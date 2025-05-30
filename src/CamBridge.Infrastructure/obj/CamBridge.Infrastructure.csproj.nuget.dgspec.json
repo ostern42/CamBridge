@@ -5,7 +5,7 @@
   },
   "projects": {
     "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Core\\CamBridge.Core.csproj": {
-      "version": "1.0.0",
+      "version": "0.1.1",
       "restore": {
         "projectUniqueName": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Core\\CamBridge.Core.csproj",
         "projectName": "CamBridge.Core",
@@ -50,14 +50,6 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
-          "dependencies": {
-            "Microsoft.NET.ILLink.Tasks": {
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[8.0.16, )",
-              "autoReferenced": true
-            }
-          },
           "imports": [
             "net461",
             "net462",
@@ -69,24 +61,6 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Crossgen2.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
@@ -94,15 +68,10 @@
           },
           "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
         }
-      },
-      "runtimes": {
-        "win-x64": {
-          "#import": []
-        }
       }
     },
     "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Infrastructure\\CamBridge.Infrastructure.csproj": {
-      "version": "1.0.0",
+      "version": "0.1.1",
       "restore": {
         "projectUniqueName": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Infrastructure\\CamBridge.Infrastructure.csproj",
         "projectName": "CamBridge.Infrastructure",
@@ -158,17 +127,19 @@
             },
             "Microsoft.Extensions.DependencyInjection.Abstractions": {
               "target": "Package",
-              "version": "[8.0.2, )"
+              "version": "[8.0.0, )"
             },
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
-              "version": "[8.0.2, )"
+              "version": "[8.0.0, )"
             },
-            "Microsoft.NET.ILLink.Tasks": {
-              "suppressParent": "All",
+            "System.Drawing.Common": {
               "target": "Package",
-              "version": "[8.0.16, )",
-              "autoReferenced": true
+              "version": "[8.0.0, )"
+            },
+            "fo-dicom": {
+              "target": "Package",
+              "version": "[5.1.2, )"
             }
           },
           "imports": [
@@ -182,35 +153,12 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Crossgen2.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
           "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
-        }
-      },
-      "runtimes": {
-        "win-x64": {
-          "#import": []
         }
       }
     }

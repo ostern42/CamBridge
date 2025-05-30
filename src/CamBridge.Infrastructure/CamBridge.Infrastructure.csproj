@@ -1,30 +1,35 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<!-- Import shared version and configuration -->
-	<Import Project="..\..\Version.props" />
 
-	<PropertyGroup>
-		<AssemblyTitle>CamBridge Infrastructure Layer</AssemblyTitle>
-		<AssemblyDescription>EXIF reading, DICOM conversion and file system operations</AssemblyDescription>
-	</PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\CamBridge.Core\CamBridge.Core.csproj" />
-	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CamBridge.Core\CamBridge.Core.csproj" />
+  </ItemGroup>
 
-	<ItemGroup>
-		<!-- EXIF reading library -->
-		<PackageReference Include="MetadataExtractor" Version="2.8.1" />
-		
-		<!-- Logging -->
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
-		
-		<!-- Dependency Injection -->
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MetadataExtractor" Version="2.8.1" />
+    <PackageReference Include="fo-dicom" Version="5.1.2" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+  </ItemGroup>
 
-	<ItemGroup>
-		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-			<_Parameter1>CamBridge.Infrastructure.Tests</_Parameter1>
-		</AssemblyAttribute>
-	</ItemGroup>
+  <Import Project="..\..\Version.props" />
+  
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>CamBridge.Infrastructure.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
 </Project>
