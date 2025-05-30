@@ -6,7 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.1] - 2025-05-30
+## [0.0.2] - 2025-05-30
+### Added
+- Core domain models: PatientInfo, StudyInfo, ImageMetadata
+- Value objects: DicomTag, ExifTag, PatientId, StudyId
+- Core interfaces: IExifReader, IDicomConverter, IFileProcessor, IMappingConfiguration
+- Configuration models: CamBridgeSettings, MappingRule, ProcessingOptions
+- DICOM tag constants for common modules
+- QRBridge data parsing support
+
+## [0.0.1] - 2025-01-30
 ### Added
 - Initial project structure
 - Solution with four projects: Core, Infrastructure, Service, Config
