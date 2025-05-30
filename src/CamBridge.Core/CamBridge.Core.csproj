@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<Import Project="..\..\Version.props" />
+
+	<PropertyGroup>
+		<AssemblyName>CamBridge.Core</AssemblyName>
+		<RootNamespace>CamBridge.Core</RootNamespace>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<Platforms>x64</Platforms>
+		<Platform>x64</Platform>
+		
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Folder Include="Entities\" />
+		<Folder Include="Interfaces\" />
+		<Folder Include="Services\" />
+		<Folder Include="ValueObjects\" />
+		<Folder Include="Exceptions\" />
+	</ItemGroup>
+
+</Project>

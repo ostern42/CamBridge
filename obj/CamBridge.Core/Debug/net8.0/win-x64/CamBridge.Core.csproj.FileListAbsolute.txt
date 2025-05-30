@@ -1,0 +1,9 @@
+C:\Users\aiadmin\source\repos\CamBridge\bin\Debug\net8.0\win-x64\CamBridge.Core.deps.json
+C:\Users\aiadmin\source\repos\CamBridge\bin\Debug\net8.0\win-x64\CamBridge.Core.dll
+C:\Users\aiadmin\source\repos\CamBridge\bin\Debug\net8.0\win-x64\CamBridge.Core.pdb
+C:\Users\aiadmin\source\repos\CamBridge\obj\CamBridge.Core\Debug\net8.0\win-x64\CamBridge.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\aiadmin\source\repos\CamBridge\obj\CamBridge.Core\Debug\net8.0\win-x64\CamBridge.Core.csproj.CoreCompileInputs.cache
+C:\Users\aiadmin\source\repos\CamBridge\obj\CamBridge.Core\Debug\net8.0\win-x64\CamBridge.Core.dll
+C:\Users\aiadmin\source\repos\CamBridge\obj\CamBridge.Core\Debug\net8.0\win-x64\refint\CamBridge.Core.dll
+C:\Users\aiadmin\source\repos\CamBridge\obj\CamBridge.Core\Debug\net8.0\win-x64\CamBridge.Core.pdb
+C:\Users\aiadmin\source\repos\CamBridge\obj\CamBridge.Core\Debug\net8.0\win-x64\ref\CamBridge.Core.dll

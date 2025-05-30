@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<Import Project="..\..\Version.props" />
+
+	<PropertyGroup>
+		<AssemblyName>CamBridge.Infrastructure</AssemblyName>
+		<RootNamespace>CamBridge.Infrastructure</RootNamespace>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<Platforms>x64</Platforms>
+		<Platform>x64</Platform>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\CamBridge.Core\CamBridge.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Exif\" />
+		<Folder Include="Dicom\" />
+		<Folder Include="FileSystem\" />
+		<Folder Include="Configuration\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- DICOM library will be added in Phase 4 -->
+		<!-- <PackageReference Include="fo-dicom" Version="5.1.2" /> -->
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,31 @@
+<Window x:Class="CamBridge.Config.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="CamBridge Configuration">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title Bar -->
+        <Grid Grid.Row="0" Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}">
+            <TextBlock Text="CamBridge Configuration v0.0.1" 
+                       VerticalAlignment="Center" 
+                       Margin="16,0"
+                       Style="{StaticResource SubtitleTextBlockStyle}"/>
+        </Grid>
+
+        <!-- Content Area -->
+        <Grid Grid.Row="1" Padding="24">
+            <TextBlock Text="Configuration interface will be implemented in Phase 8-10" 
+                       HorizontalAlignment="Center" 
+                       VerticalAlignment="Center"
+                       Style="{StaticResource BodyTextBlockStyle}"/>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+	<Import Project="..\..\Version.props" />
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<AssemblyName>CamBridge.Service</AssemblyName>
+		<RootNamespace>CamBridge.Service</RootNamespace>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<Platforms>x64</Platforms>
+		<Platform>x64</Platform>
+
+		<!-- Windows Service specific -->
+		<UseWindowsForms>false</UseWindowsForms>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
+		<PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="5.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\CamBridge.Core\CamBridge.Core.csproj" />
+		<ProjectReference Include="..\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj" />
+	</ItemGroup>
+
+</Project>

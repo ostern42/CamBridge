@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "dgSpecHash": "18owfNFfPhk=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Config\\CamBridge.Config.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\aiadmin\\.nuget\\packages\\communitytoolkit.common\\7.1.2\\communitytoolkit.common.7.1.2.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\communitytoolkit.mvvm\\8.2.2\\communitytoolkit.mvvm.8.2.2.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\communitytoolkit.winui\\7.1.2\\communitytoolkit.winui.7.1.2.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\communitytoolkit.winui.ui\\7.1.2\\communitytoolkit.winui.ui.7.1.2.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\communitytoolkit.winui.ui.animations\\7.1.2\\communitytoolkit.winui.ui.animations.7.1.2.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.net.illink.tasks\\8.0.16\\microsoft.net.illink.tasks.8.0.16.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.windows.sdk.buildtools\\10.0.22621.3233\\microsoft.windows.sdk.buildtools.10.0.22621.3233.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.windowsappsdk\\1.5.240227000\\microsoft.windowsappsdk.1.5.240227000.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.netcore.app.crossgen2.win-x64\\8.0.16\\microsoft.netcore.app.crossgen2.win-x64.8.0.16.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\8.0.16\\microsoft.aspnetcore.app.runtime.win-x64.8.0.16.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\8.0.16\\microsoft.windowsdesktop.app.runtime.win-x64.8.0.16.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\8.0.16\\microsoft.netcore.app.runtime.win-x64.8.0.16.nupkg.sha512"
+  ],
+  "logs": []
+}

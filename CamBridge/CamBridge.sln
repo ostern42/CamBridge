@@ -1,0 +1,54 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36121.58 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Projektmappenelemente", "Projektmappenelemente", "{84D27F74-D2BA-6C25-2661-968F101900D9}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		CHANGELOG.md = CHANGELOG.md
+		LICENSE.txt = LICENSE.txt
+		README.md = README.md
+		Version.props = Version.props
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Core", "..\src\CamBridge.Core\CamBridge.Core.csproj", "{F1565008-AF85-49D0-89CC-F55C74354574}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Infrastructure", "..\src\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj", "{6E23E0A3-D5EA-40AA-BECE-28B430F92F48}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Service", "..\src\CamBridge.Service\CamBridge.Service.csproj", "{C681B9D1-3649-4BCF-9E77-7680CFCB369C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Config", "..\src\CamBridge.Config\CamBridge.Config.csproj", "{71E41F76-FE3A-4B71-999A-B30B32003261}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F1565008-AF85-49D0-89CC-F55C74354574}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1565008-AF85-49D0-89CC-F55C74354574}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1565008-AF85-49D0-89CC-F55C74354574}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1565008-AF85-49D0-89CC-F55C74354574}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E23E0A3-D5EA-40AA-BECE-28B430F92F48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E23E0A3-D5EA-40AA-BECE-28B430F92F48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E23E0A3-D5EA-40AA-BECE-28B430F92F48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E23E0A3-D5EA-40AA-BECE-28B430F92F48}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C681B9D1-3649-4BCF-9E77-7680CFCB369C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C681B9D1-3649-4BCF-9E77-7680CFCB369C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C681B9D1-3649-4BCF-9E77-7680CFCB369C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C681B9D1-3649-4BCF-9E77-7680CFCB369C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71E41F76-FE3A-4B71-999A-B30B32003261}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{71E41F76-FE3A-4B71-999A-B30B32003261}.Debug|Any CPU.Build.0 = Debug|x64
+		{71E41F76-FE3A-4B71-999A-B30B32003261}.Debug|Any CPU.Deploy.0 = Debug|x64
+		{71E41F76-FE3A-4B71-999A-B30B32003261}.Release|Any CPU.ActiveCfg = Release|x64
+		{71E41F76-FE3A-4B71-999A-B30B32003261}.Release|Any CPU.Build.0 = Release|x64
+		{71E41F76-FE3A-4B71-999A-B30B32003261}.Release|Any CPU.Deploy.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {423800E8-0FE0-4426-9715-B42E8F92C2FD}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,109 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{84D27F74-D2BA-6C25-2661-968F101900D9}|Projektmappenelemente{84D27F74-D2BA-6C25-2661-968F101900D9}|C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{84D27F74-D2BA-6C25-2661-968F101900D9}|Projektmappenelemente{84D27F74-D2BA-6C25-2661-968F101900D9}|solutionrelative:.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{84D27F74-D2BA-6C25-2661-968F101900D9}|Projektmappenelemente{84D27F74-D2BA-6C25-2661-968F101900D9}|C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\LICENSE.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{84D27F74-D2BA-6C25-2661-968F101900D9}|Projektmappenelemente{84D27F74-D2BA-6C25-2661-968F101900D9}|solutionrelative:LICENSE.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{84D27F74-D2BA-6C25-2661-968F101900D9}|Projektmappenelemente{84D27F74-D2BA-6C25-2661-968F101900D9}|C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\CHANGELOG.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{84D27F74-D2BA-6C25-2661-968F101900D9}|Projektmappenelemente{84D27F74-D2BA-6C25-2661-968F101900D9}|solutionrelative:CHANGELOG.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{84D27F74-D2BA-6C25-2661-968F101900D9}|Projektmappenelemente{84D27F74-D2BA-6C25-2661-968F101900D9}|C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\README.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{84D27F74-D2BA-6C25-2661-968F101900D9}|Projektmappenelemente{84D27F74-D2BA-6C25-2661-968F101900D9}|solutionrelative:README.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{84D27F74-D2BA-6C25-2661-968F101900D9}|Projektmappenelemente{84D27F74-D2BA-6C25-2661-968F101900D9}|C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\Version.props||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{84D27F74-D2BA-6C25-2661-968F101900D9}|Projektmappenelemente{84D27F74-D2BA-6C25-2661-968F101900D9}|solutionrelative:Version.props||{8B382828-6202-11D1-8870-0000F87579D2}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 1,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedHeight": 285,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": ".gitignore",
+              "DocumentMoniker": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\.gitignore",
+              "RelativeDocumentMoniker": ".gitignore",
+              "ToolTip": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\.gitignore",
+              "RelativeToolTip": ".gitignore",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2025-05-30T16:23:02.184Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "LICENSE.txt",
+              "DocumentMoniker": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\LICENSE.txt",
+              "RelativeDocumentMoniker": "LICENSE.txt",
+              "ToolTip": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\LICENSE.txt",
+              "RelativeToolTip": "LICENSE.txt",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
+              "WhenOpened": "2025-05-30T16:22:49.345Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "CHANGELOG.md",
+              "DocumentMoniker": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\CHANGELOG.md",
+              "RelativeDocumentMoniker": "CHANGELOG.md",
+              "ToolTip": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\CHANGELOG.md",
+              "RelativeToolTip": "CHANGELOG.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-05-30T16:22:38.269Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "README.md",
+              "DocumentMoniker": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\README.md",
+              "RelativeDocumentMoniker": "README.md",
+              "ToolTip": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\README.md",
+              "RelativeToolTip": "README.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-05-30T16:22:28.024Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Version.props",
+              "DocumentMoniker": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\Version.props",
+              "RelativeDocumentMoniker": "Version.props",
+              "ToolTip": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\CamBridge\\Version.props",
+              "RelativeToolTip": "Version.props",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003801|",
+              "WhenOpened": "2025-05-30T16:22:16.468Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
