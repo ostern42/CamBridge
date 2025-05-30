@@ -6,14 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.2] - 2025-05-30
+## [0.1.0] - 2025-05-30
 ### Added
-- Core domain models: PatientInfo, StudyInfo, ImageMetadata
-- Value objects: DicomTag, ExifTag, PatientId, StudyId
-- Core interfaces: IExifReader, IDicomConverter, IFileProcessor, IMappingConfiguration
-- Configuration models: CamBridgeSettings, MappingRule, ProcessingOptions
-- DICOM tag constants for common modules
-- QRBridge data parsing support
+- EXIF reader implementation with Ricoh G900 II support
+- Barcode tag extraction for QRBridge data
+- Pipe-delimited and command-line format parsers
+- Raw EXIF data extraction fallback
+- Comprehensive unit tests for EXIF processing
+- Infrastructure test project
+
+### Fixed
+- QRBridge data location (Barcode tag instead of UserComment)
+
+## [0.0.2] - 2025-05-30
+### Added  
+- Core domain models (PatientInfo, StudyInfo, ImageMetadata)
+- Value objects (DicomTag, ExifTag, PatientId, StudyId)
+- Domain interfaces (IExifReader, IDicomConverter)
+- Configuration models (Settings, MappingRule)
+- Infrastructure project structure
 
 ## [0.0.1] - 2025-01-30
 ### Added

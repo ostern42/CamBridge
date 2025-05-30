@@ -1,55 +1,90 @@
 # CamBridge
 
-JPEG to DICOM converter for medical imaging
+JPEG to DICOM converter for medical imaging, specifically designed for Ricoh G900 II cameras with QRBridge barcode integration.
+
+**Version:** 0.1.0  
+**Copyright:** © 2025 Claude's Improbably Reliable Software Solutions
 
 ## Overview
 
-CamBridge processes JPEG images from Ricoh G900 II cameras, extracting patient and examination data from EXIF metadata and converting them to DICOM format for PACS integration.
+CamBridge processes JPEG images from Ricoh G900 II cameras that contain patient and examination information encoded via QRBridge barcodes. The software extracts this information from EXIF metadata and converts the images to DICOM format for PACS integration.
 
 ## Features
 
-- Automatic EXIF extraction from JPEG files
-- DICOM-compliant conversion (Secondary Capture)
-- Windows Service for folder monitoring
-- Configuration GUI (WinUI 3)
-- Configurable tag mapping
-
-## Requirements
-
-- Windows 10/11 (64-bit)
-- .NET 8.0 Runtime
-- Administrator privileges (for service installation)
+- **EXIF Extraction** ✓ Extract QRBridge data from Ricoh camera barcode tags
+- **DICOM Conversion** (Coming in v0.2.0)
+- **Windows Service** (Coming in v0.3.0)
+- **Configuration GUI** (Coming in v0.4.0)
 
 ## Architecture
 
-- **CamBridge.Core**: Domain logic and entities
-- **CamBridge.Infrastructure**: EXIF/DICOM processing
-- **CamBridge.Service**: Windows Service for automation
-- **CamBridge.Config**: Configuration interface
+```
+CamBridge/
+├── src/
+│   ├── CamBridge.Core/          # Domain models and interfaces
+│   ├── CamBridge.Infrastructure/# EXIF/DICOM processing
+│   ├── CamBridge.Service/       # Windows Service (planned)
+│   └── CamBridge.Config/        # WinUI 3 GUI (planned)
+└── tests/
+    └── CamBridge.Infrastructure.Tests/
+```
 
-## Installation
+## QRBridge Data Format
 
-1. Extract all files to desired location
-2. Run `CamBridge.Config.exe` as Administrator
-3. Configure input/output folders and mappings
-4. Install and start the service
+CamBridge supports two formats:
 
-## Configuration
+1. **Pipe-delimited** (Ricoh G900 II default):
+   ```
+   EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
+   ```
 
-Service configuration is stored in `appsettings.json`:
-- Input/output folder paths
-- EXIF to DICOM tag mappings
-- Processing options
+2. **Command-line format**:
+   ```
+   -examid "EX002" -name "Schmidt, Maria" -birthdate "1985-03-15"
+   ```
 
-## DICOM Compliance
+## Development Status
 
-- SOP Class: VL Photographic Image (1.2.840.10008.5.1.4.1.1.77.1.4)
-- Transfer Syntax: JPEG Baseline (1.2.840.10008.1.2.4.50)
-- Modality: XC (External Camera)
+### Phase 3 Complete (v0.1.0) ✓
+- EXIF reader implementation
+- Ricoh-specific barcode tag extraction
+- QRBridge format parsing
+- Unit test framework
 
-## Version
+### Next: Phase 4 - DICOM Conversion
+- fo-dicom library integration
+- JPEG to DICOM converter
+- DICOM tag mapping
 
-Current: 0.0.1 (Initial structure)
+## Requirements
+
+- .NET 8.0 SDK
+- Windows 10/11 (x64)
+- Visual Studio 2022 or VS Code
+
+## Building
+
+```bash
+dotnet build
+dotnet test
+```
+
+## Usage (Development)
+
+```csharp
+// Register services
+services.AddCamBridgeInfrastructureForRicoh();
+
+// Extract QRBridge data
+var exifReader = serviceProvider.GetRequiredService<IExifReader>();
+var barcodeData = await exifReader.GetUserCommentAsync("image.jpg");
+var patientInfo = exifReader.ParseQRBridgeData(barcodeData);
+```
+
+## License
+
+Proprietary - Claude's Improbably Reliable Software Solutions
 
 ---
-� 2025 Claude's Improbably Reliable Software Solutions
+
+*For medical imaging professionals who need reliable JPEG to DICOM conversion.*

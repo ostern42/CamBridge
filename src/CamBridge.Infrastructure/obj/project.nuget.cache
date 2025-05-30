@@ -1,10 +1,17 @@
 {
   "version": 2,
-  "dgSpecHash": "v2Q4Yrmh4Xc=",
+  "dgSpecHash": "efyQrPqSjEc=",
   "success": true,
   "projectFilePath": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Infrastructure\\CamBridge.Infrastructure.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\aiadmin\\.nuget\\packages\\metadataextractor\\2.8.1\\metadataextractor.2.8.1.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.2\\microsoft.extensions.dependencyinjection.abstractions.8.0.2.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.2\\microsoft.extensions.logging.abstractions.8.0.2.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.net.illink.tasks\\8.0.16\\microsoft.net.illink.tasks.8.0.16.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.netcore.platforms\\2.1.2\\microsoft.netcore.platforms.2.1.2.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\4.5.2\\system.runtime.compilerservices.unsafe.4.5.2.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\system.text.encoding.codepages\\4.5.1\\system.text.encoding.codepages.4.5.1.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\xmpcore\\6.1.10.1\\xmpcore.6.1.10.1.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.netcore.app.crossgen2.win-x64\\8.0.16\\microsoft.netcore.app.crossgen2.win-x64.8.0.16.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\8.0.16\\microsoft.aspnetcore.app.runtime.win-x64.8.0.16.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\8.0.16\\microsoft.windowsdesktop.app.runtime.win-x64.8.0.16.nupkg.sha512",
