@@ -127,19 +127,23 @@
             },
             "Microsoft.Extensions.DependencyInjection.Abstractions": {
               "target": "Package",
-              "version": "[8.0.0, )"
+              "version": "[9.0.5, )"
+            },
+            "Microsoft.Extensions.Hosting.Abstractions": {
+              "target": "Package",
+              "version": "[9.0.5, )"
             },
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
-              "version": "[8.0.0, )"
+              "version": "[9.0.5, )"
             },
             "System.Drawing.Common": {
               "target": "Package",
-              "version": "[8.0.0, )"
+              "version": "[9.0.5, )"
             },
             "fo-dicom": {
               "target": "Package",
-              "version": "[5.1.2, )"
+              "version": "[5.2.2, )"
             }
           },
           "imports": [

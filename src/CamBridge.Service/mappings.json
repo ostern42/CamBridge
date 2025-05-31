@@ -1,0 +1,95 @@
+{
+  "version": "1.0",
+  "description": "CamBridge EXIF to DICOM mapping configuration for Ricoh G900 II with QRBridge",
+  "mappings": [
+    {
+      "name": "PatientName",
+      "sourceType": "QRBridge",
+      "sourceField": "name",
+      "targetTag": "(0010,0010)",
+      "transform": "None",
+      "required": true
+    },
+    {
+      "name": "PatientID",
+      "sourceType": "QRBridge",
+      "sourceField": "patientid",
+      "targetTag": "(0010,0020)",
+      "transform": "None",
+      "required": true
+    },
+    {
+      "name": "PatientBirthDate",
+      "sourceType": "QRBridge",
+      "sourceField": "birthdate",
+      "targetTag": "(0010,0030)",
+      "transform": "DateToDicom",
+      "required": false
+    },
+    {
+      "name": "PatientSex",
+      "sourceType": "QRBridge",
+      "sourceField": "gender",
+      "targetTag": "(0010,0040)",
+      "transform": "GenderToDicom",
+      "required": false,
+      "defaultValue": "O"
+    },
+    {
+      "name": "StudyDescription",
+      "sourceType": "QRBridge",
+      "sourceField": "comment",
+      "targetTag": "(0008,1030)",
+      "transform": "None",
+      "required": false
+    },
+    {
+      "name": "StudyID",
+      "sourceType": "QRBridge",
+      "sourceField": "examid",
+      "targetTag": "(0020,0010)",
+      "transform": "TruncateTo16",
+      "required": false
+    },
+    {
+      "name": "Manufacturer",
+      "sourceType": "EXIF",
+      "sourceField": "Make",
+      "targetTag": "(0008,0070)",
+      "transform": "None",
+      "required": false
+    },
+    {
+      "name": "ManufacturerModelName",
+      "sourceType": "EXIF",
+      "sourceField": "Model",
+      "targetTag": "(0008,1090)",
+      "transform": "None",
+      "required": false
+    },
+    {
+      "name": "SoftwareVersions",
+      "sourceType": "EXIF",
+      "sourceField": "Software",
+      "targetTag": "(0018,1020)",
+      "transform": "None",
+      "required": false
+    },
+    {
+      "name": "AcquisitionDateTime",
+      "sourceType": "EXIF",
+      "sourceField": "DateTimeOriginal",
+      "targetTag": "(0008,002A)",
+      "transform": "DateToDicom",
+      "required": false
+    },
+    {
+      "name": "PatientComments",
+      "sourceType": "QRBridge",
+      "sourceField": "comment",
+      "targetTag": "(0010,4000)",
+      "transform": "None",
+      "required": false
+    }
+  ]
+}

@@ -5,6 +5,28 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-05-31 12:05
+### Added
+- FileProcessor service orchestrating complete conversion pipeline
+- ProcessingQueue with thread-safe operation and retry logic
+- FolderWatcherService monitoring multiple folders via FileSystemWatcher
+- Comprehensive configuration system via appsettings.json
+- Health check endpoint for service monitoring
+- Statistics reporting and performance metrics
+- Graceful shutdown with processing completion
+- File debouncing to avoid processing during write operations
+
+### Changed
+- Worker service now coordinates all processing components
+- Enhanced logging with structured output
+- Program.cs with full dependency injection setup
+- Target framework to net8.0-windows for Windows Service
+
+### Fixed
+- Robust error handling throughout pipeline
+- File locking detection before processing
+- Proper resource cleanup on service shutdown
+
 ## [0.2.0] - 2025-01-24
 ### Added
 - JSON-based mapping configuration system

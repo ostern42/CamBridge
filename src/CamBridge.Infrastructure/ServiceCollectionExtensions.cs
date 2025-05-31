@@ -31,8 +31,8 @@ namespace CamBridge.Infrastructure
             // Register DICOM converter service with mapper support
             services.AddScoped<IDicomConverter, DicomConverter>();
 
-            // TODO: Register additional services in future phases
-            // services.AddScoped<IFileProcessor, FileProcessor>();
+            // Register file processor service
+            services.AddScoped<IFileProcessor, FileProcessor>();
 
             return services;
         }
@@ -64,6 +64,9 @@ namespace CamBridge.Infrastructure
             // Register DICOM converter service
             services.AddScoped<IDicomConverter, DicomConverter>();
 
+            // Register file processor service
+            services.AddScoped<IFileProcessor, FileProcessor>();
+
             return services;
         }
 
@@ -83,6 +86,9 @@ namespace CamBridge.Infrastructure
             {
                 services.AddScoped<IExifReader, ExifReader>();
             }
+
+            // Register mapping configuration loader as singleton
+            services.AddSingleton<MappingConfigurationLoader>();
 
             // Register mapping configuration from file
             services.AddSingleton<IMappingConfiguration>(provider =>
@@ -105,9 +111,9 @@ namespace CamBridge.Infrastructure
                 return config;
             });
 
-            services.AddScoped<MappingConfigurationLoader>();
             services.AddScoped<IDicomTagMapper, DicomTagMapper>();
             services.AddScoped<IDicomConverter, DicomConverter>();
+            services.AddScoped<IFileProcessor, FileProcessor>();
 
             return services;
         }
