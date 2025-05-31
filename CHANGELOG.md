@@ -1,51 +1,53 @@
-# Changelog
+# CamBridge Changelog
+
 All notable changes to CamBridge will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.1] - 2025-01-15
-
+## [0.2.0] - 2025-01-24
 ### Added
-- DICOM converter implementation using fo-dicom v5.1.2
-- JPEG to DICOM conversion with preserved compression
-- VL Photographic Image Storage SOP Class support
-- Proper JPEG encapsulated pixel data handling
-- Photometric interpretation YBR_FULL_422 for JPEG
-- Character set ISO_IR 100 for German umlauts
-- DICOM file validation with mandatory tag checks
-- Comprehensive unit tests for DICOM conversion
-- System.Drawing.Common for image dimension reading
+- JSON-based mapping configuration system
+- MappingConfigurationLoader for loading/saving mappings
+- DicomTagMapper service for dynamic tag mapping
+- CustomMappingConfiguration with validation
+- Support for value transformations (date, gender, truncation)
+- Default value support for optional fields
+- Comprehensive mapping configuration tests
 
-### Technical
-- Transfer Syntax: JPEG Baseline (1.2.840.10008.1.2.4.50)
-- SOP Class: VL Photographic Image (1.2.840.10008.5.1.4.1.1.77.1.4)
-- Implementation UID: 1.2.276.0.7230010.3.0.3.6.4
+### Changed
+- DicomConverter now supports dynamic mappings
+- ServiceCollectionExtensions enhanced with configuration options
+- Improved dependency injection setup
 
-## [0.1.0] - 2025-01-15
-
+## [0.1.1] - 2025-01-18
 ### Added
-- EXIF data extraction from JPEG files
-- QRBridge data parsing (pipe-delimited format)
-- Ricoh G900 II barcode tag support
-- MetadataExtractor library integration
-- Comprehensive unit test suite
-- Service registration extensions
-- Specialized RicohExifReader implementation
+- RicohExifReader for specialized Ricoh camera support
+- Raw EXIF data extraction fallback
+- Pipe-delimited QRBridge format parsing
+### Fixed
+- Improved barcode data detection in EXIF
+- Better handling of custom Ricoh tags
 
-### Technical
-- Clean Architecture structure
-- .NET 8.0 target framework
-- xUnit test framework
+## [0.1.0] - 2025-01-17
+### Added
+- EXIF extraction with MetadataExtractor
+- QRBridge data parsing from User Comment
+- DICOM conversion with fo-dicom
+- JPEG compression preservation
+- Core entity models (Patient, Study, Metadata)
+- Value objects (DicomTag, ExifTag, PatientId, StudyId)
+- Infrastructure services (ExifReader, DicomConverter)
+- Unit tests for core functionality
 
-## [0.0.1] - 2025-01-14
-
+## [0.0.1] - 2025-01-10
 ### Added
 - Initial project structure
-- Core domain entities and value objects
-- Windows Service infrastructure
-- Serilog logging configuration
-- Version management system
+- Core interfaces and abstractions
+- Windows Service skeleton
+- Automatic versioning setup
 
----
-© 2025 Claude's Improbably Reliable Software Solutions
+[0.2.0]: https://github.com/claude/cambridge/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/claude/cambridge/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/claude/cambridge/compare/v0.0.1...v0.1.0
+[0.0.1]: https://github.com/claude/cambridge/releases/tag/v0.0.1

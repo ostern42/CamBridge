@@ -1,4 +1,4 @@
-﻿using CamBridge.Core.Interfaces;
+using CamBridge.Core.Interfaces;
 using CamBridge.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,12 +18,21 @@ namespace CamBridge.Infrastructure
             services.AddScoped<IExifReader, ExifReader>();
             services.AddScoped<RicohExifReader>(); // Can be injected directly when needed
 
-            // Register DICOM converter service
+            // Register mapping configuration services
+            services.AddSingleton<IMappingConfiguration>(provider =>
+            {
+                // Default to built-in configuration
+                // Can be overridden by loading from file in startup
+                return IMappingConfiguration.GetDefault();
+            });
+            services.AddScoped<MappingConfigurationLoader>();
+            services.AddScoped<IDicomTagMapper, DicomTagMapper>();
+
+            // Register DICOM converter service with mapper support
             services.AddScoped<IDicomConverter, DicomConverter>();
 
             // TODO: Register additional services in future phases
             // services.AddScoped<IFileProcessor, FileProcessor>();
-            // services.AddScoped<IMappingConfiguration, DefaultMappingConfiguration>();
 
             return services;
         }
@@ -44,7 +53,60 @@ namespace CamBridge.Infrastructure
                 services.AddScoped<IExifReader, ExifReader>();
             }
 
+            // Register mapping configuration services
+            services.AddSingleton<IMappingConfiguration>(provider =>
+            {
+                return IMappingConfiguration.GetDefault();
+            });
+            services.AddScoped<MappingConfigurationLoader>();
+            services.AddScoped<IDicomTagMapper, DicomTagMapper>();
+
             // Register DICOM converter service
+            services.AddScoped<IDicomConverter, DicomConverter>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds CamBridge infrastructure with custom mapping configuration from file
+        /// </summary>
+        public static IServiceCollection AddCamBridgeInfrastructure(this IServiceCollection services,
+            string mappingConfigurationPath,
+            bool useRicohExifReader = false)
+        {
+            // Register EXIF reader
+            if (useRicohExifReader)
+            {
+                services.AddScoped<IExifReader, RicohExifReader>();
+            }
+            else
+            {
+                services.AddScoped<IExifReader, ExifReader>();
+            }
+
+            // Register mapping configuration from file
+            services.AddSingleton<IMappingConfiguration>(provider =>
+            {
+                var loader = provider.GetRequiredService<MappingConfigurationLoader>();
+                var config = loader.LoadFromFileAsync(mappingConfigurationPath).GetAwaiter().GetResult();
+
+                // Validate configuration
+                if (config is CustomMappingConfiguration customConfig)
+                {
+                    var validation = customConfig.Validate();
+                    if (!validation.IsValid)
+                    {
+                        var logger = provider.GetRequiredService<ILogger<IMappingConfiguration>>();
+                        logger.LogWarning("Mapping configuration has validation errors: {Errors}",
+                            string.Join("; ", validation.Errors));
+                    }
+                }
+
+                return config;
+            });
+
+            services.AddScoped<MappingConfigurationLoader>();
+            services.AddScoped<IDicomTagMapper, DicomTagMapper>();
             services.AddScoped<IDicomConverter, DicomConverter>();
 
             return services;

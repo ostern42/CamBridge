@@ -1,110 +1,162 @@
-# CamBridge - JPEG to DICOM Converter
+# CamBridge
 
-[![Version](https://img.shields.io/badge/version-0.1.1-blue.svg)](CHANGELOG.md)
-[![.NET](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+JPEG to DICOM converter for medical imaging from Ricoh cameras with QRBridge integration.
 
-CamBridge is a Windows service that monitors folders for JPEG images from Ricoh cameras and automatically converts them to DICOM format, preserving patient and examination data embedded in EXIF fields.
+© 2025 Claude's Improbably Reliable Software Solutions
 
-## 🎯 Features
+## Overview
 
-- **EXIF Data Extraction**: Reads patient/exam data from JPEG EXIF fields
-- **QRBridge Compatibility**: Parses QRBridge-encoded data from Ricoh cameras
-- **DICOM Conversion**: Creates standard-compliant DICOM files with preserved JPEG compression
-- **Automatic Processing**: Windows service monitors folders for new images
-- **Metadata Preservation**: Maps EXIF data to appropriate DICOM tags
-- **German Umlaut Support**: Proper character encoding (ISO_IR 100)
+CamBridge is a Windows service that monitors folders for JPEG images from Ricoh G900 II cameras and automatically converts them to DICOM format. Patient and examination data embedded via QRBridge QR codes is extracted from EXIF metadata and mapped to appropriate DICOM tags.
 
-## 🏗️ Architecture
+## Features
 
+- **Automatic JPEG to DICOM conversion** preserving original compression
+- **QRBridge data extraction** from EXIF User Comment field
+- **Flexible mapping configuration** via JSON files
+- **Ricoh G900 II camera support** with specialized EXIF reading
+- **Windows Service** for background operation
+- **Comprehensive logging** with Serilog
+
+## System Requirements
+
+- Windows 10/11 or Windows Server 2016+
+- .NET 8.0 Runtime
+- Ricoh G900 II camera with QRBridge-encoded QR codes
+
+## Installation
+
+1. Download the latest release
+2. Extract to installation directory (e.g., `C:\Program Files\CamBridge`)
+3. Configure settings in `appsettings.json`
+4. Install as Windows Service:
+   ```cmd
+   sc create CamBridgeService binPath="C:\Program Files\CamBridge\CamBridge.Service.exe"
+   ```
+
+## Configuration
+
+### Basic Settings (appsettings.json)
+
+```json
+{
+  "CamBridge": {
+    "WatchFolders": [
+      {
+        "Path": "C:\\Images\\Input",
+        "OutputPath": "C:\\Images\\DICOM",
+        "Enabled": true
+      }
+    ],
+    "DefaultOutputFolder": "C:\\CamBridge\\Output",
+    "MappingConfigurationFile": "mappings.json"
+  }
+}
 ```
-CamBridge/
-├── src/
-│   ├── CamBridge.Core/          # Domain entities, interfaces
-│   ├── CamBridge.Infrastructure/# EXIF reader, DICOM converter
-│   └── CamBridge.Service/       # Windows service host
-└── tests/
-    └── CamBridge.Infrastructure.Tests/
+
+### Mapping Configuration (mappings.json)
+
+CamBridge uses a flexible JSON-based mapping system to convert EXIF and QRBridge data to DICOM tags:
+
+```json
+{
+  "version": "1.0",
+  "description": "CamBridge EXIF to DICOM mapping configuration",
+  "mappings": [
+    {
+      "name": "PatientName",
+      "sourceType": "QRBridge",
+      "sourceField": "name",
+      "targetTag": "(0010,0010)",
+      "transform": "None",
+      "required": true
+    },
+    {
+      "name": "PatientBirthDate",
+      "sourceType": "QRBridge",
+      "sourceField": "birthdate",
+      "targetTag": "(0010,0030)",
+      "transform": "DateToDicom"
+    },
+    {
+      "name": "Manufacturer",
+      "sourceType": "EXIF",
+      "sourceField": "Make",
+      "targetTag": "(0008,0070)"
+    }
+  ]
+}
 ```
 
-## 🔧 Technical Details
+#### Mapping Configuration Options
 
-### DICOM Implementation
-- **SOP Class**: VL Photographic Image Storage (1.2.840.10008.5.1.4.1.1.77.1.4)
-- **Transfer Syntax**: JPEG Baseline Process 1 (1.2.840.10008.1.2.4.50)
-- **Photometric Interpretation**: YBR_FULL_422 (for JPEG compressed data)
-- **Character Set**: ISO_IR 100 (Latin-1 with German extensions)
+- **sourceType**: "QRBridge" or "EXIF"
+- **transform**: Value transformation
+  - `None`: No transformation
+  - `DateToDicom`: Convert dates to YYYYMMDD format
+  - `GenderToDicom`: Convert to M/F/O
+  - `ToUpper`/`ToLower`: Case conversion
+  - `TruncateTo16`/`TruncateTo64`: Length limits
+- **required**: If true, conversion fails when field is missing
+- **defaultValue**: Used when source field is empty
 
-### Supported Data Format
-QRBridge data in pipe-delimited format:
+## QRBridge Format
+
+QRBridge encodes patient data as pipe-delimited strings:
 ```
 EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
 ```
 
-## 📦 Dependencies
+Fields:
+1. Exam ID
+2. Patient Name
+3. Birth Date
+4. Gender (M/F/O)
+5. Comment/Study Description
 
-- [fo-dicom](https://github.com/fo-dicom/fo-dicom) v5.1.2 - DICOM toolkit
-- [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet) v2.8.1 - EXIF reading
-- [Serilog](https://serilog.net/) - Structured logging
-- System.Drawing.Common - Image processing
+## Development
 
-## 🚀 Getting Started
+### Building from Source
 
-### Prerequisites
-- .NET 8.0 SDK
-- Windows 10/11 or Windows Server 2019+
-- Visual Studio 2022 (optional)
-
-### Building
 ```bash
+# Clone repository
+git clone https://github.com/claude/cambridge.git
+
+# Build
 dotnet build
+
+# Run tests
 dotnet test
+
+# Publish
+dotnet publish -c Release -r win-x64
 ```
 
-### Installation
-```bash
-# Install as Windows Service
-sc create CamBridgeService binPath="C:\Path\To\CamBridge.Service.exe"
+### Project Structure
+
+```
+CamBridge/
+├── src/
+│   ├── CamBridge.Core/          # Domain models and interfaces
+│   ├── CamBridge.Infrastructure/ # Service implementations
+│   └── CamBridge.Service/       # Windows Service host
+└── tests/
+    └── CamBridge.Infrastructure.Tests/
 ```
 
-## 📸 Ricoh Camera Configuration
+## Roadmap
 
-1. Enable QRBridge barcode scanning
-2. Set camera to save barcodes in EXIF User Comment field
-3. Configure image output folder
+- [x] Phase 1-2: Project setup and core models
+- [x] Phase 3-4: EXIF extraction and DICOM conversion
+- [x] Phase 5: Mapping configuration system
+- [ ] Phase 6-7: File monitoring and processing pipeline
+- [ ] Phase 8: Enhanced error handling and retry logic
+- [ ] Phase 9: Web management interface
+- [ ] Phase 10: PACS integration
 
-## 🔍 EXIF to DICOM Mapping
+## License
 
-| EXIF/QRBridge Field | DICOM Tag | Description |
-|---------------------|-----------|-------------|
-| name | (0010,0010) | Patient Name |
-| patientid | (0010,0020) | Patient ID |
-| birthdate | (0010,0030) | Patient Birth Date |
-| gender | (0010,0040) | Patient Sex |
-| examid | (0020,0010) | Study ID |
-| comment | (0008,1030) | Study Description |
-| Make | (0008,0070) | Manufacturer |
-| Model | (0008,1090) | Model Name |
+Proprietary - © 2025 Claude's Improbably Reliable Software Solutions
 
-## 📊 Current Status
+## Support
 
-- ✅ Phase 1: Project setup (v0.0.1)
-- ✅ Phase 2: Core domain model
-- ✅ Phase 3: EXIF extraction (v0.1.0)
-- ✅ Phase 4: DICOM conversion (v0.1.1)
-- ⏳ Phase 5: Mapping configuration
-- ⏳ Phase 6: File processing pipeline
-- ⏳ Phase 7: Folder monitoring
-- ⏳ Phase 8: Configuration & UI
-
-## 📝 License
-
-MIT License - see [LICENSE](LICENSE) file
-
-## 👥 Credits
-
-© 2025 Claude's Improbably Reliable Software Solutions
-
----
-
-*CamBridge - Bridging the gap between camera and PACS*
+For issues and feature requests, please contact support.

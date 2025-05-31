@@ -14,12 +14,12 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Claude\'s Improbably Reliable Software Solutions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("© 2025 Claude\'s Improbably Reliable Software Solutions")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.1.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.1+1bff3ef0af7b4bcdb22feb41716e855a05b3475a")]
-[assembly: System.Reflection.AssemblyProductAttribute("CamBridge JPEG to DICOM Converter")]
+[assembly: System.Reflection.AssemblyDescriptionAttribute("JPEG to DICOM converter for medical imaging from Ricoh cameras")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.2.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.2.0+511bdeb2910b20f4fb9966d39a23cb958cef6109")]
+[assembly: System.Reflection.AssemblyProductAttribute("CamBridge")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CamBridge.Infrastructure")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.1.1.0")]
-[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/cirs/cambridge")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.2.0.0")]
 
 // Von der MSBuild WriteCodeFragment-Klasse generiert.
 

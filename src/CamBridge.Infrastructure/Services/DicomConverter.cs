@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using CamBridge.Core.Entities;
 using CamBridge.Core.Interfaces;
@@ -18,9 +20,13 @@ namespace CamBridge.Infrastructure.Services
     /// Implementation of IDicomConverter using fo-dicom library
     /// Converts JPEG images to DICOM format while preserving JPEG compression
     /// </summary>
+    [SupportedOSPlatform("windows")]
     public class DicomConverter : IDicomConverter
     {
         private readonly ILogger<DicomConverter> _logger;
+        private readonly IDicomTagMapper? _tagMapper;
+        private readonly IMappingConfiguration? _mappingConfiguration;
+
         private const string PHOTOGRAPHIC_SOP_CLASS_UID = "1.2.840.10008.5.1.4.1.1.77.1.4";
         private const string JPEG_BASELINE_TRANSFER_SYNTAX_UID = "1.2.840.10008.1.2.4.50";
 
@@ -28,9 +34,21 @@ namespace CamBridge.Infrastructure.Services
         private const string IMPLEMENTATION_CLASS_UID = "1.2.276.0.7230010.3.0.3.6.4";
         private const string IMPLEMENTATION_VERSION_NAME = "CAMBRIDGE_001";
 
+        // Constructor for backward compatibility
         public DicomConverter(ILogger<DicomConverter> logger)
+            : this(logger, null, null)
+        {
+        }
+
+        // New constructor with dependency injection
+        public DicomConverter(
+            ILogger<DicomConverter> logger,
+            IDicomTagMapper? tagMapper,
+            IMappingConfiguration? mappingConfiguration)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _tagMapper = tagMapper;
+            _mappingConfiguration = mappingConfiguration;
         }
 
         /// <inheritdoc />
@@ -59,7 +77,18 @@ namespace CamBridge.Infrastructure.Services
                 var (width, height) = await GetImageDimensionsAsync(sourceJpegPath, metadata);
 
                 // Create DICOM dataset
-                var dataset = CreateDicomDataset(metadata, width, height);
+                DicomDataset dataset;
+
+                if (_tagMapper != null && _mappingConfiguration != null)
+                {
+                    // Use dynamic mapping
+                    dataset = CreateDicomDatasetWithMapping(metadata, width, height);
+                }
+                else
+                {
+                    // Use legacy hardcoded mapping
+                    dataset = CreateDicomDatasetLegacy(metadata, width, height);
+                }
 
                 // Create DICOM file with JPEG encapsulated pixel data
                 var dicomFile = CreateDicomFileWithJpegData(dataset, jpegBytes);
@@ -170,7 +199,146 @@ namespace CamBridge.Infrastructure.Services
         /// <inheritdoc />
         public string GetPhotographicSopClassUid() => PHOTOGRAPHIC_SOP_CLASS_UID;
 
-        private DicomDataset CreateDicomDataset(ImageMetadata metadata, int width, int height)
+        private DicomDataset CreateDicomDatasetWithMapping(ImageMetadata metadata, int width, int height)
+        {
+            var dataset = new DicomDataset();
+
+            // Add basic technical tags that aren't mapped
+            AddBasicTechnicalTags(dataset, metadata, width, height);
+
+            // Prepare source data for mapping
+            var sourceData = PrepareSourceData(metadata);
+
+            // Apply mappings
+            var mappingResult = _tagMapper!.MapToDataset(sourceData, dataset);
+
+            if (!mappingResult.IsSuccess)
+            {
+                _logger.LogWarning("Mapping completed with {ErrorCount} errors: {Errors}",
+                    mappingResult.Errors.Count, string.Join("; ", mappingResult.Errors));
+            }
+
+            // Add any essential tags that weren't mapped
+            EnsureEssentialTags(dataset, metadata);
+
+            return dataset;
+        }
+
+        private Dictionary<string, Dictionary<string, string>> PrepareSourceData(ImageMetadata metadata)
+        {
+            var sourceData = new Dictionary<string, Dictionary<string, string>>();
+
+            // Prepare QRBridge data
+            var qrBridgeData = new Dictionary<string, string>();
+
+            // Extract from parsed user comment if available
+            if (metadata.ExifData.TryGetValue("QRBridgeData", out var qrData))
+            {
+                // Assume it's already parsed into key-value pairs
+                var parts = qrData.Split('|');
+                if (parts.Length >= 1) qrBridgeData["examid"] = parts[0];
+                if (parts.Length >= 2) qrBridgeData["name"] = parts[1];
+                if (parts.Length >= 3) qrBridgeData["birthdate"] = parts[2];
+                if (parts.Length >= 4) qrBridgeData["gender"] = parts[3];
+                if (parts.Length >= 5) qrBridgeData["comment"] = parts[4];
+            }
+
+            // Or use metadata directly
+            qrBridgeData["name"] = metadata.Patient.Name;
+            qrBridgeData["patientid"] = metadata.Patient.Id.Value;
+            if (metadata.Patient.BirthDate.HasValue)
+                qrBridgeData["birthdate"] = metadata.Patient.BirthDate.Value.ToString("yyyy-MM-dd");
+            qrBridgeData["gender"] = metadata.Patient.Gender.ToString()[0].ToString();
+            qrBridgeData["examid"] = metadata.Study.ExamId ?? metadata.Study.Id.Value;
+            if (!string.IsNullOrEmpty(metadata.Study.Comment))
+                qrBridgeData["comment"] = metadata.Study.Comment;
+
+            sourceData["QRBridge"] = qrBridgeData;
+
+            // Prepare EXIF data
+            sourceData["EXIF"] = new Dictionary<string, string>(metadata.ExifData);
+
+            // Add technical data to EXIF if not already present
+            if (metadata.TechnicalData.Manufacturer != null)
+                sourceData["EXIF"]["Make"] = metadata.TechnicalData.Manufacturer;
+            if (metadata.TechnicalData.Model != null)
+                sourceData["EXIF"]["Model"] = metadata.TechnicalData.Model;
+            if (metadata.TechnicalData.Software != null)
+                sourceData["EXIF"]["Software"] = metadata.TechnicalData.Software;
+
+            return sourceData;
+        }
+
+        private void AddBasicTechnicalTags(DicomDataset dataset, ImageMetadata metadata, int width, int height)
+        {
+            // File Meta Information
+            dataset.Add(DicomTag.SpecificCharacterSet, "ISO_IR 100"); // Latin-1 for Umlauts
+
+            // Essential Study/Series UIDs (generate if not mapped)
+            dataset.Add(DicomTag.StudyInstanceUID, DicomUID.Generate());
+            dataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate());
+
+            // Dates and times (will be overwritten if mapped)
+            dataset.Add(DicomTag.StudyDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.StudyTime, metadata.Study.StudyDate.ToString("HHmmss"));
+            dataset.Add(DicomTag.SeriesDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.SeriesTime, metadata.Study.StudyDate.ToString("HHmmss"));
+
+            // Series Module defaults
+            dataset.Add(DicomTag.Modality, metadata.Study.Modality);
+            dataset.Add(DicomTag.SeriesNumber, "1");
+            dataset.Add(DicomTag.SeriesDescription, "VL Photographic Image");
+
+            // General Equipment Module defaults
+            dataset.Add(DicomTag.StationName, Environment.MachineName);
+            dataset.Add(DicomTag.ConversionType, "DI"); // Digital Interface
+
+            // General Image Module
+            dataset.Add(DicomTag.InstanceNumber, metadata.InstanceNumber.ToString());
+            dataset.Add(DicomTag.ContentDate, metadata.CaptureDateTime.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.ContentTime, metadata.CaptureDateTime.ToString("HHmmss.ffffff"));
+            dataset.Add(DicomTag.ImageType, "DERIVED", "PRIMARY");
+
+            // Image Pixel Module (technical requirements)
+            dataset.Add(DicomTag.SamplesPerPixel, (ushort)3); // Color image
+            dataset.Add(DicomTag.PhotometricInterpretation, "YBR_FULL_422"); // Required for JPEG
+            dataset.Add(DicomTag.Rows, (ushort)height);
+            dataset.Add(DicomTag.Columns, (ushort)width);
+            dataset.Add(DicomTag.BitsAllocated, (ushort)8);
+            dataset.Add(DicomTag.BitsStored, (ushort)8);
+            dataset.Add(DicomTag.HighBit, (ushort)7);
+            dataset.Add(DicomTag.PixelRepresentation, (ushort)0); // Unsigned
+            dataset.Add(DicomTag.PlanarConfiguration, (ushort)0); // Color-by-pixel
+
+            // SOP Common Module
+            dataset.Add(DicomTag.SOPClassUID, PHOTOGRAPHIC_SOP_CLASS_UID);
+            dataset.Add(DicomTag.SOPInstanceUID, metadata.InstanceUid);
+        }
+
+        private void EnsureEssentialTags(DicomDataset dataset, ImageMetadata metadata)
+        {
+            // Ensure critical patient identifiers exist
+            if (!dataset.Contains(DicomTag.PatientName))
+            {
+                dataset.Add(DicomTag.PatientName, metadata.Patient.Name);
+                _logger.LogWarning("Patient Name was not mapped, using fallback");
+            }
+
+            if (!dataset.Contains(DicomTag.PatientID))
+            {
+                dataset.Add(DicomTag.PatientID, metadata.Patient.Id.Value);
+                _logger.LogWarning("Patient ID was not mapped, using fallback");
+            }
+
+            // Ensure Study ID exists
+            if (!dataset.Contains(DicomTag.StudyID))
+            {
+                dataset.Add(DicomTag.StudyID, metadata.Study.Id.Value);
+            }
+        }
+
+        // Legacy method for backward compatibility
+        private DicomDataset CreateDicomDatasetLegacy(ImageMetadata metadata, int width, int height)
         {
             var dataset = new DicomDataset();
 
@@ -265,6 +433,7 @@ namespace CamBridge.Infrastructure.Services
             return file;
         }
 
+        [SupportedOSPlatform("windows")]
         private async Task<(int width, int height)> GetImageDimensionsAsync(string jpegPath, ImageMetadata metadata)
         {
             // First try to get from metadata
