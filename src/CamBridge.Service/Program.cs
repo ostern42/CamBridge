@@ -29,7 +29,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("Starting CamBridge Service v0.3.0");
+    Log.Information("Starting CamBridge Service v0.3.1");
 
     var host = Host.CreateDefaultBuilder(args)
         .UseWindowsService(options =>
@@ -54,7 +54,7 @@ try
 
             // Register processing services
             services.AddSingleton<ProcessingQueue>();
-            services.AddScoped<IFileProcessor, FileProcessor>();
+            // IFileProcessor is already registered by AddCamBridgeInfrastructure as Scoped
 
             // Register hosted services
             services.AddSingleton<FolderWatcherService>();
@@ -99,7 +99,7 @@ void ValidateConfiguration(CamBridgeSettings settings)
         Log.Warning("No watch folders configured or enabled");
     }
 
-    foreach (var folder in settings.WatchFolders.Where(f => f.Enabled))
+    foreach (var folder in settings.WatchFolders?.Where(f => f.Enabled) ?? Enumerable.Empty<FolderConfiguration>())
     {
         if (!Directory.Exists(folder.Path))
         {

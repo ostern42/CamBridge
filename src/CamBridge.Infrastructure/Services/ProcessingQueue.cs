@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CamBridge.Core;
 using CamBridge.Core.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -17,7 +18,7 @@ namespace CamBridge.Infrastructure.Services
     public class ProcessingQueue
     {
         private readonly ILogger<ProcessingQueue> _logger;
-        private readonly IFileProcessor _fileProcessor;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly ProcessingOptions _options;
         private readonly ConcurrentQueue<ProcessingItem> _queue = new();
         private readonly ConcurrentDictionary<string, ProcessingItem> _activeItems = new();
@@ -38,11 +39,11 @@ namespace CamBridge.Infrastructure.Services
 
         public ProcessingQueue(
             ILogger<ProcessingQueue> logger,
-            IFileProcessor fileProcessor,
+            IServiceScopeFactory scopeFactory,
             IOptions<ProcessingOptions> options)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _fileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
+            _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
 
             _processingSlots = new SemaphoreSlim(
@@ -71,11 +72,15 @@ namespace CamBridge.Infrastructure.Services
                 return false;
             }
 
-            // Check if file should be processed
-            if (!_fileProcessor.ShouldProcessFile(filePath))
+            // Check if file should be processed using a new scope
+            using (var scope = _scopeFactory.CreateScope())
             {
-                _logger.LogDebug("File {FilePath} does not meet processing criteria", filePath);
-                return false;
+                var fileProcessor = scope.ServiceProvider.GetRequiredService<IFileProcessor>();
+                if (!fileProcessor.ShouldProcessFile(filePath))
+                {
+                    _logger.LogDebug("File {FilePath} does not meet processing criteria", filePath);
+                    return false;
+                }
             }
 
             var item = new ProcessingItem(filePath);
@@ -175,8 +180,13 @@ namespace CamBridge.Infrastructure.Services
                 _logger.LogInformation("Starting processing of {FilePath} (attempt {Attempt})",
                     item.FilePath, item.AttemptCount);
 
-                // Process the file
-                var result = await _fileProcessor.ProcessFileAsync(item.FilePath);
+                // Process the file with a new scope
+                ProcessingResult result;
+                using (var scope = _scopeFactory.CreateScope())
+                {
+                    var fileProcessor = scope.ServiceProvider.GetRequiredService<IFileProcessor>();
+                    result = await fileProcessor.ProcessFileAsync(item.FilePath);
+                }
 
                 // Update statistics
                 lock (_statsLock)

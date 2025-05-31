@@ -1,6 +1,7 @@
 using CamBridge.Core.Interfaces;
 using CamBridge.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
+using System.Runtime.Versioning;
 
 namespace CamBridge.Infrastructure
 {
@@ -12,6 +13,7 @@ namespace CamBridge.Infrastructure
         /// <summary>
         /// Adds CamBridge infrastructure services to the dependency injection container
         /// </summary>
+        [SupportedOSPlatform("windows")]
         public static IServiceCollection AddCamBridgeInfrastructure(this IServiceCollection services)
         {
             // Register EXIF reader services
@@ -40,6 +42,7 @@ namespace CamBridge.Infrastructure
         /// <summary>
         /// Adds CamBridge infrastructure services with specific implementations
         /// </summary>
+        [SupportedOSPlatform("windows")]
         public static IServiceCollection AddCamBridgeInfrastructure(this IServiceCollection services,
             bool useRicohExifReader)
         {
@@ -73,6 +76,7 @@ namespace CamBridge.Infrastructure
         /// <summary>
         /// Adds CamBridge infrastructure with custom mapping configuration from file
         /// </summary>
+        [SupportedOSPlatform("windows")]
         public static IServiceCollection AddCamBridgeInfrastructure(this IServiceCollection services,
             string mappingConfigurationPath,
             bool useRicohExifReader = false)

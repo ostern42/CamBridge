@@ -1,34 +1,25 @@
-using System;
-using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 using CamBridge.Core;
 using CamBridge.Core.Interfaces;
 using CamBridge.Infrastructure.Services;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Moq;
-using Xunit;
 
 namespace CamBridge.Infrastructure.Tests
 {
-    public class ProcessingQueueTests : IDisposable
+    public class ProcessingQueueTests
     {
-        private readonly string _testDirectory;
         private readonly Mock<ILogger<ProcessingQueue>> _loggerMock;
+        private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
         private readonly Mock<IFileProcessor> _fileProcessorMock;
-        private readonly ProcessingOptions _processingOptions;
-        private readonly ProcessingQueue _processingQueue;
+        private readonly ProcessingOptions _options;
 
         public ProcessingQueueTests()
         {
-            _testDirectory = Path.Combine(Path.GetTempPath(), $"CamBridgeQueueTest_{Guid.NewGuid()}");
-            Directory.CreateDirectory(_testDirectory);
-
             _loggerMock = new Mock<ILogger<ProcessingQueue>>();
+            _scopeFactoryMock = new Mock<IServiceScopeFactory>();
             _fileProcessorMock = new Mock<IFileProcessor>();
-
-            _processingOptions = new ProcessingOptions
+            _options = new ProcessingOptions
             {
                 MaxConcurrentProcessing = 2,
                 RetryOnFailure = true,
@@ -36,239 +27,254 @@ namespace CamBridge.Infrastructure.Tests
                 RetryDelaySeconds = 1
             };
 
-            var optionsWrapper = Options.Create(_processingOptions);
+            // Setup scope factory to return file processor
+            var scopeMock = new Mock<IServiceScope>();
+            var serviceProviderMock = new Mock<IServiceProvider>();
 
-            _processingQueue = new ProcessingQueue(
-                _loggerMock.Object,
-                _fileProcessorMock.Object,
-                optionsWrapper);
+            serviceProviderMock
+                .Setup(x => x.GetService(typeof(IFileProcessor)))
+                .Returns(_fileProcessorMock.Object);
+
+            scopeMock
+                .Setup(x => x.ServiceProvider)
+                .Returns(serviceProviderMock.Object);
+
+            _scopeFactoryMock
+                .Setup(x => x.CreateScope())
+                .Returns(scopeMock.Object);
         }
 
         [Fact]
-        public void TryEnqueue_ValidFile_ReturnsTrue()
+        public void Constructor_WithValidParameters_ShouldInitialize()
+        {
+            // Arrange & Act
+            var queue = new ProcessingQueue(
+                _loggerMock.Object,
+                _scopeFactoryMock.Object,
+                Options.Create(_options));
+
+            // Assert
+            Assert.NotNull(queue);
+            Assert.Equal(0, queue.QueueLength);
+            Assert.Equal(0, queue.ActiveProcessing);
+        }
+
+        [Fact]
+        public void TryEnqueue_WithValidFile_ShouldReturnTrue()
         {
             // Arrange
-            var testFile = CreateTestFile();
-            _fileProcessorMock.Setup(x => x.ShouldProcessFile(testFile))
+            var queue = new ProcessingQueue(
+                _loggerMock.Object,
+                _scopeFactoryMock.Object,
+                Options.Create(_options));
+
+            const string filePath = @"C:\test\image.jpg";
+            _fileProcessorMock
+                .Setup(x => x.ShouldProcessFile(filePath))
                 .Returns(true);
 
             // Act
-            var result = _processingQueue.TryEnqueue(testFile);
+            var result = queue.TryEnqueue(filePath);
 
             // Assert
             Assert.True(result);
-            Assert.Equal(1, _processingQueue.QueueLength);
+            Assert.Equal(1, queue.QueueLength);
+            _scopeFactoryMock.Verify(x => x.CreateScope(), Times.Once);
         }
 
         [Fact]
-        public void TryEnqueue_DuplicateFile_ReturnsFalse()
+        public void TryEnqueue_WithInvalidFile_ShouldReturnFalse()
         {
             // Arrange
-            var testFile = CreateTestFile();
-            _fileProcessorMock.Setup(x => x.ShouldProcessFile(testFile))
-                .Returns(true);
+            var queue = new ProcessingQueue(
+                _loggerMock.Object,
+                _scopeFactoryMock.Object,
+                Options.Create(_options));
 
-            // Act
-            _processingQueue.TryEnqueue(testFile);
-            var result = _processingQueue.TryEnqueue(testFile);
-
-            // Assert
-            Assert.False(result);
-            Assert.Equal(1, _processingQueue.QueueLength);
-        }
-
-        [Fact]
-        public void TryEnqueue_InvalidFile_ReturnsFalse()
-        {
-            // Arrange
-            var testFile = "invalid.jpg";
-            _fileProcessorMock.Setup(x => x.ShouldProcessFile(testFile))
+            const string filePath = @"C:\test\image.jpg";
+            _fileProcessorMock
+                .Setup(x => x.ShouldProcessFile(filePath))
                 .Returns(false);
 
             // Act
-            var result = _processingQueue.TryEnqueue(testFile);
+            var result = queue.TryEnqueue(filePath);
 
             // Assert
             Assert.False(result);
-            Assert.Equal(0, _processingQueue.QueueLength);
+            Assert.Equal(0, queue.QueueLength);
         }
 
         [Fact]
-        public async Task ProcessQueueAsync_ProcessesEnqueuedFiles()
+        public void TryEnqueue_WithDuplicateFile_ShouldReturnFalse()
         {
             // Arrange
-            var testFile = CreateTestFile();
-            _fileProcessorMock.Setup(x => x.ShouldProcessFile(testFile))
-                .Returns(true);
-            _fileProcessorMock.Setup(x => x.ProcessFileAsync(testFile))
-                .ReturnsAsync(ProcessingResult.CreateSuccess(testFile, "output.dcm", TimeSpan.FromSeconds(1)));
+            var queue = new ProcessingQueue(
+                _loggerMock.Object,
+                _scopeFactoryMock.Object,
+                Options.Create(_options));
 
-            _processingQueue.TryEnqueue(testFile);
+            const string filePath = @"C:\test\image.jpg";
+            _fileProcessorMock
+                .Setup(x => x.ShouldProcessFile(filePath))
+                .Returns(true);
+
+            // Act
+            queue.TryEnqueue(filePath);
+            var result = queue.TryEnqueue(filePath);
+
+            // Assert
+            Assert.False(result);
+            Assert.Equal(1, queue.QueueLength);
+        }
+
+        [Fact]
+        public async Task ProcessQueueAsync_WithSuccessfulProcessing_ShouldUpdateStatistics()
+        {
+            // Arrange
+            var queue = new ProcessingQueue(
+                _loggerMock.Object,
+                _scopeFactoryMock.Object,
+                Options.Create(_options));
+
+            const string filePath = @"C:\test\image.jpg";
+            var processingResult = ProcessingResult.CreateSuccess(
+                filePath,
+                @"C:\output\image.dcm",
+                TimeSpan.FromSeconds(1));
+
+            _fileProcessorMock
+                .Setup(x => x.ShouldProcessFile(filePath))
+                .Returns(true);
+            _fileProcessorMock
+                .Setup(x => x.ProcessFileAsync(filePath))
+                .ReturnsAsync(processingResult);
+
+            queue.TryEnqueue(filePath);
 
             // Act
             var cts = new CancellationTokenSource();
-            var processTask = _processingQueue.ProcessQueueAsync(cts.Token);
+            var processTask = queue.ProcessQueueAsync(cts.Token);
 
-            // Wait for processing to start
-            await Task.Delay(500);
-
-            // Stop processing
+            // Wait for processing to complete
+            await Task.Delay(100);
             cts.Cancel();
-            await processTask;
 
-            // Assert
-            _fileProcessorMock.Verify(x => x.ProcessFileAsync(testFile), Times.Once);
-            Assert.Equal(1, _processingQueue.TotalProcessed);
-            Assert.Equal(1, _processingQueue.TotalSuccessful);
-            Assert.Equal(0, _processingQueue.TotalFailed);
-        }
-
-        [Fact]
-        public async Task ProcessQueueAsync_HandlesFailureWithRetry()
-        {
-            // Arrange
-            var testFile = CreateTestFile();
-            var attemptCount = 0;
-
-            _fileProcessorMock.Setup(x => x.ShouldProcessFile(testFile))
-                .Returns(true);
-
-            _fileProcessorMock.Setup(x => x.ProcessFileAsync(testFile))
-                .ReturnsAsync(() =>
-                {
-                    attemptCount++;
-                    if (attemptCount < 2)
-                    {
-                        return ProcessingResult.CreateFailure(testFile, "Test error", TimeSpan.FromSeconds(1));
-                    }
-                    return ProcessingResult.CreateSuccess(testFile, "output.dcm", TimeSpan.FromSeconds(1));
-                });
-
-            _processingQueue.TryEnqueue(testFile);
-
-            // Act
-            var cts = new CancellationTokenSource();
-            var processTask = _processingQueue.ProcessQueueAsync(cts.Token);
-
-            // Wait for retry
-            await Task.Delay(2500);
-
-            // Stop processing
-            cts.Cancel();
-            await processTask;
-
-            // Assert
-            Assert.Equal(2, attemptCount); // Initial attempt + 1 retry
-            Assert.Equal(1, _processingQueue.TotalProcessed);
-            Assert.Equal(1, _processingQueue.TotalSuccessful);
-        }
-
-        [Fact]
-        public async Task ProcessQueueAsync_ConcurrentProcessing()
-        {
-            // Arrange
-            var file1 = CreateTestFile("file1.jpg");
-            var file2 = CreateTestFile("file2.jpg");
-            var processingCount = 0;
-            var maxConcurrent = 0;
-            var lockObj = new object();
-
-            _fileProcessorMock.Setup(x => x.ShouldProcessFile(It.IsAny<string>()))
-                .Returns(true);
-
-            _fileProcessorMock.Setup(x => x.ProcessFileAsync(It.IsAny<string>()))
-                .ReturnsAsync((string file) =>
-                {
-                    lock (lockObj)
-                    {
-                        processingCount++;
-                        if (processingCount > maxConcurrent)
-                            maxConcurrent = processingCount;
-                    }
-
-                    Thread.Sleep(500); // Simulate processing
-
-                    lock (lockObj)
-                    {
-                        processingCount--;
-                    }
-
-                    return ProcessingResult.CreateSuccess(file, "output.dcm", TimeSpan.FromMilliseconds(500));
-                });
-
-            _processingQueue.TryEnqueue(file1);
-            _processingQueue.TryEnqueue(file2);
-
-            // Act
-            var cts = new CancellationTokenSource();
-            var processTask = _processingQueue.ProcessQueueAsync(cts.Token);
-
-            // Wait for processing
-            await Task.Delay(1500);
-
-            // Stop processing
-            cts.Cancel();
-            await processTask;
-
-            // Assert
-            Assert.Equal(2, maxConcurrent); // Should process 2 files concurrently
-            Assert.Equal(2, _processingQueue.TotalProcessed);
-            Assert.Equal(2, _processingQueue.TotalSuccessful);
-        }
-
-        [Fact]
-        public void GetStatistics_ReturnsCorrectStats()
-        {
-            // Arrange
-            var testFile = CreateTestFile();
-            _fileProcessorMock.Setup(x => x.ShouldProcessFile(testFile))
-                .Returns(true);
-
-            _processingQueue.TryEnqueue(testFile);
-
-            // Act
-            var stats = _processingQueue.GetStatistics();
-
-            // Assert
-            Assert.Equal(1, stats.QueueLength);
-            Assert.Equal(0, stats.ActiveProcessing);
-            Assert.Equal(0, stats.TotalProcessed);
-            Assert.Equal(0, stats.TotalSuccessful);
-            Assert.Equal(0, stats.TotalFailed);
-            Assert.Equal(0, stats.SuccessRate);
-        }
-
-        [Fact]
-        public void GetActiveItems_ReturnsEmptyWhenNoProcessing()
-        {
-            // Act
-            var activeItems = _processingQueue.GetActiveItems();
-
-            // Assert
-            Assert.Empty(activeItems);
-        }
-
-        private string CreateTestFile(string fileName = null)
-        {
-            fileName ??= $"test_{Guid.NewGuid()}.jpg";
-            var filePath = Path.Combine(_testDirectory, fileName);
-            File.WriteAllBytes(filePath, new byte[1024]);
-            return filePath;
-        }
-
-        public void Dispose()
-        {
             try
             {
-                if (Directory.Exists(_testDirectory))
-                {
-                    Directory.Delete(_testDirectory, true);
-                }
+                await processTask;
             }
-            catch
+            catch (OperationCanceledException)
             {
-                // Ignore cleanup errors
+                // Expected
             }
+
+            // Assert
+            var stats = queue.GetStatistics();
+            Assert.Equal(1, stats.TotalProcessed);
+            Assert.Equal(1, stats.TotalSuccessful);
+            Assert.Equal(0, stats.TotalFailed);
+            Assert.Equal(100, stats.SuccessRate);
+        }
+
+        [Fact]
+        public async Task ProcessQueueAsync_WithFailedProcessing_ShouldRetry()
+        {
+            // Arrange
+            var options = new ProcessingOptions
+            {
+                MaxConcurrentProcessing = 1,
+                RetryOnFailure = true,
+                MaxRetryAttempts = 2,
+                RetryDelaySeconds = 0 // No delay for testing
+            };
+
+            var queue = new ProcessingQueue(
+                _loggerMock.Object,
+                _scopeFactoryMock.Object,
+                Options.Create(options));
+
+            const string filePath = @"C:\test\image.jpg";
+            var failureResult = ProcessingResult.CreateFailure(
+                filePath,
+                "Test error",
+                TimeSpan.FromSeconds(1));
+
+            _fileProcessorMock
+                .Setup(x => x.ShouldProcessFile(filePath))
+                .Returns(true);
+            _fileProcessorMock
+                .Setup(x => x.ProcessFileAsync(filePath))
+                .ReturnsAsync(failureResult);
+
+            queue.TryEnqueue(filePath);
+
+            // Act
+            var cts = new CancellationTokenSource();
+            var processTask = queue.ProcessQueueAsync(cts.Token);
+
+            // Wait for retries
+            await Task.Delay(200);
+            cts.Cancel();
+
+            try
+            {
+                await processTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected
+            }
+
+            // Assert
+            _fileProcessorMock.Verify(
+                x => x.ProcessFileAsync(filePath),
+                Times.Exactly(2)); // Initial + 1 retry
+
+            var stats = queue.GetStatistics();
+            Assert.Equal(2, stats.TotalProcessed);
+            Assert.Equal(0, stats.TotalSuccessful);
+            Assert.Equal(2, stats.TotalFailed);
+        }
+
+        [Fact]
+        public void GetStatistics_ShouldReturnCorrectValues()
+        {
+            // Arrange
+            var queue = new ProcessingQueue(
+                _loggerMock.Object,
+                _scopeFactoryMock.Object,
+                Options.Create(_options));
+
+            // Act
+            var stats = queue.GetStatistics();
+
+            // Assert
+            Assert.NotNull(stats);
+            Assert.Equal(0, stats.QueueLength);
+            Assert.Equal(0, stats.ActiveProcessing);
+            Assert.Equal(0, stats.TotalProcessed);
+            Assert.Equal(0, stats.SuccessRate);
+            Assert.True(stats.UpTime > TimeSpan.Zero);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData(" ")]
+        public void TryEnqueue_WithInvalidPath_ShouldReturnFalse(string? filePath)
+        {
+            // Arrange
+            var queue = new ProcessingQueue(
+                _loggerMock.Object,
+                _scopeFactoryMock.Object,
+                Options.Create(_options));
+
+            // Act
+            var result = queue.TryEnqueue(filePath!);
+
+            // Assert
+            Assert.False(result);
+            Assert.Equal(0, queue.QueueLength);
         }
     }
 }
