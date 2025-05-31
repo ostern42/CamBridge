@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using CamBridge.Infrastructure.Services;
 
 namespace CamBridge.Core
 {
@@ -18,6 +19,16 @@ namespace CamBridge.Core
         /// Default output folder for DICOM files
         /// </summary>
         public string DefaultOutputFolder { get; set; } = @"C:\CamBridge\Output";
+
+        /// <summary>
+        /// Path to mapping configuration file
+        /// </summary>
+        public string MappingConfigurationFile { get; set; } = "mappings.json";
+
+        /// <summary>
+        /// Whether to use Ricoh-specific EXIF reader
+        /// </summary>
+        public bool UseRicohExifReader { get; set; } = true;
 
         /// <summary>
         /// Processing options
@@ -38,6 +49,11 @@ namespace CamBridge.Core
         /// Service-specific settings
         /// </summary>
         public ServiceSettings Service { get; set; } = new();
+
+        /// <summary>
+        /// Notification settings
+        /// </summary>
+        public NotificationSettings Notifications { get; set; } = new();
     }
 
     public class FolderConfiguration

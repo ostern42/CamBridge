@@ -1,0 +1,65 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "CamBridge": {
+    "WatchFolders": [
+      {
+        "Path": "C:\\CamBridge\\Input",
+        "OutputPath": "C:\\CamBridge\\Output",
+        "Enabled": true,
+        "IncludeSubdirectories": false,
+        "FilePattern": "*.jpg;*.jpeg"
+      }
+    ],
+    "DefaultOutputFolder": "C:\\CamBridge\\Output",
+    "MappingConfigurationFile": "mappings.json",
+    "UseRicohExifReader": true,
+    "Processing": {
+      "SuccessAction": "Archive",
+      "FailureAction": "MoveToError",
+      "ArchiveFolder": "C:\\CamBridge\\Archive",
+      "ErrorFolder": "C:\\CamBridge\\Errors",
+      "CreateBackup": true,
+      "BackupFolder": "C:\\CamBridge\\Backup",
+      "MaxConcurrentProcessing": 2,
+      "RetryOnFailure": true,
+      "MaxRetryAttempts": 3,
+      "RetryDelaySeconds": 5,
+      "ProcessExistingOnStartup": true,
+      "MaxFileAge": "30.00:00:00",
+      "MinimumFileSizeBytes": 1024,
+      "MaximumFileSizeBytes": 104857600,
+      "OutputFilePattern": "{PatientID}_{StudyDate}_{InstanceNumber}.dcm",
+      "PreserveFolderStructure": false,
+      "OutputOrganization": "ByPatientAndDate"
+    },
+    "Dicom": {
+      "ImplementationClassUid": "1.2.276.0.7230010.3.0.3.6.4",
+      "ImplementationVersionName": "CAMBRIDGE_001",
+      "InstitutionName": "",
+      "StationName": "",
+      "ValidateAfterCreation": true
+    },
+    "Logging": {
+      "LogLevel": "Information",
+      "LogFolder": "C:\\CamBridge\\Logs",
+      "EnableFileLogging": true,
+      "EnableEventLog": true,
+      "MaxLogFileSizeMB": 10,
+      "MaxLogFiles": 10,
+      "IncludePatientDataInDebugLogs": false
+    },
+    "Service": {
+      "ServiceName": "CamBridgeService",
+      "DisplayName": "CamBridge JPEG to DICOM Converter",
+      "Description": "Monitors folders for JPEG files from Ricoh cameras and converts them to DICOM format",
+      "StartupDelaySeconds": 5,
+      "FileProcessingDelayMs": 500
+    }
+  }
+}
