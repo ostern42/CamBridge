@@ -1,5 +1,0 @@
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.csproj.AssemblyReference.cache
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.AssemblyInfoInputs.cache
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.AssemblyInfo.cs
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.csproj.CoreCompileInputs.cache

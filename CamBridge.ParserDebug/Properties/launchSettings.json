@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "CamBridge.ParserDebug": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\R0010168.JPG",
+      "workingDirectory": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\",
+      "remoteDebugEnabled": false
+    }
+  }
+}

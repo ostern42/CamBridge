@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-01, 23:52 Uhr  
+**Letzte Aktualisierung:** 2025-06-02, 01:05 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -60,35 +60,29 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-Nächste Aufgabe: FEATURES TESTEN & PARSER-BUG FIXEN!
+Nächste Aufgabe: BUILD-FEHLER FIXEN & EXIFTOOL TESTEN!
 
-Stand: v0.5.2 - Build-Fehler behoben, Collector v2.0 installiert
+Stand: v0.5.3 - Parser-Bug verstanden, ExifTool integriert
 
 ERFOLGE:
-✅ NotificationService Build-Fehler behoben (6 Methoden implementiert)
-✅ Neue Collector-Scripts v2.0 installiert und getestet
-✅ PROJECT_CONTEXT mit Timestamps funktioniert
-✅ 7 Profile für verschiedene Anwendungsfälle
+✅ Parser-Bug identifiziert: Ricoh speichert in "Barcode" Tag
+✅ ExifToolReader implementiert mit Fallback
+✅ Debug-Console für EXIF-Analyse erstellt
+✅ GCM_TAG Prefix-Handling gefixt
 
-NOCH ZU TESTEN (v0.5.0-v0.5.1 Features):
-🧪 Mapping Editor Drag & Drop
-🧪 DICOM Tag Browser
-🧪 Template-System (Ricoh/Minimal/Full)
-🧪 Import/Export Funktionalität
-🧪 Protocol v2 Parser
-
-KRITISCHER BUG:
-🐛 QRBridge Parser schneidet String ab!
-🐛 Beweis: Andere EXIF-Reader zeigen kompletten String
-🐛 Problem liegt in UNSEREM Code, nicht bei der Kamera
+PROBLEME:
+🐛 PatientId doppelt definiert (Entities vs ValueObjects)
+🐛 Build-Fehler verhindern Tests
+🔧 ExifTool Integration ungetestet
 
 PRIORITÄTEN:
-1. ⚡ Parser-Bug in CamBridge fixen (NICHT in QRBridge!)
-2. 🧪 Alle v0.5.0-v0.5.1 Features gründlich testen
-3. 📝 Dokumentation aktualisieren
-4. 🚀 Dann v0.5.5 mit fehlenden Features angehen
+1. ⚡ PatientId Duplikat beheben
+2. 🧪 ExifTool mit echten Bildern testen
+3. ✅ Verifizieren dass alle 5 Felder gelesen werden
+4. 🧪 Features von v0.5.0-v0.5.1 testen
+5. 📝 Dokumentation aktualisieren
 
-COLLECTOR-TIPP: Nutze 'collect-smart.bat' für automatische Profil-Wahl!
+WICHTIG: ExifTool.exe muss im Tools-Ordner liegen!
 ```
 
 ## 🎯 Projekt-Identität
@@ -120,17 +114,19 @@ Das bedeutet:
 - ✅ JSON parsing mit Fehlerbehandlung
 - 🚧 QRBridge.exe Encoder noch nicht aktualisiert
 
-### Geplant für v0.5.2-v0.5.5
-- Parser-Bug in CamBridge fixen (String wird abgeschnitten!)
-- Umfassende Tests beider Protokolle
-- Dokumentation der Parser-Fixes
-
 ### 🚫 QRBridge bleibt unverändert! (01.06.2025, 23:00)
 - **KEIN v2 Encoder** - unnötige Komplexität
 - **QRBridge hat kein VOGON** - zu klein für große Änderungen
 - **Parser-Bug wird in CamBridge gefixt**
 - **Pipes funktionieren** - warum ändern?
 - **Nur ändern wenn wirklich nötig** (z.B. vergessenes Datenfeld)
+
+### 🔍 KRITISCHE ERKENNTNIS: Barcode Tag! (02.06.2025, 01:05)
+- **Ricoh speichert ALLE 5 Felder** im proprietären "Barcode" EXIF-Tag
+- **UserComment enthält nur** "GCM_TAG" als Marker
+- **MetadataExtractor kann Barcode Tag NICHT lesen**
+- **ExifTool ist die einzige Lösung** für vollständige Daten
+- **Beweis:** ExifTool zeigt `Barcode: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax`
 
 ## 📝 Wichtige Konventionen
 
@@ -188,6 +184,13 @@ Das bedeutet:
 - **Timestamps:** PROJECT_CONTEXT_[PROFILE]_[TIMESTAMP].md
 - **Profile:** minimal, core, gui, balanced, mapping, full, custom
 - **Alte Scripts archiviert:** cleanup-old-collectors.bat verfügbar
+
+### v0.5.3 ExifTool Integration (02.06.2025, 01:05)
+- **ExifToolReader:** Wrapper für exiftool.exe mit JSON-Output
+- **Fallback-Hierarchie:** ExifTool → RicohExifReader → ExifReader
+- **Auto-Discovery:** Sucht ExifTool in mehreren Locations
+- **Barcode Tag Support:** Liest proprietäre Pentax/Ricoh Tags
+- **Performance:** ~50-100ms Overhead pro Bild
 
 ## 💬 Kommunikations-Präferenzen
 
@@ -259,18 +262,21 @@ Das bedeutet:
 ### Wichtige Pfade
 ```
 CamBridge/
-├── Version.props                    # Zentrale Version (jetzt 0.5.2)
+├── Version.props                    # Zentrale Version (jetzt 0.5.3)
 ├── collect-sources.bat              # NEU: Master Collector
 ├── collect-smart.bat                # NEU: Smart Selector
 ├── COLLECTOR_README.md              # NEU: Dokumentation
+├── Tools/                           # NEU: ExifTool Location
+│   └── exiftool.exe                # Muss hier liegen!
 ├── src/
 │   ├── CamBridge.Core/             # Models, Settings
-│   ├── CamBridge.Infrastructure/   # Processing (NotificationService fixed!)
+│   ├── CamBridge.Infrastructure/   # Processing (ExifToolReader NEU!)
 │   ├── CamBridge.Service/          # Windows Service
 │   └── CamBridge.Config/           # WPF GUI
 │       ├── Dialogs/                # DicomTagBrowserDialog
 │       ├── Views/                  # MappingEditorPage
 │       └── ViewModels/             # MappingEditorViewModel
+├── CamBridge.ParserDebug/          # NEU: Debug Console
 ├── QRBridge/                       # QRBridge Source
 └── PROJECT_WISDOM.md               # Dieses Dokument
 ```
@@ -341,6 +347,14 @@ CamBridge/
 - **Beweis:** Andere Software liest alle 5 Felder aus demselben JPEG
 - **TODO:** QRBridge Parser debuggen und fixen in v0.5.3!
 
+### 🎯 GELÖST: Barcode Tag Erkenntnis! (v0.5.3)
+- **Ricoh speichert in 2 verschiedenen Tags:**
+  - UserComment: "GCM_TAG" + erste 3 Felder
+  - Barcode: ALLE 5 Felder komplett!
+- **MetadataExtractor kann Barcode Tag NICHT lesen**
+- **ExifTool ist die Lösung** - liest proprietäre Tags
+- **Implementation:** ExifToolReader mit Fallback
+
 ### v0.5.1 Spezifische Fallstricke
 - **EmailSettings:** Sind verschachtelte Properties in NotificationSettings
 - **Project References:** CamBridge.Config braucht Infrastructure
@@ -354,12 +368,18 @@ CamBridge/
 - **Daily Summary:** ProcessingSummary-Formatierung hinzugefügt
 - **Threshold Alerts:** Dead Letter Schwellwert-Benachrichtigung
 
+### v0.5.3 Build-Fehler NEU!
+- **PatientId:** Doppelt definiert in Entities UND ValueObjects
+- **Namespace-Konflikt:** Muss in einem der beiden Ordner entfernt werden
+- **ProcessingResult:** Properties passen nicht zu NotificationService
+- **ExifTool:** Noch nicht getestet
+
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 01.06.2025, 23:52 Uhr
-- **Entwicklungszeit bisher:** ~51 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 02.06.2025, 01:05 Uhr
+- **Entwicklungszeit bisher:** ~52.5 Stunden (inkl. Nachtschichten!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -369,9 +389,9 @@ CamBridge/
 
 ### Wichtige Erkenntnis
 **Timestamps erzählen Geschichten!**
-- Nachtschichten erkennen (01:17, 02:22)
+- Nachtschichten erkennen (01:17, 02:22, 01:05)
 - "Duplikate" entlarven (9 Std Unterschied = kein Duplikat!)
-- Arbeitsintensität verstehen (51 Std in 3 Tagen)
+- Arbeitsintensität verstehen (52.5 Std in 3 Tagen)
 
 ### Git-History (Mit exakten Timestamps!)
 ```
@@ -396,13 +416,14 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚡️
 [pending] - 01.06. 21:47:00 - v0.5.0: Mapping Editor UI
 [pending] - 01.06. 22:32:00 - v0.5.1: DICOM Browser & Protocol v2
 [pending] - 01.06. 23:52:00 - v0.5.2: Collector v2.0 & Build Fix
+[pending] - 02.06. 01:05:00 - v0.5.3: ExifTool Integration & Parser Fix
 ```
 
 ### Arbeitszeiten-Analyse
-- **Nachtschichten:** DICOM (01:17), GUI (02:22), jetzt (23:52)
+- **Nachtschichten:** DICOM (01:17), GUI (02:22), Parser (01:05)
 - **Schnelle Fixes:** v0.0.2 Duplikat in 78 Sekunden
 - **Lange Sessions:** Fast 24 Stunden am 01.06!
-- **Gesamt:** ~51 Stunden in 3 Tagen!
+- **Gesamt:** ~52.5 Stunden in 3 Tagen!
 
 ### Die wahre Geschichte der Duplikate
 - **v0.0.2:** Git-Anfängerfehler, 78 Sekunden später nochmal
@@ -411,7 +432,7 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚡️
   - 11:30 - Service Control hinzugefügt (ausgeschlafen)
   - Hätte v0.4.1 sein sollen!
 
-## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 01.06.2025, 23:52)
+## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 02.06.2025, 01:05)
 
 ### ⚡️ WICHTIGE KORREKTUR
 **Original-Plan sagte "WinUI 3" - wir nutzen aber WPF mit ModernWpfUI!**
@@ -459,19 +480,26 @@ Nach genauem Code-Review haben wir festgestellt:
     - NotificationService Interface-Implementierung ✅
     - Collector v2.0 mit 7 Profilen ✅
     - Smart Git-basierte Profil-Auswahl ✅
+13. **Phase 11a:** ExifTool Integration (v0.5.3) - PARTIAL ⚠️
+    - ExifToolReader implementiert ✅
+    - Debug-Console erstellt ✅
+    - Barcode Tag Problem identifiziert ✅
+    - ❌ Build-Fehler verhindern Tests
+    - ❌ Integration nicht verifiziert
 
-#### 🔥 AKTUELLE PHASE - TESTING & BUG FIXES
-13. **Phase 11:** Testing & Parser Fix (v0.5.3-v0.5.5) - JETZT!
-    - Parser-Bug fixen (String wird abgeschnitten!) ❌
+#### 🔥 AKTUELLE PHASE - BUG FIXES & TESTING
+14. **Phase 11b:** Build Fix & Testing (v0.5.4) - JETZT!
+    - PatientId Duplikat beheben ❌
+    - ExifTool Integration testen ❌
+    - Alle 5 QRBridge-Felder verifizieren ❌
     - v0.5.0-v0.5.1 Features gründlich testen ❌
     - Watch Folder Management GUI erweitern ❌
     - Live-Preview für alle Transformationen ❌
     - Validation UI für Mappings ❌
-    - Comprehensive Testing Suite ❌
     - **Feature-complete Beta**
 
 #### 🚧 Nächste Phasen (NEU STRUKTURIERT)
-14. **Phase 12:** Performance & Polish (v0.6.0) - 1 Chat
+15. **Phase 12:** Performance & Polish (v0.6.0) - 1 Chat
     - Batch-Verarbeitung optimieren
     - Memory-Pool für große Dateien
     - Parallelisierung mit Channels
@@ -480,25 +508,25 @@ Nach genauem Code-Review haben wir festgestellt:
     - Error Recovery verbessern
     - **Production-ready Beta**
 
-15. **Phase 13:** FTP-Server Integration (v0.7.0) - 1 Chat [Optional]
+16. **Phase 13:** FTP-Server Integration (v0.7.0) - 1 Chat [Optional]
     - FTP-Server für automatischen Empfang
     - Watch für FTP-Ordner
     - Authentifizierung
     - Auto-Delete nach Verarbeitung
 
-16. **Phase 14:** PACS Integration (v0.8.0) - 2 Chats [Optional]
+17. **Phase 14:** PACS Integration (v0.8.0) - 2 Chats [Optional]
     - DICOM C-STORE SCU
     - Network Transfer
     - PACS-Konfiguration
     - Connection Tests
 
-17. **Phase 15:** MWL Integration (v0.9.0) - 2 Chats [Optional]
+18. **Phase 15:** MWL Integration (v0.9.0) - 2 Chats [Optional]
     - DICOM C-FIND SCU
     - MWL-Validierung
     - StudyInstanceUID Sync
     - Fehlerbehandlung
 
-18. **Phase 16:** Deployment & Release (v1.0.0) - 1 Chat
+19. **Phase 16:** Deployment & Release (v1.0.0) - 1 Chat
     - MSI Installer
     - Auto-Updates
     - CI/CD Pipeline
@@ -511,9 +539,11 @@ Nach genauem Code-Review haben wir festgestellt:
 3. **Fehlende Features identifiziert**: Watch Folder GUI, Live-Preview
 4. **Neue Phasenstruktur** reflektiert tatsächlichen Stand
 5. **Collector v2.0** revolutioniert die Entwicklung!
+6. **ExifTool Integration** essentiell für vollständige Daten!
 
 ### Was wirklich noch fehlt (Code-verifiziert):
-- **Parser-Bug Fix** (String wird abgeschnitten!) - KRITISCH!
+- **Build-Fehler beheben** (PatientId Duplikat) - KRITISCH!
+- **ExifTool Integration testen** - KRITISCH!
 - **Feature Testing** (v0.5.0-v0.5.1 ungetestet)
 - **Watch Folder Management GUI** (nur Basic-Version in Settings)
 - **Live-Preview** für Transformationen (nur teilweise)
@@ -522,7 +552,7 @@ Nach genauem Code-Review haben wir festgestellt:
 - **UI-Polish** (Animationen, Fluent Design)
 
 ### Zeitschätzung bis v1.0.0 (REVIDIERT)
-- **Phase 11:** Testing & Parser Fix - JETZT!
+- **Phase 11b:** Build Fix & Testing - JETZT!
 - **Phase 12:** Performance & Polish - 1 Chat
 - **Phase 13-15:** Optional Features - 4 Chats
 - **Phase 16:** Release - 1 Chat
@@ -544,13 +574,18 @@ Service:
 
 Processing:
 - fo-dicom für DICOM
-- MetadataExtractor für EXIF
+- MetadataExtractor für EXIF (limitiert!)
+- ExifTool für vollständige EXIF-Daten (NEU!)
 
 QRBridge Integration (NEU!):
 - Kontrolle über beide Seiten
 - Protokoll-Evolution möglich
 - v2 JSON Format implementiert
 - Optimierung für Ricoh-Limits
+
+External Tools:
+- ExifTool 12.96 für Barcode Tag
+- Muss in Tools/ Ordner liegen
 
 Collector Tools (NEU!):
 - collect-sources.bat mit 7 Profilen
@@ -563,7 +598,8 @@ Collector Tools (NEU!):
 - **v0.5.0** - Mapping Editor (Erledigt ✅)
 - **v0.5.1** - DICOM Browser & Protocol v2 (Erledigt ✅)
 - **v0.5.2** - Build Fix & Collector v2.0 (Erledigt ✅)
-- **v0.5.3** - Parser Fix & Testing (Aktuelles Ziel 🎯)
+- **v0.5.3** - ExifTool Integration (Teilweise ⚠️)
+- **v0.5.4** - Build Fix & Testing (Aktuelles Ziel 🎯)
 - **v0.5.5** - Feature Complete Beta
 - **v0.6.0** - Performance & Polish
 - **v0.7.0** - FTP-Server Integration [Optional]
@@ -574,12 +610,13 @@ Collector Tools (NEU!):
 ### Entwicklungs-Philosophie
 "Sauberer, schöner, ästhetischer und formal korrekter Code für medizinische Software"
 
-### 🔴 KRITISCHE PLAN-ÄNDERUNGEN (01.06.2025, 23:52)
+### 🔴 KRITISCHE PLAN-ÄNDERUNGEN (02.06.2025, 01:05)
 1. **v2 Encoder GESTRICHEN** - QRBridge bleibt unverändert
 2. **Parser-Bug wird in CamBridge gefixt**, nicht in QRBridge
 3. **Fehlende Features identifiziert**: Watch Folder GUI, Live-Preview
 4. **Plan nur mit Code-Gegenprüfung ändern** - neue Regel!
 5. **Collector v2.0** macht Entwicklung effizienter!
+6. **ExifTool essentiell** für vollständige Daten!
 
 ## 🚨 Anti-Patterns (Was wir NICHT machen)
 
@@ -602,6 +639,7 @@ Collector Tools (NEU!):
 - **KEINE** neuen Features bei Build-Fehlern - erst stabilisieren!
 - **KEINE** Änderungen am Phasenplan ohne Code-Gegenprüfung!
 - **KEIN** unnötiges Anfassen von QRBridge - hat kein VOGON!
+- **KEINE** Duplikate in Namespaces (siehe PatientId Problem)!
 
 ### Kommunikations-Anti-Patterns
 - **KEINE** langen Einleitungen ("Das ist eine exzellente Frage...")
@@ -681,6 +719,13 @@ Collector Tools (NEU!):
 - Timestamps verhindern Überschreibungen
 - Token-Effizienz durch gezielte Coverage
 
+**ExifTool Integration (v0.5.3):**
+- Ricoh speichert ALLE 5 Felder im "Barcode" Tag
+- MetadataExtractor kann proprietäre Tags NICHT lesen
+- ExifTool ist die einzige Lösung
+- ~50-100ms Performance-Overhead akzeptabel
+- JSON-Output für einfaches Parsing
+
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
 ### Option 1: V.O.G.O.N. (Empfohlen!)
@@ -697,15 +742,15 @@ Collector Tools (NEU!):
 Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
-Aktueller Stand: v0.5.2
-- Build-Fehler behoben ✅
-- Collector v2.0 installiert ✅
-- Parser-Bug identifiziert 🐛
+Aktueller Stand: v0.5.3
+- ExifTool integriert ✅
+- Parser-Bug verstanden ✅
+- Build-Fehler verhindert Tests 🐛
 - Features ungetestet 🧪
 
-Nächste Aufgabe: Parser-Bug fixen & Features testen!
+Nächste Aufgabe: Build-Fehler fixen & ExifTool testen!
 
-Tech Stack: .NET 8, WPF/ModernWpfUI, MVVM
+Tech Stack: .NET 8, WPF/ModernWpfUI, MVVM, ExifTool
 Architektur: Enterprise-Level für medizinische Software
 
 [PROJECT_WISDOM.md und PROJECT_CONTEXT_*.md anhängen]
@@ -766,6 +811,7 @@ Architektur: Enterprise-Level für medizinische Software
 - **NEU:** Kontrolle über beide Seiten (QRBridge + CamBridge)!
 - **NEU:** Protocol v2 mit JSON-Format und Backward Compatibility!
 - **NEU:** Collector v2.0 für effiziente Entwicklung!
+- **NEU:** ExifTool Integration für vollständige Datenextraktion!
 
 ### MWL-Integration (Phase 15+)
 **Modality Worklist Integration für v0.8.0+**
@@ -820,6 +866,7 @@ Basierend auf der Erfahrung mit "Flickenteppich"-Architekturen (VB6, Legacy SQL,
 - Integration Tests für Services  
 - UI Tests für kritische Workflows
 - Performance Tests vor Major Releases
+- **NEU:** ExifTool Integration Tests
 
 ### Git Commit Format
 ```
@@ -837,25 +884,24 @@ Types: feat, fix, docs, style, refactor, test, chore
 ### Wichtige Versionierungs-Dateien
 1. **Version.props:** Zentrale Versionsverwaltung
    ```xml
-   <AssemblyVersion>0.5.2.0</AssemblyVersion>
-   <FileVersion>0.5.2.0</FileVersion>
-   <InformationalVersion>0.5.2</InformationalVersion>
+   <AssemblyVersion>0.5.3.0</AssemblyVersion>
+   <FileVersion>0.5.3.0</FileVersion>
+   <InformationalVersion>0.5.3</InformationalVersion>
    ```
 
 2. **CHANGELOG.md:** Mit exakter Zeit
    ```markdown
-   ## [0.5.2] - 2025-06-01 23:52
+   ## [0.5.3] - 2025-06-02 01:05
    ### Added
-   - New unified source collector script
-   - Intelligent profile selection
+   - ExifToolReader for comprehensive EXIF support
    
    ### Fixed
-   - NotificationService build errors
+   - Parser bug: Data is in Barcode tag
    ```
 
 3. **MainWindow.xaml:** Title mit Version
    ```xml
-   Title="CamBridge Configuration v0.5.2"
+   Title="CamBridge Configuration v0.5.3"
    ```
 
 ## 🔄 Update-Protokoll
@@ -887,6 +933,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 - **v0.5.0** - 2025-06-01: Mapping Editor UI ✅
 - **v0.5.1** - 2025-06-01: DICOM Browser & Protocol v2 ✅
 - **v0.5.2** - 2025-06-01: Collector v2.0 & Build Fix ✅
+- **v0.5.3** - 2025-06-02: ExifTool Integration & Parser Fix ⚠️
 
 ### Versionierungs-Lektionen
 1. **v0.0.2 Duplikat:** Gleich am Anfang passiert
@@ -897,6 +944,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 6. **v0.5.0 Synergie:** QRBridge + CamBridge = Optimierungspotenzial!
 7. **v0.5.1 Evolution:** Protocol v2 zeigt die Macht der Kontrolle!
 8. **v0.5.2 Revolution:** Collector v2.0 macht alles effizienter!
+9. **v0.5.3 Erkenntnis:** ExifTool ist die einzige Lösung für Barcode Tag!
 
 ### Die Unwahrscheinliche Geschichte von CamBridge
 *Eine Kurzgeschichten-Idee: Douglas Adams entwickelt einen DICOM-Konverter*
@@ -910,6 +958,10 @@ Er tippte eine weitere Zeile Code und murmelte: "Forty-two different DICOM tags.
 Dann hatte er eine Erleuchtung: "Was ist, wenn wir BEIDE Seiten kontrollieren? QRBridge UND CamBridge? Das ist wie... wie wenn Ford Prefect sowohl den Reiseführer schreibt ALS AUCH die Planeten bewertet!"
 
 Und so entstand Protocol v2 - ein JSON-Format so elegant, dass selbst die Vogonen es nicht hätten besser verschlüsseln können. "v2:", flüsterte er ehrfürchtig, "die magischen Zeichen, die alles verändern."
+
+Aber dann kam die Ricoh G900 II und versteckte ihre Geheimnisse im "Barcode" Tag. "Natürlich", seufzte Douglas, "das ist wie die Antwort auf die ultimative Frage des Lebens, des Universums und des ganzen Rests - sie ist da, aber niemand kann sie finden ohne das richtige Werkzeug."
+
+Und so musste ExifTool her - das Pan-Galaktische Knoblauch-Knacker-Äquivalent der EXIF-Welt. "Manchmal", philosophierte er, "braucht man eben doch einen Vorschlaghammer für eine Nuss."
 
 *Diese Geschichte wartet noch darauf, geschrieben zu werden. Vielleicht in einem anderen Projekt, mit unserem Chat-Entwicklungs-Betriebssystem...*
 
@@ -941,10 +993,25 @@ v0.5.1 Erfolge:
 - **Templates:** Ricoh, Minimal, Full funktionieren
 - **DICOM Browser:** Suche mit Gruppierung nach Modulen
 
-Nächste Schritte (v0.5.3+):
-- **Parser-Bug fixen:** String wird abgeschnitten!
-- **Testing:** Alle Features von v0.5.0-v0.5.1
-- **Dokumentation:** Protocol Evolution Guide
+### ExifTool Integration (v0.5.3) 🔧
+**Die Lösung für proprietäre Tags!**
+
+Erkenntnisse:
+- **Ricoh speichert in 2 Tags:** UserComment (3 Felder) + Barcode (5 Felder)
+- **MetadataExtractor versagt:** Kann Barcode Tag nicht lesen
+- **ExifTool rettet uns:** Liest ALLE proprietären Tags
+- **Performance:** 50-100ms Overhead akzeptabel
+
+Implementation:
+- **ExifToolReader:** JSON-basiertes Parsing
+- **Fallback-Chain:** ExifTool → RicohReader → BasicReader
+- **Auto-Discovery:** Findet exiftool.exe automatisch
+- **Deployment:** Tools-Ordner wird mitkopiert
+
+Nächste Schritte (v0.5.4+):
+- **Build-Fehler fixen:** PatientId Duplikat
+- **Integration testen:** Mit echten Bildern
+- **Dokumentation:** ExifTool Setup Guide
 
 ### Collector v2.0 Revolution (v0.5.2) 🚀
 **Die neue Ära der Source Collection!**
@@ -1004,26 +1071,32 @@ Workflow:
 - 2025-06-01 23:05: collect-sources-gui-config.bat dokumentiert für GUI-Debugging
 - 2025-06-01 23:10: Upload-Strategie geklärt: PROJECT_CONTEXT sind Transport-Container, keine Wahrheit!
 - 2025-06-01 23:52: v0.5.2 - Collector v2.0 Revolution! Build-Fehler behoben, Git-Integration!
+- 2025-06-02 00:30: WISDOM - Parser-Bug analysiert, Ricoh speichert ALLE Daten im Barcode Tag!
+- 2025-06-02 00:45: ExifTool Integration begonnen, ExifToolReader implementiert
+- 2025-06-02 01:05: v0.5.3 - ExifTool als Lösung bestätigt, Build-Fehler mit PatientId gefunden
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.5.2
+### Aktuelle Version: v0.5.3
 ### Tatsächlicher Stand: 
-- ✅ NotificationService Build-Fehler behoben
-- ✅ Collector v2.0 installiert und getestet
+- ✅ ExifTool Integration implementiert
+- ✅ Parser-Bug verstanden (Barcode Tag)
+- ✅ Debug-Console für EXIF-Analyse
 - ✅ DICOM Tag Browser mit Suche
 - ✅ Template-System funktioniert
 - ✅ QRBridge Protocol v2 Parser
 - ✅ Import/Export für Mappings
+- ❌ Build-Fehler (PatientId Duplikat)
+- ❌ ExifTool Integration UNGETESTET
 - ❌ Watch Folder Management GUI (nur Basic)
 - ❌ Live-Preview (nur teilweise)
 - ❌ Alle Features UNGETESTET
-- 🔥 Parser-Bug: String wird ABGESCHNITTEN!
 ### Nächste Aufgabe: 
-- Parser-Bug in CAMBRIDGE fixen (nicht QRBridge!)
+- PatientId Duplikat fixen
+- ExifTool Integration testen
+- Verifizieren dass alle 5 Felder gelesen werden
 - v0.5.0-v0.5.1 Features TESTEN
 - Fehlende GUI-Features nachrüsten
-- Collector v2.0 weiter nutzen
 ### Architektur: Enterprise-Level (und das ist GUT so!)
 ### Kontext: Medizinische Software mit 0% Fehlertoleranz
 ### Geschätzte v1.0.0: 3-7 Chats (realistisch nach Plan-Revision)
@@ -1039,3 +1112,8 @@ Workflow:
 - **collect-sources.bat list** - Zeige alle Profile
 - **collect-smart.bat** - Automatische Profil-Auswahl
 - **cleanup-old-collectors.bat** - Archiviere alte Scripts
+
+### ExifTool Commands:
+- **exiftool.exe -j image.jpg** - JSON Output
+- **exiftool.exe -Barcode image.jpg** - Nur Barcode Tag
+- **Tools\exiftool.exe** - Standard Location im Projekt

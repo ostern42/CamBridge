@@ -1,7 +1,7 @@
-// src/CamBridge.Infrastructure/Services/NotificationService.cs
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
@@ -22,7 +22,7 @@ namespace CamBridge.Infrastructure.Services
     {
         private readonly ILogger<NotificationService> _logger;
         private readonly NotificationSettings _settings;
-        private readonly string _eventSource = "CamBridge";
+        private readonly string _eventSource = "CamBridge Service";
         private readonly string _eventLog = "Application";
         private readonly List<ProcessingResult> _dailySummaryBuffer = new();
         private DateTime _lastSummaryDate = DateTime.MinValue;
@@ -38,6 +38,160 @@ namespace CamBridge.Infrastructure.Services
             if (_settings.EnableEventLog)
             {
                 InitializeEventLog();
+            }
+        }
+
+        /// <summary>
+        /// Send info notification
+        /// </summary>
+        public async Task NotifyInfoAsync(string subject, string message)
+        {
+            try
+            {
+                if (_settings.EnableEventLog)
+                {
+                    WriteEventLog(message, EventLogEntryType.Information);
+                }
+
+                if (ShouldSendEmail(LogLevel.Information))
+                {
+                    await SendEmailAsync(subject, message);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send info notification");
+            }
+        }
+
+        /// <summary>
+        /// Send warning notification
+        /// </summary>
+        public async Task NotifyWarningAsync(string subject, string message)
+        {
+            try
+            {
+                if (_settings.EnableEventLog)
+                {
+                    WriteEventLog(message, EventLogEntryType.Warning);
+                }
+
+                if (ShouldSendEmail(LogLevel.Warning))
+                {
+                    await SendEmailAsync(subject, message);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send warning notification");
+            }
+        }
+
+        /// <summary>
+        /// Send error notification
+        /// </summary>
+        public async Task NotifyErrorAsync(string subject, string message, Exception? exception = null)
+        {
+            try
+            {
+                if (_settings.EnableEventLog)
+                {
+                    WriteEventLog(message, EventLogEntryType.Error, exception);
+                }
+
+                if (ShouldSendEmail(LogLevel.Error))
+                {
+                    var body = BuildErrorEmailBody(message, exception);
+                    await SendEmailAsync(subject, body);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send error notification");
+            }
+        }
+
+        /// <summary>
+        /// Send critical error notification
+        /// </summary>
+        public async Task NotifyCriticalErrorAsync(string subject, string message, Exception? exception = null)
+        {
+            try
+            {
+                // Critical errors always go to event log
+                if (_settings.EnableEventLog)
+                {
+                    WriteEventLog($"CRITICAL: {message}", EventLogEntryType.Error, exception);
+                }
+
+                // Critical errors always attempt email if configured
+                if (_settings.EnableEmail && _settings.Email != null)
+                {
+                    var body = BuildErrorEmailBody($"CRITICAL ERROR: {message}", exception);
+                    await SendEmailAsync($"[CRITICAL] {subject}", body);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send critical error notification");
+            }
+        }
+
+        /// <summary>
+        /// Send notification when dead letter threshold is exceeded
+        /// </summary>
+        public async Task NotifyDeadLetterThresholdAsync(int count, DeadLetterStatistics statistics)
+        {
+            try
+            {
+                var message = $"Dead letter queue threshold exceeded. Count: {count}, Threshold: {_settings.DeadLetterThreshold}";
+
+                var details = new StringBuilder();
+                details.AppendLine(message);
+                details.AppendLine();
+                details.AppendLine("Statistics:");
+                details.AppendLine($"  Total Items: {statistics.TotalItems}");
+                details.AppendLine($"  Items Last Hour: {statistics.ItemsLastHour}");
+                details.AppendLine($"  Items Last 24 Hours: {statistics.ItemsLast24Hours}");
+                details.AppendLine($"  Oldest Item: {statistics.OldestItem:yyyy-MM-dd HH:mm:ss}");
+
+                if (statistics.TopErrors.Any())
+                {
+                    details.AppendLine();
+                    details.AppendLine("Top Errors:");
+                    foreach (var error in statistics.TopErrors.Take(5))
+                    {
+                        details.AppendLine($"  - {error.Key}: {error.Value} occurrences");
+                    }
+                }
+
+                await NotifyWarningAsync("Dead Letter Threshold Exceeded", details.ToString());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send dead letter threshold notification");
+            }
+        }
+
+        /// <summary>
+        /// Send daily summary report
+        /// </summary>
+        public async Task SendDailySummaryAsync(ProcessingSummary summary)
+        {
+            if (!_settings.SendDailySummary || _settings.Email == null)
+                return;
+
+            try
+            {
+                var subject = $"Daily Processing Summary - {summary.Date:yyyy-MM-dd}";
+                var body = BuildDailySummaryBody(summary);
+
+                await SendEmailAsync(subject, body);
+                _logger.LogInformation("Daily summary sent for {Date}", summary.Date);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send daily summary");
             }
         }
 
@@ -78,87 +232,7 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send notification for file: {FileName}", result.FileName);
-            }
-        }
-
-        /// <summary>
-        /// Send notification for critical errors
-        /// </summary>
-        public async Task NotifyErrorAsync(string message, Exception? exception = null)
-        {
-            try
-            {
-                if (_settings.EnableEventLog)
-                {
-                    WriteEventLog(message, EventLogEntryType.Error, exception);
-                }
-
-                if (ShouldSendEmail(LogLevel.Error))
-                {
-                    var subject = "Critical Error";
-                    var body = BuildErrorEmailBody(message, exception);
-                    await SendEmailAsync(subject, body);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send error notification");
-            }
-        }
-
-        /// <summary>
-        /// Send notification for warnings
-        /// </summary>
-        public async Task NotifyWarningAsync(string message)
-        {
-            try
-            {
-                if (_settings.EnableEventLog)
-                {
-                    WriteEventLog(message, EventLogEntryType.Warning);
-                }
-
-                if (ShouldSendEmail(LogLevel.Warning))
-                {
-                    await SendEmailAsync("Warning", message);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send warning notification");
-            }
-        }
-
-        /// <summary>
-        /// Send daily summary report
-        /// </summary>
-        public async Task SendDailySummaryAsync()
-        {
-            if (!_settings.SendDailySummary || _settings.Email == null)
-                return;
-
-            try
-            {
-                List<ProcessingResult> summaryData;
-                lock (_dailySummaryBuffer)
-                {
-                    if (_dailySummaryBuffer.Count == 0)
-                        return;
-
-                    summaryData = new List<ProcessingResult>(_dailySummaryBuffer);
-                    _dailySummaryBuffer.Clear();
-                }
-
-                var subject = $"Daily Processing Summary - {DateTime.Now:yyyy-MM-dd}";
-                var body = BuildDailySummaryBody(summaryData);
-
-                await SendEmailAsync(subject, body);
-                _logger.LogInformation("Daily summary sent with {Count} items", summaryData.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send daily summary");
+                _logger.LogError(ex, "Failed to send notification for file: {FilePath}", result.FilePath);
             }
         }
 
@@ -252,9 +326,10 @@ namespace CamBridge.Infrastructure.Services
 
         private async Task SendEmailNotificationAsync(ProcessingResult result)
         {
+            var fileName = Path.GetFileName(result.FilePath);
             var subject = result.Success
-                ? $"Processing Successful: {result.FileName}"
-                : $"Processing Failed: {result.FileName}";
+                ? $"Processing Successful: {fileName}"
+                : $"Processing Failed: {fileName}";
 
             var body = BuildProcessingEmailBody(result);
             await SendEmailAsync(subject, body);
@@ -269,9 +344,10 @@ namespace CamBridge.Infrastructure.Services
                 _ => EventLogEntryType.Information
             };
 
+            var fileName = Path.GetFileName(result.FilePath);
             var message = result.Success
-                ? $"Successfully processed: {result.FileName}\nOutput: {result.OutputFile}"
-                : $"Failed to process: {result.FileName}\nError: {result.ErrorMessage}";
+                ? $"Successfully processed: {fileName}\nOutput: {result.OutputFile}"
+                : $"Failed to process: {fileName}\nError: {result.ErrorMessage}";
 
             WriteEventLog(message, eventType);
         }
@@ -296,11 +372,14 @@ namespace CamBridge.Infrastructure.Services
         private string BuildProcessingEmailBody(ProcessingResult result)
         {
             var sb = new StringBuilder();
+            var fileName = Path.GetFileName(result.FilePath);
+
             sb.AppendLine($"File Processing Notification");
             sb.AppendLine($"==========================");
             sb.AppendLine();
             sb.AppendLine($"Timestamp: {result.ProcessedAt:yyyy-MM-dd HH:mm:ss}");
-            sb.AppendLine($"File: {result.FileName}");
+            sb.AppendLine($"File: {fileName}");
+            sb.AppendLine($"Path: {result.FilePath}");
             sb.AppendLine($"Status: {(result.Success ? "SUCCESS" : "FAILED")}");
 
             if (result.Success)
@@ -316,14 +395,8 @@ namespace CamBridge.Infrastructure.Services
                 sb.AppendLine($"Error: {result.ErrorMessage}");
             }
 
-            if (result.PatientInfo != null)
-            {
-                sb.AppendLine();
-                sb.AppendLine("Patient Information:");
-                sb.AppendLine($"  Name: {result.PatientInfo.PatientName}");
-                sb.AppendLine($"  ID: {result.PatientInfo.PatientId}");
-                sb.AppendLine($"  Study ID: {result.PatientInfo.StudyId}");
-            }
+            // Note: PatientInfo is not available on ProcessingResult in the current implementation
+            // This would need to be added if patient information should be included in notifications
 
             sb.AppendLine();
             sb.AppendLine("---");
@@ -335,8 +408,8 @@ namespace CamBridge.Infrastructure.Services
         private string BuildErrorEmailBody(string message, Exception? exception)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("Critical Error Notification");
-            sb.AppendLine("==========================");
+            sb.AppendLine("Error Notification");
+            sb.AppendLine("==================");
             sb.AppendLine();
             sb.AppendLine($"Timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             sb.AppendLine($"Message: {message}");
@@ -368,47 +441,36 @@ namespace CamBridge.Infrastructure.Services
             return sb.ToString();
         }
 
-        private string BuildDailySummaryBody(List<ProcessingResult> results)
+        private string BuildDailySummaryBody(ProcessingSummary summary)
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"Daily Processing Summary - {DateTime.Now:yyyy-MM-dd}");
+            sb.AppendLine($"Daily Processing Summary - {summary.Date:yyyy-MM-dd}");
             sb.AppendLine("=====================================");
             sb.AppendLine();
 
-            var successful = results.Count(r => r.Success);
-            var failed = results.Count(r => !r.Success);
+            sb.AppendLine($"Total Files Processed: {summary.TotalProcessed}");
+            sb.AppendLine($"Successful: {summary.Successful}");
+            sb.AppendLine($"Failed: {summary.Failed}");
+            sb.AppendLine($"Success Rate: {summary.SuccessRate:F1}%");
+            sb.AppendLine($"Average Processing Time: {summary.AverageProcessingTime:F2} ms");
+            sb.AppendLine($"Total Processing Time: {summary.ProcessingTimeSeconds:F1} seconds");
+            sb.AppendLine($"Service Uptime: {summary.Uptime:d\\.hh\\:mm\\:ss}");
 
-            sb.AppendLine($"Total Files Processed: {results.Count}");
-            sb.AppendLine($"Successful: {successful}");
-            sb.AppendLine($"Failed: {failed}");
-            sb.AppendLine($"Success Rate: {(results.Count > 0 ? (successful * 100.0 / results.Count) : 0):F1}%");
-
-            if (results.Any(r => r.ProcessingTime.HasValue))
-            {
-                var avgTime = results.Where(r => r.ProcessingTime.HasValue)
-                    .Average(r => r.ProcessingTime!.Value.TotalMilliseconds);
-                sb.AppendLine($"Average Processing Time: {avgTime:F2} ms");
-            }
-
-            if (failed > 0)
+            if (summary.Failed > 0 && summary.TopErrors.Any())
             {
                 sb.AppendLine();
-                sb.AppendLine("Failed Files:");
-                sb.AppendLine("--------------");
-                foreach (var failure in results.Where(r => !r.Success))
+                sb.AppendLine("Top Errors:");
+                sb.AppendLine("-----------");
+                foreach (var error in summary.TopErrors.Take(5))
                 {
-                    sb.AppendLine($"  • {failure.FileName}: {failure.ErrorMessage}");
+                    sb.AppendLine($"  • {error.Key}: {error.Value} occurrences");
                 }
             }
 
-            sb.AppendLine();
-            sb.AppendLine("Processed Files by Hour:");
-            sb.AppendLine("------------------------");
-            var byHour = results.GroupBy(r => r.ProcessedAt.Hour)
-                               .OrderBy(g => g.Key);
-            foreach (var hourGroup in byHour)
+            if (summary.DeadLetterCount > 0)
             {
-                sb.AppendLine($"  {hourGroup.Key:00}:00 - {hourGroup.Key:00}:59: {hourGroup.Count()} files");
+                sb.AppendLine();
+                sb.AppendLine($"Dead Letter Queue: {summary.DeadLetterCount} items pending");
             }
 
             sb.AppendLine();
@@ -419,6 +481,27 @@ namespace CamBridge.Infrastructure.Services
             return sb.ToString();
         }
 
+        private string BuildDailySummaryBody(List<ProcessingResult> results)
+        {
+            var summary = new ProcessingSummary
+            {
+                Date = DateTime.Today,
+                TotalProcessed = results.Count,
+                Successful = results.Count(r => r.Success),
+                Failed = results.Count(r => !r.Success),
+                ProcessingTimeSeconds = results.Where(r => r.ProcessingTime.HasValue)
+                    .Sum(r => r.ProcessingTime!.Value.TotalSeconds),
+                TopErrors = results.Where(r => !r.Success && !string.IsNullOrEmpty(r.ErrorMessage))
+                    .GroupBy(r => r.ErrorMessage!)
+                    .OrderByDescending(g => g.Count())
+                    .Take(5)
+                    .ToDictionary(g => g.Key, g => g.Count()),
+                Uptime = TimeSpan.FromHours(24) // Placeholder
+            };
+
+            return BuildDailySummaryBody(summary);
+        }
+
         private async Task CheckAndSendDailySummaryAsync()
         {
             if (!_settings.SendDailySummary)
@@ -427,9 +510,21 @@ namespace CamBridge.Infrastructure.Services
             var now = DateTime.Now;
 
             // Check if we've crossed into a new day and it's the configured hour
-            if (now.Date > _lastSummaryDate && now.Hour >= _settings.DailySummaryHour)
+            if (now.Date > _lastSummaryDate && now.Hour >= (_settings.DailySummaryHour ?? 8))
             {
-                await SendDailySummaryAsync();
+                List<ProcessingResult> summaryData;
+                lock (_dailySummaryBuffer)
+                {
+                    if (_dailySummaryBuffer.Count == 0)
+                        return;
+
+                    summaryData = new List<ProcessingResult>(_dailySummaryBuffer);
+                    _dailySummaryBuffer.Clear();
+                }
+
+                await SendEmailAsync($"Daily Processing Summary - {DateTime.Now:yyyy-MM-dd}",
+                    BuildDailySummaryBody(summaryData));
+
                 _lastSummaryDate = now.Date;
             }
         }

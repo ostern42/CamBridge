@@ -38,22 +38,41 @@ namespace CamBridge.Infrastructure.Services
         }
 
         /// <inheritdoc />
-        public async Task<string?> GetUserCommentAsync(string filePath)
+        public virtual async Task<string?> GetUserCommentAsync(string filePath)
         {
             var exifData = await ReadExifDataAsync(filePath);
 
-            // First try to get the barcode field (Ricoh G900 II specific)
+            // PRIORITY 1: Look for Barcode field (Ricoh G900 II specific)
             if (exifData.TryGetValue("Barcode", out var barcode) && !string.IsNullOrWhiteSpace(barcode))
             {
-                _logger.LogInformation("Found QRBridge data in Barcode field: {Barcode}", barcode);
-                return barcode;
+                // Skip if it's just "GCM_TAG"
+                if (barcode.Trim() != "GCM_TAG")
+                {
+                    _logger.LogInformation("Found QRBridge data in Barcode field: {Barcode}", barcode);
+                    return barcode;
+                }
             }
 
-            // Fallback to User Comment
+            // PRIORITY 2: Check Pentax-specific barcode field
+            if (exifData.TryGetValue("PentaxBarcode", out var pentaxBarcode) && !string.IsNullOrWhiteSpace(pentaxBarcode))
+            {
+                _logger.LogInformation("Found QRBridge data in Pentax Barcode field: {Barcode}", pentaxBarcode);
+                return pentaxBarcode;
+            }
+
+            // PRIORITY 3: Fall back to User Comment (but not if it's just "GCM_TAG")
             if (exifData.TryGetValue("UserComment", out var userComment))
             {
-                _logger.LogInformation("Found data in UserComment field: {UserComment}", userComment);
-                return userComment;
+                // Skip if UserComment is just the marker
+                if (userComment.Trim() == "GCM_TAG")
+                {
+                    _logger.LogDebug("UserComment contains only 'GCM_TAG' marker, not using as data source");
+                }
+                else if (!string.IsNullOrWhiteSpace(userComment))
+                {
+                    _logger.LogInformation("Found data in UserComment field: {UserComment}", userComment);
+                    return userComment;
+                }
             }
 
             _logger.LogWarning("No QRBridge data found in EXIF for file: {FilePath}", filePath);
@@ -130,21 +149,18 @@ namespace CamBridge.Infrastructure.Services
                         ExtractValue(exifData, subIfd, ExifDirectoryBase.TagFocalLength, "FocalLength");
                         ExtractValue(exifData, subIfd, ExifDirectoryBase.TagFlash, "Flash");
 
-                        // Special handling for User Comment with proper encoding
+                        // FIXED: Better handling for User Comment with proper encoding
                         if (subIfd.HasTagName(ExifDirectoryBase.TagUserComment))
                         {
                             var userCommentBytes = subIfd.GetByteArray(ExifDirectoryBase.TagUserComment);
                             if (userCommentBytes != null && userCommentBytes.Length > 8)
                             {
-                                // EXIF UserComment has 8-byte encoding prefix
-                                // Skip it and use Latin-1 for German umlauts
-                                var dataBytes = userCommentBytes.Skip(8).ToArray();
-                                var userComment = Encoding.GetEncoding("ISO-8859-1").GetString(dataBytes).TrimEnd('\0');
-
+                                var userComment = ExtractUserCommentSafely(userCommentBytes);
                                 if (!string.IsNullOrWhiteSpace(userComment))
                                 {
                                     exifData["UserComment"] = userComment;
-                                    _logger.LogDebug("Extracted UserComment with Latin-1 encoding: {UserComment}", userComment);
+                                    _logger.LogDebug("Extracted UserComment (length: {Length}): {UserComment}",
+                                        userComment.Length, userComment);
                                 }
                             }
                         }
@@ -176,6 +192,120 @@ namespace CamBridge.Infrastructure.Services
             return exifData;
         }
 
+        /// <summary>
+        /// Safely extracts UserComment with proper handling of encoding and length
+        /// </summary>
+        private string ExtractUserCommentSafely(byte[] userCommentBytes)
+        {
+            try
+            {
+                // EXIF UserComment structure:
+                // First 8 bytes: Character code (e.g., "ASCII\0\0\0", "UNICODE\0", "JIS\0\0\0\0\0")
+                // Remaining bytes: The actual comment data
+
+                if (userCommentBytes.Length <= 8)
+                    return string.Empty;
+
+                // Extract character code
+                var characterCode = Encoding.ASCII.GetString(userCommentBytes, 0, 8).TrimEnd('\0');
+                _logger.LogDebug("UserComment character code: '{CharCode}'", characterCode);
+
+                // Calculate actual data length (excluding trailing nulls)
+                int dataLength = userCommentBytes.Length - 8;
+                var dataBytes = new byte[dataLength];
+                Array.Copy(userCommentBytes, 8, dataBytes, 0, dataLength);
+
+                // Find actual length by looking for the last non-null byte
+                int actualLength = dataLength;
+                for (int i = dataLength - 1; i >= 0; i--)
+                {
+                    if (dataBytes[i] != 0)
+                    {
+                        actualLength = i + 1;
+                        break;
+                    }
+                }
+
+                // If actualLength is 0, the comment is empty
+                if (actualLength == 0)
+                    return string.Empty;
+
+                _logger.LogDebug("UserComment actual data length: {Length} bytes", actualLength);
+
+                // Decode based on character code
+                string result;
+                switch (characterCode.ToUpperInvariant())
+                {
+                    case "UNICODE":
+                        result = Encoding.Unicode.GetString(dataBytes, 0, actualLength);
+                        break;
+                    case "JIS":
+                        // Japanese Industrial Standard - rarely used
+                        result = Encoding.GetEncoding("ISO-2022-JP").GetString(dataBytes, 0, actualLength);
+                        break;
+                    case "ASCII":
+                    default:
+                        // For ASCII, we'll try Latin-1 for better German umlaut support
+                        result = Encoding.GetEncoding("ISO-8859-1").GetString(dataBytes, 0, actualLength);
+                        break;
+                }
+
+                // Remove any remaining control characters but preserve the data
+                result = CleanUserCommentData(result);
+
+                _logger.LogDebug("Extracted UserComment: '{Comment}' (final length: {Length})",
+                    result, result.Length);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error extracting UserComment safely");
+                // Fallback: try to extract as Latin-1 skipping first 8 bytes
+                try
+                {
+                    var fallback = Encoding.GetEncoding("ISO-8859-1")
+                        .GetString(userCommentBytes, 8, userCommentBytes.Length - 8);
+                    return CleanUserCommentData(fallback);
+                }
+                catch
+                {
+                    return string.Empty;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Cleans UserComment data while preserving all actual content
+        /// </summary>
+        private string CleanUserCommentData(string data)
+        {
+            if (string.IsNullOrEmpty(data))
+                return data;
+
+            var sb = new StringBuilder(data.Length);
+
+            // Note: GCM_TAG removal is now handled in ParsePipeDelimitedFormat
+            // This method just cleans control characters
+
+            // Process character by character to preserve all printable content
+            foreach (char c in data)
+            {
+                // Keep all printable ASCII and extended ASCII (for umlauts)
+                if (c >= 32 || c == '\t' || c == '\n' || c == '\r')
+                {
+                    sb.Append(c);
+                }
+                // Stop at first null character (true end of string)
+                else if (c == '\0')
+                {
+                    break;
+                }
+            }
+
+            return sb.ToString().Trim();
+        }
+
         private void ExtractValue(Dictionary<string, string> exifData, MetadataExtractor.Directory directory, int tagType, string key)
         {
             if (directory.HasTagName(tagType))
@@ -197,36 +327,52 @@ namespace CamBridge.Infrastructure.Services
 
                 if (!string.IsNullOrWhiteSpace(description))
                 {
-                    // Clean up the description - remove line breaks and fix encoding
+                    // Clean up the description - remove line breaks
                     var cleanedDescription = description
-                        .Replace("\r\n", "")
-                        .Replace("\n", "")
-                        .Replace("\r", "");
+                        .Replace("\r\n", " ")
+                        .Replace("\n", " ")
+                        .Replace("\r", " ")
+                        .Trim();
 
-                    // Check if this might be barcode data (pipe-delimited = QRBridge format)
-                    if (cleanedDescription.Contains('|') &&
-                        (cleanedDescription.Contains("EX") || cleanedDescription.Contains("Schmidt") ||
-                         cleanedDescription.Contains("1985")))
+                    // PRIORITY CHECK: Is this the Pentax Barcode tag?
+                    if (tagName.Equals("Barcode", StringComparison.OrdinalIgnoreCase) ||
+                        (directory.Name.Contains("Pentax") && tagName.Contains("0x0423")))
                     {
-                        // Check if it's the User Comment with encoding prefix
-                        if (tagName.Contains("User Comment") && description.Length > 8)
+                        if (cleanedDescription.Contains('|'))
                         {
-                            // Try to clean it
-                            var cleaned = CleanUserComment(description);
-                            if (cleaned != description && cleaned.Contains('|'))
-                            {
-                                exifData["Barcode"] = cleaned;
-                                _logger.LogDebug("Found barcode data in tag {TagName}: {Value}", tagName, cleaned);
-                                continue;
-                            }
+                            exifData["Barcode"] = cleanedDescription;
+                            _logger.LogInformation("Found Ricoh/Pentax Barcode tag: {Value}", cleanedDescription);
+                            continue;
                         }
-
-                        exifData["Barcode"] = cleanedDescription;
-                        _logger.LogDebug("Found barcode data in tag {TagName}: {Value}", tagName, cleanedDescription);
                     }
 
-                    // Store tag with cleaned name
+                    // Check if this might be barcode data in other tags
+                    if (cleanedDescription.Contains('|') &&
+                        (cleanedDescription.StartsWith("EX", StringComparison.OrdinalIgnoreCase) ||
+                         cleanedDescription.Contains("Schmidt") ||
+                         cleanedDescription.Contains("1985")))
+                    {
+                        // Only set as Barcode if we don't already have one
+                        if (!exifData.ContainsKey("Barcode"))
+                        {
+                            exifData["Barcode"] = cleanedDescription;
+                            _logger.LogDebug("Found barcode data in tag {TagName}: {Value}", tagName, cleanedDescription);
+                        }
+                    }
+
+                    // Store tag with cleaned name (including Pentax-specific tags)
                     var cleanName = tagName.Replace(" ", "").Replace("-", "");
+
+                    // Special handling for Pentax tags
+                    if (directory.Name.Contains("Pentax") && tagName.StartsWith("Unknown"))
+                    {
+                        // Also store with a more descriptive name
+                        if (tagName.Contains("0x0423"))
+                        {
+                            exifData["PentaxBarcode"] = cleanedDescription;
+                        }
+                    }
+
                     if (!exifData.ContainsKey(cleanName))
                     {
                         exifData[cleanName] = cleanedDescription;
@@ -237,8 +383,25 @@ namespace CamBridge.Infrastructure.Services
 
         private void FindBarcodeData(Dictionary<string, string> exifData)
         {
-            // Check various possible tag names for barcode data
-            var possibleBarcodeKeys = new[] { "Barcode", "BarcodeInfo", "Unknown0x9999", "Memo", "Comment" };
+            // PRIORITY 1: Check if "Barcode" key already exists (from ExtractAllTags)
+            if (exifData.TryGetValue("Barcode", out var existingBarcode) &&
+                !string.IsNullOrWhiteSpace(existingBarcode) &&
+                existingBarcode.Contains('|'))
+            {
+                _logger.LogDebug("Barcode already found: {Value}", existingBarcode);
+                return;
+            }
+
+            // PRIORITY 2: Check various possible tag names for barcode data
+            var possibleBarcodeKeys = new[] {
+                "Barcode",
+                "BarcodeInfo",
+                "Pentax Barcode",  // Pentax-specific
+                "Unknown0x0423",   // Pentax tag 0x0423
+                "Unknown0x9999",
+                "Memo",
+                "Comment"
+            };
 
             foreach (var key in possibleBarcodeKeys)
             {
@@ -247,99 +410,77 @@ namespace CamBridge.Infrastructure.Services
                     if (value.Contains('|'))
                     {
                         exifData["Barcode"] = value;
-                        _logger.LogDebug("Found barcode data in {Key}: {Value}", key, value);
-                        break;
+                        _logger.LogInformation("Found barcode data in {Key}: {Value}", key, value);
+                        return; // Stop after finding first valid barcode
                     }
                 }
             }
 
-            // If User Comment contains barcode-like data, also consider it
+            // PRIORITY 3: If User Comment contains barcode-like data, use it as fallback
             if (exifData.TryGetValue("UserComment", out var userComment))
             {
-                if (userComment.Contains('|') && !exifData.ContainsKey("Barcode"))
+                // Skip if UserComment is just "GCM_TAG"
+                if (userComment.Trim() == "GCM_TAG")
+                {
+                    _logger.LogDebug("UserComment contains only 'GCM_TAG' marker, skipping");
+                }
+                else if (userComment.Contains('|') && !exifData.ContainsKey("Barcode"))
                 {
                     exifData["Barcode"] = userComment;
+                    _logger.LogDebug("Using UserComment as Barcode fallback: {Value}", userComment);
                 }
             }
-        }
-
-        private string CleanUserComment(string userComment)
-        {
-            // First, try to detect and fix encoding issues
-            // The � character often indicates UTF-8 interpreted as Latin-1
-            if (userComment.Contains("�") || userComment.Contains("\ufffd"))
-            {
-                _logger.LogDebug("Detected encoding issue in user comment, attempting to fix");
-
-                // Try different approaches to fix the encoding
-                try
-                {
-                    // If it's UTF-8 bytes interpreted as Latin-1, convert back
-                    var latin1Bytes = Encoding.GetEncoding("ISO-8859-1").GetBytes(userComment);
-                    var utf8String = Encoding.UTF8.GetString(latin1Bytes);
-
-                    // Check if this improved the string (should contain German umlauts now)
-                    if (!utf8String.Contains("�") &&
-                        (utf8String.Contains("ö") || utf8String.Contains("ä") || utf8String.Contains("ü") ||
-                         utf8String.Contains("Ö") || utf8String.Contains("Ä") || utf8String.Contains("Ü")))
-                    {
-                        userComment = utf8String;
-                        _logger.LogDebug("Fixed encoding using UTF-8 interpretation");
-                    }
-                }
-                catch
-                {
-                    // If conversion fails, continue with original
-                }
-            }
-
-            // EXIF UserComment often has encoding prefix like "ASCII\0\0\0" or "UNICODE\0"
-            if (userComment.StartsWith("ASCII", StringComparison.OrdinalIgnoreCase))
-            {
-                var idx = userComment.IndexOf('\0');
-                if (idx > 0 && idx < userComment.Length - 1)
-                {
-                    return userComment.Substring(idx + 1).TrimStart('\0');
-                }
-            }
-
-            // Check if first 8 chars look like encoding marker
-            if (userComment.Length > 8 && !userComment.Substring(0, 8).Contains('|') && userComment.Substring(8).Contains('|'))
-            {
-                return userComment.Substring(8).TrimStart('\0');
-            }
-
-            return userComment;
         }
 
         private Dictionary<string, string> ParsePipeDelimitedFormat(string data)
         {
-            // Clean up the data first - remove any line breaks the camera might have added
-            // The Ricoh G900 II displays barcode on 2 lines and might insert line breaks
-            data = data.Replace("\r\n", "").Replace("\n", "").Replace("\r", "");
+            // Clean up the data first - remove line breaks but preserve content
+            data = data.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", " ");
 
-            // Also remove any non-printable characters except pipe
-            data = System.Text.RegularExpressions.Regex.Replace(data, @"[^\x20-\x7E|äöüÄÖÜß]", "");
+            // WICHTIG: Remove "GCM_TAG " prefix that Ricoh camera adds
+            if (data.StartsWith("GCM_TAG ", StringComparison.OrdinalIgnoreCase))
+            {
+                data = data.Substring(8).Trim();
+                _logger.LogDebug("Removed 'GCM_TAG ' prefix from data");
+            }
 
-            _logger.LogDebug("Cleaned QRBridge data: {Data}", data);
+            _logger.LogDebug("Parsing QRBridge data: '{Data}' (length: {Length})", data, data.Length);
 
             // Format: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
             var parts = data.Split('|');
             var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            if (parts.Length >= 1) result["examid"] = parts[0].Trim();
-            if (parts.Length >= 2) result["name"] = parts[1].Trim();
-            if (parts.Length >= 3) result["birthdate"] = parts[2].Trim();
-            if (parts.Length >= 4) result["gender"] = parts[3].Trim();
-            if (parts.Length >= 5) result["comment"] = parts[4].Trim();
+            // Parse all available fields
+            if (parts.Length >= 1 && !string.IsNullOrWhiteSpace(parts[0]))
+                result["examid"] = parts[0].Trim();
 
-            _logger.LogDebug("Parsed pipe-delimited data: {Count} fields", result.Count);
+            if (parts.Length >= 2 && !string.IsNullOrWhiteSpace(parts[1]))
+                result["name"] = parts[1].Trim();
+
+            if (parts.Length >= 3 && !string.IsNullOrWhiteSpace(parts[2]))
+                result["birthdate"] = parts[2].Trim();
+
+            if (parts.Length >= 4 && !string.IsNullOrWhiteSpace(parts[3]))
+                result["gender"] = parts[3].Trim();
+
+            if (parts.Length >= 5 && !string.IsNullOrWhiteSpace(parts[4]))
+                result["comment"] = parts[4].Trim();
+
+            _logger.LogInformation("Parsed pipe-delimited data: {Count} fields from {PartsCount} parts",
+                result.Count, parts.Length);
 
             // Log each field for debugging
             foreach (var field in result)
             {
                 _logger.LogDebug("  {Key}: '{Value}' (Length: {Length})",
                     field.Key, field.Value, field.Value.Length);
+            }
+
+            // Log warning if expected fields are missing (Ricoh G900 II limitation)
+            if (parts.Length < 5)
+            {
+                _logger.LogWarning("QRBridge data incomplete: only {Count} of 5 expected fields found. " +
+                    "This is a known Ricoh G900 II limitation.", parts.Length);
             }
 
             return result;
