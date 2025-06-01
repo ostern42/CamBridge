@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
-    /// Thread-safe queue for managing file processing with retry logic
+    /// Thread-safe queue for managing file processing with retry logic and dead letter support
     /// </summary>
     public class ProcessingQueue
     {
@@ -23,7 +23,10 @@ namespace CamBridge.Infrastructure.Services
         private readonly ConcurrentQueue<ProcessingItem> _queue = new();
         private readonly ConcurrentDictionary<string, ProcessingItem> _activeItems = new();
         private readonly SemaphoreSlim _processingSlots;
+        private readonly DeadLetterQueue _deadLetterQueue;
+        private readonly INotificationService? _notificationService;
         private readonly object _statsLock = new();
+        private readonly Dictionary<string, int> _errorCounts = new();
 
         private int _totalProcessed;
         private int _totalSuccessful;
@@ -40,15 +43,22 @@ namespace CamBridge.Infrastructure.Services
         public ProcessingQueue(
             ILogger<ProcessingQueue> logger,
             IServiceScopeFactory scopeFactory,
-            IOptions<ProcessingOptions> options)
+            IOptions<ProcessingOptions> options,
+            DeadLetterQueue deadLetterQueue,
+            INotificationService? notificationService = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _deadLetterQueue = deadLetterQueue ?? throw new ArgumentNullException(nameof(deadLetterQueue));
+            _notificationService = notificationService;
 
             _processingSlots = new SemaphoreSlim(
                 _options.MaxConcurrentProcessing,
                 _options.MaxConcurrentProcessing);
+
+            // Subscribe to dead letter events
+            _deadLetterQueue.ThresholdExceeded += OnDeadLetterThresholdExceeded;
         }
 
         /// <summary>
@@ -144,9 +154,34 @@ namespace CamBridge.Infrastructure.Services
                     TotalSuccessful = TotalSuccessful,
                     TotalFailed = TotalFailed,
                     UpTime = UpTime,
-                    ProcessingRate = TotalProcessed > 0 ? TotalProcessed / UpTime.TotalMinutes : 0
+                    ProcessingRate = TotalProcessed > 0 ? TotalProcessed / UpTime.TotalMinutes : 0,
+                    TopErrors = _errorCounts
+                        .OrderByDescending(x => x.Value)
+                        .Take(5)
+                        .ToDictionary(x => x.Key, x => x.Value)
                 };
             }
+        }
+
+        /// <summary>
+        /// Gets daily summary for notifications
+        /// </summary>
+        public ProcessingSummary GetDailySummary()
+        {
+            var stats = GetStatistics();
+            var deadLetterStats = _deadLetterQueue.GetStatistics();
+
+            return new ProcessingSummary
+            {
+                Date = DateTime.Today,
+                TotalProcessed = stats.TotalProcessed,
+                Successful = stats.TotalSuccessful,
+                Failed = stats.TotalFailed,
+                ProcessingTimeSeconds = stats.UpTime.TotalSeconds,
+                TopErrors = stats.TopErrors,
+                DeadLetterCount = deadLetterStats.TotalCount,
+                Uptime = stats.UpTime
+            };
         }
 
         /// <summary>
@@ -199,6 +234,7 @@ namespace CamBridge.Infrastructure.Services
                     else
                     {
                         _totalFailed++;
+                        TrackError(result.ErrorMessage ?? "Unknown error");
                     }
                 }
 
@@ -209,8 +245,20 @@ namespace CamBridge.Infrastructure.Services
                 }
                 else if (!result.Success)
                 {
+                    // Add to dead letter queue
                     _logger.LogError("Failed to process {FilePath} after {Attempts} attempts: {Error}",
                         item.FilePath, item.AttemptCount, result.ErrorMessage);
+
+                    await _deadLetterQueue.AddAsync(
+                        item.FilePath,
+                        result.ErrorMessage ?? "Processing failed",
+                        item.AttemptCount);
+
+                    // Send notification for critical errors
+                    if (IsCriticalError(result.ErrorMessage))
+                    {
+                        await NotifyCriticalErrorAsync(item.FilePath, result.ErrorMessage);
+                    }
                 }
             }
             catch (Exception ex)
@@ -221,11 +269,23 @@ namespace CamBridge.Infrastructure.Services
                 {
                     _totalProcessed++;
                     _totalFailed++;
+                    TrackError(ex.Message);
                 }
 
                 if (ShouldRetry(item))
                 {
                     await ScheduleRetryAsync(item, cancellationToken);
+                }
+                else
+                {
+                    // Add to dead letter queue
+                    await _deadLetterQueue.AddAsync(
+                        item.FilePath,
+                        $"Unexpected error: {ex.Message}",
+                        item.AttemptCount);
+
+                    // Notify about unexpected errors
+                    await NotifyCriticalErrorAsync(item.FilePath, ex.Message, ex);
                 }
             }
             finally
@@ -261,6 +321,69 @@ namespace CamBridge.Infrastructure.Services
             }
         }
 
+        private void TrackError(string error)
+        {
+            var category = CategorizeError(error);
+            _errorCounts.TryGetValue(category, out var count);
+            _errorCounts[category] = count + 1;
+        }
+
+        private string CategorizeError(string error)
+        {
+            if (error.Contains("EXIF", StringComparison.OrdinalIgnoreCase))
+                return "EXIF extraction failed";
+            if (error.Contains("DICOM", StringComparison.OrdinalIgnoreCase))
+                return "DICOM conversion failed";
+            if (error.Contains("Patient", StringComparison.OrdinalIgnoreCase))
+                return "Patient data missing";
+            if (error.Contains("File", StringComparison.OrdinalIgnoreCase))
+                return "File access error";
+            if (error.Contains("Memory", StringComparison.OrdinalIgnoreCase))
+                return "Memory error";
+            return "Other error";
+        }
+
+        private bool IsCriticalError(string? error)
+        {
+            if (string.IsNullOrEmpty(error)) return false;
+
+            var criticalKeywords = new[] { "OutOfMemory", "AccessDenied", "Unauthorized", "Fatal" };
+            return criticalKeywords.Any(keyword =>
+                error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private async Task NotifyCriticalErrorAsync(string filePath, string? error, Exception? ex = null)
+        {
+            if (_notificationService == null) return;
+
+            try
+            {
+                await _notificationService.NotifyCriticalErrorAsync(
+                    $"Processing failed for {Path.GetFileName(filePath)}",
+                    $"File: {filePath}\nError: {error}",
+                    ex);
+            }
+            catch (Exception notifyEx)
+            {
+                _logger.LogError(notifyEx, "Failed to send critical error notification");
+            }
+        }
+
+        private async void OnDeadLetterThresholdExceeded(object? sender, DeadLetterEventArgs e)
+        {
+            if (_notificationService == null) return;
+
+            try
+            {
+                var stats = _deadLetterQueue.GetStatistics();
+                await _notificationService.NotifyDeadLetterThresholdAsync(e.TotalCount, stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send dead letter threshold notification");
+            }
+        }
+
         /// <summary>
         /// Processing item with retry tracking
         /// </summary>
@@ -291,6 +414,7 @@ namespace CamBridge.Infrastructure.Services
         public int TotalFailed { get; init; }
         public TimeSpan UpTime { get; init; }
         public double ProcessingRate { get; init; }
+        public Dictionary<string, int> TopErrors { get; init; } = new();
 
         public double SuccessRate => TotalProcessed > 0
             ? (double)TotalSuccessful / TotalProcessed * 100

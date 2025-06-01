@@ -3,6 +3,7 @@ using CamBridge.Core.Interfaces;
 using CamBridge.Infrastructure;
 using CamBridge.Infrastructure.Services;
 using CamBridge.Service;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,56 +30,106 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("Starting CamBridge Service v0.3.1");
+    Log.Information("Starting CamBridge Service v0.3.2");
 
-    var host = Host.CreateDefaultBuilder(args)
-        .UseWindowsService(options =>
+    var builder = WebApplication.CreateBuilder(args);
+
+    // Configure as Windows Service with Web API support
+    builder.Host.UseWindowsService(options =>
+    {
+        options.ServiceName = "CamBridge Service";
+    });
+
+    builder.Host.UseSerilog();
+
+    // Configure services
+    builder.Services.Configure<CamBridgeSettings>(builder.Configuration.GetSection("CamBridge"));
+    builder.Services.Configure<ProcessingOptions>(builder.Configuration.GetSection("CamBridge:Processing"));
+    builder.Services.Configure<NotificationSettings>(builder.Configuration.GetSection("CamBridge:Notifications"));
+
+    // Register infrastructure services
+    var mappingConfigPath = builder.Configuration["CamBridge:MappingConfigurationFile"] ?? "mappings.json";
+    var useRicohReader = builder.Configuration.GetValue<bool>("CamBridge:UseRicohExifReader", true);
+    builder.Services.AddCamBridgeInfrastructure(mappingConfigPath, useRicohReader);
+
+    // Register core services
+    builder.Services.AddSingleton<DeadLetterQueue>();
+    builder.Services.AddSingleton<INotificationService, NotificationService>();
+
+    // Register ProcessingQueue with dependencies
+    builder.Services.AddSingleton<ProcessingQueue>(provider =>
+    {
+        var logger = provider.GetRequiredService<ILogger<ProcessingQueue>>();
+        var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
+        var options = provider.GetRequiredService<IOptions<ProcessingOptions>>();
+        var deadLetterQueue = provider.GetRequiredService<DeadLetterQueue>();
+        var notificationService = provider.GetService<INotificationService>();
+
+        return new ProcessingQueue(logger, scopeFactory, options, deadLetterQueue, notificationService);
+    });
+
+    // Register hosted services
+    builder.Services.AddSingleton<FolderWatcherService>();
+    builder.Services.AddHostedService(provider => provider.GetRequiredService<FolderWatcherService>());
+    builder.Services.AddHostedService<Worker>();
+
+    // Add daily summary service
+    builder.Services.AddHostedService<DailySummaryService>();
+
+    // Add health checks
+    builder.Services.AddHealthChecks()
+        .AddCheck<CamBridgeHealthCheck>("cambridge_health");
+
+    // Add controllers for Web API
+    builder.Services.AddControllers();
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(c =>
+    {
+        c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
         {
-            options.ServiceName = "CamBridge Service";
-        })
-        .UseSerilog()
-        .ConfigureServices((hostContext, services) =>
-        {
-            // Load configuration
-            var configuration = hostContext.Configuration;
+            Title = "CamBridge API",
+            Version = "v1",
+            Description = "API for monitoring CamBridge JPEG to DICOM conversion service"
+        });
+    });
 
-            // Configure settings
-            services.Configure<CamBridgeSettings>(configuration.GetSection("CamBridge"));
-            services.Configure<ProcessingOptions>(configuration.GetSection("CamBridge:Processing"));
+    // Configure Kestrel to listen on a specific port
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ListenLocalhost(5050); // API port
+    });
 
-            // Register infrastructure services
-            var mappingConfigPath = configuration["CamBridge:MappingConfigurationFile"] ?? "mappings.json";
-            var useRicohReader = configuration.GetValue<bool>("CamBridge:UseRicohExifReader", true);
-
-            services.AddCamBridgeInfrastructure(mappingConfigPath, useRicohReader);
-
-            // Register processing services
-            services.AddSingleton<ProcessingQueue>();
-            // IFileProcessor is already registered by AddCamBridgeInfrastructure as Scoped
-
-            // Register hosted services
-            services.AddSingleton<FolderWatcherService>();
-            services.AddHostedService(provider => provider.GetRequiredService<FolderWatcherService>());
-            services.AddHostedService<Worker>();
-
-            // Add health checks (optional)
-            services.AddHealthChecks()
-                .AddCheck<CamBridgeHealthCheck>("cambridge_health");
-        })
-        .ConfigureAppConfiguration((hostingContext, config) =>
-        {
-            config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                  .AddJsonFile($"appsettings.{hostingContext.HostingEnvironment.EnvironmentName}.json",
-                      optional: true, reloadOnChange: true)
-                  .AddEnvironmentVariables();
-        })
-        .Build();
+    var app = builder.Build();
 
     // Validate configuration
-    var settings = host.Services.GetRequiredService<IOptions<CamBridgeSettings>>().Value;
+    var settings = app.Services.GetRequiredService<IOptions<CamBridgeSettings>>().Value;
     ValidateConfiguration(settings);
 
-    await host.RunAsync();
+    // Configure HTTP pipeline
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "CamBridge API v1");
+            c.RoutePrefix = string.Empty; // Swagger UI at root
+        });
+    }
+
+    app.UseRouting();
+    app.MapControllers();
+    app.MapHealthChecks("/health");
+
+    // Startup notification
+    var notificationService = app.Services.GetService<INotificationService>();
+    if (notificationService != null)
+    {
+        await notificationService.NotifyInfoAsync(
+            "CamBridge Service Started",
+            $"Service version 0.3.2 started successfully on {Environment.MachineName}");
+    }
+
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
@@ -117,6 +168,20 @@ void ValidateConfiguration(CamBridgeSettings settings)
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to create default output folder: {Path}", settings.DefaultOutputFolder);
+        }
+    }
+
+    // Validate notification settings
+    var notificationSettings = settings.Notifications;
+    if (notificationSettings?.EnableEmail == true)
+    {
+        if (string.IsNullOrEmpty(notificationSettings.SmtpHost))
+        {
+            Log.Warning("Email notifications enabled but SMTP host not configured");
+        }
+        if (string.IsNullOrEmpty(notificationSettings.EmailTo))
+        {
+            Log.Warning("Email notifications enabled but recipient email not configured");
         }
     }
 }

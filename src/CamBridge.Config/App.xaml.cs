@@ -1,28 +1,63 @@
-﻿using Microsoft.UI.Xaml;
+// src/CamBridge.Config/App.xaml.cs
+using System;
+using System.Runtime.Versioning;
+using System.Windows;
+using CamBridge.Config.Services;
+using CamBridge.Config.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-namespace CamBridge.Config;
-
-/// <summary>
-/// Provides application-specific behavior to supplement the default Application class.
-/// </summary>
-public partial class App : Application
+namespace CamBridge.Config
 {
-    /// <summary>
-    /// Initializes the singleton application object.
-    /// </summary>
-    public App()
+    [SupportedOSPlatform("windows")]
+    public partial class App : Application
     {
-        this.InitializeComponent();
-    }
+        private IHost? _host;
 
-    /// <summary>
-    /// Invoked when the application is launched.
-    /// </summary>
-    protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
-    {
-        m_window = new MainWindow();
-        m_window.Activate();
-    }
+        // Property für DI-Zugriff
+        public IHost Host => _host!;
 
-    private Window? m_window;
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            _host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
+                .ConfigureServices((context, services) =>
+                {
+                    // Services
+                    services.AddHttpClient<HttpApiService>();
+                    services.AddSingleton<IApiService, HttpApiService>();
+                    services.AddSingleton<INavigationService, NavigationService>();
+                    services.AddSingleton<IServiceManager, ServiceManager>();
+                    services.AddSingleton<IConfigurationService, ConfigurationService>();
+
+                    // ViewModels
+                    services.AddTransient<MainViewModel>();
+                    services.AddTransient<DashboardViewModel>();
+                    services.AddTransient<ServiceControlViewModel>();
+                    services.AddTransient<SettingsViewModel>();
+
+                    // Main Window
+                    services.AddSingleton<MainWindow>();
+                })
+                .ConfigureLogging(logging =>
+                {
+                    logging.AddDebug();
+                })
+                .Build();
+
+            _host.Start();
+
+            var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+            mainWindow.Show();
+
+            base.OnStartup(e);
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            _host?.StopAsync().Wait();
+            _host?.Dispose();
+            base.OnExit(e);
+        }
+    }
 }

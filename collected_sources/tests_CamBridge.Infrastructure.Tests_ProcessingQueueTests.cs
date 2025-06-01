@@ -12,13 +12,16 @@ namespace CamBridge.Infrastructure.Tests
         private readonly Mock<ILogger<ProcessingQueue>> _loggerMock;
         private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
         private readonly Mock<IFileProcessor> _fileProcessorMock;
+        private readonly Mock<ILogger<DeadLetterQueue>> _deadLetterLoggerMock;
         private readonly ProcessingOptions _options;
+        private readonly DeadLetterQueue _deadLetterQueue;
 
         public ProcessingQueueTests()
         {
             _loggerMock = new Mock<ILogger<ProcessingQueue>>();
             _scopeFactoryMock = new Mock<IServiceScopeFactory>();
             _fileProcessorMock = new Mock<IFileProcessor>();
+            _deadLetterLoggerMock = new Mock<ILogger<DeadLetterQueue>>();
             _options = new ProcessingOptions
             {
                 MaxConcurrentProcessing = 2,
@@ -26,6 +29,9 @@ namespace CamBridge.Infrastructure.Tests
                 MaxRetryAttempts = 3,
                 RetryDelaySeconds = 1
             };
+
+            // Create DeadLetterQueue
+            _deadLetterQueue = new DeadLetterQueue(_deadLetterLoggerMock.Object);
 
             // Setup scope factory to return file processor
             var scopeMock = new Mock<IServiceScope>();
@@ -51,7 +57,8 @@ namespace CamBridge.Infrastructure.Tests
             var queue = new ProcessingQueue(
                 _loggerMock.Object,
                 _scopeFactoryMock.Object,
-                Options.Create(_options));
+                Options.Create(_options),
+                _deadLetterQueue);
 
             // Assert
             Assert.NotNull(queue);
@@ -66,7 +73,8 @@ namespace CamBridge.Infrastructure.Tests
             var queue = new ProcessingQueue(
                 _loggerMock.Object,
                 _scopeFactoryMock.Object,
-                Options.Create(_options));
+                Options.Create(_options),
+                _deadLetterQueue);
 
             const string filePath = @"C:\test\image.jpg";
             _fileProcessorMock
@@ -89,7 +97,8 @@ namespace CamBridge.Infrastructure.Tests
             var queue = new ProcessingQueue(
                 _loggerMock.Object,
                 _scopeFactoryMock.Object,
-                Options.Create(_options));
+                Options.Create(_options),
+                _deadLetterQueue);
 
             const string filePath = @"C:\test\image.jpg";
             _fileProcessorMock
@@ -111,7 +120,8 @@ namespace CamBridge.Infrastructure.Tests
             var queue = new ProcessingQueue(
                 _loggerMock.Object,
                 _scopeFactoryMock.Object,
-                Options.Create(_options));
+                Options.Create(_options),
+                _deadLetterQueue);
 
             const string filePath = @"C:\test\image.jpg";
             _fileProcessorMock
@@ -134,7 +144,8 @@ namespace CamBridge.Infrastructure.Tests
             var queue = new ProcessingQueue(
                 _loggerMock.Object,
                 _scopeFactoryMock.Object,
-                Options.Create(_options));
+                Options.Create(_options),
+                _deadLetterQueue);
 
             const string filePath = @"C:\test\image.jpg";
             var processingResult = ProcessingResult.CreateSuccess(
@@ -191,7 +202,8 @@ namespace CamBridge.Infrastructure.Tests
             var queue = new ProcessingQueue(
                 _loggerMock.Object,
                 _scopeFactoryMock.Object,
-                Options.Create(options));
+                Options.Create(options),
+                _deadLetterQueue);
 
             const string filePath = @"C:\test\image.jpg";
             var failureResult = ProcessingResult.CreateFailure(
@@ -243,7 +255,8 @@ namespace CamBridge.Infrastructure.Tests
             var queue = new ProcessingQueue(
                 _loggerMock.Object,
                 _scopeFactoryMock.Object,
-                Options.Create(_options));
+                Options.Create(_options),
+                _deadLetterQueue);
 
             // Act
             var stats = queue.GetStatistics();
@@ -267,7 +280,8 @@ namespace CamBridge.Infrastructure.Tests
             var queue = new ProcessingQueue(
                 _loggerMock.Object,
                 _scopeFactoryMock.Object,
-                Options.Create(_options));
+                Options.Create(_options),
+                _deadLetterQueue);
 
             // Act
             var result = queue.TryEnqueue(filePath!);

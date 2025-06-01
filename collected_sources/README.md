@@ -15,6 +15,10 @@ CamBridge is a Windows service that monitors folders for JPEG images from Ricoh 
 - **Flexible mapping configuration** via JSON files
 - **Ricoh G900 II camera support** with specialized EXIF reading
 - **Windows Service** for background operation
+- **Dead Letter Queue** for failed conversions
+- **Email & Event Log notifications** for critical errors
+- **Web Dashboard** for real-time monitoring
+- **REST API** for integration and monitoring
 - **Comprehensive logging** with Serilog
 
 ## System Requirements
@@ -22,13 +26,48 @@ CamBridge is a Windows service that monitors folders for JPEG images from Ricoh 
 - Windows 10/11 or Windows Server 2016+
 - .NET 8.0 Runtime
 - Ricoh G900 II camera with QRBridge-encoded QR codes
+- Administrator privileges for service installation
+
+## Quick Start
+
+1. Download the latest release
+2. Extract to a temporary folder
+3. Run PowerShell as Administrator:
+   ```powershell
+   .\Install-CamBridge.ps1
+   ```
+4. Access the dashboard at http://localhost:5050
 
 ## Installation
 
-1. Download the latest release
-2. Extract to installation directory (e.g., `C:\Program Files\CamBridge`)
-3. Configure settings in `appsettings.json`
-4. Install as Windows Service:
+### Automated Installation
+
+The PowerShell installation script handles:
+- Service creation and configuration
+- Directory structure setup
+- Firewall rule configuration
+- Event Log source creation
+
+```powershell
+# Install with custom path
+.\Install-CamBridge.ps1 -InstallPath "D:\CamBridge"
+
+# Uninstall
+.\Install-CamBridge.ps1 -Uninstall
+```
+
+### Manual Installation
+
+1. Extract files to installation directory
+2. Create required directories:
+   - `C:\CamBridge\Input`
+   - `C:\CamBridge\Output`
+   - `C:\CamBridge\Archive`
+   - `C:\CamBridge\Errors`
+   - `C:\CamBridge\Backup`
+   - `C:\CamBridge\Logs`
+
+3. Install as Windows Service:
    ```cmd
    sc create CamBridgeService binPath="C:\Program Files\CamBridge\CamBridge.Service.exe"
    ```
@@ -47,8 +86,15 @@ CamBridge is a Windows service that monitors folders for JPEG images from Ricoh 
         "Enabled": true
       }
     ],
-    "DefaultOutputFolder": "C:\\CamBridge\\Output",
-    "MappingConfigurationFile": "mappings.json"
+    "Processing": {
+      "MaxRetryAttempts": 3,
+      "RetryDelaySeconds": 5
+    },
+    "Notifications": {
+      "EnableEmail": true,
+      "EmailTo": "admin@hospital.com",
+      "SmtpHost": "smtp.hospital.com"
+    }
   }
 }
 ```
@@ -59,8 +105,6 @@ CamBridge uses a flexible JSON-based mapping system to convert EXIF and QRBridge
 
 ```json
 {
-  "version": "1.0",
-  "description": "CamBridge EXIF to DICOM mapping configuration",
   "mappings": [
     {
       "name": "PatientName",
@@ -69,35 +113,10 @@ CamBridge uses a flexible JSON-based mapping system to convert EXIF and QRBridge
       "targetTag": "(0010,0010)",
       "transform": "None",
       "required": true
-    },
-    {
-      "name": "PatientBirthDate",
-      "sourceType": "QRBridge",
-      "sourceField": "birthdate",
-      "targetTag": "(0010,0030)",
-      "transform": "DateToDicom"
-    },
-    {
-      "name": "Manufacturer",
-      "sourceType": "EXIF",
-      "sourceField": "Make",
-      "targetTag": "(0008,0070)"
     }
   ]
 }
 ```
-
-#### Mapping Configuration Options
-
-- **sourceType**: "QRBridge" or "EXIF"
-- **transform**: Value transformation
-  - `None`: No transformation
-  - `DateToDicom`: Convert dates to YYYYMMDD format
-  - `GenderToDicom`: Convert to M/F/O
-  - `ToUpper`/`ToLower`: Case conversion
-  - `TruncateTo16`/`TruncateTo64`: Length limits
-- **required**: If true, conversion fails when field is missing
-- **defaultValue**: Used when source field is empty
 
 ## QRBridge Format
 
@@ -113,6 +132,78 @@ Fields:
 4. Gender (M/F/O)
 5. Comment/Study Description
 
+## Monitoring
+
+### Web Dashboard
+
+Access the real-time monitoring dashboard at http://localhost:5050
+
+Features:
+- Service status and uptime
+- Processing queue statistics
+- Success/failure rates
+- Dead letter queue management
+- Active processing items
+
+### REST API
+
+API documentation available at http://localhost:5050/swagger
+
+Key endpoints:
+- `GET /api/status` - Service status
+- `GET /api/status/statistics` - Processing statistics
+- `GET /api/status/deadletters` - Dead letter items
+- `POST /api/status/deadletters/{id}/reprocess` - Reprocess failed item
+- `GET /api/status/health` - Health check
+
+### Event Log
+
+CamBridge logs to Windows Event Log under "Application" source "CamBridge Service".
+
+## Dead Letter Queue
+
+Files that fail processing after all retry attempts are moved to the dead letter queue:
+
+- Located in `C:\CamBridge\Errors\dead-letters`
+- Organized by date
+- Metadata stored in `dead-letters.json`
+- Can be reprocessed via dashboard or API
+
+## Notifications
+
+### Email Notifications
+
+Configure SMTP settings for email alerts:
+- Critical errors
+- Dead letter threshold exceeded
+- Daily processing summaries
+
+### Event Log Notifications
+
+All notifications are also logged to Windows Event Log.
+
+## Troubleshooting
+
+### Service Won't Start
+
+1. Check Event Viewer for errors
+2. Verify all directories exist and have proper permissions
+3. Ensure .NET 8.0 runtime is installed
+4. Check `C:\CamBridge\Logs` for detailed logs
+
+### Files Not Processing
+
+1. Verify watch folder configuration
+2. Check file permissions
+3. Ensure JPEG files contain valid EXIF data
+4. Review dead letter queue for errors
+
+### DICOM Validation Errors
+
+1. Check mapping configuration
+2. Verify required patient data is present
+3. Review DICOM validation logs
+
 ## Development
 
 ### Building from Source
@@ -122,7 +213,7 @@ Fields:
 git clone https://github.com/claude/cambridge.git
 
 # Build
-dotnet build
+dotnet build --configuration Release
 
 # Run tests
 dotnet test
@@ -138,20 +229,59 @@ CamBridge/
 ├── src/
 │   ├── CamBridge.Core/          # Domain models and interfaces
 │   ├── CamBridge.Infrastructure/ # Service implementations
-│   └── CamBridge.Service/       # Windows Service host
+│   └── CamBridge.Service/       # Windows Service & Web API
 └── tests/
     └── CamBridge.Infrastructure.Tests/
 ```
 
+### Running Tests
+
+```powershell
+# Run all tests with coverage
+.\Run-Tests.ps1
+
+# Run specific test category
+dotnet test --filter Category=Integration
+```
+
+## Version History
+
+- **0.3.2** - Dead letter queue, notifications, web dashboard
+- **0.3.1** - Fixed dependency injection issues
+- **0.3.0** - Windows Service implementation
+- **0.2.0** - Dynamic mapping configuration
+- **0.1.0** - Core EXIF/DICOM functionality
+- **0.0.1** - Initial project structure
+
 ## Roadmap
 
-- [x] Phase 1-2: Project setup and core models
-- [x] Phase 3-4: EXIF extraction and DICOM conversion
-- [x] Phase 5: Mapping configuration system
-- [ ] Phase 6-7: File monitoring and processing pipeline
-- [ ] Phase 8: Enhanced error handling and retry logic
-- [ ] Phase 9: Web management interface
-- [ ] Phase 10: PACS integration
+### Phase 7: Dateiverarbeitung Pipeline (1 Chat)
+- Ordnerüberwachung
+- Datei-Queue System
+- Fehlerbehandlung
+- Backup-Funktionalität
+
+- 
+### Phase 8: WinUI 3 GUI Basis (2 Chats)
+- CamBridge Config Projekt
+- Moderne UI mit Animationen
+- Navigation-Framework
+- MVVM-Struktur
+
+
+### Phase 9: Service-Steuerung GUI (1 Chat)
+- Service Installation/Deinstallation
+- Start/Stop/Status
+- Uptime-Anzeige
+- Admin-Rechte Handling
+
+
+### Phase 10: Konfigurationsverwaltung (1 Chat)
+- JSON-Konfiguration
+- Settings-UI
+- Ordner-Auswahl Dialoge
+- Mapping-Editor
+
 
 ## License
 
@@ -160,3 +290,10 @@ Proprietary - © 2025 Claude's Improbably Reliable Software Solutions
 ## Support
 
 For issues and feature requests, please contact support.
+
+## Acknowledgments
+
+- fo-dicom for DICOM processing
+- MetadataExtractor for EXIF reading
+- Serilog for structured logging
+- QRBridge for patient data encoding

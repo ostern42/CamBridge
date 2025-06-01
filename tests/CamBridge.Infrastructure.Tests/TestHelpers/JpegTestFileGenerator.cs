@@ -1,164 +1,207 @@
+// src/CamBridge.Infrastructure.Tests/TestHelpers/JpegTestFileGenerator.cs
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.Versioning;
 using System.Text;
-using MetadataExtractor;
-using MetadataExtractor.Formats.Exif;
-using MetadataExtractor.Formats.Jpeg;
 
 namespace CamBridge.Infrastructure.Tests.TestHelpers
 {
     /// <summary>
-    /// Helper class to generate test JPEG files with custom EXIF data
+    /// Helper class to generate test JPEG files with EXIF data
     /// </summary>
+    [SupportedOSPlatform("windows")]
     public static class JpegTestFileGenerator
     {
         /// <summary>
-        /// Creates a test JPEG file with QRBridge data in User Comment
+        /// Creates a test JPEG file with embedded EXIF user comment
         /// </summary>
         public static string CreateTestJpegWithQRBridgeData(
-            string qrBridgeData,
-            string? fileName = null,
-            int width = 800,
-            int height = 600)
+            string outputPath,
+            string examId = "EX002",
+            string patientName = "Schmidt, Maria",
+            string birthDate = "1985-03-15",
+            string gender = "F",
+            string comment = "Röntgen Thorax")
         {
-            fileName ??= $"test_{Guid.NewGuid():N}.jpg";
-            var tempPath = Path.Combine(Path.GetTempPath(), "CamBridgeTests");
-            Directory.CreateDirectory(tempPath);
-            var filePath = Path.Combine(tempPath, fileName);
+            // Create QRBridge formatted data
+            var qrBridgeData = $"{examId}|{patientName}|{birthDate}|{gender}|{comment}";
 
             // Create a simple test image
-            using (var bitmap = new Bitmap(width, height))
+            using var bitmap = new Bitmap(800, 600);
             using (var graphics = Graphics.FromImage(bitmap))
             {
-                // Fill with gradient
-                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                    new Rectangle(0, 0, width, height),
-                    Color.LightBlue,
-                    Color.DarkBlue,
-                    45f))
+                graphics.Clear(Color.White);
+                graphics.DrawString("Test Medical Image",
+                    new Font("Arial", 24),
+                    Brushes.Black,
+                    new PointF(250, 250));
+
+                // Add some test pattern
+                for (int i = 0; i < 10; i++)
                 {
-                    graphics.FillRectangle(brush, 0, 0, width, height);
+                    graphics.DrawRectangle(Pens.Gray,
+                        50 + i * 20,
+                        50 + i * 20,
+                        100,
+                        100);
                 }
-
-                // Add some text
-                using (var font = new Font("Arial", 24))
-                using (var textBrush = new SolidBrush(Color.White))
-                {
-                    graphics.DrawString("CamBridge Test Image", font, textBrush, 50, 50);
-                    graphics.DrawString($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-                        new Font("Arial", 12), textBrush, 50, 100);
-                }
-
-                // Save with EXIF data
-                var encoderParams = new EncoderParameters(1);
-                encoderParams.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 85L);
-
-                // Get JPEG codec
-                var jpegCodec = GetEncoder(ImageFormat.Jpeg);
-
-                // Note: System.Drawing doesn't support writing custom EXIF tags directly
-                // In real implementation, we'd need to use a library like ExifLib or similar
-                // For testing, we'll save the image and then modify EXIF data
-                bitmap.Save(filePath, jpegCodec, encoderParams);
             }
 
-            // In a real implementation, we would inject the EXIF data here
-            // For testing purposes, we'll create a companion file with the data
-            var exifDataPath = Path.ChangeExtension(filePath, ".exif");
-            File.WriteAllText(exifDataPath, qrBridgeData);
+            // Save with EXIF data
+            var encoderParameters = new EncoderParameters(1);
+            encoderParameters.Param[0] = new EncoderParameter(
+                System.Drawing.Imaging.Encoder.Quality,
+                90L);
 
-            return filePath;
-        }
+            // Get JPEG codec
+            var jpegCodec = GetEncoder(ImageFormat.Jpeg);
 
-        /// <summary>
-        /// Creates multiple test files with different patient data
-        /// </summary>
-        public static List<string> CreateTestDataset()
-        {
-            var files = new List<string>();
-            var testData = new[]
+            // Create property items for EXIF data
+            var propertyItems = new[]
             {
-                "EX001|Schmidt, Maria|1985-03-15|F|Röntgen Thorax",
-                "EX002|Müller, Hans|1975-06-20|M|CT Abdomen",
-                "EX003|Wagner, Lisa|1990-12-01|F|MRT Knie links",
-                "EX004|Becker, Thomas|1968-08-30|M|Ultraschall Abdomen",
-                "EX005|Meyer, Anna|2000-01-15|F|Röntgen Hand rechts"
+                CreatePropertyItem(0x010F, "RICOH"), // Make
+                CreatePropertyItem(0x0110, "G900 II"), // Model
+                CreatePropertyItem(0x0131, "CamBridge Test"), // Software
+                CreatePropertyItem(0x0132, DateTime.Now.ToString("yyyy:MM:dd HH:mm:ss")), // DateTime
+                CreatePropertyItem(0x9003, DateTime.Now.ToString("yyyy:MM:dd HH:mm:ss")), // DateTimeOriginal
+                CreatePropertyItem(0x9286, qrBridgeData) // UserComment
             };
 
-            foreach (var data in testData)
+            // Add properties to bitmap
+            foreach (var prop in propertyItems)
             {
-                var fileName = $"patient_{data.Split('|')[0]}.jpg";
-                files.Add(CreateTestJpegWithQRBridgeData(data, fileName));
+                bitmap.SetPropertyItem(prop);
             }
 
-            return files;
+            // Ensure directory exists
+            var directory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            // Save the image
+            bitmap.Save(outputPath, jpegCodec, encoderParameters);
+
+            return outputPath;
         }
 
         /// <summary>
-        /// Creates test files with edge cases
+        /// Creates a test JPEG without QRBridge data
         /// </summary>
-        public static Dictionary<string, string> CreateEdgeCaseFiles()
+        public static string CreateTestJpegWithoutQRBridgeData(string outputPath)
         {
-            var files = new Dictionary<string, string>();
+            using var bitmap = new Bitmap(800, 600);
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.Clear(Color.LightGray);
+                graphics.DrawString("Test Image - No Patient Data",
+                    new Font("Arial", 20),
+                    Brushes.Red,
+                    new PointF(200, 280));
+            }
 
-            // Missing gender
-            files["missing_gender"] = CreateTestJpegWithQRBridgeData(
-                "EX100|Test, Patient|1980-01-01||No gender specified");
+            // Basic EXIF data only
+            var propertyItems = new[]
+            {
+                CreatePropertyItem(0x010F, "Generic"), // Make
+                CreatePropertyItem(0x0110, "Camera"), // Model
+                CreatePropertyItem(0x0132, DateTime.Now.ToString("yyyy:MM:dd HH:mm:ss")) // DateTime
+            };
 
-            // Missing birthdate
-            files["missing_birthdate"] = CreateTestJpegWithQRBridgeData(
-                "EX101|Test, Patient Two||M|No birthdate");
+            foreach (var prop in propertyItems)
+            {
+                bitmap.SetPropertyItem(prop);
+            }
 
-            // Special characters
-            files["special_chars"] = CreateTestJpegWithQRBridgeData(
-                "EX102|Østergård, Søren|1975-05-05|M|Ärztliche Untersuchung");
+            var directory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
 
-            // Very long comment
-            files["long_comment"] = CreateTestJpegWithQRBridgeData(
-                "EX103|Test, Patient|1990-01-01|F|" + new string('X', 200));
-
-            // Minimal data
-            files["minimal"] = CreateTestJpegWithQRBridgeData(
-                "EX104|Minimal Patient");
-
-            // Empty QRBridge data
-            files["empty"] = CreateTestJpegWithQRBridgeData("");
-
-            return files;
+            bitmap.Save(outputPath, ImageFormat.Jpeg);
+            return outputPath;
         }
 
         /// <summary>
-        /// Cleans up test files
+        /// Creates a batch of test images with sequential data
         /// </summary>
-        public static void CleanupTestFiles()
+        public static string[] CreateBatchTestImages(string outputDirectory, int count)
         {
-            var tempPath = Path.Combine(Path.GetTempPath(), "CamBridgeTests");
-            if (Directory.Exists(tempPath))
+            var paths = new string[count];
+
+            for (int i = 0; i < count; i++)
             {
-                try
-                {
-                    Directory.Delete(tempPath, true);
-                }
-                catch
-                {
-                    // Ignore cleanup errors in tests
-                }
+                var examId = $"EX{(i + 1):D3}";
+                var patientName = $"Test{i + 1}, Patient";
+                var birthDate = new DateTime(1980 + i % 40, (i % 12) + 1, (i % 28) + 1).ToString("yyyy-MM-dd");
+                var gender = i % 2 == 0 ? "M" : "F";
+                var comment = $"Test procedure {i + 1}";
+
+                var filename = Path.Combine(outputDirectory, $"test_{examId}.jpg");
+                paths[i] = CreateTestJpegWithQRBridgeData(
+                    filename, examId, patientName, birthDate, gender, comment);
             }
+
+            return paths;
         }
 
         private static ImageCodecInfo GetEncoder(ImageFormat format)
         {
-            var codecs = ImageCodecInfo.GetImageDecoders();
+            var codecs = ImageCodecInfo.GetImageEncoders();
             foreach (var codec in codecs)
             {
                 if (codec.FormatID == format.Guid)
-                {
                     return codec;
+            }
+            throw new InvalidOperationException($"Encoder for {format} not found");
+        }
+
+        [SupportedOSPlatform("windows6.1")]
+        private static PropertyItem CreatePropertyItem(int id, string value)
+        {
+            // Create a dummy image to get a PropertyItem template
+            using var dummy = new Bitmap(1, 1);
+            var prop = dummy.PropertyItems.Length > 0
+                ? dummy.PropertyItems[0]
+                : (PropertyItem)Activator.CreateInstance(typeof(PropertyItem), true)!;
+
+            prop.Id = id;
+            prop.Type = 2; // ASCII
+            prop.Value = Encoding.UTF8.GetBytes(value + '\0');
+            prop.Len = prop.Value.Length;
+
+            return prop;
+        }
+
+        /// <summary>
+        /// Cleans up test files from a directory
+        /// </summary>
+        public static void CleanupTestFiles(string directory)
+        {
+            if (Directory.Exists(directory))
+            {
+                try
+                {
+                    var files = Directory.GetFiles(directory, "*.jpg", SearchOption.AllDirectories)
+                        .Concat(Directory.GetFiles(directory, "*.dcm", SearchOption.AllDirectories));
+
+                    foreach (var file in files)
+                    {
+                        try
+                        {
+                            File.Delete(file);
+                        }
+                        catch
+                        {
+                            // Ignore individual file deletion errors
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore cleanup errors
                 }
             }
-            throw new InvalidOperationException($"Encoder not found for format {format}");
         }
     }
 }

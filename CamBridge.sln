@@ -16,6 +16,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
 		CHANGELOG.md = CHANGELOG.md
+		collect-sources.bat = collect-sources.bat
+		GUI-Readme.md = GUI-Readme.md
 		LICENSE = LICENSE
 		README.md = README.md
 		Version.props = Version.props
@@ -24,6 +26,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Infrastructure.Tests", "tests\CamBridge.Infrastructure.Tests\CamBridge.Infrastructure.Tests.csproj", "{03AA1FFC-7FEF-1400-5F70-86F61601BB3B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Service", "src\CamBridge.Service\CamBridge.Service.csproj", "{BD06EA45-212C-409E-1365-BE7D576ED3D5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Config", "src\CamBridge.Config\CamBridge.Config.csproj", "{0A650D8D-A3A3-86BD-C080-239D78DF7F94}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -47,6 +51,12 @@ Global
 		{BD06EA45-212C-409E-1365-BE7D576ED3D5}.Debug|Any CPU.Build.0 = Debug|x64
 		{BD06EA45-212C-409E-1365-BE7D576ED3D5}.Release|Any CPU.ActiveCfg = Release|x64
 		{BD06EA45-212C-409E-1365-BE7D576ED3D5}.Release|Any CPU.Build.0 = Release|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Debug|Any CPU.Build.0 = Debug|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Debug|Any CPU.Deploy.0 = Debug|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.ActiveCfg = Release|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.Build.0 = Release|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.Deploy.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -55,6 +65,7 @@ Global
 		{8A7C5D2E-3F1B-4E9A-8D6B-2C7F9E4A1B3D} = {5B3E4D7C-8A2F-4C1B-9E3D-7A5C6F9B2E4A}
 		{2B7F5A8C-9D4E-4F3A-8B6C-1E9D4F7A3B2C} = {5B3E4D7C-8A2F-4C1B-9E3D-7A5C6F9B2E4A}
 		{BD06EA45-212C-409E-1365-BE7D576ED3D5} = {5B3E4D7C-8A2F-4C1B-9E3D-7A5C6F9B2E4A}
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94} = {5B3E4D7C-8A2F-4C1B-9E3D-7A5C6F9B2E4A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}

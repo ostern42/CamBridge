@@ -1253,6 +1253,7 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.5",
           "Microsoft.Extensions.Hosting.Abstractions": "9.0.5",
           "Microsoft.Extensions.Logging.Abstractions": "9.0.5",
+          "System.Diagnostics.EventLog": "8.0.0",
           "System.Drawing.Common": "9.0.5",
           "fo-dicom": "5.2.2"
         },

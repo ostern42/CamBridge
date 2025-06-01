@@ -1,0 +1,14 @@
+<Project>
+	<PropertyGroup>
+		<!-- Force override all RuntimeIdentifiers -->
+		<RuntimeIdentifiers></RuntimeIdentifiers>
+		<RuntimeIdentifier></RuntimeIdentifier>
+		<_UsingDefaultRuntimeIdentifier>false</_UsingDefaultRuntimeIdentifier>
+		<UseRidGraph>false</UseRidGraph>
+		<_EnableDefaultWindowsPlatform>false</_EnableDefaultWindowsPlatform>
+		<_DesktopBridgeRuntimeIdentifiers></_DesktopBridgeRuntimeIdentifiers>
+		<WindowsAppSDKRuntimeIdentifiers></WindowsAppSDKRuntimeIdentifiers>
+		<_WindowsDesktopSdkTargetFramework></_WindowsDesktopSdkTargetFramework>
+		<DisableDefaultRuntimeIdentifiers>true</DisableDefaultRuntimeIdentifiers>
+	</PropertyGroup>
+</Project>

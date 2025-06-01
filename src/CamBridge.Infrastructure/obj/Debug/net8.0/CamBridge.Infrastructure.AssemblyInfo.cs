@@ -16,11 +16,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("© 2025 Claude\'s Improbably Reliable Software Solutions")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("JPEG to DICOM converter for medical imaging from Ricoh cameras")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.3.2.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.3.2+7814cb9195d25907cca02c9a687a65a64ac62fc3")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.3.3.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.3.3+0ab9addd809e3078f1de682652eaa579c88e10d7")]
 [assembly: System.Reflection.AssemblyProductAttribute("CamBridge")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CamBridge.Infrastructure")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.3.2.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.3.3.0")]
 
 // Von der MSBuild WriteCodeFragment-Klasse generiert.
 
