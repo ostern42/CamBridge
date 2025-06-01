@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-01, 15:20 Uhr  
+**Letzte Aktualisierung:** 2025-06-01, 17:15 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -43,26 +43,42 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 5. README.md bei Bedarf aktualisieren
 6. Übergabeprompt für nächsten Chat erstellen
 7. PROJECT_WISDOM.md als VOLLSTÄNDIGES Artefakt finalisieren
+8. CHANGELOG.md NUR neuester Eintrag als Artefakt
+9. Version.props als VOLLSTÄNDIGES Artefakt
+
+## ⚠️ ABSOLUT KRITISCHE VOGON CLOSE REGEL ⚠️
+**BEIM VOGON CLOSE MÜSSEN IMMER ERSTELLT WERDEN:**
+1. **PROJECT_WISDOM.md** - Als VOLLSTÄNDIGES Artefakt (nicht nur Updates!)
+2. **CHANGELOG.md** - NUR der neueste Versions-Eintrag als Artefakt
+3. **Version.props** - Als VOLLSTÄNDIGES Artefakt
+
+**WARUM:** Updates können fehlschlagen oder übersehen werden. Nur vollständige Artefakte garantieren, dass der Nutzer die aktualisierten Dateien bekommt! Beim CHANGELOG reicht der neueste Eintrag um Zeit zu sparen.
+
+**MERKSATZ:** "Ein VOGON CLOSE ohne vollständige Artefakte ist wie ein Vogone ohne Poesie - technisch möglich, aber sinnlos!"
 
 *Hinweis: Dieses System ist zu 100% vogonenfrei und wurde nicht von der galaktischen Planungskommission genehmigt, was es vermutlich effizienter macht.*
 
 ### 📋 Aktueller Übergabeprompt
 ```
-Nächste Aufgabe: Dead Letters Crash Fix & Vogon Poetry Easter Egg (v0.4.3)
+Nächste Aufgabe: Core-Funktionalität Test mit Original Ricoh JPEG
+
+Stand: v0.4.3 - GUI soweit entwickelt, aber Core nie getestet!
 
 PRIORITÄTEN:
-1. Dead Letters DI-Problem fixen (crasht beim Navigieren)
-2. VOGON POETRY EASTER EGG implementieren!
-   - Versteckt in About-Box oder als Konami Code
-   - "Oh freddled gruntbuggly, thy DICOM tags are to me..."
-   - Die ultimative Hommage an Douglas Adams in v0.4.2+
+1. Original Ricoh JPEG mit QRBridge-Daten testen
+2. JPEG → DICOM Konvertierung durchführen
+3. Erzeugtes DICOM analysieren und validieren
+4. Prüfen ob Patient/Study-Daten korrekt gemappt wurden
 
-Stand: v0.4.2 - Die heilige "42" Version mit Dead Letters UI (crasht noch)
-Nach v0.4.3: Dashboard Polish (v0.5.0)
+Danach:
+- Settings Page Crash Fix (v0.4.4)
+- Dashboard Polish (v0.5.0)
+
+Notizen:
+- GUI-Entwicklung pausieren, erst Core testen!
+- Service sollte laufen für den Test
+- Mapping-Konfiguration prüfen
 ```
-
-## 🚨 WICHTIGSTE REGEL 🚨
-**IMMER nach aktueller Uhrzeit/Datum fragen bevor CHANGELOG.md Updates!**
 
 ## 🎯 Projekt-Identität
 - **Copyright:** © 2025 Claude's Improbably Reliable Software Solutions
@@ -144,6 +160,8 @@ Nach v0.4.3: Dashboard Polish (v0.5.0)
 
 ### VOGON CLOSE Artefakt-Regel
 - **WICHTIGSTE REGEL:** PROJECT_WISDOM.md MUSS als vollständiges Artefakt existieren!
+- **CHANGELOG.md:** Nur der neueste Versions-Eintrag als Artefakt (spart Zeit & Tokens)
+- **Version.props:** Als vollständiges Artefakt
 - **Keine Updates ohne Basis:** Erst create, dann update
 - **Vollständigkeit:** Alle Artefakte müssen komplett und fehlerfrei sein
 - **Vertrauen schaffen:** Der Nutzer soll sich keine Sorgen machen müssen
@@ -209,6 +227,8 @@ CamBridge/
 5. **README.md:** Features-Liste aktualisieren (falls nötig)
 6. **Übergabeprompt:** Für nächsten Chat vorbereiten
 7. **PROJECT_WISDOM.md:** Als VOLLSTÄNDIGES ARTEFAKT finalisieren!
+8. **CHANGELOG.md:** NUR neuester Eintrag als Artefakt!
+9. **Version.props:** Als VOLLSTÄNDIGES ARTEFAKT!
 
 ## ⚠️ Bekannte Fallstricke
 
@@ -217,23 +237,29 @@ CamBridge/
 - **PasswordBox:** Binding nur mit Behavior/Attached Property
 - **Spacing:** Existiert nicht in WPF/ModernWPF!
 - **NumberBox:** Aus ModernWpfUI, nicht WinUI
+- **IsTabStop:** Nicht für Page verfügbar (v0.4.3 Fix)
 
 ### Service
 - **UAC:** Admin-Rechte für Service-Control nötig
 - **Pfade:** Absolute Pfade in appsettings.json
 - **Event Log:** Source muss registriert sein
 
-### Dead Letters Page (v0.4.2)
-- **DI-Problem:** DeadLettersViewModel nicht korrekt registriert
-- **Navigation Crash:** Beim Wechsel zur Dead Letters Page
-- **Fix in v0.4.3:** Proper DI registration und ViewModelBase
+### Dead Letters Page (v0.4.2-v0.4.3)
+- **DI-Problem:** DeadLettersViewModel nicht korrekt registriert → BEHOBEN in v0.4.3
+- **Navigation Crash:** Beim Wechsel zur Dead Letters Page → BEHOBEN in v0.4.3
+- **UI funktioniert:** DataGrid zeigt Items, Retry-Button vorhanden
+
+### Settings Page (v0.4.1-v0.4.4)
+- **CRASHT NOCH:** Navigation zur Settings Page führt zu Absturz
+- **Vermutliche Ursache:** SettingsViewModel Initialisierung oder DI
+- **TODO v0.4.4:** Crash debuggen und fixen
 
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 01.06.2025, 15:10 Uhr
-- **Entwicklungszeit bisher:** ~42.7 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 01.06.2025, 17:15 Uhr
+- **Entwicklungszeit bisher:** ~44.7 Stunden (inkl. Nachtschichten!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -245,7 +271,7 @@ CamBridge/
 **Timestamps erzählen Geschichten!**
 - Nachtschichten erkennen (01:17, 02:22)
 - "Duplikate" entlarven (9 Std Unterschied = kein Duplikat!)
-- Arbeitsintensität verstehen (42 Std in 2,5 Tagen)
+- Arbeitsintensität verstehen (44 Std in 2,8 Tagen)
 
 ### Git-History (Mit exakten Timestamps!)
 ```
@@ -263,14 +289,15 @@ a6b77bb - 31.05. 15:45:17 - v0.3.0: File monitoring
 e0e68f1 - 01.06. 02:22:32 - v0.4.0: GUI (Nachtschicht!) ⚠️
 e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
 [pending] - 01.06. 13:30:00 - v0.4.1: Settings
-[pending] - 01.06. 15:10:XX - v0.4.2: Dead Letters (crasht noch)
+[pending] - 01.06. 15:10:00 - v0.4.2: Dead Letters (UI fertig)
+[pending] - 01.06. 17:15:00 - v0.4.3: Vogon Poetry & Dead Letters Fix
 ```
 
 ### Arbeitszeiten-Analyse
 - **Nachtschichten:** DICOM (01:17), GUI (02:22)
 - **Schnelle Fixes:** v0.0.2 Duplikat in 78 Sekunden
 - **Lange Sessions:** 9 Stunden zwischen v0.4.0 Commits
-- **Gesamt:** ~42.7 Stunden in 2,7 Tagen!
+- **Gesamt:** ~44.7 Stunden in 2,8 Tagen!
 
 ### Die wahre Geschichte der Duplikate
 - **v0.0.2:** Git-Anfängerfehler, 78 Sekunden später nochmal
@@ -308,30 +335,31 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
      * "Restart as Admin" Feature
      * Quick Actions (Services.msc, EventVwr.msc)
      * Service Not Installed Erkennung
-9. **Phase 8.5:** Settings-Page (v0.4.1) ← FERTIG
-10. **Phase 10:** Dead Letters Management (v0.4.2) - UI FERTIG, crasht aber
+9. **Phase 8.5:** Settings-Page (v0.4.1) ← FERTIG aber crasht
+10. **Phase 10:** Dead Letters Management (v0.4.2) - UI FERTIG
+11. **Phase 10.5:** Dead Letters Fix & Easter Egg (v0.4.3) ← FERTIG
 
 #### 🚧 Aktuelle Phase
-11. **Phase 10.5:** Dead Letters Fix & Easter Egg (v0.4.3)
-    - Dead Letters DI-Problem beheben
-    - VOGON POETRY EASTER EGG implementieren!
+12. **Phase 10.6:** Settings Page Fix (v0.4.4)
+    - Settings Page DI-Problem beheben
+    - Crash beim Navigieren fixen
     
 #### 🚧 Verbleibende Phasen
-12. **Phase 11:** Dashboard Polish & Performance (v0.5.0) - 1 Chat
+13. **Phase 11:** Dashboard Polish & Performance (v0.5.0) - 1 Chat
     - Performance-Optimierung
     - UI-Verbesserungen
     - Feature-complete Beta
     
-13. **Phase 12:** PACS Integration (v0.6.0) - Optional, 2 Chats
+14. **Phase 12:** PACS Integration (v0.6.0) - Optional, 2 Chats
     - DICOM C-STORE SCU
     - Network Transfer
     
-14. **Phase 13:** Deployment (v0.9.0 → v1.0.0) - 1 Chat
+15. **Phase 13:** Deployment (v0.9.0 → v1.0.0) - 1 Chat
     - MSI Installer
     - Release Pipeline
 
 ### Zeitschätzung bis v1.0.0
-- Phase 10.5: 1 Chat (v0.4.3)
+- Phase 10.6: 0.5 Chat (v0.4.4)
 - Phase 11: 1 Chat (v0.5.0)
 - Phase 12: 2 Chats (optional)
 - Phase 13: 1 Chat
@@ -356,7 +384,7 @@ Processing:
 ```
 
 ### Meilensteine
-- **v0.4.3** - Dead Letters Fix + Easter Egg
+- **v0.4.4** - Settings Page Fix
 - **v0.5.0** - Feature Complete Beta
 - **v0.6.0** - PACS Ready (optional)
 - **v0.9.0** - Release Candidate
@@ -378,6 +406,8 @@ Processing:
 - **KEINE** Annahmen über Placeholder - IMMER Dateigrößen prüfen!
 - **KEINE** Artefakt-Flut - maximal 2-3 pro Interaktion!
 - **KEINE** Software ohne Eastereggs - besonders nicht in v0.4.2!
+- **KEIN** VOGON CLOSE ohne vollständige Artefakte!
+- **KEINE** kompletten CHANGELOG Artefakte beim CLOSE - nur neuester Eintrag!
 
 ### Kommunikations-Anti-Patterns
 - **KEINE** langen Einleitungen ("Das ist eine exzellente Frage...")
@@ -402,6 +432,7 @@ Processing:
 - InfoBar → Border mit TextBlocks
 - NumberBox → TextBox mit Validierung
 - NavigationView hat automatisches Settings-Icon (IsSettingsVisible="False")
+- IsTabStop → Nicht für Page verfügbar!
 
 **Dateinamen-Konsistenz:**
 - DeadLetterPage vs DeadLettersPage - IMMER konsistent bleiben!
@@ -409,6 +440,7 @@ Processing:
 
 **VOGON CLOSE Artefakt-Regel:**
 - PROJECT_WISDOM.md MUSS als vollständiges Artefakt existieren!
+- CHANGELOG.md MUSS als vollständiges Artefakt existieren!
 - Keine Updates ohne Basis-Artefakt
 - Vollständigkeit ist Pflicht
 
@@ -427,13 +459,14 @@ Processing:
 Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
-Aktueller Stand: v0.4.2
+Aktueller Stand: v0.4.3
 - GUI Framework mit Dashboard ✓
 - Service Control (Phase 9) ✓  
-- Settings-Page ✓
-- Dead Letters: UI fertig aber crasht
+- Settings-Page (crasht noch)
+- Dead Letters funktioniert ✓
+- Vogon Poetry Easter Egg ✓
 
-Nächste Aufgabe: Dead Letters Crash Fix & Easteregg (v0.4.3)
+Nächste Aufgabe: Settings Page Crash Fix (v0.4.4)
 
 Tech Stack: .NET 8, WPF/ModernWpfUI, MVVM
 Architektur: Enterprise-Level für medizinische Software
@@ -563,27 +596,29 @@ Types: feat, fix, docs, style, refactor, test, chore
 ### Wichtige Versionierungs-Dateien
 1. **Version.props:** Zentrale Versionsverwaltung
    ```xml
-   <AssemblyVersion>0.4.2.0</AssemblyVersion>
-   <FileVersion>0.4.2.0</FileVersion>
-   <InformationalVersion>0.4.2</InformationalVersion>
+   <AssemblyVersion>0.4.3.0</AssemblyVersion>
+   <FileVersion>0.4.3.0</FileVersion>
+   <InformationalVersion>0.4.3</InformationalVersion>
    ```
 
 2. **CHANGELOG.md:** Mit exakter Zeit
    ```markdown
-   ## [0.4.2] - 2025-06-01 15:10
+   ## [0.4.3] - 2025-06-01 17:15
    ### Added
-   - Dead Letters management page with full CRUD operations
-   - Real-time filtering and sorting
-   - Export functionality (CSV/JSON)
-   - Batch operations for retry/delete
+   - Vogon Poetry Easter Egg - tribute to Douglas Adams
+   - Dead Letters page basic functionality
+   
+   ### Fixed
+   - Dead Letters navigation crash
+   - AboutPage keyboard focus issues
    
    ### Known Issues
-   - Dead Letters page crashes on navigation (DI issue)
+   - Settings page crashes on navigation
    ```
 
 3. **MainWindow.xaml:** Title mit Version
    ```xml
-   Title="CamBridge Configuration v0.4.2"
+   Title="CamBridge Configuration v0.4.3"
    ```
 
 ## 🔄 Update-Protokoll
@@ -608,7 +643,8 @@ Types: feat, fix, docs, style, refactor, test, chore
 - **v0.4.0** - 2025-06-01: WPF GUI with dashboard (e0e68f1) ⚠️
 - **v0.4.0** - 2025-06-01: WPF configuration UI (e806e31) ⚠️ DUPLIKAT!
 - **v0.4.1** - 2025-06-01: Settings Page (noch nicht committed)
-- **v0.4.2** - 2025-06-01: Dead Letters UI (crasht noch)
+- **v0.4.2** - 2025-06-01: Dead Letters UI (funktioniert)
+- **v0.4.3** - 2025-06-01: Vogon Poetry & Dead Letters Fix
 
 ### Versionierungs-Lektionen
 1. **v0.0.2 Duplikat:** Gleich am Anfang passiert
@@ -628,18 +664,18 @@ Er tippte eine weitere Zeile Code und murmelte: "Forty-two different DICOM tags.
 
 *Diese Geschichte wartet noch darauf, geschrieben zu werden. Vielleicht in einem anderen Projekt, mit unserem Chat-Entwicklungs-Betriebssystem...*
 
-### Vogon Poetry Easter Egg (v0.4.3)
+### Vogon Poetry Easter Egg (v0.4.3) ✅
 **Die ultimative Hommage an Douglas Adams!**
 
-Geplante Implementierung:
-1. **Trigger:** Konami Code oder versteckter Button in About-Box
+Implementierung:
+1. **Trigger:** "42" auf About-Page tippen
 2. **Inhalt:** Vogonische Poesie über DICOM
-3. **Beispiel:**
-   ```
-   "Oh freddled gruntbuggly, thy DICOM tags are to me
-   As plurdled gabbleblotchits on a lurgid JPEG tree..."
-   ```
-4. **Feature:** Muss in v0.4.3 rein - die 42er Version braucht das!
+3. **Features:**
+   - Amiga Boing Ball Sprite Animation
+   - Scrollender Rainbow-Text
+   - ERROR HAIKU Box
+   - Guru Meditation Meldungen
+4. **Status:** In v0.4.3 erfolgreich implementiert!
 
 ### NEUE REGEL: Versionierungs-Disziplin
 - IMMER Version erhöhen, auch für kleine Änderungen
@@ -670,15 +706,19 @@ Geplante Implementierung:
 - 2025-06-01 15:10: Dead Letters UI komplett implementiert (crasht noch), v0.4.2 abgeschlossen
 - 2025-06-01 15:15: KRITISCHE REGEL: PROJECT_WISDOM.md als vollständiges Artefakt beim VOGON CLOSE!
 - 2025-06-01 15:20: MWL-Integration Details und Dokumentations-Strategien hinzugefügt
+- 2025-06-01 17:15: v0.4.3 - Vogon Poetry Easter Egg implementiert, Dead Letters funktioniert, Settings crasht noch
+- 2025-06-01 17:20: WISDOM - Changelog nur neueste Version, nächster Chat Core-Test mit Ricoh JPEG
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.4.2
+### Aktuelle Version: v0.4.3
 ### Tatsächlicher Stand: 
 - ✅ Service Control (Phase 9) in v0.4.0 erledigt
-- ✅ Settings Page (v0.4.1) implementiert
-- ✅ Dead Letters UI (v0.4.2) implementiert aber crasht
-### Nächste Aufgabe: Dead Letters Fix & Vogon Poetry Easter Egg (v0.4.3)
+- ✅ Settings Page (v0.4.1) implementiert (crasht aber noch)
+- ✅ Dead Letters UI (v0.4.2) implementiert
+- ✅ Vogon Poetry Easter Egg (v0.4.3) funktioniert
+- ✅ Dead Letters Navigation (v0.4.3) gefixt
+### Nächste Aufgabe: Core-Funktionalität Test mit Ricoh JPEG
 ### Architektur: Enterprise-Level (und das ist GUT so!)
 ### Kontext: Medizinische Software mit 0% Fehlertoleranz
 ### Geschätzte v1.0.0: 3-5 Chats

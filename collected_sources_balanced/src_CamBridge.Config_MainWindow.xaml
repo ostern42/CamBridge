@@ -19,6 +19,11 @@
                 <ui:NavigationViewItem Icon="Document" Content="Dead Letters" Tag="DeadLetters"/>
                 <ui:NavigationViewItemSeparator/>
                 <ui:NavigationViewItem Icon="Setting" Content="Settings" Tag="Settings"/>
+                <ui:NavigationViewItem Content="About" Tag="About">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:FontIcon Glyph="&#xE946;"/>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
 
             <Frame x:Name="ContentFrame" NavigationUIVisibility="Hidden"/>

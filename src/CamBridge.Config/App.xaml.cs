@@ -15,7 +15,7 @@ namespace CamBridge.Config
     {
         private IHost? _host;
 
-        // Property für DI-Zugriff
+        // Property for DI access
         public IHost Host => _host!;
 
         protected override void OnStartup(StartupEventArgs e)
@@ -30,12 +30,12 @@ namespace CamBridge.Config
                     services.AddSingleton<IServiceManager, ServiceManager>();
                     services.AddSingleton<IConfigurationService, ConfigurationService>();
 
-                    // ViewModels
+                    // ViewModels - WICHTIG: Alle müssen registriert sein!
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ServiceControlViewModel>();
                     services.AddTransient<SettingsViewModel>();
-                    services.AddTransient<ServiceControlViewModel>();
+                    services.AddTransient<DeadLettersViewModel>();
 
                     // Main Window
                     services.AddSingleton<MainWindow>();

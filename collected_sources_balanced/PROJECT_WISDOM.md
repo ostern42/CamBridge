@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-01, 14:00 Uhr  
+**Letzte Aktualisierung:** 2025-06-01, 15:20 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -42,18 +42,23 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 4. Git commit string vorbereiten
 5. README.md bei Bedarf aktualisieren
 6. Übergabeprompt für nächsten Chat erstellen
-7. PROJECT_WISDOM.md finalisieren
+7. PROJECT_WISDOM.md als VOLLSTÄNDIGES Artefakt finalisieren
 
 *Hinweis: Dieses System ist zu 100% vogonenfrei und wurde nicht von der galaktischen Planungskommission genehmigt, was es vermutlich effizienter macht.*
 
 ### 📋 Aktueller Übergabeprompt
 ```
-Nächste Aufgabe: Dead Letters Crash Fix & Vogon Poetry Easteregg (v0.4.3)
-- Dead Letters Page crasht (wahrscheinlich DI-Problem)
-- PRIORITÄT: Vogonisches Poesie Easteregg implementieren!
-- Dann Dashboard Polish (v0.5.0)
+Nächste Aufgabe: Dead Letters Crash Fix & Vogon Poetry Easter Egg (v0.4.3)
 
-Stand: v0.4.2, Die heilige 42-Version mit Dead Letters UI (crasht noch)
+PRIORITÄTEN:
+1. Dead Letters DI-Problem fixen (crasht beim Navigieren)
+2. VOGON POETRY EASTER EGG implementieren!
+   - Versteckt in About-Box oder als Konami Code
+   - "Oh freddled gruntbuggly, thy DICOM tags are to me..."
+   - Die ultimative Hommage an Douglas Adams in v0.4.2+
+
+Stand: v0.4.2 - Die heilige "42" Version mit Dead Letters UI (crasht noch)
+Nach v0.4.3: Dashboard Polish (v0.5.0)
 ```
 
 ## 🚨 WICHTIGSTE REGEL 🚨
@@ -118,7 +123,7 @@ Stand: v0.4.2, Die heilige 42-Version mit Dead Letters UI (crasht noch)
 - **v0.4.2:** Die "42" Version - besonders wichtig!
 
 ### Token-Effizienz
-- **KEINE:** HTML-formatierten Code-Blöcke (zu viele Tokens!)
+- **KEINE:** HTML-formatierten Code-Blöcke (Token-Verschwendung!)
 - **Nutze:** Einfache Markdown Code-Blöcke
 - **Fokus:** Funktionalität über visuelle Effekte
 - **Artefakte:** Nur essentieller Code, keine Boilerplate
@@ -137,6 +142,12 @@ Stand: v0.4.2, Die heilige 42-Version mit Dead Letters UI (crasht noch)
 - **Keine Riesen-Artefakte** für einzeilige Änderungen!
 - **Geduldig sein:** Der Nutzer kann Code nur auf Meta-Ebene nachvollziehen
 
+### VOGON CLOSE Artefakt-Regel
+- **WICHTIGSTE REGEL:** PROJECT_WISDOM.md MUSS als vollständiges Artefakt existieren!
+- **Keine Updates ohne Basis:** Erst create, dann update
+- **Vollständigkeit:** Alle Artefakte müssen komplett und fehlerfrei sein
+- **Vertrauen schaffen:** Der Nutzer soll sich keine Sorgen machen müssen
+
 ## 📁 Projekt-Struktur-Wissen
 
 ### Datei-Sammlungen
@@ -145,6 +156,7 @@ Stand: v0.4.2, Die heilige 42-Version mit Dead Letters UI (crasht noch)
 - **collect-sources-balanced.bat:** ~15-20% Coverage (OPTIMAL!)
 - **collect-sources-settings.bat:** Nur Settings-spezifisch
 - **Ausschließen:** obj/, bin/, packages/, wpftmp/, AssemblyInfo
+- **WICHTIG:** PROJECT_CONTEXT.md wird vom Script generiert - IGNORIEREN! Alles steht im PROJECT_WISDOM.md!
 
 ### Optimale Sammlung für neue Chats
 ```batch
@@ -196,7 +208,7 @@ CamBridge/
    ```
 5. **README.md:** Features-Liste aktualisieren (falls nötig)
 6. **Übergabeprompt:** Für nächsten Chat vorbereiten
-7. **PROJECT_WISDOM.md:** Mit neuen Erkenntnissen finalisieren
+7. **PROJECT_WISDOM.md:** Als VOLLSTÄNDIGES ARTEFAKT finalisieren!
 
 ## ⚠️ Bekannte Fallstricke
 
@@ -211,12 +223,17 @@ CamBridge/
 - **Pfade:** Absolute Pfade in appsettings.json
 - **Event Log:** Source muss registriert sein
 
+### Dead Letters Page (v0.4.2)
+- **DI-Problem:** DeadLettersViewModel nicht korrekt registriert
+- **Navigation Crash:** Beim Wechsel zur Dead Letters Page
+- **Fix in v0.4.3:** Proper DI registration und ViewModelBase
+
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 01.06.2025, 14:00 Uhr
-- **Entwicklungszeit bisher:** ~41.5 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 01.06.2025, 15:10 Uhr
+- **Entwicklungszeit bisher:** ~42.7 Stunden (inkl. Nachtschichten!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -228,7 +245,7 @@ CamBridge/
 **Timestamps erzählen Geschichten!**
 - Nachtschichten erkennen (01:17, 02:22)
 - "Duplikate" entlarven (9 Std Unterschied = kein Duplikat!)
-- Arbeitsintensität verstehen (41 Std in 2,5 Tagen)
+- Arbeitsintensität verstehen (42 Std in 2,5 Tagen)
 
 ### Git-History (Mit exakten Timestamps!)
 ```
@@ -246,14 +263,14 @@ a6b77bb - 31.05. 15:45:17 - v0.3.0: File monitoring
 e0e68f1 - 01.06. 02:22:32 - v0.4.0: GUI (Nachtschicht!) ⚠️
 e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
 [pending] - 01.06. 13:30:00 - v0.4.1: Settings
-[pending] - 01.06. XX:XX:XX - v0.4.2: Dead Letters (crasht noch)
+[pending] - 01.06. 15:10:XX - v0.4.2: Dead Letters (crasht noch)
 ```
 
 ### Arbeitszeiten-Analyse
 - **Nachtschichten:** DICOM (01:17), GUI (02:22)
 - **Schnelle Fixes:** v0.0.2 Duplikat in 78 Sekunden
 - **Lange Sessions:** 9 Stunden zwischen v0.4.0 Commits
-- **Gesamt:** ~41.5 Stunden in 2,5 Tagen!
+- **Gesamt:** ~42.7 Stunden in 2,7 Tagen!
 
 ### Die wahre Geschichte der Duplikate
 - **v0.0.2:** Git-Anfängerfehler, 78 Sekunden später nochmal
@@ -292,31 +309,30 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
      * Quick Actions (Services.msc, EventVwr.msc)
      * Service Not Installed Erkennung
 9. **Phase 8.5:** Settings-Page (v0.4.1) ← FERTIG
+10. **Phase 10:** Dead Letters Management (v0.4.2) - UI FERTIG, crasht aber
 
 #### 🚧 Aktuelle Phase
-10. **Phase 10:** Dead Letters Management (v0.4.2) - TEILWEISE FERTIG
-    - UI implementiert ✓
-    - ViewModel & Service integration ✓
-    - Crasht beim Navigieren (DI-Problem)
+11. **Phase 10.5:** Dead Letters Fix & Easter Egg (v0.4.3)
+    - Dead Letters DI-Problem beheben
+    - VOGON POETRY EASTER EGG implementieren!
     
 #### 🚧 Verbleibende Phasen
-11. **Phase 11:** Dashboard Polish & Performance (v0.5.0) - 1 Chat
-    - Dead Letters Crash beheben
+12. **Phase 11:** Dashboard Polish & Performance (v0.5.0) - 1 Chat
     - Performance-Optimierung
     - UI-Verbesserungen
     - Feature-complete Beta
     
-12. **Phase 12:** PACS Integration (v0.6.0) - Optional, 2 Chats
+13. **Phase 12:** PACS Integration (v0.6.0) - Optional, 2 Chats
     - DICOM C-STORE SCU
     - Network Transfer
     
-13. **Phase 13:** Deployment (v0.9.0 → v1.0.0) - 1 Chat
+14. **Phase 13:** Deployment (v0.9.0 → v1.0.0) - 1 Chat
     - MSI Installer
     - Release Pipeline
 
 ### Zeitschätzung bis v1.0.0
-- Phase 10: 1 Chat (heute)
-- Phase 11: 1 Chat  
+- Phase 10.5: 1 Chat (v0.4.3)
+- Phase 11: 1 Chat (v0.5.0)
 - Phase 12: 2 Chats (optional)
 - Phase 13: 1 Chat
 - **Gesamt:** 3-5 Chats
@@ -340,6 +356,7 @@ Processing:
 ```
 
 ### Meilensteine
+- **v0.4.3** - Dead Letters Fix + Easter Egg
 - **v0.5.0** - Feature Complete Beta
 - **v0.6.0** - PACS Ready (optional)
 - **v0.9.0** - Release Candidate
@@ -390,6 +407,11 @@ Processing:
 - DeadLetterPage vs DeadLettersPage - IMMER konsistent bleiben!
 - Bei Umbenennungen ALLE Referenzen prüfen
 
+**VOGON CLOSE Artefakt-Regel:**
+- PROJECT_WISDOM.md MUSS als vollständiges Artefakt existieren!
+- Keine Updates ohne Basis-Artefakt
+- Vollständigkeit ist Pflicht
+
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
 ### Option 1: V.O.G.O.N. (Empfohlen!)
@@ -431,6 +453,37 @@ Architektur: Enterprise-Level für medizinische Software
 ### Geplante Erweiterungen (bestätigt):
 - **FTP-Server** für automatischen Empfang
 - **DICOM C-STORE** für direkten PACS-Versand
+- **MWL-Integration** für DICOM-Validierung:
+  - Prüfung gegen Modality Worklist
+  - Untersuchungs-ID Abgleich (QR ↔ MWL)
+  - StudyInstanceUID aus MWL übernehmen
+  - Konsistenz mit bestehendem RIS/PACS
+  - **MWL-Beispiel** (Untersuchungs-ID 276):
+    ```
+    (0008,0005) CS Specific Character Set:          ISO_IR 100
+    (0008,0050) SH Accession Number:                ELUID276
+    (0008,0080) LO Institution Name:                MD_01
+    (0008,0090) PN Referring Physician's Name:      
+    (0010,0010) PN Patient's Name:                  Test^Johnny
+    (0010,0020) LO Patient ID:                      0000483817
+    (0010,0030) DA Patient's Birth Date:            20010101
+    (0010,0040) CS Patient's Sex:                   M
+    (0020,000d) UI Study Instance UID:              1.2.276.12276087.2.276.202503281416550777
+    (0032,1060) LO Requested Procedure Description: Endosonographie
+    (0038,0010) LO Admission ID:                    002236810
+    (0040,0100) SQ Scheduled Procedure Step Sequence
+         (0008,0060) CS Modality:                              
+         (0040,0001) AE Scheduled Station AE Title:            HERBERT
+         (0040,0002) DA Scheduled Procedure Step Start Date:   20250331
+         (0040,0007) LO Scheduled Procedure Step Description:  Endosonographie
+         (0040,0009) SH Scheduled Procedure Step ID:           ELU_276
+         (0040,1001) SH Requested Procedure ID:          ELU_276
+    ```
+  - **Wichtige Tags für CamBridge:**
+    - `(0008,0050)` Accession Number: ELUID276 (muss mit QR-Code US-ID matchen!)
+    - `(0020,000d)` Study Instance UID: Von MWL übernehmen für Konsistenz
+    - `(0040,0009)` Scheduled Procedure Step ID: ELU_276
+    - `(0040,1001)` Requested Procedure ID: ELU_276
 - **Erweiterte Settings** für verschiedene Workflows
 - **Weitere Services** je nach Bedarf
 
@@ -439,6 +492,54 @@ Architektur: Enterprise-Level für medizinische Software
 - Robuste Fehlerbehandlung mit Dead-Letter-Queue
 - Erweiterbare Architektur für zukünftige Protokolle
 - Enterprise-ready von Tag 1
+
+### MWL-Integration (Phase 12+)
+**Modality Worklist Integration für v0.6.0+**
+
+Die MWL-Integration würde CamBridge erlauben:
+1. **Validierung:** QR-Code Untersuchungs-ID gegen MWL prüfen
+2. **Datenübernahme:** StudyInstanceUID aus MWL verwenden
+3. **Konsistenz:** Sicherstellen dass alle DICOM-Tags mit RIS übereinstimmen
+
+**Technische Umsetzung:**
+- DICOM C-FIND SCU für MWL-Abfragen
+- Query by Accession Number (z.B. "ELUID276")
+- Übernahme der StudyInstanceUID für PACS-Konsistenz
+- Fehlerbehandlung wenn keine MWL-Entry gefunden
+
+**Workflow:**
+```
+1. JPEG mit QR-Code "EX002|Schmidt, Maria|..." empfangen
+2. MWL-Query mit Accession Number "ELUID276"
+3. StudyInstanceUID aus MWL übernehmen
+4. DICOM erstellen mit konsistenten UIDs
+5. Optional: C-STORE direkt ans PACS
+```
+
+Diese Integration würde die nahtlose Einbindung in bestehende RIS/PACS-Infrastrukturen ermöglichen und die Datenkonsistenz weiter erhöhen.
+
+## 📚 Professionelle Dokumentation für Entscheider
+
+### Dokumentations-Strategien für Enterprise-Umgebungen
+
+Basierend auf der Erfahrung mit "Flickenteppich"-Architekturen (VB6, Legacy SQL, moderne .NET Komponenten) empfehlen sich folgende Ansätze:
+
+1. **Confluence-Ready Documentation**
+   - Architecture Decision Records (ADRs)
+   - Automatisch generierte API-Dokumentation
+   - Living Documentation aus Code-Kommentaren
+
+2. **Interactive Showcases**
+   - HTML/JavaScript Demos für Management
+   - Live-Dashboard mit ROI-Metriken
+   - "Geld-gespart-heute" Counter
+
+3. **Integration Stories**
+   - Betonung der Legacy-Kompatibilität
+   - Schrittweise Modernisierung
+   - Quick Wins und Pilot-Programme
+
+**Siehe Artefakte:** ADR-Template und Interactive Showcase für Beispiele
 
 ### Testing-Strategie
 - Unit Tests für Business Logic
@@ -469,7 +570,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 
 2. **CHANGELOG.md:** Mit exakter Zeit
    ```markdown
-   ## [0.4.2] - 2025-06-01 HH:MM
+   ## [0.4.2] - 2025-06-01 15:10
    ### Added
    - Dead Letters management page with full CRUD operations
    - Real-time filtering and sorting
@@ -507,6 +608,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 - **v0.4.0** - 2025-06-01: WPF GUI with dashboard (e0e68f1) ⚠️
 - **v0.4.0** - 2025-06-01: WPF configuration UI (e806e31) ⚠️ DUPLIKAT!
 - **v0.4.1** - 2025-06-01: Settings Page (noch nicht committed)
+- **v0.4.2** - 2025-06-01: Dead Letters UI (crasht noch)
 
 ### Versionierungs-Lektionen
 1. **v0.0.2 Duplikat:** Gleich am Anfang passiert
@@ -525,6 +627,19 @@ Es ist eine so absurde Vorstellung, dass sie durch ihre schiere Unwahrscheinlich
 Er tippte eine weitere Zeile Code und murmelte: "Forty-two different DICOM tags... das kann kein Zufall sein."
 
 *Diese Geschichte wartet noch darauf, geschrieben zu werden. Vielleicht in einem anderen Projekt, mit unserem Chat-Entwicklungs-Betriebssystem...*
+
+### Vogon Poetry Easter Egg (v0.4.3)
+**Die ultimative Hommage an Douglas Adams!**
+
+Geplante Implementierung:
+1. **Trigger:** Konami Code oder versteckter Button in About-Box
+2. **Inhalt:** Vogonische Poesie über DICOM
+3. **Beispiel:**
+   ```
+   "Oh freddled gruntbuggly, thy DICOM tags are to me
+   As plurdled gabbleblotchits on a lurgid JPEG tree..."
+   ```
+4. **Feature:** Muss in v0.4.3 rein - die 42er Version braucht das!
 
 ### NEUE REGEL: Versionierungs-Disziplin
 - IMMER Version erhöhen, auch für kleine Änderungen
@@ -547,23 +662,26 @@ Er tippte eine weitere Zeile Code und murmelte: "Forty-two different DICOM tags.
 - 2025-06-01 13:20: Git-History integriert - mehr Duplikate entdeckt!
 - 2025-06-01 13:25: Exakte Timestamps enthüllen die wahre Geschichte!
 - 2025-06-01 14:00: Wichtige Lektionen über Artefakt-Erstellung und VS-Anfänger
-- 2025-06-01 XX:XX: CAMBRIDGE CLOSE hinzugefügt, Dead Letters teilweise implementiert
-- 2025-06-01 XX:XX: V.O.G.O.N. System benannt, Douglas Adams Integration
-- 2025-06-01 XX:XX: Die unwahrscheinliche Geschichte von CamBridge konzipiert
-- 2025-06-01 XX:XX: Vogonisches Poesie Easteregg geplant - V.O.G.O.N. ist Ford Prefect!
-- 2025-06-01 XX:XX: CAMBRIDGE → VOGON umbenannt, Easteregg hat Priorität!
+- 2025-06-01 14:30: CAMBRIDGE CLOSE hinzugefügt, Dead Letters teilweise implementiert
+- 2025-06-01 14:45: V.O.G.O.N. System benannt, Douglas Adams Integration
+- 2025-06-01 14:50: Die unwahrscheinliche Geschichte von CamBridge konzipiert
+- 2025-06-01 14:55: Vogonisches Poesie Easteregg geplant - V.O.G.O.N. ist Ford Prefect!
+- 2025-06-01 15:00: CAMBRIDGE → VOGON umbenannt, Easteregg hat Priorität!
+- 2025-06-01 15:10: Dead Letters UI komplett implementiert (crasht noch), v0.4.2 abgeschlossen
+- 2025-06-01 15:15: KRITISCHE REGEL: PROJECT_WISDOM.md als vollständiges Artefakt beim VOGON CLOSE!
+- 2025-06-01 15:20: MWL-Integration Details und Dokumentations-Strategien hinzugefügt
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.4.2 (pending)
+### Aktuelle Version: v0.4.2
 ### Tatsächlicher Stand: 
 - ✅ Service Control (Phase 9) in v0.4.0 erledigt
 - ✅ Settings Page (v0.4.1) implementiert
-- ⚠️ Dead Letters (Phase 10) UI fertig aber crasht
-### Nächste Aufgabe: Dead Letters Crash Fix & Dashboard Polish (v0.5.0)
+- ✅ Dead Letters UI (v0.4.2) implementiert aber crasht
+### Nächste Aufgabe: Dead Letters Fix & Vogon Poetry Easter Egg (v0.4.3)
 ### Architektur: Enterprise-Level (und das ist GUT so!)
 ### Kontext: Medizinische Software mit 0% Fehlertoleranz
-### Geschätzte v1.0.0: 2-4 Chats
+### Geschätzte v1.0.0: 3-5 Chats
 
 ### V.O.G.O.N. Commands:
 - **VOGON INIT** - Automatischer Start

@@ -9,15 +9,29 @@ namespace CamBridge.Config.Views
     [SupportedOSPlatform("windows")]
     public partial class DeadLettersPage : Page
     {
-        private readonly DeadLettersViewModel _viewModel;
+        private DeadLettersViewModel? _viewModel;
 
         public DeadLettersPage()
         {
             InitializeComponent();
 
-            // Get ViewModel from DI
-            _viewModel = ((App)Application.Current).Host.Services.GetRequiredService<DeadLettersViewModel>();
-            DataContext = _viewModel;
+            // Get ViewModel from DI with null check
+            try
+            {
+                var app = Application.Current as App;
+                if (app?.Host != null)
+                {
+                    _viewModel = app.Host.Services.GetRequiredService<DeadLettersViewModel>();
+                    DataContext = _viewModel;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading DeadLettersViewModel: {ex.Message}");
+                // Create a basic viewmodel if DI fails
+                _viewModel = new DeadLettersViewModel(null!);
+                DataContext = _viewModel;
+            }
         }
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)

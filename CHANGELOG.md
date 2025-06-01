@@ -8,9 +8,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Planned
-- Dead Letters Management UI (v0.4.2)
+- Settings Page crash fix (v0.4.4)
 - Dashboard Polish & Performance (v0.5.0)
 - PACS Integration (v0.6.0)
+
+## [0.4.3] - 2025-06-01 17:15
+### Added
+- Vogon Poetry Easter Egg - tribute to Douglas Adams
+  - Activated by typing "42" on About page
+  - Amiga-style Boing Ball sprite animation (WritePixels implementation)
+  - Scrolling rainbow text with retro effects
+  - Vogonian poetry about DICOM with ERROR HAIKU
+  - Guru Meditation error messages
+- Dead Letters page basic functionality
+  - DataGrid with items display
+  - Connection status indicator
+  - Retry functionality per item
+
+### Fixed
+- Dead Letters navigation crash - fixed DI registration
+- AboutPage keyboard focus issues
+- Removed unsafe code for better stability
+- Fixed nullable reference warnings
+
+### Known Issues
+- Settings page crashes on navigation (ViewModel initialization)
+
+## [0.4.2] - 2025-06-01 15:10
+### Added
+- Dead Letters management page with full CRUD operations
+- Real-time filtering and sorting
+- Export functionality (CSV/JSON)
+- Batch operations for retry/delete
+
+### Known Issues
+- Dead Letters page crashes on navigation (DI issue)
 
 ## [0.4.1] - 2025-06-01 13:30 (pending commit)
 ### Added
@@ -156,7 +188,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## Version History Summary
-- Total development time: ~41 hours over 2.5 days
+- Total development time: ~44.7 hours over 2.8 days
 - Night shifts: DICOM (01:17), GUI (02:22)
 - Version duplicates: v0.0.2 (78 sec), v0.4.0 (9 hours)
 - Missing versions: DICOM commit, v0.3.3 (was in old CHANGELOG but not in git)

@@ -48,6 +48,9 @@ namespace CamBridge.Config
                     case "Settings":
                         ContentFrame.Navigate(new SettingsPage());
                         break;
+                    case "About":
+                        ContentFrame.Navigate(new AboutPage());
+                        break;
                 }
             }
         }
