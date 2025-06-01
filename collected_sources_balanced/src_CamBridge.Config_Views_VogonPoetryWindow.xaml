@@ -30,16 +30,7 @@
                 <LinearDoubleKeyFrame KeyTime="0:0:8" Value="350"/>
             </DoubleAnimationUsingKeyFrames>
 
-            <!-- Ball rotation - AUTHENTIC with direction changes -->
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BallRotation" 
-                                         Storyboard.TargetProperty="Angle"
-                                         RepeatBehavior="Forever">
-                <!-- Rotate right when moving right -->
-                <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0"/>
-                <LinearDoubleKeyFrame KeyTime="0:0:4" Value="720"/>
-                <!-- Rotate left when moving left -->
-                <LinearDoubleKeyFrame KeyTime="0:0:8" Value="0"/>
-            </DoubleAnimationUsingKeyFrames>
+            <!-- Sprite frame animation handled in code-behind -->
         </Storyboard>
 
         <!-- Scrolling Text Animation - SLOWER -->
@@ -102,44 +93,18 @@
         </Canvas>
 
         <Canvas Panel.ZIndex="5">
-            <!-- Amiga Boing Ball - POLYGON STYLE -->
-            <Grid x:Name="BoingBall" Canvas.Left="50" Canvas.Top="300" 
-                  Width="100" Height="100" RenderTransformOrigin="0.5,0.5">
-                <Grid.RenderTransform>
+            <!-- Amiga Boing Ball - SPRITE ANIMATION STYLE -->
+            <Image x:Name="BoingBall" Canvas.Left="50" Canvas.Top="300" 
+                   Width="100" Height="100" RenderTransformOrigin="0.5,0.5">
+                <Image.RenderTransform>
                     <TransformGroup>
                         <!-- Slight tilt for authentic look -->
                         <RotateTransform Angle="15"/>
-                        <!-- Main rotation -->
-                        <RotateTransform x:Name="BallRotation" Angle="0"/>
                     </TransformGroup>
-                </Grid.RenderTransform>
+                </Image.RenderTransform>
 
-                <!-- Ball as Polygon (16-sided for that retro polygon look) -->
-                <Polygon Points="50,0 70,10 85,25 95,45 95,55 85,75 70,90 50,100 30,90 15,75 5,55 5,45 15,25 30,10"
-                         Stretch="Fill" ClipToBounds="True">
-                    <Polygon.Fill>
-                        <DrawingBrush TileMode="Tile" Viewport="0,0,0.4,0.4" ViewportUnits="RelativeToBoundingBox">
-                            <DrawingBrush.Drawing>
-                                <DrawingGroup>
-                                    <GeometryDrawing Brush="#FFCC0000">
-                                        <GeometryDrawing.Geometry>
-                                            <RectangleGeometry Rect="0,0,1,1"/>
-                                        </GeometryDrawing.Geometry>
-                                    </GeometryDrawing>
-                                    <GeometryDrawing Brush="White">
-                                        <GeometryDrawing.Geometry>
-                                            <GeometryGroup>
-                                                <RectangleGeometry Rect="0,0,0.5,0.5"/>
-                                                <RectangleGeometry Rect="0.5,0.5,0.5,0.5"/>
-                                            </GeometryGroup>
-                                        </GeometryDrawing.Geometry>
-                                    </GeometryDrawing>
-                                </DrawingGroup>
-                            </DrawingBrush.Drawing>
-                        </DrawingBrush>
-                    </Polygon.Fill>
-                </Polygon>
-            </Grid>
+                <!-- WriteableBitmap will be set in code-behind for sprite animation -->
+            </Image>
 
             <!-- Scrolling Text -->
             <TextBlock x:Name="ScrollingText" Canvas.Left="800" Canvas.Top="20"

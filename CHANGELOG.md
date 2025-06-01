@@ -6,11 +6,30 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-### Planned
-- Settings Page crash fix (v0.4.4)
-- Dashboard Polish & Performance (v0.5.0)
-- PACS Integration (v0.6.0)
+## [0.4.4] - 2025-06-01 19:21
+### Added
+- Core functionality test with real Ricoh G900 II JPEG
+- Enhanced EXIF parser with line break and encoding fixes
+- Flexible QRBridge parser for incomplete data
+- mappings.json for TestConsole
+- Hex dump debugging in TestConsole
+
+### Fixed
+- EXIF encoding issues with German umlauts
+- Parser handling of camera line breaks in barcode data
+- NotificationService null reference warnings
+
+### Changed
+- Parser now handles incomplete QRBridge data (3 of 5 fields)
+- Improved debug logging for QRBridge parsing
+
+### Discovered
+- Ricoh G900 II only saves first 3 QRBridge fields (gender/comment missing)
+- Camera inserts "GCM_TAG " prefix in UserComment
+
+### Known Issues
+- Settings page still crashes on navigation
+- QRBridge data truncation needs investigation
 
 ## [0.4.3] - 2025-06-01 17:15
 ### Added

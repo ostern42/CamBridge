@@ -92,44 +92,6 @@
                             </TextBlock>
                         </StackPanel>
                     </Border>
-
-                    <!-- Hidden Answer Instructions - VISIBLE -->
-                    <Border Background="#1A1A1A" 
-                            BorderBrush="#00FF00"
-                            BorderThickness="2"
-                            CornerRadius="8" 
-                            Padding="20,15" 
-                            HorizontalAlignment="Center"
-                            Margin="0,40,0,30">
-                        <TextBlock x:Name="KonamiHint" 
-                                  FontFamily="Consolas"
-                                  FontSize="18"
-                                  Foreground="#00FF00"
-                                  FontWeight="Bold"
-                                  HorizontalAlignment="Center">
-                            <Run Text="🔑 Type "/>
-                            <Run Text="42" FontSize="24" Foreground="#FFD700"/>
-                            <Run Text=" for a surprise... 🔑"/>
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Style.Triggers>
-                                        <EventTrigger RoutedEvent="Loaded">
-                                            <BeginStoryboard>
-                                                <Storyboard>
-                                                    <DoubleAnimation 
-                                                        Storyboard.TargetProperty="Opacity"
-                                                        From="0.4" To="1.0" 
-                                                        Duration="0:0:1.5"
-                                                        AutoReverse="True"
-                                                        RepeatBehavior="Forever"/>
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </EventTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Border>
                 </StackPanel>
             </ScrollViewer>
         </Border>

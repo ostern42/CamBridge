@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-01, 17:15 Uhr  
+**Letzte Aktualisierung:** 2025-06-01, 19:21 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -60,24 +60,33 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-Nächste Aufgabe: Core-Funktionalität Test mit Original Ricoh JPEG
+Nächste Aufgabe: Settings Page Crash Fix und Parser-Verbesserungen
 
-Stand: v0.4.3 - GUI soweit entwickelt, aber Core nie getestet!
+Stand: v0.4.4 - Core mit echtem Ricoh JPEG erfolgreich getestet!
+
+ERFOLGE:
+✅ JPEG → DICOM Konvertierung funktioniert
+✅ QRBridge-Daten werden aus EXIF extrahiert
+✅ Parser bereinigt Zeilenumbrüche und Encoding
+✅ Grundlegende Patientendaten werden übernommen
+
+PROBLEME:
+⚠️ Ricoh speichert nur 3 von 5 QRBridge-Feldern
+⚠️ Gender und Comment fehlen im EXIF
+⚠️ "GCM_TAG " Prefix wird von Kamera eingefügt
+⚠️ Settings Page crasht noch immer
 
 PRIORITÄTEN:
-1. Original Ricoh JPEG mit QRBridge-Daten testen
-2. JPEG → DICOM Konvertierung durchführen
-3. Erzeugtes DICOM analysieren und validieren
-4. Prüfen ob Patient/Study-Daten korrekt gemappt wurden
+1. Settings Page Crash debuggen und fixen (v0.4.5)
+2. Parser für unvollständige Daten robuster machen
+3. Tests mit vollständigem QR-Code (alle 5 Felder)
+4. Dashboard Polish & Performance (v0.5.0)
 
-Danach:
-- Settings Page Crash Fix (v0.4.4)
-- Dashboard Polish (v0.5.0)
-
-Notizen:
-- GUI-Entwicklung pausieren, erst Core testen!
-- Service sollte laufen für den Test
-- Mapping-Konfiguration prüfen
+WICHTIGE ERKENNTNISSE:
+- ExifReader muss "GCM_TAG " Prefix entfernen
+- Ricoh G900 II hat Längenbeschränkung für Barcode?
+- mappings.json ist essentiell für korrekte Zuordnung
+- PatientID sollte aus ExamID extrahiert werden
 ```
 
 ## 🎯 Projekt-Identität
@@ -249,17 +258,23 @@ CamBridge/
 - **Navigation Crash:** Beim Wechsel zur Dead Letters Page → BEHOBEN in v0.4.3
 - **UI funktioniert:** DataGrid zeigt Items, Retry-Button vorhanden
 
-### Settings Page (v0.4.1-v0.4.4)
+### Settings Page (v0.4.1-v0.4.5)
 - **CRASHT NOCH:** Navigation zur Settings Page führt zu Absturz
 - **Vermutliche Ursache:** SettingsViewModel Initialisierung oder DI
-- **TODO v0.4.4:** Crash debuggen und fixen
+- **TODO v0.4.5:** Crash debuggen und fixen
+
+### Ricoh G900 II QRBridge (v0.4.4)
+- **NUR 3 FELDER:** Kamera speichert nur examid|name|birthdate
+- **FEHLENDE FELDER:** gender und comment werden abgeschnitten
+- **GCM_TAG PREFIX:** Kamera fügt "GCM_TAG " vor Barcode ein
+- **ENCODING:** UTF-8/Latin-1 Probleme bei Umlauten → GELÖST
 
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 01.06.2025, 17:15 Uhr
-- **Entwicklungszeit bisher:** ~44.7 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 01.06.2025, 19:21 Uhr
+- **Entwicklungszeit bisher:** ~46.8 Stunden (inkl. Nachtschichten!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -271,7 +286,7 @@ CamBridge/
 **Timestamps erzählen Geschichten!**
 - Nachtschichten erkennen (01:17, 02:22)
 - "Duplikate" entlarven (9 Std Unterschied = kein Duplikat!)
-- Arbeitsintensität verstehen (44 Std in 2,8 Tagen)
+- Arbeitsintensität verstehen (46 Std in 3 Tagen)
 
 ### Git-History (Mit exakten Timestamps!)
 ```
@@ -291,13 +306,14 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
 [pending] - 01.06. 13:30:00 - v0.4.1: Settings
 [pending] - 01.06. 15:10:00 - v0.4.2: Dead Letters (UI fertig)
 [pending] - 01.06. 17:15:00 - v0.4.3: Vogon Poetry & Dead Letters Fix
+[pending] - 01.06. 19:21:00 - v0.4.4: Core Test mit Ricoh JPEG
 ```
 
 ### Arbeitszeiten-Analyse
 - **Nachtschichten:** DICOM (01:17), GUI (02:22)
 - **Schnelle Fixes:** v0.0.2 Duplikat in 78 Sekunden
 - **Lange Sessions:** 9 Stunden zwischen v0.4.0 Commits
-- **Gesamt:** ~44.7 Stunden in 2,8 Tagen!
+- **Gesamt:** ~46.8 Stunden in 3 Tagen!
 
 ### Die wahre Geschichte der Duplikate
 - **v0.0.2:** Git-Anfängerfehler, 78 Sekunden später nochmal
@@ -338,28 +354,66 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
 9. **Phase 8.5:** Settings-Page (v0.4.1) ← FERTIG aber crasht
 10. **Phase 10:** Dead Letters Management (v0.4.2) - UI FERTIG
 11. **Phase 10.5:** Dead Letters Fix & Easter Egg (v0.4.3) ← FERTIG
+12. **Phase 10.6:** Core Test mit Ricoh JPEG (v0.4.4) ← FERTIG
 
 #### 🚧 Aktuelle Phase
-12. **Phase 10.6:** Settings Page Fix (v0.4.4)
+13. **Phase 10.7:** Settings Page Fix (v0.4.5)
     - Settings Page DI-Problem beheben
     - Crash beim Navigieren fixen
+    - Vollständige Settings-Funktionalität wiederherstellen
     
 #### 🚧 Verbleibende Phasen
-13. **Phase 11:** Dashboard Polish & Performance (v0.5.0) - 1 Chat
-    - Performance-Optimierung
-    - UI-Verbesserungen
-    - Feature-complete Beta
+14. **Phase 11:** Konfigurationsverwaltung erweitert (v0.5.0) - 1 Chat
+    - **Mapping-Editor mit Drag & Drop**
+    - Import/Export Konfiguration
+    - Live-Preview für Mappings
+    - Validierung mit Beispieldaten
+    - Template-System für häufige Mappings
     
-14. **Phase 12:** PACS Integration (v0.6.0) - Optional, 2 Chats
-    - DICOM C-STORE SCU
-    - Network Transfer
+15. **Phase 12:** Performance & Polish (v0.5.5) - 1 Chat
+    - Batch-Verarbeitung optimieren
+    - Memory-Pool für große Dateien
+    - Parallelisierung mit Channels
+    - UI-Animationen verfeinern
+    - Dashboard Performance-Optimierung
+    - **Feature-complete Beta**
     
-15. **Phase 13:** Deployment (v0.9.0 → v1.0.0) - 1 Chat
-    - MSI Installer
-    - Release Pipeline
+16. **Phase 13:** FTP-Server Integration (v0.6.0) - 1 Chat
+    - FTP-Server für automatischen Empfang
+    - Watch für FTP-Ordner
+    - Authentifizierung und Sicherheit
+    - Auto-Delete nach Verarbeitung
+    
+17. **Phase 14:** PACS Integration (v0.7.0) - 2 Chats
+    - DICOM C-STORE SCU Implementation
+    - Network Transfer mit Retry-Logic
+    - PACS-Konfiguration in Settings
+    - Connection Test-Funktion
+    - Transfer-Status Dashboard
+    
+18. **Phase 15:** MWL Integration (v0.8.0) - 2 Chats
+    - DICOM C-FIND SCU für MWL-Abfragen
+    - Validierung gegen Modality Worklist
+    - StudyInstanceUID aus MWL übernehmen
+    - Automatischer Datenabgleich
+    - Fehlerbehandlung bei MWL-Mismatch
+    
+19. **Phase 16:** Erweiterte Features (v0.9.0) - 1 Chat
+    - Multi-Camera Support (verschiedene Modelle)
+    - Audit-Trail für MDR/FDA Compliance
+    - Erweiterte Statistiken und Reports
+    - Backup/Restore Funktionalität
+    - Plugin-System für Erweiterungen
+    
+20. **Phase 17:** Deployment & Release (v1.0.0) - 1 Chat
+    - MSI Installer mit WiX
+    - Automatische Updates
+    - Release Pipeline (CI/CD)
+    - Dokumentation finalisieren
+    - Performance-Tests und Zertifizierung
 
 ### Zeitschätzung bis v1.0.0
-- Phase 10.6: 0.5 Chat (v0.4.4)
+- Phase 10.7: 0.5 Chat (v0.4.5)
 - Phase 11: 1 Chat (v0.5.0)
 - Phase 12: 2 Chats (optional)
 - Phase 13: 1 Chat
@@ -384,7 +438,7 @@ Processing:
 ```
 
 ### Meilensteine
-- **v0.4.4** - Settings Page Fix
+- **v0.4.5** - Settings Page Fix
 - **v0.5.0** - Feature Complete Beta
 - **v0.6.0** - PACS Ready (optional)
 - **v0.9.0** - Release Candidate
@@ -440,9 +494,16 @@ Processing:
 
 **VOGON CLOSE Artefakt-Regel:**
 - PROJECT_WISDOM.md MUSS als vollständiges Artefakt existieren!
-- CHANGELOG.md MUSS als vollständiges Artefakt existieren!
+- CHANGELOG.md NUR neuester Eintrag als Artefakt!
+- Version.props MUSS als vollständiges Artefakt existieren!
 - Keine Updates ohne Basis-Artefakt
 - Vollständigkeit ist Pflicht
+
+**Ricoh G900 II Erkenntnisse (v0.4.4):**
+- Kamera speichert nur 3 von 5 QRBridge-Feldern
+- "GCM_TAG " Prefix wird eingefügt
+- Gender und Comment werden abgeschnitten/fehlen
+- Encoding-Probleme bei Umlauten sind lösbar
 
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
@@ -459,14 +520,14 @@ Processing:
 Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
-Aktueller Stand: v0.4.3
-- GUI Framework mit Dashboard ✓
-- Service Control (Phase 9) ✓  
-- Settings-Page (crasht noch)
-- Dead Letters funktioniert ✓
-- Vogon Poetry Easter Egg ✓
+Aktueller Stand: v0.4.4
+- Core-Test mit echtem Ricoh JPEG ✓
+- Parser-Verbesserungen für Encoding ✓
+- QRBridge-Extraktion funktioniert ✓
+- Ricoh speichert nur 3 von 5 Feldern ⚠️
+- Settings-Page crasht noch
 
-Nächste Aufgabe: Settings Page Crash Fix (v0.4.4)
+Nächste Aufgabe: Settings Page Crash Fix (v0.4.5)
 
 Tech Stack: .NET 8, WPF/ModernWpfUI, MVVM
 Architektur: Enterprise-Level für medizinische Software
@@ -596,29 +657,29 @@ Types: feat, fix, docs, style, refactor, test, chore
 ### Wichtige Versionierungs-Dateien
 1. **Version.props:** Zentrale Versionsverwaltung
    ```xml
-   <AssemblyVersion>0.4.3.0</AssemblyVersion>
-   <FileVersion>0.4.3.0</FileVersion>
-   <InformationalVersion>0.4.3</InformationalVersion>
+   <AssemblyVersion>0.4.4.0</AssemblyVersion>
+   <FileVersion>0.4.4.0</FileVersion>
+   <InformationalVersion>0.4.4</InformationalVersion>
    ```
 
 2. **CHANGELOG.md:** Mit exakter Zeit
    ```markdown
-   ## [0.4.3] - 2025-06-01 17:15
+   ## [0.4.4] - 2025-06-01 19:21
    ### Added
-   - Vogon Poetry Easter Egg - tribute to Douglas Adams
-   - Dead Letters page basic functionality
+   - Core functionality test with real Ricoh G900 II JPEG
+   - Enhanced EXIF parser with line break and encoding fixes
    
    ### Fixed
-   - Dead Letters navigation crash
-   - AboutPage keyboard focus issues
+   - EXIF encoding issues with German umlauts
+   - Parser handling of camera line breaks
    
-   ### Known Issues
-   - Settings page crashes on navigation
+   ### Discovered
+   - Ricoh G900 II only saves first 3 QRBridge fields
    ```
 
 3. **MainWindow.xaml:** Title mit Version
    ```xml
-   Title="CamBridge Configuration v0.4.3"
+   Title="CamBridge Configuration v0.4.4"
    ```
 
 ## 🔄 Update-Protokoll
@@ -645,6 +706,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 - **v0.4.1** - 2025-06-01: Settings Page (noch nicht committed)
 - **v0.4.2** - 2025-06-01: Dead Letters UI (funktioniert)
 - **v0.4.3** - 2025-06-01: Vogon Poetry & Dead Letters Fix
+- **v0.4.4** - 2025-06-01: Core Test mit Ricoh JPEG
 
 ### Versionierungs-Lektionen
 1. **v0.0.2 Duplikat:** Gleich am Anfang passiert
@@ -708,17 +770,18 @@ Implementierung:
 - 2025-06-01 15:20: MWL-Integration Details und Dokumentations-Strategien hinzugefügt
 - 2025-06-01 17:15: v0.4.3 - Vogon Poetry Easter Egg implementiert, Dead Letters funktioniert, Settings crasht noch
 - 2025-06-01 17:20: WISDOM - Changelog nur neueste Version, nächster Chat Core-Test mit Ricoh JPEG
+- 2025-06-01 19:21: v0.4.4 - Core erfolgreich getestet, Ricoh speichert nur 3 Felder, Parser verbessert
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.4.3
+### Aktuelle Version: v0.4.4
 ### Tatsächlicher Stand: 
-- ✅ Service Control (Phase 9) in v0.4.0 erledigt
-- ✅ Settings Page (v0.4.1) implementiert (crasht aber noch)
-- ✅ Dead Letters UI (v0.4.2) implementiert
-- ✅ Vogon Poetry Easter Egg (v0.4.3) funktioniert
-- ✅ Dead Letters Navigation (v0.4.3) gefixt
-### Nächste Aufgabe: Core-Funktionalität Test mit Ricoh JPEG
+- ✅ Core mit echtem Ricoh JPEG getestet
+- ✅ JPEG → DICOM Konvertierung funktioniert
+- ✅ QRBridge-Daten werden extrahiert
+- ⚠️ Ricoh speichert nur 3 von 5 Feldern
+- ⚠️ Settings Page crasht noch immer
+### Nächste Aufgabe: Settings Page Crash Fix (v0.4.5)
 ### Architektur: Enterprise-Level (und das ist GUT so!)
 ### Kontext: Medizinische Software mit 0% Fehlertoleranz
 ### Geschätzte v1.0.0: 3-5 Chats
