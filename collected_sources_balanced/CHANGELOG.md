@@ -1,0 +1,168 @@
+# CamBridge Changelog
+
+All notable changes to CamBridge will be documented in this file.  
+© 2025 Claude's Improbably Reliable Software Solutions
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+### Planned
+- Dead Letters Management UI (v0.4.2)
+- Dashboard Polish & Performance (v0.5.0)
+- PACS Integration (v0.6.0)
+
+## [0.4.1] - 2025-06-01 13:30 (pending commit)
+### Added
+- Complete Settings page with 4-tab TabView layout
+- Real JSON persistence to appsettings.json with auto-backup
+- Comprehensive MVVM data binding with CommunityToolkit.Mvvm
+- Watch folder management with add/remove functionality
+- Input validation with Data Annotations
+- Folder browse dialogs using Win32 interop
+- Status bar with loading indicators and change tracking
+- Value converters for visibility bindings
+- PROJECT_WISDOM.md - Cross-session documentation system
+
+### Fixed
+- WPF/ModernWPF compatibility (removed WinUI3 Spacing attributes)
+
+### Changed
+- ConfigurationService from mock to real implementation
+- Version management to prevent duplicates (lessons learned from v0.4.0)
+
+## [0.4.0] - 2025-06-01 11:30:55 (Duplicate version! Should have been v0.4.1)
+### Added
+- Service Control implementation (Phase 9)
+- Start/Stop/Restart functionality with UAC handling
+- Automatic status updates every 2 seconds
+- Uptime display for running service
+- "Restart as Administrator" feature
+- Quick Actions for Services.msc and EventVwr.msc
+- Service installation detection
+
+### Note
+- This was committed 9 hours after the first v0.4.0 commit
+- Should have incremented version number
+
+## [0.4.0] - 2025-06-01 02:22:32 (Night shift development)
+### Added
+- WPF Configuration GUI with ModernWPF UI framework
+- Real-time dashboard with auto-refresh (5 seconds)
+- HttpApiService for REST API communication  
+- StatusController API endpoints for service monitoring
+- Connection status indicator with visual feedback
+- Active processing items display
+- Recent activity tracking
+- Full dependency injection for ViewModels and Services
+
+### Fixed
+- Platform-specific CA1416 warnings for Windows-only features
+- Missing package references for HTTP client
+- Dependency injection setup for ViewModels
+- Proper error handling for offline service
+
+### Changed
+- Dashboard now shows live data from ProcessingQueue
+- Added loading states during API calls
+- Display of processing statistics and queue status
+
+### Breaking Change
+- INotificationService now includes NotifyErrorAsync method
+
+## [0.3.2] - 2025-05-31 23:10:22
+### Added
+- Complete error handling with dead-letter queue persistence and reprocessing
+- Email/event log notifications with daily summaries and threshold alerts
+- Web dashboard (port 5050) with REST API and real-time monitoring
+- PowerShell installation script with automated setup
+- Build and deployment automation
+
+### Known Issues
+- Integration tests have build errors (later fixed)
+
+## [0.3.1] - 2025-05-31 16:51:44
+### Fixed
+- Dependency injection issue where singleton ProcessingQueue tried to consume scoped IFileProcessor
+- ProcessingQueue now uses IServiceScopeFactory to create scopes for file processing
+- Removed duplicate IFileProcessor registration in Program.cs
+
+### Added
+- Batch and PowerShell scripts for collecting source files for deployment
+
+## [0.3.0] - 2025-05-31 15:45:17
+### Added
+- FileProcessor service orchestrating complete conversion pipeline
+- ProcessingQueue with thread-safe operation and retry logic
+- FolderWatcherService monitoring multiple folders via FileSystemWatcher
+- Comprehensive configuration system via appsettings.json
+- Health check endpoint for service monitoring
+- Statistics reporting and performance metrics
+- PowerShell installation script and documentation
+
+### Changed
+- Worker service now coordinates all processing components
+- Enhanced logging with structured output
+- Target framework to net8.0-windows for Windows Service
+
+### Breaking Change
+- Target framework changed to net8.0-windows
+
+## [0.2.0] - 2025-05-31 10:34:17
+### Added
+- Flexible JSON-based mapping configuration system
+- MappingConfigurationLoader for JSON serialization
+- DicomTagMapper service for dynamic EXIF to DICOM mapping
+- Support for value transformations (date, gender, truncation)
+- Comprehensive tests for mapping system
+
+## [Missing Version] - 2025-05-31 01:17:17 (Night shift!)
+### Added
+- DICOM conversion implementation with fo-dicom v5.1.2
+- DicomConverter for JPEG to DICOM transformation
+- Preserve JPEG compression using encapsulated pixel data
+- Support YBR_FULL_422 photometric interpretation
+
+### Note
+- This commit was missing version number in git commit message
+
+## [0.1.0] - 2025-05-30 23:49:44
+### Added
+- EXIF extraction with QRBridge support
+- Support for pipe-delimited and command-line QRBridge formats
+- RicohExifReader for specialized Ricoh G900 II support
+- Infrastructure layer with comprehensive unit tests
+
+## [0.0.2] - 2025-05-30 21:34:12 (Git duplicate - 78 seconds after first)
+### Added
+- Core domain models (second commit)
+
+## [0.0.2] - 2025-05-30 21:32:54
+### Added
+- Core domain models (Patient, Study, Metadata)
+- Value objects (DicomTag, ExifTag, PatientId, StudyId)
+- Repository interfaces
+
+## [0.0.1] - 2025-05-30 20:34:20
+### Added
+- Initial project structure with 4 projects (Core, Infrastructure, Service, Config)
+- Automatic versioning via Version.props
+- Documentation (README, CHANGELOG, LICENSE)
+
+### Note
+- Project started at 20:30:44 with .gitattributes
+- First real commit 4 minutes later
+
+---
+
+## Version History Summary
+- Total development time: ~41 hours over 2.5 days
+- Night shifts: DICOM (01:17), GUI (02:22)
+- Version duplicates: v0.0.2 (78 sec), v0.4.0 (9 hours)
+- Missing versions: DICOM commit, v0.3.3 (was in old CHANGELOG but not in git)
+
+## Lessons Learned
+- Always increment version numbers, even for small changes
+- Use "babysteps" versioning (v0.0.1 → v0.0.2 → v0.0.3)
+- Check git history before committing to avoid duplicates
+- Night shift commits need extra attention to versioning
