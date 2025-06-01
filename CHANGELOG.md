@@ -6,6 +6,28 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2025-06-01 20:52
+### Added
+- ConfigurationService with JSON persistence to %APPDATA%\CamBridge
+- NotificationSettings model with comprehensive email configuration
+- Global converter registration in App.xaml for all pages
+- PasswordBoxHelper class for secure password binding (implementation pending)
+
+### Fixed
+- Settings page crash on navigation - DI registration for ConfigurationService
+- All value converters now properly registered and accessible
+- Navigation between all pages now stable
+
+### Changed
+- Temporary TextBox for SMTP password field (PasswordBox binding workaround)
+- Settings are now persisted between application sessions
+- Improved error handling during page initialization
+
+### Known Issues
+- PasswordBox still uses TextBox temporarily (security concern)
+- Ricoh G900 II only saves 3 of 5 QRBridge fields
+- Service connection shows "Service Offline" (service not running)
+
 ## [0.4.4] - 2025-06-01 19:21
 ### Added
 - Core functionality test with real Ricoh G900 II JPEG

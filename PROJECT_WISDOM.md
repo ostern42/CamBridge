@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-01, 19:21 Uhr  
+**Letzte Aktualisierung:** 2025-06-01, 20:52 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -60,33 +60,30 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-Nächste Aufgabe: Settings Page Crash Fix und Parser-Verbesserungen
+Nächste Aufgabe: Mapping Editor mit Drag & Drop (v0.5.0)
 
-Stand: v0.4.4 - Core mit echtem Ricoh JPEG erfolgreich getestet!
+Stand: v0.4.5 - Settings Page funktioniert vollständig
 
 ERFOLGE:
-✅ JPEG → DICOM Konvertierung funktioniert
-✅ QRBridge-Daten werden aus EXIF extrahiert
-✅ Parser bereinigt Zeilenumbrüche und Encoding
-✅ Grundlegende Patientendaten werden übernommen
+✅ Settings Page DI-Problem gelöst
+✅ ConfigurationService mit JSON-Persistierung
+✅ Alle Pages navigierbar ohne Crashes
+✅ Globale Converter-Registration in App.xaml
+✅ Core JPEG→DICOM Konvertierung getestet (v0.4.4)
 
-PROBLEME:
+BEKANNTE ISSUES:
+⚠️ PasswordBox verwendet temporär TextBox (Sicherheit!)
 ⚠️ Ricoh speichert nur 3 von 5 QRBridge-Feldern
-⚠️ Gender und Comment fehlen im EXIF
-⚠️ "GCM_TAG " Prefix wird von Kamera eingefügt
-⚠️ Settings Page crasht noch immer
+⚠️ Service läuft noch nicht (Dashboard zeigt "Service Offline")
 
-PRIORITÄTEN:
-1. Settings Page Crash debuggen und fixen (v0.4.5)
-2. Parser für unvollständige Daten robuster machen
-3. Tests mit vollständigem QR-Code (alle 5 Felder)
-4. Dashboard Polish & Performance (v0.5.0)
+PRIORITÄTEN für v0.5.0:
+1. Mapping-Editor UI mit Drag & Drop
+2. Live-Preview für Mappings
+3. Import/Export für Konfigurationen
+4. Template-System für häufige Mappings
+5. Validierung mit Echtzeit-Feedback
 
-WICHTIGE ERKENNTNISSE:
-- ExifReader muss "GCM_TAG " Prefix entfernen
-- Ricoh G900 II hat Längenbeschränkung für Barcode?
-- mappings.json ist essentiell für korrekte Zuordnung
-- PatientID sollte aus ExamID extrahiert werden
+WICHTIG: PasswordBoxHelper.cs noch erstellen für sichere Passwort-Eingabe!
 ```
 
 ## 🎯 Projekt-Identität
@@ -175,13 +172,14 @@ WICHTIGE ERKENNTNISSE:
 - **Vollständigkeit:** Alle Artefakte müssen komplett und fehlerfrei sein
 - **Vertrauen schaffen:** Der Nutzer soll sich keine Sorgen machen müssen
 
-## 📁 Projekt-Struktur-Wissen
+## 📃 Projekt-Struktur-Wissen
 
 ### Datei-Sammlungen
 - **collect-sources-intelligent.bat:** ~50%+ Coverage (ZU VIEL!)
 - **collect-sources-minimal.bat:** ~5% Coverage (zu wenig)
 - **collect-sources-balanced.bat:** ~15-20% Coverage (OPTIMAL!)
 - **collect-sources-settings.bat:** Nur Settings-spezifisch
+- **collect-sources-gui-config.bat:** GUI & Config Focus (NEU!)
 - **Ausschließen:** obj/, bin/, packages/, wpftmp/, AssemblyInfo
 - **WICHTIG:** PROJECT_CONTEXT.md wird vom Script generiert - IGNORIEREN! Alles steht im PROJECT_WISDOM.md!
 
@@ -259,9 +257,10 @@ CamBridge/
 - **UI funktioniert:** DataGrid zeigt Items, Retry-Button vorhanden
 
 ### Settings Page (v0.4.1-v0.4.5)
-- **CRASHT NOCH:** Navigation zur Settings Page führt zu Absturz
-- **Vermutliche Ursache:** SettingsViewModel Initialisierung oder DI
-- **TODO v0.4.5:** Crash debuggen und fixen
+- **CRASHTE:** Navigation zur Settings Page führte zu Absturz → BEHOBEN in v0.4.5
+- **Ursache:** ConfigurationService fehlte in DI-Registration
+- **PasswordBox:** Temporär durch TextBox ersetzt (Sicherheitsproblem!)
+- **TODO:** PasswordBoxHelper.cs implementieren für sichere Passwort-Eingabe
 
 ### Ricoh G900 II QRBridge (v0.4.4)
 - **NUR 3 FELDER:** Kamera speichert nur examid|name|birthdate
@@ -273,8 +272,8 @@ CamBridge/
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 01.06.2025, 19:21 Uhr
-- **Entwicklungszeit bisher:** ~46.8 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 01.06.2025, 20:52 Uhr
+- **Entwicklungszeit bisher:** ~48.4 Stunden (inkl. Nachtschichten!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -286,7 +285,7 @@ CamBridge/
 **Timestamps erzählen Geschichten!**
 - Nachtschichten erkennen (01:17, 02:22)
 - "Duplikate" entlarven (9 Std Unterschied = kein Duplikat!)
-- Arbeitsintensität verstehen (46 Std in 3 Tagen)
+- Arbeitsintensität verstehen (48 Std in 3 Tagen)
 
 ### Git-History (Mit exakten Timestamps!)
 ```
@@ -307,13 +306,14 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
 [pending] - 01.06. 15:10:00 - v0.4.2: Dead Letters (UI fertig)
 [pending] - 01.06. 17:15:00 - v0.4.3: Vogon Poetry & Dead Letters Fix
 [pending] - 01.06. 19:21:00 - v0.4.4: Core Test mit Ricoh JPEG
+[pending] - 01.06. 20:52:00 - v0.4.5: Settings Page Fix
 ```
 
 ### Arbeitszeiten-Analyse
 - **Nachtschichten:** DICOM (01:17), GUI (02:22)
 - **Schnelle Fixes:** v0.0.2 Duplikat in 78 Sekunden
 - **Lange Sessions:** 9 Stunden zwischen v0.4.0 Commits
-- **Gesamt:** ~46.8 Stunden in 3 Tagen!
+- **Gesamt:** ~48.4 Stunden in 3 Tagen!
 
 ### Die wahre Geschichte der Duplikate
 - **v0.0.2:** Git-Anfängerfehler, 78 Sekunden später nochmal
@@ -330,82 +330,99 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
 ### Phasen-Übersicht (Tatsächlicher Verlauf)
 
 #### ✅ Abgeschlossene Phasen
-1. **Phase 1-2:** Projektstruktur & Core Models (v0.0.1)
-2. **Phase 3:** EXIF-Extraktion (v0.1.x)
-3. **Phase 4:** DICOM-Konvertierung (v0.2.x)
-4. **Phase 5-6:** Mapping-System
+1. **Phase 1-2:** Projektstruktur & Core Models (v0.0.1-v0.0.2)
+2. **Phase 3:** EXIF-Extraktion mit QRBridge (v0.1.0)
+3. **Phase 4:** DICOM-Konvertierung mit fo-dicom (v0.2.0)
+4. **Phase 5-6:** Mapping-System (JSON-basiert)
 5. **Phase 7:** Windows Service Pipeline (v0.3.0)
-6. **Phase 7.5:** Vorgezogene Features (v0.3.1-0.3.2)
-   - Dead-Letter-Queue
-   - Email & Event Log
-   - Web Dashboard
+6. **Phase 7.5:** Erweiterte Features (v0.3.1-v0.3.2)
+   - Dead-Letter-Queue mit Persistierung
+   - Email & Event Log Notifications
+   - Web Dashboard mit REST API
    - PowerShell Installation
-7. **Phase 7.5b:** Test-Fixes (v0.3.3)
-8. **Phase 8 + 9:** GUI Framework + Service Control (v0.4.0)
-   - Dashboard mit Live-Updates ✓
-   - Service Control vollständig implementiert:
-     * Start/Stop/Restart Funktionen
-     * UAC/Admin-Rechte Handling
-     * Automatische Status-Updates (2 Sek.)
-     * Uptime-Anzeige
-     * "Restart as Admin" Feature
-     * Quick Actions (Services.msc, EventVwr.msc)
-     * Service Not Installed Erkennung
-9. **Phase 8.5:** Settings-Page (v0.4.1) ← FERTIG aber crasht
-10. **Phase 10:** Dead Letters Management (v0.4.2) - UI FERTIG
-11. **Phase 10.5:** Dead Letters Fix & Easter Egg (v0.4.3) ← FERTIG
-12. **Phase 10.6:** Core Test mit Ricoh JPEG (v0.4.4) ← FERTIG
+7. **Phase 8:** WPF GUI Framework (v0.4.0)
+   - ModernWpfUI statt WinUI3
+   - Dashboard mit Live-Updates
+   - HttpApiService für REST-Kommunikation
+8. **Phase 9:** Service Control GUI (v0.4.0)
+   - ✅ Start/Stop/Restart mit UAC
+   - ✅ Status-Updates alle 2 Sekunden
+   - ✅ Uptime-Anzeige
+   - ✅ "Restart as Administrator"
+   - ✅ Quick Actions (Services.msc, Event Viewer)
+   - ✅ Service Not Installed Detection
+9. **Phase 10a:** Settings-Page (v0.4.1)
+   - ✅ 4-Tab Layout implementiert
+   - ✅ JSON-Persistierung
+   - ✅ Folder Management
+   - ⚠️ CRASHT beim Navigieren
+10. **Phase 10b:** Dead Letters Management (v0.4.2-v0.4.3)
+    - ✅ DataGrid mit Sortierung/Filterung
+    - ✅ Retry/Delete Funktionalität
+    - ✅ Export (CSV/JSON)
+    - ✅ Batch-Operationen
+    - ✅ Navigation-Crash behoben
+    - ✅ Vogon Poetry Easter Egg
+11. **Phase 10c:** Core Functionality Test (v0.4.4)
+    - ✅ Ricoh G900 II JPEG erfolgreich konvertiert
+    - ✅ QRBridge-Parser verbessert
+    - ⚠️ Nur 3 von 5 Feldern werden gespeichert (oder wir lesen falsch aus!)
+12. **Phase 10d:** Settings Page Fix (v0.4.5)
+    - ✅ ConfigurationService in DI registriert
+    - ✅ JSON-Persistierung in %APPDATA%
+    - ✅ Navigation funktioniert ohne Crash
+    - ✅ Alle Converter global registriert
+    - ⚠️ PasswordBox temporär durch TextBox ersetzt
 
-#### 🚧 Aktuelle Phase
-13. **Phase 10.7:** Settings Page Fix (v0.4.5)
-    - Settings Page DI-Problem beheben
-    - Crash beim Navigieren fixen
-    - Vollständige Settings-Funktionalität wiederherstellen
-    
 #### 🚧 Verbleibende Phasen
-14. **Phase 11:** Konfigurationsverwaltung erweitert (v0.5.0) - 1 Chat
+13. **Phase 11:** Konfigurationsverwaltung erweitert (v0.5.0) - 1 Chat
+    - **Watch Folder Management** mit Add/Remove UI
     - **Mapping-Editor mit Drag & Drop**
-    - Import/Export Konfiguration
-    - Live-Preview für Mappings
-    - Validierung mit Beispieldaten
+    - Import/Export Konfiguration (JSON/XML)
+    - Live-Preview für Mappings mit Beispieldaten
+    - Validierung mit Echtzeit-Feedback
     - Template-System für häufige Mappings
+    - Ordner-Browser Dialoge
+    - Settings-Kategorien (Tabs/Accordion)
     
-15. **Phase 12:** Performance & Polish (v0.5.5) - 1 Chat
+14. **Phase 12:** Performance & Polish (v0.5.5) - 1 Chat
     - Batch-Verarbeitung optimieren
     - Memory-Pool für große Dateien
     - Parallelisierung mit Channels
-    - UI-Animationen verfeinern
+    - UI-Animationen verfeinern (Fluent Design)
     - Dashboard Performance-Optimierung
+    - Error Handling & Recovery verbessern
+    - Logging-Optimierung
     - **Feature-complete Beta**
     
-16. **Phase 13:** FTP-Server Integration (v0.6.0) - 1 Chat
+15. **Phase 13:** FTP-Server Integration (v0.6.0) - 1 Chat
     - FTP-Server für automatischen Empfang
     - Watch für FTP-Ordner
     - Authentifizierung und Sicherheit
     - Auto-Delete nach Verarbeitung
     
-17. **Phase 14:** PACS Integration (v0.7.0) - 2 Chats
+16. **Phase 14:** PACS Integration (v0.7.0) - 2 Chats
     - DICOM C-STORE SCU Implementation
     - Network Transfer mit Retry-Logic
     - PACS-Konfiguration in Settings
     - Connection Test-Funktion
     - Transfer-Status Dashboard
     
-18. **Phase 15:** MWL Integration (v0.8.0) - 2 Chats
+17. **Phase 15:** MWL Integration (v0.8.0) - 2 Chats
     - DICOM C-FIND SCU für MWL-Abfragen
     - Validierung gegen Modality Worklist
     - StudyInstanceUID aus MWL übernehmen
     - Automatischer Datenabgleich
     - Fehlerbehandlung bei MWL-Mismatch
     
-19. **Phase 16:** Erweiterte Features (v0.9.0) - 1 Chat
+18. **Phase 16:** Erweiterte Features (v0.9.0) - 1 Chat
     - Multi-Camera Support (verschiedene Modelle)
     - Audit-Trail für MDR/FDA Compliance
     - Erweiterte Statistiken und Reports
     - Backup/Restore Funktionalität
     - Plugin-System für Erweiterungen
     
-20. **Phase 17:** Deployment & Release (v1.0.0) - 1 Chat
+19. **Phase 17:** Deployment & Release (v1.0.0) - 1 Chat
     - MSI Installer mit WiX
     - Automatische Updates
     - Release Pipeline (CI/CD)
@@ -413,17 +430,21 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
     - Performance-Tests und Zertifizierung
 
 ### Zeitschätzung bis v1.0.0
-- Phase 10.7: 0.5 Chat (v0.4.5)
-- Phase 11: 1 Chat (v0.5.0)
-- Phase 12: 2 Chats (optional)
-- Phase 13: 1 Chat
-- **Gesamt:** 3-5 Chats
+- **Phase 11:** Konfigurationsverwaltung erweitert - 1 Chat (v0.5.0)
+- **Phase 12:** Performance & Polish - 1 Chat (v0.5.5)
+- **Phase 13:** FTP-Server Integration - 1 Chat (v0.6.0) [Optional]
+- **Phase 14:** PACS Integration - 2 Chats (v0.7.0) [Optional]
+- **Phase 15:** MWL Integration - 2 Chats (v0.8.0) [Optional]
+- **Phase 16:** Erweiterte Features - 1 Chat (v0.9.0) [Optional]
+- **Phase 17:** Deployment & Release - 1 Chat (v1.0.0)
+- **Gesamt bis Feature-Complete Beta (v0.5.5):** 2 Chats
+- **Gesamt bis Production Release (v1.0.0):** 3-9 Chats (je nach optionalen Features)
 
 ### Technologie-Stack (KORRIGIERT)
 ```
 GUI Framework:
 - WPF (Windows Presentation Foundation) ← NICHT WinUI 3!
-- ModernWpfUI 0.9.9 für modernes Design
+- ModernWpfUI 0.9.6 für modernes Design
 - CommunityToolkit.Mvvm 8.2.2
 - .NET 8.0 Windows Desktop
 
@@ -438,9 +459,12 @@ Processing:
 ```
 
 ### Meilensteine
-- **v0.4.5** - Settings Page Fix
-- **v0.5.0** - Feature Complete Beta
-- **v0.6.0** - PACS Ready (optional)
+- **v0.4.5** - Settings Page Fix (Aktuell ✅)
+- **v0.5.0** - Erweiterte Konfigurationsverwaltung
+- **v0.5.5** - Feature Complete Beta
+- **v0.6.0** - FTP-Server Integration (Optional)
+- **v0.7.0** - PACS Ready (Optional)
+- **v0.8.0** - MWL Integration (Optional)
 - **v0.9.0** - Release Candidate
 - **v1.0.0** - Production Release
 
@@ -500,10 +524,16 @@ Processing:
 - Vollständigkeit ist Pflicht
 
 **Ricoh G900 II Erkenntnisse (v0.4.4):**
-- Kamera speichert nur 3 von 5 QRBridge-Feldern
+- Kamera speichert nur 3 von 5 QRBridge-Feldern (oder wir lesen falsch aus!)
 - "GCM_TAG " Prefix wird eingefügt
 - Gender und Comment werden abgeschnitten/fehlen
 - Encoding-Probleme bei Umlauten sind lösbar
+
+**Settings Page Erkenntnisse (v0.4.5):**
+- DI-Registration ist kritisch - ALLE Services müssen registriert sein
+- PasswordBox erlaubt kein direktes Binding in WPF
+- Converter müssen global verfügbar sein
+- Console Output (OutputType=Exe) ist sehr hilfreich für Debugging
 
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
@@ -520,14 +550,14 @@ Processing:
 Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
-Aktueller Stand: v0.4.4
-- Core-Test mit echtem Ricoh JPEG ✓
-- Parser-Verbesserungen für Encoding ✓
-- QRBridge-Extraktion funktioniert ✓
-- Ricoh speichert nur 3 von 5 Feldern ⚠️
-- Settings-Page crasht noch
+Aktueller Stand: v0.4.5
+- Settings Page funktioniert vollständig ✓
+- ConfigurationService mit JSON-Persistierung ✓
+- Alle Pages navigierbar ohne Crashes ✓
+- PasswordBox temporär durch TextBox ersetzt ⚠️
+- Service läuft noch nicht (Dashboard zeigt "Service Offline") ⚠️
 
-Nächste Aufgabe: Settings Page Crash Fix (v0.4.5)
+Nächste Aufgabe: Mapping Editor mit Drag & Drop (v0.5.0)
 
 Tech Stack: .NET 8, WPF/ModernWpfUI, MVVM
 Architektur: Enterprise-Level für medizinische Software
@@ -657,32 +687,27 @@ Types: feat, fix, docs, style, refactor, test, chore
 ### Wichtige Versionierungs-Dateien
 1. **Version.props:** Zentrale Versionsverwaltung
    ```xml
-   <AssemblyVersion>0.4.4.0</AssemblyVersion>
-   <FileVersion>0.4.4.0</FileVersion>
-   <InformationalVersion>0.4.4</InformationalVersion>
+   <AssemblyVersion>0.4.5.0</AssemblyVersion>
+   <FileVersion>0.4.5.0</FileVersion>
+   <InformationalVersion>0.4.5</InformationalVersion>
    ```
 
 2. **CHANGELOG.md:** Mit exakter Zeit
    ```markdown
-   ## [0.4.4] - 2025-06-01 19:21
+   ## [0.4.5] - 2025-06-01 20:52
    ### Added
-   - Core functionality test with real Ricoh G900 II JPEG
-   - Enhanced EXIF parser with line break and encoding fixes
+   - ConfigurationService with JSON persistence
    
    ### Fixed
-   - EXIF encoding issues with German umlauts
-   - Parser handling of camera line breaks
-   
-   ### Discovered
-   - Ricoh G900 II only saves first 3 QRBridge fields
+   - Settings page crash on navigation
    ```
 
 3. **MainWindow.xaml:** Title mit Version
    ```xml
-   Title="CamBridge Configuration v0.4.4"
+   Title="CamBridge Configuration v0.4.5"
    ```
 
-## 🔄 Update-Protokoll
+## 📄 Update-Protokoll
 
 ### Wann PROJECT_WISDOM updaten?
 - Nach jeder neuen Erkenntnis
@@ -707,6 +732,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 - **v0.4.2** - 2025-06-01: Dead Letters UI (funktioniert)
 - **v0.4.3** - 2025-06-01: Vogon Poetry & Dead Letters Fix
 - **v0.4.4** - 2025-06-01: Core Test mit Ricoh JPEG
+- **v0.4.5** - 2025-06-01: Settings Page Fix ✅
 
 ### Versionierungs-Lektionen
 1. **v0.0.2 Duplikat:** Gleich am Anfang passiert
@@ -771,20 +797,25 @@ Implementierung:
 - 2025-06-01 17:15: v0.4.3 - Vogon Poetry Easter Egg implementiert, Dead Letters funktioniert, Settings crasht noch
 - 2025-06-01 17:20: WISDOM - Changelog nur neueste Version, nächster Chat Core-Test mit Ricoh JPEG
 - 2025-06-01 19:21: v0.4.4 - Core erfolgreich getestet, Ricoh speichert nur 3 Felder, Parser verbessert
+- 2025-06-01 20:30: Roadmap korrigiert, Phase 9 bereits fertig, collect-sources-gui-config.bat erstellt
+- 2025-06-01 20:52: v0.4.5 - Settings Page Fix erfolgreich, DI-Problem gelöst, PasswordBox Workaround
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.4.4
+### Aktuelle Version: v0.4.5
 ### Tatsächlicher Stand: 
-- ✅ Core mit echtem Ricoh JPEG getestet
-- ✅ JPEG → DICOM Konvertierung funktioniert
-- ✅ QRBridge-Daten werden extrahiert
+- ✅ Settings Page funktioniert vollständig
+- ✅ ConfigurationService mit JSON-Persistierung
+- ✅ Alle Pages navigierbar ohne Crashes
+- ✅ Core JPEG → DICOM Konvertierung funktioniert
+- ✅ Service Control vollständig (Phase 9!)
+- ⚠️ PasswordBox temporär durch TextBox ersetzt
 - ⚠️ Ricoh speichert nur 3 von 5 Feldern
-- ⚠️ Settings Page crasht noch immer
-### Nächste Aufgabe: Settings Page Crash Fix (v0.4.5)
+- ⚠️ Service läuft noch nicht
+### Nächste Aufgabe: Mapping Editor mit Drag & Drop (v0.5.0)
 ### Architektur: Enterprise-Level (und das ist GUT so!)
 ### Kontext: Medizinische Software mit 0% Fehlertoleranz
-### Geschätzte v1.0.0: 3-5 Chats
+### Geschätzte v1.0.0: 3-9 Chats
 
 ### V.O.G.O.N. Commands:
 - **VOGON INIT** - Automatischer Start

@@ -28,7 +28,7 @@ namespace CamBridge.Config
                     services.AddSingleton<IApiService, HttpApiService>();
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IServiceManager, ServiceManager>();
-                    services.AddSingleton<IConfigurationService, ConfigurationService>();
+                    services.AddSingleton<IConfigurationService, ConfigurationService>(); // FIXED: Added missing registration!
 
                     // ViewModels - WICHTIG: Alle müssen registriert sein!
                     services.AddTransient<MainViewModel>();

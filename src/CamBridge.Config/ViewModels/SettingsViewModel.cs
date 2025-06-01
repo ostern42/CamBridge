@@ -7,7 +7,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CamBridge.Config.ViewModels
 {
@@ -170,7 +169,16 @@ namespace CamBridge.Config.ViewModels
 
         public async Task InitializeAsync()
         {
-            await LoadSettingsAsync();
+            try
+            {
+                await LoadSettingsAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error initializing SettingsViewModel: {ex.Message}");
+                StatusMessage = "Failed to load settings";
+                IsError = true;
+            }
         }
 
         [RelayCommand]
@@ -285,15 +293,159 @@ namespace CamBridge.Config.ViewModels
 
         private void MapFromSettings(CamBridgeSettings settings)
         {
-            // Map all settings to view model properties
-            // Implementation details omitted for brevity
+            // Watch Folders
+            WatchFolders.Clear();
+            foreach (var folder in settings.WatchFolders)
+            {
+                var folderVm = new FolderConfigurationViewModel
+                {
+                    Path = folder.Path,
+                    OutputPath = folder.OutputPath,
+                    Enabled = folder.Enabled,
+                    IncludeSubdirectories = folder.IncludeSubdirectories,
+                    FilePattern = folder.FilePattern
+                };
+
+                // Subscribe to changes
+                folderVm.PropertyChanged += (s, e) => HasChanges = true;
+                WatchFolders.Add(folderVm);
+            }
+
+            // Processing Options
+            DefaultOutputFolder = settings.DefaultOutputFolder;
+            SuccessAction = settings.Processing.SuccessAction;
+            FailureAction = settings.Processing.FailureAction;
+            ArchiveFolder = settings.Processing.ArchiveFolder;
+            ErrorFolder = settings.Processing.ErrorFolder;
+            CreateBackup = settings.Processing.CreateBackup;
+            BackupFolder = settings.Processing.BackupFolder;
+            MaxConcurrentProcessing = settings.Processing.MaxConcurrentProcessing;
+            RetryOnFailure = settings.Processing.RetryOnFailure;
+            MaxRetryAttempts = settings.Processing.MaxRetryAttempts;
+            OutputOrganization = settings.Processing.OutputOrganization;
+            ProcessExistingOnStartup = settings.Processing.ProcessExistingOnStartup;
+
+            if (settings.Processing.MaxFileAge.HasValue)
+            {
+                MaxFileAgeDays = (int)settings.Processing.MaxFileAge.Value.TotalDays;
+            }
+
+            // DICOM Settings
+            ImplementationClassUid = settings.Dicom.ImplementationClassUid;
+            ImplementationVersionName = settings.Dicom.ImplementationVersionName;
+            InstitutionName = settings.Dicom.InstitutionName;
+            StationName = settings.Dicom.StationName;
+            ValidateAfterCreation = settings.Dicom.ValidateAfterCreation;
+
+            // Notification Settings - safe navigation
+            EnableEmail = settings.Notifications?.EnableEmail ?? false;
+            EnableEventLog = settings.Notifications?.EnableEventLog ?? true;
+
+            if (settings.Notifications?.Email != null)
+            {
+                EmailFrom = settings.Notifications.Email.From;
+                EmailTo = settings.Notifications.Email.To;
+                SmtpHost = settings.Notifications.Email.SmtpHost;
+                SmtpPort = settings.Notifications.Email.SmtpPort;
+                SmtpUseSsl = settings.Notifications.Email.UseSsl;
+                SmtpUsername = settings.Notifications.Email.Username;
+                SmtpPassword = settings.Notifications.Email.Password;
+            }
+
+            MinimumEmailLevel = settings.Notifications?.MinimumEmailLevel ?? "Warning";
+            SendDailySummary = settings.Notifications?.SendDailySummary ?? false;
+            DailySummaryHour = settings.Notifications?.DailySummaryHour ?? 8;
+
+            // Logging Settings
+            LogLevel = settings.Logging.LogLevel;
+            LogFolder = settings.Logging.LogFolder;
+            EnableFileLogging = settings.Logging.EnableFileLogging;
+            EnableServiceEventLog = settings.Logging.EnableEventLog;
+            MaxLogFileSizeMB = settings.Logging.MaxLogFileSizeMB;
+            MaxLogFiles = settings.Logging.MaxLogFiles;
+
+            // Service Settings
+            StartupDelaySeconds = settings.Service.StartupDelaySeconds;
+            FileProcessingDelayMs = settings.Service.FileProcessingDelayMs;
         }
 
         private CamBridgeSettings MapToSettings()
         {
-            // Map view model properties back to settings
-            // Implementation details omitted for brevity
-            return new CamBridgeSettings();
+            var settings = new CamBridgeSettings
+            {
+                DefaultOutputFolder = DefaultOutputFolder,
+                Processing = new ProcessingOptions
+                {
+                    SuccessAction = SuccessAction,
+                    FailureAction = FailureAction,
+                    ArchiveFolder = ArchiveFolder,
+                    ErrorFolder = ErrorFolder,
+                    CreateBackup = CreateBackup,
+                    BackupFolder = BackupFolder,
+                    MaxConcurrentProcessing = MaxConcurrentProcessing,
+                    RetryOnFailure = RetryOnFailure,
+                    MaxRetryAttempts = MaxRetryAttempts,
+                    OutputOrganization = OutputOrganization,
+                    ProcessExistingOnStartup = ProcessExistingOnStartup,
+                    MaxFileAge = TimeSpan.FromDays(MaxFileAgeDays)
+                },
+                Dicom = new DicomSettings
+                {
+                    ImplementationClassUid = ImplementationClassUid,
+                    ImplementationVersionName = ImplementationVersionName,
+                    InstitutionName = InstitutionName,
+                    StationName = StationName,
+                    ValidateAfterCreation = ValidateAfterCreation
+                },
+                Notifications = new NotificationSettings
+                {
+                    EnableEmail = EnableEmail,
+                    EnableEventLog = EnableEventLog,
+                    Email = new EmailSettings
+                    {
+                        From = EmailFrom,
+                        To = EmailTo,
+                        SmtpHost = SmtpHost,
+                        SmtpPort = SmtpPort,
+                        UseSsl = SmtpUseSsl,
+                        Username = SmtpUsername,
+                        Password = SmtpPassword
+                    },
+                    MinimumEmailLevel = MinimumEmailLevel,
+                    SendDailySummary = SendDailySummary,
+                    DailySummaryHour = DailySummaryHour
+                },
+                Logging = new LoggingSettings
+                {
+                    LogLevel = LogLevel,
+                    LogFolder = LogFolder,
+                    EnableFileLogging = EnableFileLogging,
+                    EnableEventLog = EnableServiceEventLog,
+                    MaxLogFileSizeMB = MaxLogFileSizeMB,
+                    MaxLogFiles = MaxLogFiles
+                },
+                Service = new ServiceSettings
+                {
+                    StartupDelaySeconds = StartupDelaySeconds,
+                    FileProcessingDelayMs = FileProcessingDelayMs
+                }
+            };
+
+            // Map Watch Folders
+            settings.WatchFolders.Clear();
+            foreach (var folder in WatchFolders)
+            {
+                settings.WatchFolders.Add(new FolderConfiguration
+                {
+                    Path = folder.Path,
+                    OutputPath = folder.OutputPath,
+                    Enabled = folder.Enabled,
+                    IncludeSubdirectories = folder.IncludeSubdirectories,
+                    FilePattern = folder.FilePattern
+                });
+            }
+
+            return settings;
         }
     }
 

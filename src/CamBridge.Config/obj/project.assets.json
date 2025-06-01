@@ -2925,6 +2925,7 @@
       "Microsoft.Extensions.DependencyInjection >= 8.0.0",
       "Microsoft.Extensions.Hosting >= 8.0.0",
       "Microsoft.Extensions.Http >= 8.0.0",
+      "Microsoft.Extensions.Logging.Console >= 8.0.0",
       "Microsoft.Extensions.Logging.Debug >= 8.0.0",
       "ModernWpfUI >= 0.9.6",
       "System.Drawing.Common >= 8.0.0",
@@ -3008,6 +3009,10 @@
             "version": "[8.0.0, )"
           },
           "Microsoft.Extensions.Http": {
+            "target": "Package",
+            "version": "[8.0.0, )"
+          },
+          "Microsoft.Extensions.Logging.Console": {
             "target": "Package",
             "version": "[8.0.0, )"
           },

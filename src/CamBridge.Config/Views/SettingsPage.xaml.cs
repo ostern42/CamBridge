@@ -1,4 +1,5 @@
 // src/CamBridge.Config/Views/SettingsPage.xaml.cs
+using System;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -13,18 +14,58 @@ namespace CamBridge.Config.Views
     [SupportedOSPlatform("windows")]
     public partial class SettingsPage : Page
     {
-        private readonly SettingsViewModel _viewModel;
+        private SettingsViewModel? _viewModel;
 
         public SettingsPage()
         {
             InitializeComponent();
 
-            // Get ViewModel from DI
-            _viewModel = ((App)Application.Current).Host.Services.GetRequiredService<SettingsViewModel>();
-            DataContext = _viewModel;
+            // Defer ViewModel initialization to Loaded event
+            Loaded += SettingsPage_Loaded;
+        }
 
-            // Initialize the view model
-            _ = _viewModel.InitializeAsync();
+        private async void SettingsPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Only initialize once
+            if (_viewModel != null) return;
+
+            try
+            {
+                // Get ViewModel from DI with null safety
+                var app = Application.Current as App;
+                if (app?.Host != null)
+                {
+                    _viewModel = app.Host.Services.GetRequiredService<SettingsViewModel>();
+                    DataContext = _viewModel;
+
+                    // Initialize the view model after setting DataContext
+                    await _viewModel.InitializeAsync();
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("App.Host is null - DI not available");
+                    ShowErrorMessage("Configuration service not available");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading SettingsViewModel: {ex.Message}");
+                ShowErrorMessage($"Failed to load settings: {ex.Message}");
+            }
+        }
+
+        private void ShowErrorMessage(string message)
+        {
+            // Create a simple error display
+            var errorText = new TextBlock
+            {
+                Text = message,
+                Margin = new Thickness(20),
+                FontSize = 16,
+                Foreground = System.Windows.Media.Brushes.Red
+            };
+
+            Content = new Grid { Children = { errorText } };
         }
 
         // Number validation for TextBox inputs
@@ -34,70 +75,94 @@ namespace CamBridge.Config.Views
             e.Handled = regex.IsMatch(e.Text);
         }
 
-        // Browse folder dialogs
+        // Browse folder dialogs with better error handling
         private void BrowseWatchFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog
+            try
             {
-                Title = "Select Watch Folder",
-                CheckFileExists = false,
-                CheckPathExists = true,
-                FileName = "Select Folder",
-                Filter = "Folder|*.none",
-                ValidateNames = false
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
-                if (_viewModel.SelectedWatchFolder != null && !string.IsNullOrEmpty(folderPath))
+                var dialog = new OpenFileDialog
                 {
-                    _viewModel.SelectedWatchFolder.Path = folderPath;
+                    Title = "Select Watch Folder",
+                    CheckFileExists = false,
+                    CheckPathExists = true,
+                    FileName = "Select Folder",
+                    Filter = "Folder|*.none",
+                    ValidateNames = false
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
+                    if (_viewModel?.SelectedWatchFolder != null && !string.IsNullOrEmpty(folderPath))
+                    {
+                        _viewModel.SelectedWatchFolder.Path = folderPath;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting folder: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void BrowseOutputFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog
+            try
             {
-                Title = "Select Output Folder",
-                CheckFileExists = false,
-                CheckPathExists = true,
-                FileName = "Select Folder",
-                Filter = "Folder|*.none",
-                ValidateNames = false
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
-                if (!string.IsNullOrEmpty(folderPath))
+                var dialog = new OpenFileDialog
                 {
-                    _viewModel.DefaultOutputFolder = folderPath;
+                    Title = "Select Output Folder",
+                    CheckFileExists = false,
+                    CheckPathExists = true,
+                    FileName = "Select Folder",
+                    Filter = "Folder|*.none",
+                    ValidateNames = false
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
+                    if (_viewModel != null && !string.IsNullOrEmpty(folderPath))
+                    {
+                        _viewModel.DefaultOutputFolder = folderPath;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting folder: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void BrowseLogFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog
+            try
             {
-                Title = "Select Log Folder",
-                CheckFileExists = false,
-                CheckPathExists = true,
-                FileName = "Select Folder",
-                Filter = "Folder|*.none",
-                ValidateNames = false
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
-                if (!string.IsNullOrEmpty(folderPath))
+                var dialog = new OpenFileDialog
                 {
-                    _viewModel.LogFolder = folderPath;
+                    Title = "Select Log Folder",
+                    CheckFileExists = false,
+                    CheckPathExists = true,
+                    FileName = "Select Folder",
+                    Filter = "Folder|*.none",
+                    ValidateNames = false
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
+                    if (_viewModel != null && !string.IsNullOrEmpty(folderPath))
+                    {
+                        _viewModel.LogFolder = folderPath;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting folder: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

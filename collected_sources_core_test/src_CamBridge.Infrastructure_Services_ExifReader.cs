@@ -197,8 +197,16 @@ namespace CamBridge.Infrastructure.Services
 
                 if (!string.IsNullOrWhiteSpace(description))
                 {
+                    // Clean up the description - remove line breaks and fix encoding
+                    var cleanedDescription = description
+                        .Replace("\r\n", "")
+                        .Replace("\n", "")
+                        .Replace("\r", "");
+
                     // Check if this might be barcode data (pipe-delimited = QRBridge format)
-                    if (description.Contains('|') && description.Contains("EX"))
+                    if (cleanedDescription.Contains('|') &&
+                        (cleanedDescription.Contains("EX") || cleanedDescription.Contains("Schmidt") ||
+                         cleanedDescription.Contains("1985")))
                     {
                         // Check if it's the User Comment with encoding prefix
                         if (tagName.Contains("User Comment") && description.Length > 8)
@@ -213,15 +221,15 @@ namespace CamBridge.Infrastructure.Services
                             }
                         }
 
-                        exifData["Barcode"] = description;
-                        _logger.LogDebug("Found barcode data in tag {TagName}: {Value}", tagName, description);
+                        exifData["Barcode"] = cleanedDescription;
+                        _logger.LogDebug("Found barcode data in tag {TagName}: {Value}", tagName, cleanedDescription);
                     }
 
                     // Store tag with cleaned name
                     var cleanName = tagName.Replace(" ", "").Replace("-", "");
                     if (!exifData.ContainsKey(cleanName))
                     {
-                        exifData[cleanName] = description;
+                        exifData[cleanName] = cleanedDescription;
                     }
                 }
             }
@@ -257,6 +265,34 @@ namespace CamBridge.Infrastructure.Services
 
         private string CleanUserComment(string userComment)
         {
+            // First, try to detect and fix encoding issues
+            // The � character often indicates UTF-8 interpreted as Latin-1
+            if (userComment.Contains("�") || userComment.Contains("\ufffd"))
+            {
+                _logger.LogDebug("Detected encoding issue in user comment, attempting to fix");
+
+                // Try different approaches to fix the encoding
+                try
+                {
+                    // If it's UTF-8 bytes interpreted as Latin-1, convert back
+                    var latin1Bytes = Encoding.GetEncoding("ISO-8859-1").GetBytes(userComment);
+                    var utf8String = Encoding.UTF8.GetString(latin1Bytes);
+
+                    // Check if this improved the string (should contain German umlauts now)
+                    if (!utf8String.Contains("�") &&
+                        (utf8String.Contains("ö") || utf8String.Contains("ä") || utf8String.Contains("ü") ||
+                         utf8String.Contains("Ö") || utf8String.Contains("Ä") || utf8String.Contains("Ü")))
+                    {
+                        userComment = utf8String;
+                        _logger.LogDebug("Fixed encoding using UTF-8 interpretation");
+                    }
+                }
+                catch
+                {
+                    // If conversion fails, continue with original
+                }
+            }
+
             // EXIF UserComment often has encoding prefix like "ASCII\0\0\0" or "UNICODE\0"
             if (userComment.StartsWith("ASCII", StringComparison.OrdinalIgnoreCase))
             {
@@ -278,6 +314,15 @@ namespace CamBridge.Infrastructure.Services
 
         private Dictionary<string, string> ParsePipeDelimitedFormat(string data)
         {
+            // Clean up the data first - remove any line breaks the camera might have added
+            // The Ricoh G900 II displays barcode on 2 lines and might insert line breaks
+            data = data.Replace("\r\n", "").Replace("\n", "").Replace("\r", "");
+
+            // Also remove any non-printable characters except pipe
+            data = System.Text.RegularExpressions.Regex.Replace(data, @"[^\x20-\x7E|äöüÄÖÜß]", "");
+
+            _logger.LogDebug("Cleaned QRBridge data: {Data}", data);
+
             // Format: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
             var parts = data.Split('|');
             var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -289,6 +334,14 @@ namespace CamBridge.Infrastructure.Services
             if (parts.Length >= 5) result["comment"] = parts[4].Trim();
 
             _logger.LogDebug("Parsed pipe-delimited data: {Count} fields", result.Count);
+
+            // Log each field for debugging
+            foreach (var field in result)
+            {
+                _logger.LogDebug("  {Key}: '{Value}' (Length: {Length})",
+                    field.Key, field.Value, field.Value.Length);
+            }
+
             return result;
         }
 

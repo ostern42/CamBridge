@@ -3,6 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.modernwpf.com/2019"
       xmlns:conv="clr-namespace:CamBridge.Config.Converters"
+      xmlns:helpers="clr-namespace:CamBridge.Config.Helpers"
       xmlns:core="clr-namespace:CamBridge.Core;assembly=CamBridge.Core">
 
     <Page.Resources>
@@ -432,8 +433,10 @@
                                 <TextBlock Grid.Row="6" Grid.Column="0" 
                                            Text="Password:" 
                                            Style="{StaticResource SettingLabelStyle}"/>
+                                <!-- FIXED: PasswordBox with proper binding -->
                                 <PasswordBox Grid.Row="6" Grid.Column="1"
-                                             Password="{Binding SmtpPassword, Mode=TwoWay}"
+                                             helpers:PasswordBoxHelper.BindPassword="True"
+                                             helpers:PasswordBoxHelper.BoundPassword="{Binding SmtpPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                              Margin="0,0,0,8"/>
 
                                 <TextBlock Grid.Row="7" Grid.Column="0" 

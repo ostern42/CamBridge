@@ -1,13 +1,15 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using CamBridge.Core;
-using CamBridge.Core.Entities;  // Für ImageMetadata
-using CamBridge.Core.ValueObjects;  // Für PatientId, StudyId
+using CamBridge.Core.Entities;
+using CamBridge.Core.ValueObjects;
 using CamBridge.Core.Interfaces;
 using CamBridge.Infrastructure.Services;
 using FellowOakDicom;
-using FoDicomTag = FellowOakDicom.DicomTag;  // Alias für fo-dicom DicomTag
+using FoDicomTag = FellowOakDicom.DicomTag;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -190,6 +192,32 @@ namespace CamBridge.TestConsole
             else
             {
                 Console.WriteLine($"   ✓ Found User Comment: {userComment}");
+
+                // Debug output - show hex values
+                Console.WriteLine("\n   DEBUG - Hex dump of User Comment:");
+                var bytes = Encoding.UTF8.GetBytes(userComment);
+                for (int i = 0; i < Math.Min(bytes.Length, 100); i += 16)
+                {
+                    var hex = string.Join(" ", bytes.Skip(i).Take(16).Select(b => b.ToString("X2")));
+                    var ascii = string.Join("", bytes.Skip(i).Take(16).Select(b =>
+                        (b >= 32 && b <= 126) ? (char)b : '.'));
+                    Console.WriteLine($"   {i:D4}: {hex,-48} {ascii}");
+                }
+
+                // Check for line breaks or special characters
+                if (userComment.Contains('\r') || userComment.Contains('\n'))
+                {
+                    Console.WriteLine("\n   ⚠️ Found line breaks in data!");
+                    Console.WriteLine($"   CR (\\r) count: {userComment.Count(c => c == '\r')}");
+                    Console.WriteLine($"   LF (\\n) count: {userComment.Count(c => c == '\n')}");
+                }
+
+                // Check for encoding issues
+                if (userComment.Contains('�') || userComment.Contains('\ufffd'))
+                {
+                    Console.WriteLine("\n   ⚠️ Found encoding issues (� characters)!");
+                    Console.WriteLine("   This usually means UTF-8 data was interpreted as Latin-1");
+                }
             }
 
             // Step 3: Parse QRBridge data
@@ -309,17 +337,17 @@ namespace CamBridge.TestConsole
                 var metadata = new ImageMetadata(
                     inputFile,
                     DateTime.Now,
-                    new Core.Entities.PatientInfo(
-                        new Core.ValueObjects.PatientId("TEST001"),
+                    new PatientInfo(
+                        new PatientId("TEST001"),
                         "Debug, Test",
                         null,
-                        Core.Entities.Gender.Other),
-                    new Core.Entities.StudyInfo(
-                        new Core.ValueObjects.StudyId("STUDY001"),
+                        Gender.Other),
+                    new StudyInfo(
+                        new StudyId("STUDY001"),
                         DateTime.Now,
                         "XC"),
                     new Dictionary<string, string>(),
-                    new Core.Entities.ImageTechnicalData(),
+                    new ImageTechnicalData(),
                     1);
 
                 var outputPath = Path.Combine(Environment.CurrentDirectory, "output", "debug_test.dcm");
