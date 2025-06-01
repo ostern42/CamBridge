@@ -36,6 +36,7 @@ namespace CamBridge.Config
                     services.AddTransient<ServiceControlViewModel>();
                     services.AddTransient<SettingsViewModel>();
                     services.AddTransient<DeadLettersViewModel>();
+                    services.AddTransient<MappingEditorViewModel>();
 
                     // Main Window
                     services.AddSingleton<MainWindow>();

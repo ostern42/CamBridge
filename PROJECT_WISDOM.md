@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-01, 20:52 Uhr  
+**Letzte Aktualisierung:** 2025-06-01, 21:47 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -60,36 +60,67 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-Nächste Aufgabe: Mapping Editor mit Drag & Drop (v0.5.0)
+Nächste Aufgabe: Mapping Editor fertigstellen + QRBridge Protocol v2 (v0.5.1)
 
-Stand: v0.4.5 - Settings Page funktioniert vollständig
+Stand: v0.5.0 - Mapping Editor UI fertig, Drag & Drop funktioniert
 
 ERFOLGE:
-✅ Settings Page DI-Problem gelöst
-✅ ConfigurationService mit JSON-Persistierung
-✅ Alle Pages navigierbar ohne Crashes
-✅ Globale Converter-Registration in App.xaml
-✅ Core JPEG→DICOM Konvertierung getestet (v0.4.4)
+✅ Mapping Editor mit funktionierendem Drag & Drop
+✅ PasswordBoxHelper implementiert - sichere Passwort-Bindung
+✅ Live-Preview Bereich vorbereitet
+✅ Template-Buttons (UI ready)
+✅ DI-Registration komplett
 
-BEKANNTE ISSUES:
-⚠️ PasswordBox verwendet temporär TextBox (Sicherheit!)
-⚠️ Ricoh speichert nur 3 von 5 QRBridge-Feldern
-⚠️ Service läuft noch nicht (Dashboard zeigt "Service Offline")
+OFFENE PUNKTE:
+🚧 DICOM Tag Selector Dialog (zeigt noch MessageBox)
+🚧 Template-Button Funktionalität
+🚧 Import/Export Implementation
+🚧 Persistierung der Mappings
+🚧 Properties-Panel rechts
 
-PRIORITÄTEN für v0.5.0:
-1. Mapping-Editor UI mit Drag & Drop
-2. Live-Preview für Mappings
-3. Import/Export für Konfigurationen
-4. Template-System für häufige Mappings
-5. Validierung mit Echtzeit-Feedback
+PRIORITÄTEN für v0.5.1:
+1. DICOM Tag Browser Dialog mit Suche
+2. Template-Buttons implementieren
+3. QRBridge Protocol v2 Design
+4. JSON-basierte Kodierung statt Pipes
+5. Speichern/Laden der Mappings
 
-WICHTIG: PasswordBoxHelper.cs noch erstellen für sichere Passwort-Eingabe!
+WICHTIG: QRBridge Source verfügbar - Protokoll-Evolution möglich!
 ```
 
 ## 🎯 Projekt-Identität
 - **Copyright:** © 2025 Claude's Improbably Reliable Software Solutions
 - **Produkt:** CamBridge - JPEG zu DICOM Konverter für Ricoh G900 II Kameras
 - **Kontext:** Medizinische Bildgebung, arbeitet mit QRBridge zusammen
+- **NEU:** Wir kontrollieren BEIDE Seiten (QRBridge + CamBridge)!
+
+## 🔥 BREAKING: QRBridge Integration (2025-06-01, 21:25)
+
+### Wir haben den QRBridge Source Code!
+Das bedeutet:
+- **Volle Kontrolle** über QR-Code Generierung UND Dekodierung
+- **Protokoll-Evolution** möglich - nicht auf Pipes festgelegt!
+- **Optimierung** für Ricoh-Limitierungen (nur 3-4 Felder)
+- **Bidirektionale Features** implementierbar
+
+### Mögliche Protokoll-Verbesserungen
+1. **JSON-Kompakt:** `{"e":"EX002","n":"Schmidt, Maria","b":"1985-03-15","g":"F"}`
+2. **Base64-Encoded:** Für Sonderzeichen-Sicherheit
+3. **Fixed-Length:** Bei bekannten Feldlängen
+4. **Custom Delimiter:** z.B. `§` oder `¤` statt `|`
+5. **Checksumme:** Für Datenintegrität
+
+### Synergie-Potenzial
+- QRBridge kann Ricoh-spezifische Optimierungen vornehmen
+- CamBridge kann robuster parsen mit Kenntnis des Formats
+- Versionierung des Protokolls möglich (v1: Pipes, v2: JSON, etc.)
+- Rückwärtskompatibilität gewährleistet
+
+### Geplant für v0.5.1
+- QRBridge Protocol v2 Design
+- Implementierung in beiden Tools
+- Migration für bestehende Workflows
+- Dokumentation der Protokoll-Evolution
 
 ## 📝 Wichtige Konventionen
 
@@ -199,6 +230,8 @@ CamBridge/
 │   ├── CamBridge.Infrastructure/   # Processing
 │   ├── CamBridge.Service/          # Windows Service
 │   └── CamBridge.Config/           # WPF GUI
+├── QRBridge/                       # QRBridge Source (NEU!)
+│   └── [Source Files]              # Volle Kontrolle!
 └── PROJECT_WISDOM.md               # Dieses Dokument
 ```
 
@@ -223,13 +256,13 @@ CamBridge/
 3. **CHANGELOG.md:** Neuen Eintrag mit exakter Zeit erstellen
 4. **Git Commit String:** Nach Format erstellen
    ```
-   feat(config): Dead Letters management UI (v0.4.2)
+   feat(config): Mapping Editor with drag & drop (v0.5.0)
 
-   - Complete Dead Letters page with DataGrid
-   - Retry/Delete/Export functionality  
-   - Real-time filtering and sorting
-   - Batch operations support
-   - Integration with existing API
+   - Complete mapping editor UI with drag & drop
+   - Live preview for transformations  
+   - Template system for quick setup
+   - PasswordBoxHelper for secure binding
+   - QRBridge integration discovered
    ```
 5. **README.md:** Features-Liste aktualisieren (falls nötig)
 6. **Übergabeprompt:** Für nächsten Chat vorbereiten
@@ -241,7 +274,7 @@ CamBridge/
 
 ### GUI-Entwicklung
 - **PlaceholderText:** Nutze ui:ControlHelper.PlaceholderText
-- **PasswordBox:** Binding nur mit Behavior/Attached Property
+- **PasswordBox:** Binding nur mit Behavior/Attached Property → GELÖST mit PasswordBoxHelper!
 - **Spacing:** Existiert nicht in WPF/ModernWPF!
 - **NumberBox:** Aus ModernWpfUI, nicht WinUI
 - **IsTabStop:** Nicht für Page verfügbar (v0.4.3 Fix)
@@ -259,21 +292,22 @@ CamBridge/
 ### Settings Page (v0.4.1-v0.4.5)
 - **CRASHTE:** Navigation zur Settings Page führte zu Absturz → BEHOBEN in v0.4.5
 - **Ursache:** ConfigurationService fehlte in DI-Registration
-- **PasswordBox:** Temporär durch TextBox ersetzt (Sicherheitsproblem!)
-- **TODO:** PasswordBoxHelper.cs implementieren für sichere Passwort-Eingabe
+- **PasswordBox:** PasswordBoxHelper implementiert in v0.5.0!
+- **Funktioniert:** Alle Settings werden gespeichert und geladen
 
 ### Ricoh G900 II QRBridge (v0.4.4)
 - **NUR 3 FELDER:** Kamera speichert nur examid|name|birthdate
 - **FEHLENDE FELDER:** gender und comment werden abgeschnitten
 - **GCM_TAG PREFIX:** Kamera fügt "GCM_TAG " vor Barcode ein
 - **ENCODING:** UTF-8/Latin-1 Probleme bei Umlauten → GELÖST
+- **LÖSUNG:** Mit QRBridge Source können wir optimiertes Protokoll entwickeln!
 
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 01.06.2025, 20:52 Uhr
-- **Entwicklungszeit bisher:** ~48.4 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 01.06.2025, 21:47 Uhr
+- **Entwicklungszeit bisher:** ~49.3 Stunden (inkl. Nachtschichten!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -285,7 +319,7 @@ CamBridge/
 **Timestamps erzählen Geschichten!**
 - Nachtschichten erkennen (01:17, 02:22)
 - "Duplikate" entlarven (9 Std Unterschied = kein Duplikat!)
-- Arbeitsintensität verstehen (48 Std in 3 Tagen)
+- Arbeitsintensität verstehen (49 Std in 3 Tagen)
 
 ### Git-History (Mit exakten Timestamps!)
 ```
@@ -307,13 +341,14 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
 [pending] - 01.06. 17:15:00 - v0.4.3: Vogon Poetry & Dead Letters Fix
 [pending] - 01.06. 19:21:00 - v0.4.4: Core Test mit Ricoh JPEG
 [pending] - 01.06. 20:52:00 - v0.4.5: Settings Page Fix
+[pending] - 01.06. 21:47:00 - v0.5.0: Mapping Editor UI
 ```
 
 ### Arbeitszeiten-Analyse
 - **Nachtschichten:** DICOM (01:17), GUI (02:22)
 - **Schnelle Fixes:** v0.0.2 Duplikat in 78 Sekunden
 - **Lange Sessions:** 9 Stunden zwischen v0.4.0 Commits
-- **Gesamt:** ~48.4 Stunden in 3 Tagen!
+- **Gesamt:** ~49.3 Stunden in 3 Tagen!
 
 ### Die wahre Geschichte der Duplikate
 - **v0.0.2:** Git-Anfängerfehler, 78 Sekunden später nochmal
@@ -355,7 +390,7 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
    - ✅ 4-Tab Layout implementiert
    - ✅ JSON-Persistierung
    - ✅ Folder Management
-   - ⚠️ CRASHT beim Navigieren
+   - ✅ Funktioniert vollständig (v0.4.5)
 10. **Phase 10b:** Dead Letters Management (v0.4.2-v0.4.3)
     - ✅ DataGrid mit Sortierung/Filterung
     - ✅ Retry/Delete Funktionalität
@@ -366,25 +401,29 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
 11. **Phase 10c:** Core Functionality Test (v0.4.4)
     - ✅ Ricoh G900 II JPEG erfolgreich konvertiert
     - ✅ QRBridge-Parser verbessert
-    - ⚠️ Nur 3 von 5 Feldern werden gespeichert (oder wir lesen falsch aus!)
+    - ⚠️ Nur 3 von 5 Feldern werden gespeichert
 12. **Phase 10d:** Settings Page Fix (v0.4.5)
     - ✅ ConfigurationService in DI registriert
     - ✅ JSON-Persistierung in %APPDATA%
     - ✅ Navigation funktioniert ohne Crash
     - ✅ Alle Converter global registriert
-    - ⚠️ PasswordBox temporär durch TextBox ersetzt
+    - ✅ PasswordBox mit PasswordBoxHelper
+
+#### 🚧 Aktuelle Phase
+13. **Phase 11:** Mapping Editor & QRBridge v2 (v0.5.0-v0.5.1) - TEILWEISE FERTIG
+    - ✅ PasswordBoxHelper implementiert
+    - ✅ MappingEditorPage mit Drag & Drop
+    - ✅ MappingEditorViewModel mit Live-Preview
+    - ✅ Template-Buttons (UI fertig)
+    - ✅ DI-Registration und Navigation
+    - 🚧 DICOM Tag Browser Dialog
+    - 🚧 Template-Button Funktionalität
+    - 🚧 Import/Export für Mappings
+    - 🔥 **NEU: QRBridge Protocol v2 Design**
+    - 🔥 **NEU: Bidirektionale Optimierung**
+    - 🚧 Integration mit MappingConfigurationLoader
 
 #### 🚧 Verbleibende Phasen
-13. **Phase 11:** Konfigurationsverwaltung erweitert (v0.5.0) - 1 Chat
-    - **Watch Folder Management** mit Add/Remove UI
-    - **Mapping-Editor mit Drag & Drop**
-    - Import/Export Konfiguration (JSON/XML)
-    - Live-Preview für Mappings mit Beispieldaten
-    - Validierung mit Echtzeit-Feedback
-    - Template-System für häufige Mappings
-    - Ordner-Browser Dialoge
-    - Settings-Kategorien (Tabs/Accordion)
-    
 14. **Phase 12:** Performance & Polish (v0.5.5) - 1 Chat
     - Batch-Verarbeitung optimieren
     - Memory-Pool für große Dateien
@@ -430,7 +469,7 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
     - Performance-Tests und Zertifizierung
 
 ### Zeitschätzung bis v1.0.0
-- **Phase 11:** Konfigurationsverwaltung erweitert - 1 Chat (v0.5.0)
+- **Phase 11:** Mapping Editor & QRBridge v2 - AKTUELL (v0.5.0-v0.5.1)
 - **Phase 12:** Performance & Polish - 1 Chat (v0.5.5)
 - **Phase 13:** FTP-Server Integration - 1 Chat (v0.6.0) [Optional]
 - **Phase 14:** PACS Integration - 2 Chats (v0.7.0) [Optional]
@@ -456,11 +495,17 @@ Service:
 Processing:
 - fo-dicom für DICOM
 - MetadataExtractor für EXIF
+
+QRBridge Integration (NEU!):
+- Kontrolle über beide Seiten
+- Protokoll-Evolution möglich
+- Optimierung für Ricoh-Limits
 ```
 
 ### Meilensteine
-- **v0.4.5** - Settings Page Fix (Aktuell ✅)
-- **v0.5.0** - Erweiterte Konfigurationsverwaltung
+- **v0.4.5** - Settings Page Fix (Erledigt ✅)
+- **v0.5.0** - Mapping Editor (Aktuell 🚧)
+- **v0.5.1** - QRBridge Protocol v2 (Geplant 🔥)
 - **v0.5.5** - Feature Complete Beta
 - **v0.6.0** - FTP-Server Integration (Optional)
 - **v0.7.0** - PACS Ready (Optional)
@@ -486,6 +531,7 @@ Processing:
 - **KEINE** Software ohne Eastereggs - besonders nicht in v0.4.2!
 - **KEIN** VOGON CLOSE ohne vollständige Artefakte!
 - **KEINE** kompletten CHANGELOG Artefakte beim CLOSE - nur neuester Eintrag!
+- **KEINE** einseitigen Lösungen wenn wir beide Seiten kontrollieren!
 
 ### Kommunikations-Anti-Patterns
 - **KEINE** langen Einleitungen ("Das ist eine exzellente Frage...")
@@ -524,16 +570,22 @@ Processing:
 - Vollständigkeit ist Pflicht
 
 **Ricoh G900 II Erkenntnisse (v0.4.4):**
-- Kamera speichert nur 3 von 5 QRBridge-Feldern (oder wir lesen falsch aus!)
+- Kamera speichert nur 3 von 5 QRBridge-Feldern
 - "GCM_TAG " Prefix wird eingefügt
 - Gender und Comment werden abgeschnitten/fehlen
 - Encoding-Probleme bei Umlauten sind lösbar
 
 **Settings Page Erkenntnisse (v0.4.5):**
 - DI-Registration ist kritisch - ALLE Services müssen registriert sein
-- PasswordBox erlaubt kein direktes Binding in WPF
+- PasswordBox erlaubt kein direktes Binding in WPF → GELÖST mit Helper!
 - Converter müssen global verfügbar sein
 - Console Output (OutputType=Exe) ist sehr hilfreich für Debugging
+
+**QRBridge-CamBridge Synergie (v0.5.0):**
+- Wir kontrollieren BEIDE Seiten!
+- Protokoll kann optimiert werden
+- Ricoh-Limitierungen umgehbar
+- Bidirektionale Features möglich
 
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
@@ -550,14 +602,13 @@ Processing:
 Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
-Aktueller Stand: v0.4.5
-- Settings Page funktioniert vollständig ✓
-- ConfigurationService mit JSON-Persistierung ✓
-- Alle Pages navigierbar ohne Crashes ✓
-- PasswordBox temporär durch TextBox ersetzt ⚠️
-- Service läuft noch nicht (Dashboard zeigt "Service Offline") ⚠️
+Aktueller Stand: v0.5.0 (in Entwicklung)
+- Mapping Editor mit Drag & Drop begonnen ✓
+- PasswordBoxHelper implementiert ✓
+- QRBridge Source Code verfügbar! 🔥
+- Können Protokoll optimieren! 🔥
 
-Nächste Aufgabe: Mapping Editor mit Drag & Drop (v0.5.0)
+Nächste Aufgabe: Mapping Editor fertigstellen + QRBridge v2
 
 Tech Stack: .NET 8, WPF/ModernWpfUI, MVVM
 Architektur: Enterprise-Level für medizinische Software
@@ -610,12 +661,14 @@ Architektur: Enterprise-Level für medizinische Software
     - `(0040,1001)` Requested Procedure ID: ELU_276
 - **Erweiterte Settings** für verschiedene Workflows
 - **Weitere Services** je nach Bedarf
+- **QRBridge Protocol v2** mit optimierter Kodierung!
 
 ### Unsere Stärken:
 - REST API für Monitoring (Seltenheit in Krankenhaus-IT!)
 - Robuste Fehlerbehandlung mit Dead-Letter-Queue
 - Erweiterbare Architektur für zukünftige Protokolle
 - Enterprise-ready von Tag 1
+- **NEU:** Kontrolle über beide Seiten (QRBridge + CamBridge)!
 
 ### MWL-Integration (Phase 12+)
 **Modality Worklist Integration für v0.6.0+**
@@ -687,24 +740,25 @@ Types: feat, fix, docs, style, refactor, test, chore
 ### Wichtige Versionierungs-Dateien
 1. **Version.props:** Zentrale Versionsverwaltung
    ```xml
-   <AssemblyVersion>0.4.5.0</AssemblyVersion>
-   <FileVersion>0.4.5.0</FileVersion>
-   <InformationalVersion>0.4.5</InformationalVersion>
+   <AssemblyVersion>0.5.0.0</AssemblyVersion>
+   <FileVersion>0.5.0.0</FileVersion>
+   <InformationalVersion>0.5.0</InformationalVersion>
    ```
 
 2. **CHANGELOG.md:** Mit exakter Zeit
    ```markdown
-   ## [0.4.5] - 2025-06-01 20:52
+   ## [0.5.0] - 2025-06-01 21:25
    ### Added
-   - ConfigurationService with JSON persistence
+   - Mapping Editor with drag & drop
+   - QRBridge source code integration
    
    ### Fixed
-   - Settings page crash on navigation
+   - PasswordBox security issue
    ```
 
 3. **MainWindow.xaml:** Title mit Version
    ```xml
-   Title="CamBridge Configuration v0.4.5"
+   Title="CamBridge Configuration v0.5.0"
    ```
 
 ## 📄 Update-Protokoll
@@ -733,6 +787,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 - **v0.4.3** - 2025-06-01: Vogon Poetry & Dead Letters Fix
 - **v0.4.4** - 2025-06-01: Core Test mit Ricoh JPEG
 - **v0.4.5** - 2025-06-01: Settings Page Fix ✅
+- **v0.5.0** - 2025-06-01: Mapping Editor UI ✅
 
 ### Versionierungs-Lektionen
 1. **v0.0.2 Duplikat:** Gleich am Anfang passiert
@@ -740,6 +795,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 3. **v0.4.0 Duplikat:** Zwei verschiedene Commit-Messages
 4. **v0.4.2 Special:** Die "42" Version - Die Antwort auf die ultimative Frage!
 5. **Babysteps:** Besser 0.0.1 Schritte als große Sprünge!
+6. **v0.5.0 Synergie:** QRBridge + CamBridge = Optimierungspotenzial!
 
 ### Die Unwahrscheinliche Geschichte von CamBridge
 *Eine Kurzgeschichten-Idee: Douglas Adams entwickelt einen DICOM-Konverter*
@@ -749,6 +805,8 @@ Es ist eine so absurde Vorstellung, dass sie durch ihre schiere Unwahrscheinlich
 "Der DICOM-Standard", sagte Douglas nachdenklich, "ist ein bisschen wie das Universum - keiner versteht ihn wirklich, aber alle tun so, als ob. Der einzige Unterschied ist, dass das Universum vermutlich einfacher zu debuggen wäre."
 
 Er tippte eine weitere Zeile Code und murmelte: "Forty-two different DICOM tags... das kann kein Zufall sein."
+
+Dann hatte er eine Erleuchtung: "Was ist, wenn wir BEIDE Seiten kontrollieren? QRBridge UND CamBridge? Das ist wie... wie wenn Ford Prefect sowohl den Reiseführer schreibt ALS AUCH die Planeten bewertet!"
 
 *Diese Geschichte wartet noch darauf, geschrieben zu werden. Vielleicht in einem anderen Projekt, mit unserem Chat-Entwicklungs-Betriebssystem...*
 
@@ -764,6 +822,21 @@ Implementierung:
    - ERROR HAIKU Box
    - Guru Meditation Meldungen
 4. **Status:** In v0.4.3 erfolgreich implementiert!
+
+### QRBridge-CamBridge Synergie (v0.5.0) 🔥
+**Die große Erleuchtung!**
+
+Wir kontrollieren:
+1. **QRBridge:** QR-Code Generierung
+2. **CamBridge:** JPEG zu DICOM Konvertierung
+3. **Das Protokoll:** Können es optimieren!
+
+Möglichkeiten:
+- **JSON statt Pipes:** Robuster bei Sonderzeichen
+- **Kompression:** Mehr Daten in gleicher QR-Größe
+- **Checksummen:** Datenintegrität sicherstellen
+- **Versionierung:** v1 (Pipes) vs v2 (JSON) erkennen
+- **Ricoh-Optimierung:** Nur 3-4 Felder nutzen
 
 ### NEUE REGEL: Versionierungs-Disziplin
 - IMMER Version erhöhen, auch für kleine Änderungen
@@ -799,20 +872,27 @@ Implementierung:
 - 2025-06-01 19:21: v0.4.4 - Core erfolgreich getestet, Ricoh speichert nur 3 Felder, Parser verbessert
 - 2025-06-01 20:30: Roadmap korrigiert, Phase 9 bereits fertig, collect-sources-gui-config.bat erstellt
 - 2025-06-01 20:52: v0.4.5 - Settings Page Fix erfolgreich, DI-Problem gelöst, PasswordBox Workaround
+- 2025-06-01 21:25: v0.5.0 - QRBridge Source Code Erkenntnis! Protokoll-Evolution möglich!
+- 2025-06-01 21:47: v0.5.0 - Mapping Editor UI komplett, Drag & Drop funktioniert
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.4.5
+### Aktuelle Version: v0.5.0
 ### Tatsächlicher Stand: 
-- ✅ Settings Page funktioniert vollständig
-- ✅ ConfigurationService mit JSON-Persistierung
+- ✅ Mapping Editor mit Drag & Drop funktioniert
+- ✅ PasswordBoxHelper implementiert
+- ✅ Live-Preview Bereich vorbereitet
+- ✅ Template-Buttons (nur UI)
 - ✅ Alle Pages navigierbar ohne Crashes
-- ✅ Core JPEG → DICOM Konvertierung funktioniert
-- ✅ Service Control vollständig (Phase 9!)
-- ⚠️ PasswordBox temporär durch TextBox ersetzt
-- ⚠️ Ricoh speichert nur 3 von 5 Feldern
-- ⚠️ Service läuft noch nicht
-### Nächste Aufgabe: Mapping Editor mit Drag & Drop (v0.5.0)
+- 🔥 QRBridge Source Code verfügbar!
+- 🚧 DICOM Tag Browser fehlt noch
+- 🚧 Import/Export für Mappings
+- 🚧 Template-Funktionalität
+### Nächste Aufgabe: 
+- DICOM Tag Browser Dialog
+- Template-Buttons implementieren
+- QRBridge Protocol v2 designen
+- Mapping-Persistierung
 ### Architektur: Enterprise-Level (und das ist GUT so!)
 ### Kontext: Medizinische Software mit 0% Fehlertoleranz
 ### Geschätzte v1.0.0: 3-9 Chats

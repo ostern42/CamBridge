@@ -4,7 +4,7 @@
         xmlns:ui="http://schemas.modernwpf.com/2019"
         ui:WindowHelper.UseModernWindowStyle="True"
         Title="CamBridge Configuration v0.4.2" 
-        Height="1000" Width="1500">
+        Height="700" Width="1000">
 
     <Grid>
         <ui:NavigationView x:Name="NavView" 
@@ -17,7 +17,6 @@
                 <ui:NavigationViewItem Icon="Home" Content="Dashboard" Tag="Dashboard"/>
                 <ui:NavigationViewItem Icon="Play" Content="Service Control" Tag="ServiceControl"/>
                 <ui:NavigationViewItem Icon="Document" Content="Dead Letters" Tag="DeadLetters"/>
-                <ui:NavigationViewItem Icon="Edit" Content="Mapping Editor" Tag="MappingEditor"/>
                 <ui:NavigationViewItemSeparator/>
                 <ui:NavigationViewItem Icon="Setting" Content="Settings" Tag="Settings"/>
                 <ui:NavigationViewItem Content="About" Tag="About">

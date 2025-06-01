@@ -2,98 +2,218 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.modernwpf.com/2019"
-      PreviewKeyDown="Page_PreviewKeyDown"
+      Title="About CamBridge"
       Focusable="True">
 
-    <Grid Margin="24" Focusable="True">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <!-- Normal About Content -->
+        <Grid x:Name="NormalContent">
+            <Grid.Background>
+                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                    <GradientStop Color="#FF1E1E1E" Offset="0"/>
+                    <GradientStop Color="#FF2D2D30" Offset="1"/>
+                </LinearGradientBrush>
+            </Grid.Background>
 
-        <!-- Header -->
-        <TextBlock Text="About CamBridge" FontSize="32" FontWeight="SemiBold" Margin="0,0,0,20"/>
+            <StackPanel VerticalAlignment="Center" 
+                        HorizontalAlignment="Center"
+                        MaxWidth="600">
 
-        <!-- About Content with fixed ScrollViewer -->
-        <Border Grid.Row="1" 
-                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                BorderThickness="1"
-                CornerRadius="4">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                          Padding="20,20,30,20"
-                          PanningMode="VerticalOnly">
-                <ScrollViewer.Resources>
-                    <Style TargetType="ScrollBar">
-                        <Setter Property="Width" Value="18"/>
-                    </Style>
-                </ScrollViewer.Resources>
+                <!-- Logo/Icon Area -->
+                <Border Width="128" 
+                        Height="128" 
+                        CornerRadius="64"
+                        Background="{DynamicResource SystemControlHighlightAccentBrush}"
+                        Margin="0,0,0,24">
+                    <TextBlock Text="CB" 
+                               FontSize="48" 
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="White"/>
+                </Border>
 
-                <StackPanel>
-                    <!-- Logo/Icon Area -->
-                    <Border Height="120" Width="120" CornerRadius="60" 
-                            Background="{DynamicResource SystemControlBackgroundAccentBrush}"
-                            HorizontalAlignment="Center" Margin="0,0,0,24">
-                        <TextBlock Text="CB" FontSize="48" FontWeight="Bold" 
-                                   Foreground="White" HorizontalAlignment="Center" 
-                                   VerticalAlignment="Center"/>
-                    </Border>
+                <!-- Title -->
+                <TextBlock Text="CamBridge" 
+                           FontSize="48" 
+                           FontWeight="Light"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,8"/>
 
-                    <!-- Version Info -->
-                    <TextBlock Text="CamBridge" FontSize="28" FontWeight="SemiBold" 
-                              HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                    <TextBlock Text="Version 0.4.2 - The Answer to Life, DICOM, and Everything" 
-                              FontSize="16" Opacity="0.7" HorizontalAlignment="Center" 
-                              Margin="0,0,0,24"/>
+                <!-- Version -->
+                <TextBlock x:Name="VersionText"
+                           Text="Version 0.5.0" 
+                           FontSize="20" 
+                           Opacity="0.8"
+                           HorizontalAlignment="Center"
+                           Foreground="White"
+                           Margin="0,0,0,4"/>
 
-                    <!-- Description -->
-                    <Border CornerRadius="8" Padding="20"
-                            Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                            BorderThickness="1" Margin="0,0,0,16">
-                        <TextBlock TextWrapping="Wrap" LineHeight="24">
-                            <Run Text="CamBridge is a JPEG to DICOM converter designed for medical imaging workflows with Ricoh G900 II cameras."/>
-                            <LineBreak/><LineBreak/>
-                            <Run Text="It extracts patient data from QRBridge-encoded QR codes embedded in EXIF metadata and creates fully compliant DICOM files for seamless PACS integration."/>
-                        </TextBlock>
-                    </Border>
+                <!-- Subtitle -->
+                <TextBlock x:Name="SubtitleText"
+                           Text="JPEG to DICOM Converter for Ricoh Cameras" 
+                           FontSize="16" 
+                           Opacity="0.7"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,32"/>
 
-                    <!-- Features -->
-                    <TextBlock Text="Key Features" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12"/>
-                    <Border CornerRadius="8" Padding="20"
-                            Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                            BorderThickness="1" Margin="0,0,0,16">
-                        <TextBlock LineHeight="24">
-                            • Automatic JPEG to DICOM conversion<LineBreak/>
-                            • QRBridge data extraction from EXIF<LineBreak/>
-                            • Flexible JSON-based mapping configuration<LineBreak/>
-                            • Windows Service with REST API<LineBreak/>
-                            • Real-time monitoring dashboard<LineBreak/>
-                            • Dead letter queue for failed conversions<LineBreak/>
-                            • Email and Event Log notifications
-                        </TextBlock>
-                    </Border>
+                <!-- Info -->
+                <TextBlock TextWrapping="Wrap" 
+                           TextAlignment="Center"
+                           Opacity="0.8"
+                           LineHeight="24">
+                    <Run Text="CamBridge seamlessly converts JPEG images from Ricoh G900 II cameras"/>
+                    <LineBreak/>
+                    <Run Text="to DICOM format, preserving patient data from QRBridge QR codes."/>
+                    <LineBreak/>
+                    <LineBreak/>
+                    <Run Text="Designed for medical imaging workflows where reliability matters."/>
+                </TextBlock>
 
-                    <!-- Copyright -->
-                    <Border CornerRadius="8" Padding="20"
-                            Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                            BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="© 2025 Claude's Improbably Reliable Software Solutions" 
-                                      FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <TextBlock Text="Licensed for use in medical imaging environments" 
-                                      Opacity="0.7" Margin="0,0,0,8"/>
-                            <TextBlock Opacity="0.5" FontStyle="Italic">
-                                <Run Text="Built with love, caffeine, and a towel."/>
-                                <LineBreak/>
-                                <Run Text="Don't panic."/>
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
+                <!-- Copyright -->
+                <TextBlock Text="© 2025 Claude's Improbably Reliable Software Solutions" 
+                           FontSize="12" 
+                           Opacity="0.6"
+                           HorizontalAlignment="Center"
+                           Margin="0,32,0,0"/>
+
+                <!-- Links -->
+                <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Center"
+                            Margin="0,16,0,0">
+                    <Button Content="Documentation" 
+                            Margin="0,0,8,0"
+                            Style="{StaticResource DefaultButtonStyle}"/>
+                    <Button Content="License" 
+                            Margin="0,0,8,0"
+                            Style="{StaticResource DefaultButtonStyle}"/>
+                    <Button Content="GitHub" 
+                            Style="{StaticResource DefaultButtonStyle}"/>
                 </StackPanel>
-            </ScrollViewer>
-        </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Vogon Poetry Mode (Hidden Easter Egg) -->
+        <Grid x:Name="VogonContent" 
+              Visibility="Collapsed"
+              Background="Black">
+
+            <!-- Amiga Ball Canvas -->
+            <Canvas x:Name="SpriteCanvas" 
+                    ClipToBounds="True">
+                <Image x:Name="SpriteImage" 
+                       Width="50" 
+                       Height="50"/>
+            </Canvas>
+
+            <!-- Scrolling Rainbow Text -->
+            <Canvas Height="100" 
+                    VerticalAlignment="Top"
+                    Margin="0,50,0,0"
+                    ClipToBounds="True">
+                <TextBlock x:Name="ScrollingText"
+                           Canvas.Top="20"
+                           FontSize="48"
+                           FontFamily="Consolas"
+                           FontWeight="Bold">
+                    <TextBlock.Foreground>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="Red" Offset="0.0"/>
+                            <GradientStop Color="Orange" Offset="0.17"/>
+                            <GradientStop Color="Yellow" Offset="0.33"/>
+                            <GradientStop Color="Green" Offset="0.5"/>
+                            <GradientStop Color="Blue" Offset="0.67"/>
+                            <GradientStop Color="Indigo" Offset="0.84"/>
+                            <GradientStop Color="Violet" Offset="1.0"/>
+                        </LinearGradientBrush>
+                    </TextBlock.Foreground>
+                    <Run Text="✨ VOGON POETRY MODE ACTIVATED ✨ DICOM IS THE ANSWER ✨ 42 42 42 ✨ RESISTANCE IS FUTILE ✨"/>
+                </TextBlock>
+            </Canvas>
+
+            <!-- Main Poetry Display -->
+            <Border Background="#AA000000"
+                    CornerRadius="20"
+                    Padding="40"
+                    MaxWidth="800"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="VOGONISCHE POESIE ÜBER DICOM"
+                               FontSize="32"
+                               FontWeight="Bold"
+                               Foreground="#FF00FF00"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,20">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="Lime" BlurRadius="20" ShadowDepth="0"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
+
+                    <TextBlock FontSize="18"
+                               FontFamily="Consolas"
+                               Foreground="#FF00FF00"
+                               TextAlignment="Center"
+                               LineHeight="28">
+                        <Run Text="Oh frettled gruntbuggly,"/>
+                        <LineBreak/>
+                        <Run Text="Thy DICOM tags do gurdlе and gyre,"/>
+                        <LineBreak/>
+                        <Run Text="All mimsy were the pixel bytes,"/>
+                        <LineBreak/>
+                        <Run Text="And the JPEG headers outgrabe."/>
+                        <LineBreak/>
+                        <LineBreak/>
+                        <Run Text="See how the (0010,0010) PatientName doth slumber"/>
+                        <LineBreak/>
+                        <Run Text="In fields of binary wonder!"/>
+                        <LineBreak/>
+                        <Run Text="While (0008,0060) Modality screams"/>
+                        <LineBreak/>
+                        <Run Text="Through compressed photometric dreams!"/>
+                    </TextBlock>
+
+                    <!-- Error Haiku -->
+                    <Border Background="#FFFF0000"
+                            CornerRadius="10"
+                            Padding="20"
+                            Margin="0,30,0,0">
+                        <TextBlock Text="ERROR HAIKU:&#x0a;DICOM Tag not found&#x0a;Patient data lost in void&#x0a;Segmentation fault"
+                                   FontFamily="Consolas"
+                                   FontSize="16"
+                                   Foreground="White"
+                                   TextAlignment="Center"/>
+                    </Border>
+
+                    <!-- Exit Button -->
+                    <Button x:Name="ExitButton"
+                            Content="ESCAPE THE POETRY"
+                            FontSize="20"
+                            Padding="20,10"
+                            Margin="0,30,0,0"
+                            HorizontalAlignment="Center"
+                            Click="ExitButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+                                <Setter Property="Background" Value="#FFFF0000"/>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Guru Meditation -->
+            <Border Background="#FFFF0000"
+                    Height="40"
+                    VerticalAlignment="Bottom">
+                <TextBlock x:Name="GuruText"
+                           Text="Guru Meditation #00000004.0000AAC0"
+                           FontFamily="Consolas"
+                           FontSize="20"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Border>
+        </Grid>
     </Grid>
 </Page>

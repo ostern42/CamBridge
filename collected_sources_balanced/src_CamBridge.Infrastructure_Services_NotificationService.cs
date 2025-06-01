@@ -194,6 +194,13 @@ namespace CamBridge.Infrastructure.Services
                     client.Credentials = new NetworkCredential(_settings.SmtpUsername, _settings.SmtpPassword);
                 }
 
+                // Fix: Check for null before creating MailAddress
+                if (string.IsNullOrWhiteSpace(_settings.EmailFrom))
+                {
+                    _logger.LogError("Cannot send email: EmailFrom is not configured");
+                    return;
+                }
+
                 var message = new MailMessage
                 {
                     From = new MailAddress(_settings.EmailFrom),
@@ -202,10 +209,18 @@ namespace CamBridge.Infrastructure.Services
                     IsBodyHtml = false
                 };
 
-                // Add recipients
-                foreach (var recipient in _settings.EmailTo.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                // Add recipients - Fix: Check for null EmailTo
+                if (!string.IsNullOrWhiteSpace(_settings.EmailTo))
                 {
-                    message.To.Add(recipient.Trim());
+                    foreach (var recipient in _settings.EmailTo.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        message.To.Add(recipient.Trim());
+                    }
+                }
+                else
+                {
+                    _logger.LogError("Cannot send email: EmailTo is not configured");
+                    return;
                 }
 
                 await client.SendMailAsync(message);

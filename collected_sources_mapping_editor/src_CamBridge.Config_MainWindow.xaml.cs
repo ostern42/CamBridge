@@ -45,9 +45,6 @@ namespace CamBridge.Config
                     case "DeadLetters":
                         ContentFrame.Navigate(new DeadLettersPage());
                         break;
-                    case "MappingEditor":
-                        ContentFrame.Navigate(new MappingEditorPage());
-                        break;
                     case "Settings":
                         ContentFrame.Navigate(new SettingsPage());
                         break;

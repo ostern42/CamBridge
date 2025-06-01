@@ -6,6 +6,38 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-06-01 21:47
+### Added
+- Mapping Editor with drag & drop UI for EXIF to DICOM configuration
+- Live preview for field transformations
+- Template system for quick mapping setup (UI only)
+- PasswordBoxHelper for secure password binding in Settings
+- NotificationSettings model with comprehensive email configuration
+- MappingEditorViewModel with validation logic
+- QRBridge source code integration - full control over both sides!
+
+### Fixed
+- PasswordBox security issue - now uses proper attached property
+- BorderStyle error in MappingEditorPage XAML
+- AboutPage _spriteTimer nullable reference warning
+- DI registration for MappingEditorViewModel
+
+### Changed
+- MainWindow size increased to 1200x800 for better usability
+- Mapping Editor layout with proportional scaling (2* for middle column)
+- Navigation includes Mapping Editor item
+
+### Discovered
+- QRBridge source available - can optimize protocol (planned for v0.5.1)
+- Bidirectional control enables better field encoding than pipes
+- Ricoh limitation workarounds possible with custom protocol
+
+### Known Issues
+- Template buttons not yet functional
+- DICOM tag selector shows placeholder dialog
+- Import/Export not implemented
+- Mappings not persisted to configuration yet
+
 ## [0.4.5] - 2025-06-01 20:52
 ### Added
 - ConfigurationService with JSON persistence to %APPDATA%\CamBridge
