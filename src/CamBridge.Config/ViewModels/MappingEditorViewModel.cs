@@ -1,83 +1,113 @@
-using System;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using CamBridge.Config.Models;
+// src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
+using CamBridge.Config.Dialogs;
 using CamBridge.Config.Services;
 using CamBridge.Core;
+using CamBridge.Core.Interfaces;
 using CamBridge.Core.ValueObjects;
+using CamBridge.Infrastructure.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
+using System;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
 
 namespace CamBridge.Config.ViewModels
 {
+    /// <summary>
+    /// ViewModel for the mapping editor with drag & drop support and templates
+    /// </summary>
     public partial class MappingEditorViewModel : ViewModelBase
     {
+        private readonly ILogger<MappingEditorViewModel> _logger;
         private readonly IConfigurationService _configurationService;
-        private CamBridgeSettings? _settings;
+        private readonly MappingConfigurationLoader _mappingLoader;
 
-        [ObservableProperty]
-        private ObservableCollection<MappingRuleViewModel> _mappings = new();
+        #region Properties
 
-        [ObservableProperty]
-        private MappingRuleViewModel? _selectedMapping;
+        [ObservableProperty] private ObservableCollection<MappingRuleViewModel> _mappingRules = new();
+        [ObservableProperty] private MappingRuleViewModel? _selectedRule;
+        [ObservableProperty] private string? _previewInput;
+        [ObservableProperty] private string? _previewOutput;
+        [ObservableProperty] private bool _isModified;
+        [ObservableProperty] private string? _statusMessage;
+        [ObservableProperty] private bool _isLoading;
 
-        [ObservableProperty]
-        private ObservableCollection<FieldDefinition> _availableQRBridgeFields = new();
+        // Available source fields
+        public ObservableCollection<SourceFieldInfo> QRBridgeFields { get; } = new();
+        public ObservableCollection<SourceFieldInfo> ExifFields { get; } = new();
 
-        [ObservableProperty]
-        private ObservableCollection<FieldDefinition> _availableExifFields = new();
+        #endregion
 
-        [ObservableProperty]
-        private ObservableCollection<DicomTagDefinition> _commonDicomTags = new();
-
-        [ObservableProperty]
-        private string _previewSource = "Schmidt, Maria";
-
-        [ObservableProperty]
-        private string _previewResult = "Schmidt^Maria";
-
-        [ObservableProperty]
-        private bool _hasChanges;
-
-        [ObservableProperty]
-        private string? _statusMessage;
-
-        [ObservableProperty]
-        private bool _isValid = true;
-
-        [ObservableProperty]
-        private string _validationMessage = "All required fields mapped";
-
-        public MappingEditorViewModel(IConfigurationService configurationService)
+        public MappingEditorViewModel(
+            ILogger<MappingEditorViewModel> logger,
+            IConfigurationService configurationService)
         {
-            _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+            _logger = logger;
+            _configurationService = configurationService;
+            _mappingLoader = new MappingConfigurationLoader(_logger);
 
-            InitializeAvailableFields();
-            InitializeCommonDicomTags();
+            InitializeSourceFields();
+            _ = LoadMappingsAsync();
         }
 
-        public async Task InitializeAsync()
+        #region Initialization
+
+        private void InitializeSourceFields()
+        {
+            // QRBridge fields (from QR code data)
+            QRBridgeFields.Add(new SourceFieldInfo("examid", "Examination ID", "string"));
+            QRBridgeFields.Add(new SourceFieldInfo("name", "Patient Name", "string"));
+            QRBridgeFields.Add(new SourceFieldInfo("birthdate", "Birth Date", "date"));
+            QRBridgeFields.Add(new SourceFieldInfo("gender", "Gender", "string"));
+            QRBridgeFields.Add(new SourceFieldInfo("comment", "Comment", "string"));
+            QRBridgeFields.Add(new SourceFieldInfo("patientid", "Patient ID", "string"));
+
+            // EXIF fields (from image metadata)
+            ExifFields.Add(new SourceFieldInfo("Make", "Camera Manufacturer", "string"));
+            ExifFields.Add(new SourceFieldInfo("Model", "Camera Model", "string"));
+            ExifFields.Add(new SourceFieldInfo("DateTimeOriginal", "Capture Date/Time", "datetime"));
+            ExifFields.Add(new SourceFieldInfo("Software", "Software Version", "string"));
+            ExifFields.Add(new SourceFieldInfo("ImageDescription", "Image Description", "string"));
+        }
+
+        private async Task LoadMappingsAsync()
         {
             try
             {
                 IsLoading = true;
                 StatusMessage = "Loading mappings...";
 
-                _settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
-
-                if (_settings != null)
+                var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
+                if (settings != null)
                 {
-                    LoadMappingsFromSettings();
-                    ValidateMappings();
-                }
+                    var mappingConfig = await _mappingLoader.LoadFromFileAsync(settings.MappingConfigurationFile);
 
-                StatusMessage = "Mappings loaded successfully";
-                HasChanges = false;
+                    MappingRules.Clear();
+                    foreach (var rule in mappingConfig.GetMappingRules())
+                    {
+                        var vm = new MappingRuleViewModel(rule);
+                        vm.PropertyChanged += (s, e) =>
+                        {
+                            IsModified = true;
+                            if (s == SelectedRule)
+                                UpdatePreview();
+                        };
+                        MappingRules.Add(vm);
+                    }
+
+                    IsModified = false;
+                    StatusMessage = $"Loaded {MappingRules.Count} mapping rules";
+                }
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error loading mappings: {ex.Message}";
+                _logger.LogError(ex, "Failed to load mappings");
+                StatusMessage = "Failed to load mappings";
             }
             finally
             {
@@ -85,163 +115,100 @@ namespace CamBridge.Config.ViewModels
             }
         }
 
-        private void InitializeAvailableFields()
-        {
-            // QRBridge fields
-            AvailableQRBridgeFields.Add(new FieldDefinition("examid", "Exam ID", "Examination identifier"));
-            AvailableQRBridgeFields.Add(new FieldDefinition("name", "Patient Name", "Patient's full name"));
-            AvailableQRBridgeFields.Add(new FieldDefinition("birthdate", "Birth Date", "Patient's date of birth"));
-            AvailableQRBridgeFields.Add(new FieldDefinition("gender", "Gender", "Patient's gender (M/F/O)"));
-            AvailableQRBridgeFields.Add(new FieldDefinition("comment", "Comment", "Study description or comment"));
+        #endregion
 
-            // Common EXIF fields
-            AvailableExifFields.Add(new FieldDefinition("Make", "Camera Make", "Camera manufacturer"));
-            AvailableExifFields.Add(new FieldDefinition("Model", "Camera Model", "Camera model name"));
-            AvailableExifFields.Add(new FieldDefinition("Software", "Software", "Camera software version"));
-            AvailableExifFields.Add(new FieldDefinition("DateTimeOriginal", "Capture Time", "Original capture date/time"));
-            AvailableExifFields.Add(new FieldDefinition("ImageDescription", "Description", "Image description"));
-        }
-
-        private void InitializeCommonDicomTags()
-        {
-            // Patient Module
-            CommonDicomTags.Add(new DicomTagDefinition("(0010,0010)", "PatientName", "Patient's name", true));
-            CommonDicomTags.Add(new DicomTagDefinition("(0010,0020)", "PatientID", "Patient identifier", true));
-            CommonDicomTags.Add(new DicomTagDefinition("(0010,0030)", "PatientBirthDate", "Patient's birth date"));
-            CommonDicomTags.Add(new DicomTagDefinition("(0010,0040)", "PatientSex", "Patient's sex"));
-
-            // Study Module
-            CommonDicomTags.Add(new DicomTagDefinition("(0020,0010)", "StudyID", "Study identifier"));
-            CommonDicomTags.Add(new DicomTagDefinition("(0008,1030)", "StudyDescription", "Study description"));
-            CommonDicomTags.Add(new DicomTagDefinition("(0008,0050)", "AccessionNumber", "Accession number"));
-
-            // Equipment Module
-            CommonDicomTags.Add(new DicomTagDefinition("(0008,0070)", "Manufacturer", "Equipment manufacturer"));
-            CommonDicomTags.Add(new DicomTagDefinition("(0008,1090)", "ManufacturerModelName", "Equipment model"));
-            CommonDicomTags.Add(new DicomTagDefinition("(0018,1020)", "SoftwareVersions", "Software version"));
-        }
-
-        private void LoadMappingsFromSettings()
-        {
-            Mappings.Clear();
-
-            // TODO: Load actual mappings from configuration file
-            // For now, add some default mappings
-            AddDefaultMappings();
-        }
-
-        private void AddDefaultMappings()
-        {
-            // Default patient mappings
-            Mappings.Add(new MappingRuleViewModel
-            {
-                Name = "PatientName",
-                SourceType = "QRBridge",
-                SourceField = "name",
-                TargetTag = "(0010,0010)",
-                TargetTagName = "PatientName",
-                Transform = ValueTransform.None,
-                IsRequired = true
-            });
-
-            Mappings.Add(new MappingRuleViewModel
-            {
-                Name = "PatientID",
-                SourceType = "QRBridge",
-                SourceField = "patientid",
-                TargetTag = "(0010,0020)",
-                TargetTagName = "PatientID",
-                Transform = ValueTransform.None,
-                IsRequired = true
-            });
-
-            Mappings.Add(new MappingRuleViewModel
-            {
-                Name = "PatientBirthDate",
-                SourceType = "QRBridge",
-                SourceField = "birthdate",
-                TargetTag = "(0010,0030)",
-                TargetTagName = "PatientBirthDate",
-                Transform = ValueTransform.DateToDicom
-            });
-
-            // Equipment mappings
-            Mappings.Add(new MappingRuleViewModel
-            {
-                Name = "Manufacturer",
-                SourceType = "EXIF",
-                SourceField = "Make",
-                TargetTag = "(0008,0070)",
-                TargetTagName = "Manufacturer",
-                Transform = ValueTransform.None
-            });
-        }
-
-        private void ValidateMappings()
-        {
-            // Check if required DICOM tags are mapped
-            var hasPatientName = Mappings.Any(m => m.TargetTag == "(0010,0010)");
-            var hasPatientId = Mappings.Any(m => m.TargetTag == "(0010,0020)");
-
-            if (!hasPatientName || !hasPatientId)
-            {
-                IsValid = false;
-                ValidationMessage = "Missing required mappings: ";
-                if (!hasPatientName) ValidationMessage += "PatientName ";
-                if (!hasPatientId) ValidationMessage += "PatientID";
-            }
-            else
-            {
-                IsValid = true;
-                ValidationMessage = "All required fields mapped";
-            }
-        }
+        #region Commands
 
         [RelayCommand]
-        private void AddMapping()
+        private void AddRule()
         {
-            var newMapping = new MappingRuleViewModel
+            var newRule = new MappingRule(
+                $"NewRule_{DateTime.Now:HHmmss}",
+                "QRBridge",
+                "examid",
+                DicomTag.StudyModule.StudyID,
+                ValueTransform.None
+            );
+
+            var vm = new MappingRuleViewModel(newRule);
+            vm.PropertyChanged += (s, e) =>
             {
-                Name = "NewMapping",
-                SourceType = "QRBridge",
-                SourceField = "",
-                TargetTag = "",
-                Transform = ValueTransform.None
+                IsModified = true;
+                if (s == SelectedRule)
+                    UpdatePreview();
             };
 
-            Mappings.Add(newMapping);
-            SelectedMapping = newMapping;
-            HasChanges = true;
+            MappingRules.Add(vm);
+            SelectedRule = vm;
+            IsModified = true;
         }
 
         [RelayCommand]
-        private void RemoveMapping(MappingRuleViewModel mapping)
+        private void RemoveRule()
         {
-            if (mapping != null)
+            if (SelectedRule != null)
             {
-                Mappings.Remove(mapping);
-                HasChanges = true;
-                ValidateMappings();
+                MappingRules.Remove(SelectedRule);
+                IsModified = true;
+                SelectedRule = MappingRules.FirstOrDefault();
             }
         }
 
         [RelayCommand]
-        private async Task SaveMappings()
+        private void MoveRuleUp()
+        {
+            if (SelectedRule == null) return;
+
+            var index = MappingRules.IndexOf(SelectedRule);
+            if (index > 0)
+            {
+                MappingRules.Move(index, index - 1);
+                IsModified = true;
+            }
+        }
+
+        [RelayCommand]
+        private void MoveRuleDown()
+        {
+            if (SelectedRule == null) return;
+
+            var index = MappingRules.IndexOf(SelectedRule);
+            if (index < MappingRules.Count - 1)
+            {
+                MappingRules.Move(index, index + 1);
+                IsModified = true;
+            }
+        }
+
+        [RelayCommand]
+        private async Task SaveMappingsAsync()
         {
             try
             {
                 IsLoading = true;
                 StatusMessage = "Saving mappings...";
 
-                // TODO: Save mappings to configuration
-                await Task.Delay(500); // Simulate save
+                var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
+                if (settings != null)
+                {
+                    var config = new CustomMappingConfiguration();
+                    foreach (var ruleVm in MappingRules)
+                    {
+                        config.AddRule(ruleVm.ToMappingRule());
+                    }
 
-                HasChanges = false;
-                StatusMessage = "Mappings saved successfully";
+                    await _mappingLoader.SaveToFileAsync(config, settings.MappingConfigurationFile);
+
+                    IsModified = false;
+                    StatusMessage = "Mappings saved successfully";
+                }
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error saving mappings: {ex.Message}";
+                _logger.LogError(ex, "Failed to save mappings");
+                StatusMessage = "Failed to save mappings";
+                MessageBox.Show($"Error saving mappings: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -250,143 +217,350 @@ namespace CamBridge.Config.ViewModels
         }
 
         [RelayCommand]
-        private async Task ImportMappings()
+        private async Task ImportMappingsAsync()
         {
-            // TODO: Implement import from JSON file
-            StatusMessage = "Import functionality coming soon";
-            await Task.CompletedTask;
-        }
-
-        [RelayCommand]
-        private async Task ExportMappings()
-        {
-            // TODO: Implement export to JSON file
-            StatusMessage = "Export functionality coming soon";
-            await Task.CompletedTask;
-        }
-
-        [RelayCommand]
-        private void AddBasicPatientTemplate()
-        {
-            // Add basic patient information mappings
-            var templates = new[]
+            try
             {
-                ("PatientName", "name", "(0010,0010)", ValueTransform.None),
-                ("PatientID", "patientid", "(0010,0020)", ValueTransform.None),
-                ("PatientBirthDate", "birthdate", "(0010,0030)", ValueTransform.DateToDicom),
-                ("PatientSex", "gender", "(0010,0040)", ValueTransform.GenderToDicom)
-            };
-
-            foreach (var (name, field, tag, transform) in templates)
-            {
-                if (!Mappings.Any(m => m.TargetTag == tag))
+                var dialog = new OpenFileDialog
                 {
-                    Mappings.Add(new MappingRuleViewModel
+                    Title = "Import Mapping Configuration",
+                    Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                    DefaultExt = ".json"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    IsLoading = true;
+                    StatusMessage = "Importing mappings...";
+
+                    var importedConfig = await _mappingLoader.LoadFromFileAsync(dialog.FileName);
+
+                    MappingRules.Clear();
+                    foreach (var rule in importedConfig.GetMappingRules())
                     {
-                        Name = name,
-                        SourceType = "QRBridge",
-                        SourceField = field,
-                        TargetTag = tag,
-                        TargetTagName = name,
-                        Transform = transform,
-                        IsRequired = tag == "(0010,0010)" || tag == "(0010,0020)"
-                    });
+                        var vm = new MappingRuleViewModel(rule);
+                        vm.PropertyChanged += (s, e) =>
+                        {
+                            IsModified = true;
+                            if (s == SelectedRule)
+                                UpdatePreview();
+                        };
+                        MappingRules.Add(vm);
+                    }
+
+                    IsModified = true;
+                    StatusMessage = $"Imported {MappingRules.Count} mapping rules";
                 }
             }
-
-            HasChanges = true;
-            ValidateMappings();
-            StatusMessage = "Basic patient template added";
-        }
-
-        partial void OnSelectedMappingChanged(MappingRuleViewModel? value)
-        {
-            if (value != null)
+            catch (Exception ex)
             {
-                UpdatePreview(value);
+                _logger.LogError(ex, "Failed to import mappings");
+                MessageBox.Show($"Error importing mappings: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
             }
         }
 
-        private void UpdatePreview(MappingRuleViewModel mapping)
+        [RelayCommand]
+        private async Task ExportMappingsAsync()
         {
-            // Update preview based on selected mapping
-            PreviewSource = GetSampleValue(mapping.SourceType, mapping.SourceField);
-            PreviewResult = ApplyTransform(PreviewSource, mapping.Transform);
-        }
-
-        private string GetSampleValue(string sourceType, string sourceField)
-        {
-            return (sourceType, sourceField) switch
+            try
             {
-                ("QRBridge", "name") => "Schmidt, Maria",
-                ("QRBridge", "birthdate") => "1985-03-15",
-                ("QRBridge", "gender") => "F",
-                ("QRBridge", "examid") => "EX002",
-                ("QRBridge", "comment") => "Röntgen Thorax",
-                ("EXIF", "Make") => "RICOH",
-                ("EXIF", "Model") => "G900 II",
-                _ => "Sample Value"
-            };
-        }
-
-        private string ApplyTransform(string value, ValueTransform transform)
-        {
-            return transform switch
-            {
-                ValueTransform.DateToDicom => DateTime.TryParse(value, out var date) ? date.ToString("yyyyMMdd") : value,
-                ValueTransform.GenderToDicom => value switch
+                var dialog = new SaveFileDialog
                 {
-                    "F" or "Female" or "Weiblich" => "F",
-                    "M" or "Male" or "Männlich" => "M",
-                    _ => "O"
-                },
-                ValueTransform.ToUpper => value.ToUpper(),
-                ValueTransform.ToLower => value.ToLower(),
-                _ => value
-            };
+                    Title = "Export Mapping Configuration",
+                    Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                    DefaultExt = ".json",
+                    FileName = $"mappings_export_{DateTime.Now:yyyyMMdd_HHmmss}.json"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    IsLoading = true;
+                    StatusMessage = "Exporting mappings...";
+
+                    var config = new CustomMappingConfiguration();
+                    foreach (var ruleVm in MappingRules)
+                    {
+                        config.AddRule(ruleVm.ToMappingRule());
+                    }
+
+                    await _mappingLoader.SaveToFileAsync(config, dialog.FileName);
+
+                    StatusMessage = "Mappings exported successfully";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to export mappings");
+                MessageBox.Show($"Error exporting mappings: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
+
+        [RelayCommand]
+        private void SelectDicomTag()
+        {
+            if (SelectedRule == null) return;
+
+            var dialog = new DicomTagBrowserDialog
+            {
+                Owner = Application.Current.MainWindow
+            };
+
+            if (dialog.ShowDialog() == true && dialog.SelectedTag != null)
+            {
+                SelectedRule.TargetTag = dialog.SelectedTag;
+                SelectedRule.TargetTagString = dialog.SelectedTag.ToString();
+                UpdatePreview();
+            }
+        }
+
+        #endregion
+
+        #region Template Commands
+
+        [RelayCommand]
+        private void ApplyRicohTemplate()
+        {
+            if (MessageBox.Show(
+                "This will replace all current mappings with the Ricoh G900 II template. Continue?",
+                "Apply Template",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            MappingRules.Clear();
+
+            // Patient identification
+            AddTemplateRule("PatientName", "QRBridge", "name",
+                DicomTag.PatientModule.PatientName, ValueTransform.None, true);
+            AddTemplateRule("PatientID", "QRBridge", "patientid",
+                DicomTag.PatientModule.PatientID, ValueTransform.None, true);
+            AddTemplateRule("PatientBirthDate", "QRBridge", "birthdate",
+                DicomTag.PatientModule.PatientBirthDate, ValueTransform.DateToDicom);
+            AddTemplateRule("PatientSex", "QRBridge", "gender",
+                DicomTag.PatientModule.PatientSex, ValueTransform.GenderToDicom);
+
+            // Study information
+            AddTemplateRule("StudyID", "QRBridge", "examid",
+                DicomTag.StudyModule.StudyID, ValueTransform.TruncateTo16);
+            AddTemplateRule("StudyDescription", "QRBridge", "comment",
+                DicomTag.StudyModule.StudyDescription, ValueTransform.None);
+
+            // Equipment from EXIF
+            AddTemplateRule("Manufacturer", "EXIF", "Make",
+                DicomTag.EquipmentModule.Manufacturer, ValueTransform.None);
+            AddTemplateRule("Model", "EXIF", "Model",
+                DicomTag.EquipmentModule.ManufacturerModelName, ValueTransform.None);
+
+            IsModified = true;
+            StatusMessage = "Ricoh template applied";
+        }
+
+        [RelayCommand]
+        private void ApplyMinimalTemplate()
+        {
+            if (MessageBox.Show(
+                "This will replace all current mappings with a minimal template. Continue?",
+                "Apply Template",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            MappingRules.Clear();
+
+            // Only required DICOM fields
+            AddTemplateRule("PatientName", "QRBridge", "name",
+                DicomTag.PatientModule.PatientName, ValueTransform.None, true);
+            AddTemplateRule("PatientID", "QRBridge", "examid",
+                DicomTag.PatientModule.PatientID, ValueTransform.None, true);
+            AddTemplateRule("StudyID", "QRBridge", "examid",
+                DicomTag.StudyModule.StudyID, ValueTransform.None);
+
+            IsModified = true;
+            StatusMessage = "Minimal template applied";
+        }
+
+        [RelayCommand]
+        private void ApplyFullTemplate()
+        {
+            if (MessageBox.Show(
+                "This will replace all current mappings with a comprehensive template. Continue?",
+                "Apply Template",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            MappingRules.Clear();
+
+            // Patient Module
+            AddTemplateRule("PatientName", "QRBridge", "name",
+                DicomTag.PatientModule.PatientName, ValueTransform.None, true);
+            AddTemplateRule("PatientID", "QRBridge", "patientid",
+                DicomTag.PatientModule.PatientID, ValueTransform.None, true);
+            AddTemplateRule("PatientBirthDate", "QRBridge", "birthdate",
+                DicomTag.PatientModule.PatientBirthDate, ValueTransform.DateToDicom);
+            AddTemplateRule("PatientSex", "QRBridge", "gender",
+                DicomTag.PatientModule.PatientSex, ValueTransform.GenderToDicom);
+            AddTemplateRule("PatientComments", "QRBridge", "comment",
+                DicomTag.PatientModule.PatientComments, ValueTransform.None);
+
+            // Study Module
+            AddTemplateRule("StudyID", "QRBridge", "examid",
+                DicomTag.StudyModule.StudyID, ValueTransform.TruncateTo16);
+            AddTemplateRule("AccessionNumber", "QRBridge", "examid",
+                DicomTag.StudyModule.AccessionNumber, ValueTransform.None);
+            AddTemplateRule("StudyDescription", "QRBridge", "comment",
+                DicomTag.StudyModule.StudyDescription, ValueTransform.None);
+            AddTemplateRule("StudyDate", "EXIF", "DateTimeOriginal",
+                DicomTag.StudyModule.StudyDate, ValueTransform.DateToDicom);
+            AddTemplateRule("StudyTime", "EXIF", "DateTimeOriginal",
+                DicomTag.StudyModule.StudyTime, ValueTransform.TimeToDicom);
+
+            // Equipment Module
+            AddTemplateRule("Manufacturer", "EXIF", "Make",
+                DicomTag.EquipmentModule.Manufacturer, ValueTransform.None);
+            AddTemplateRule("Model", "EXIF", "Model",
+                DicomTag.EquipmentModule.ManufacturerModelName, ValueTransform.None);
+            AddTemplateRule("Software", "EXIF", "Software",
+                DicomTag.EquipmentModule.SoftwareVersions, ValueTransform.None);
+
+            // Image Module
+            AddTemplateRule("AcquisitionDateTime", "EXIF", "DateTimeOriginal",
+                DicomTag.ImageModule.AcquisitionDateTime, ValueTransform.DateToDicom);
+
+            IsModified = true;
+            StatusMessage = "Full template applied";
+        }
+
+        private void AddTemplateRule(string name, string sourceType, string sourceField,
+            DicomTag targetTag, ValueTransform transform, bool isRequired = false)
+        {
+            var rule = new MappingRule(name, sourceType, sourceField, targetTag,
+                transform, isRequired);
+            var vm = new MappingRuleViewModel(rule);
+            vm.PropertyChanged += (s, e) =>
+            {
+                IsModified = true;
+                if (s == SelectedRule)
+                    UpdatePreview();
+            };
+            MappingRules.Add(vm);
+        }
+
+        #endregion
+
+        #region Preview
+
+        private void UpdatePreview()
+        {
+            if (SelectedRule == null || string.IsNullOrWhiteSpace(PreviewInput))
+            {
+                PreviewOutput = string.Empty;
+                return;
+            }
+
+            try
+            {
+                var rule = SelectedRule.ToMappingRule();
+                PreviewOutput = rule.ApplyTransform(PreviewInput);
+            }
+            catch (Exception ex)
+            {
+                PreviewOutput = $"Error: {ex.Message}";
+            }
+        }
+
+        partial void OnPreviewInputChanged(string? value)
+        {
+            UpdatePreview();
+        }
+
+        partial void OnSelectedRuleChanged(MappingRuleViewModel? value)
+        {
+            UpdatePreview();
+        }
+
+        #endregion
+
+        #region Inner Classes
+
+        public class SourceFieldInfo
+        {
+            public string FieldName { get; }
+            public string DisplayName { get; }
+            public string DataType { get; }
+
+            public SourceFieldInfo(string fieldName, string displayName, string dataType)
+            {
+                FieldName = fieldName;
+                DisplayName = displayName;
+                DataType = dataType;
+            }
+        }
+
+        #endregion
     }
 
-    // View Models for data binding
+    /// <summary>
+    /// ViewModel wrapper for MappingRule
+    /// </summary>
     public partial class MappingRuleViewModel : ObservableObject
     {
-        [ObservableProperty] private string _name = string.Empty;
-        [ObservableProperty] private string _sourceType = string.Empty;
-        [ObservableProperty] private string _sourceField = string.Empty;
-        [ObservableProperty] private string _targetTag = string.Empty;
-        [ObservableProperty] private string _targetTagName = string.Empty;
+        private readonly MappingRule _rule;
+
+        [ObservableProperty] private string _name;
+        [ObservableProperty] private string _sourceType;
+        [ObservableProperty] private string _sourceField;
+        [ObservableProperty] private DicomTag _targetTag;
+        [ObservableProperty] private string _targetTagString;
         [ObservableProperty] private ValueTransform _transform;
         [ObservableProperty] private bool _isRequired;
         [ObservableProperty] private string? _defaultValue;
-    }
 
-    public class FieldDefinition
-    {
-        public string Name { get; }
-        public string DisplayName { get; }
-        public string Description { get; }
-
-        public FieldDefinition(string name, string displayName, string description)
+        public MappingRuleViewModel(MappingRule rule)
         {
-            Name = name;
-            DisplayName = displayName;
-            Description = description;
+            _rule = rule;
+            _name = rule.Name;
+            _sourceType = rule.SourceType;
+            _sourceField = rule.SourceField;
+            _targetTag = rule.TargetTag;
+            _targetTagString = rule.TargetTag.ToString();
+            _transform = rule.Transform;
+            _isRequired = rule.IsRequired;
+            _defaultValue = rule.DefaultValue;
         }
-    }
 
-    public class DicomTagDefinition
-    {
-        public string Tag { get; }
-        public string Name { get; }
-        public string Description { get; }
-        public bool IsRequired { get; }
-
-        public DicomTagDefinition(string tag, string name, string description, bool isRequired = false)
+        public MappingRule ToMappingRule()
         {
-            Tag = tag;
-            Name = name;
-            Description = description;
-            IsRequired = isRequired;
+            return new MappingRule(
+                Name,
+                SourceType,
+                SourceField,
+                TargetTag,
+                Transform,
+                IsRequired,
+                DefaultValue
+            );
+        }
+
+        partial void OnTargetTagChanged(DicomTag value)
+        {
+            TargetTagString = value?.ToString() ?? string.Empty;
         }
     }
 }

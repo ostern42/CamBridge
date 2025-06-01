@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "RdEJz17KUkQ=",
+  "dgSpecHash": "3ibY8SSHYTI=",
   "success": true,
   "projectFilePath": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Infrastructure\\CamBridge.Infrastructure.csproj",
   "expectedPackageFiles": [
@@ -19,11 +19,11 @@
     "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\9.0.5\\microsoft.extensions.logging.abstractions.9.0.5.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.extensions.options\\9.0.5\\microsoft.extensions.options.9.0.5.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.extensions.primitives\\9.0.5\\microsoft.extensions.primitives.9.0.5.nupkg.sha512",
-    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.win32.systemevents\\9.0.5\\microsoft.win32.systemevents.9.0.5.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\microsoft.win32.systemevents\\8.0.0\\microsoft.win32.systemevents.8.0.0.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\system.buffers\\4.5.1\\system.buffers.4.5.1.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\system.diagnostics.diagnosticsource\\9.0.5\\system.diagnostics.diagnosticsource.9.0.5.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\system.diagnostics.eventlog\\8.0.0\\system.diagnostics.eventlog.8.0.0.nupkg.sha512",
-    "C:\\Users\\aiadmin\\.nuget\\packages\\system.drawing.common\\9.0.5\\system.drawing.common.9.0.5.nupkg.sha512",
+    "C:\\Users\\aiadmin\\.nuget\\packages\\system.drawing.common\\8.0.10\\system.drawing.common.8.0.10.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\6.0.0\\system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\system.text.encoding.codepages\\6.0.1\\system.text.encoding.codepages.6.0.1.nupkg.sha512",
     "C:\\Users\\aiadmin\\.nuget\\packages\\system.text.encodings.web\\8.0.0\\system.text.encodings.web.8.0.0.nupkg.sha512",

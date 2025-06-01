@@ -1,5 +1,19 @@
-# CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-01, 23:52 Uhr  
+# CamBridge Context - "Minimal" Profile 
+Generated: 01.06.2025 23:46:08,90 
+Coverage: "~5" 
+Purpose: "Quick overview" 
+Version: CamBridge v0.5.1 
+ 
+## PROJECT_WISDOM.md 
+```
+### Warum eine große Datei statt einzelne Files?
+1. **Upload-Limit:** Claude erlaubt nur 5 Dateien gleichzeitig
+2. **Einfachheit:** 2 Dateien hochladen statt 20+ verwalten
+3. **Kontext:** Alles in einer Datei = zusammenhängender Kontext
+4. **Praktisch:** Copy & Paste von Teilen wenn nötig
+
+Die PROJECT_CONTEXT_*.md Dateien sind wie ein "Umzugskarton" - praktisch für den Transport, aber PROJECT_WISDOM.md ist das "Inventar" mit der Wahrheit!# CamBridge Project Wisdom & Conventions
+**Letzte Aktualisierung:** 2025-06-01, 22:50 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -60,35 +74,46 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-Nächste Aufgabe: FEATURES TESTEN & PARSER-BUG FIXEN!
+Nächste Aufgabe: BUILD-FEHLER BEHEBEN & v0.5.0-0.5.1 Features TESTEN!
 
-Stand: v0.5.2 - Build-Fehler behoben, Collector v2.0 installiert
+Stand: v0.5.1 - Features implementiert, aber BUILD FEHLER!
 
-ERFOLGE:
-✅ NotificationService Build-Fehler behoben (6 Methoden implementiert)
-✅ Neue Collector-Scripts v2.0 installiert und getestet
-✅ PROJECT_CONTEXT mit Timestamps funktioniert
-✅ 7 Profile für verschiedene Anwendungsfälle
+ERFOLGE (theoretisch, noch nicht getestet!):
+✅ DICOM Tag Browser mit Suche und Gruppierung
+✅ Template-System voll funktionsfähig
+✅ QRBridge Protocol v2 Parser implementiert
+✅ Import/Export für Mappings
+⚠️ NotificationService EmailSettings NICHT korrigiert - BUILD FEHLER!
 
-NOCH ZU TESTEN (v0.5.0-v0.5.1 Features):
-🧪 Mapping Editor Drag & Drop
-🧪 DICOM Tag Browser
-🧪 Template-System (Ricoh/Minimal/Full)
-🧪 Import/Export Funktionalität
-🧪 Protocol v2 Parser
+AKTUELLE BUILD-FEHLER:
+❌ NotificationService implementiert INotificationService nicht vollständig
+❌ 6 fehlende Interface-Methoden:
+   - NotifyInfoAsync
+   - NotifyWarningAsync
+   - NotifyErrorAsync
+   - NotifyCriticalErrorAsync
+   - NotifyDeadLetterThresholdAsync
+   - SendDailySummaryAsync
 
-KRITISCHER BUG:
-🐛 QRBridge Parser schneidet String ab!
-🐛 Beweis: Andere EXIF-Reader zeigen kompletten String
-🐛 Problem liegt in UNSEREM Code, nicht bei der Kamera
+WICHTIGE ERKENNTNIS vom Nutzer:
+🔍 Der QRBridge String wird ABGESCHNITTEN, nicht falsch gelesen!
+🔍 Ein anderer EXIF-Reader zeigt den kompletten String im Kamera-JPEG
+🔍 Der Fehler liegt bei UNS im Parser, nicht bei der Kamera!
 
-PRIORITÄTEN:
-1. ⚡ Parser-Bug in CamBridge fixen (NICHT in QRBridge!)
-2. 🧪 Alle v0.5.0-v0.5.1 Features gründlich testen
-3. 📝 Dokumentation aktualisieren
-4. 🚀 Dann v0.5.5 mit fehlenden Features angehen
+NEUE PRIORITÄTEN (KEIN HETZEN!):
+1. ⚡ Build-Fehler in NotificationService beheben
+2. 🧪 v0.5.0-0.5.1 Features gründlich testen:
+   - Mapping Editor Drag & Drop
+   - DICOM Tag Browser
+   - Template-System (Ricoh/Minimal/Full)
+   - Import/Export Funktionalität
+   - Protocol v2 Parser
+3. 🔍 QRBridge Parser-Bug analysieren (mit Source Code)
+4. 🐛 Erst DANN v0.5.2 mit Fixes angehen
 
-COLLECTOR-TIPP: Nutze 'collect-smart.bat' für automatische Profil-Wahl!
+WICHTIG: Langsam und gründlich arbeiten! Keine neuen Features bevor die alten stabil laufen!
+
+EMPFOHLENES COLLECT-SCRIPT: collect-sources-gui-config.bat (für GUI/Build-Probleme)
 ```
 
 ## 🎯 Projekt-Identität
@@ -120,9 +145,11 @@ Das bedeutet:
 - ✅ JSON parsing mit Fehlerbehandlung
 - 🚧 QRBridge.exe Encoder noch nicht aktualisiert
 
-### Geplant für v0.5.2-v0.5.5
-- Parser-Bug in CamBridge fixen (String wird abgeschnitten!)
+### Geplant für v0.5.2
+- ~~QRBridge.exe mit v2 Encoder~~ GESTRICHEN!
+- Parser-Bug in CamBridge fixen
 - Umfassende Tests beider Protokolle
+- ~~Performance-Vergleich v1 vs v2~~ Nicht nötig
 - Dokumentation der Parser-Fixes
 
 ### 🚫 QRBridge bleibt unverändert! (01.06.2025, 23:00)
@@ -182,13 +209,6 @@ Das bedeutet:
 - **NuGet Versions:** Alle müssen übereinstimmen (System.Drawing.Common)
 - **Protocol Detection:** StartsWith("v2:") für v2, Contains("|") für v1
 
-### v0.5.2 Collector Revolution (01.06.2025, 23:52)
-- **Ein Script für alles:** collect-sources.bat mit 7 Profilen
-- **Smart Selection:** collect-smart.bat analysiert Git-Änderungen
-- **Timestamps:** PROJECT_CONTEXT_[PROFILE]_[TIMESTAMP].md
-- **Profile:** minimal, core, gui, balanced, mapping, full, custom
-- **Alte Scripts archiviert:** cleanup-old-collectors.bat verfügbar
-
 ## 💬 Kommunikations-Präferenzen
 
 ### Mit dem Nutzer
@@ -229,49 +249,55 @@ Das bedeutet:
 
 ## 📂 Projekt-Struktur-Wissen
 
-### Datei-Sammlungen (NEU: Collector v2.0!)
-- **collect-sources.bat:** Master-Script mit 7 Profilen
-  - minimal (~5%) - Quick overview
-  - core (~15%) - Core ohne GUI
-  - gui (~20%) - GUI-Entwicklung
-  - balanced (~25%) - Standard (OPTIMAL!)
-  - mapping (~20%) - Mapping Editor
-  - full (~50%) - Komplett (VORSICHT!)
-  - custom - Eigene Patterns
-- **collect-smart.bat:** Git-basierte automatische Profil-Auswahl
-- **cleanup-old-collectors.bat:** Archiviert alte Scripts
-- **COLLECTOR_README.md:** Dokumentation für neue Scripts
+### Datei-Sammlungen
+- **collect-sources-intelligent.bat:** ~50%+ Coverage (ZU VIEL!)
+- **collect-sources-minimal.bat:** ~5% Coverage (zu wenig)
+- **collect-sources-balanced.bat:** ~15-20% Coverage (OPTIMAL!)
+- **collect-sources-settings.bat:** Nur Settings-spezifisch
+- **collect-sources-gui-config.bat:** GUI & Config Focus (NEU!)
+  - Fokus: Settings Page Fix & Mapping Editor
+  - Sammelt: DI Setup, ViewModels, Configuration Services
+  - Inkludiert funktionierende Pages als Referenz
+  - ~20 Dateien für GUI-Debugging
+- **Ausschließen:** obj/, bin/, packages/, wpftmp/, AssemblyInfo
 
-### Wie die neuen Scripts funktionieren:
-- Ein Master-Script statt 6 verschiedene
-- Profile-basierte Collection
-- Timestamps verhindern Überschreibungen
-- Git-Integration für intelligente Auswahl
-- Bessere Token-Effizienz durch gezieltes Sammeln
+### Wie die Scripts funktionieren:
+- Alle .bat Scripts pipen in EINE große Datei (PROJECT_CONTEXT_*.md)
+- Das ist PRAKTISCH für Upload (2 Dateien statt 20+)
+- PROJECT_CONTEXT_*.md ist nur ein TRANSPORT-CONTAINER
+- PROJECT_WISDOM.md ist die WAHRHEIT über den Projektstand
 
 ### Optimale Upload-Strategie:
 ```
 1. PROJECT_WISDOM.md (immer!)
-2. collect-smart.bat ausführen (oder spezifisches Profil)
-3. PROJECT_CONTEXT_[PROFILE]_[TIMESTAMP].md uploaden
+2. PROJECT_CONTEXT_GUI_CONFIG.md (für GUI-Probleme)
+   ODER PROJECT_CONTEXT_BALANCED.md (für allgemeine Entwicklung)
 ```
+
+**KLARSTELLUNG:** Die PROJECT_CONTEXT Dateien sind HILFREICH für den Code-Transfer, aber PROJECT_WISDOM.md hat Vorrang bei Widersprüchen!
+
+### Warum eine große Datei statt einzelne Files?
+1. **Upload-Limit:** Claude erlaubt nur 5 Dateien gleichzeitig
+2. **Einfachheit:** 2 Dateien hochladen statt 20+ verwalten
+3. **Kontext:** Alles in einer Datei = zusammenhängender Kontext
+4. **Praktisch:** Copy & Paste von Teilen wenn nötig
+
+Die PROJECT_CONTEXT_*.md Dateien sind wie ein "Umzugskarton" - praktisch für den Transport, aber PROJECT_WISDOM.md ist das "Inventar" mit der Wahrheit!
 
 ### Wichtige Pfade
 ```
 CamBridge/
-├── Version.props                    # Zentrale Version (jetzt 0.5.2)
-├── collect-sources.bat              # NEU: Master Collector
-├── collect-smart.bat                # NEU: Smart Selector
-├── COLLECTOR_README.md              # NEU: Dokumentation
+├── Version.props                    # Zentrale Version
+├── cambridge-entwicklungsplan-v2.md # Roadmap
 ├── src/
 │   ├── CamBridge.Core/             # Models, Settings
-│   ├── CamBridge.Infrastructure/   # Processing (NotificationService fixed!)
+│   ├── CamBridge.Infrastructure/   # Processing
 │   ├── CamBridge.Service/          # Windows Service
 │   └── CamBridge.Config/           # WPF GUI
-│       ├── Dialogs/                # DicomTagBrowserDialog
-│       ├── Views/                  # MappingEditorPage
-│       └── ViewModels/             # MappingEditorViewModel
-├── QRBridge/                       # QRBridge Source
+│       ├── Dialogs/                # NEU: DicomTagBrowserDialog
+│       └── ViewModels/             # MappingEditorViewModel etc.
+├── QRBridge/                       # QRBridge Source (NEU!)
+│   └── [Source Files]              # Volle Kontrolle!
 └── PROJECT_WISDOM.md               # Dieses Dokument
 ```
 
@@ -288,13 +314,22 @@ CamBridge/
 1. PROJECT_WISDOM.md einbinden
 2. Aktuellen Stand beschreiben
 3. Nächste Aufgabe klar definieren
-4. collect-smart.bat verwenden für optimale Coverage
+4. balanced.bat Output verwenden (~15-20%)
 
 ### Chat-Abschluss mit "VOGON CLOSE"
 1. **Zeit erfragen:** "Wie spät ist es?" (für CHANGELOG)
 2. **Version.props:** AssemblyVersion, FileVersion, InformationalVersion erhöhen
 3. **CHANGELOG.md:** Neuen Eintrag mit exakter Zeit erstellen
 4. **Git Commit String:** Nach Format erstellen
+   ```
+   feat(config): Mapping Editor with drag & drop (v0.5.0)
+
+   - Complete mapping editor UI with drag & drop
+   - Live preview for transformations  
+   - Template system for quick setup
+   - PasswordBoxHelper for secure binding
+   - QRBridge integration discovered
+   ```
 5. **README.md:** Features-Liste aktualisieren (falls nötig)
 6. **Übergabeprompt:** Für nächsten Chat vorbereiten
 7. **PROJECT_WISDOM.md:** Als VOLLSTÄNDIGES ARTEFAKT finalisieren!
@@ -339,7 +374,7 @@ CamBridge/
 - **Problem ist NICHT die Kamera:** Sie speichert alles korrekt
 - **Problem ist UNSER Parser:** Wir schneiden den String ab
 - **Beweis:** Andere Software liest alle 5 Felder aus demselben JPEG
-- **TODO:** QRBridge Parser debuggen und fixen in v0.5.3!
+- **TODO:** QRBridge Parser debuggen BEVOR wir v2 implementieren!
 
 ### v0.5.1 Spezifische Fallstricke
 - **EmailSettings:** Sind verschachtelte Properties in NotificationSettings
@@ -348,18 +383,12 @@ CamBridge/
 - **XAML Run:** Hat keine Opacity, nutze Foreground stattdessen
 - **Protocol Detection:** Check für "v2:" muss VOR pipe-check kommen
 
-### v0.5.2 Build-Fehler BEHOBEN!
-- **NotificationService:** Alle 6 Interface-Methoden implementiert
-- **Async Pattern:** Konsistent für alle Notification-Methoden
-- **Daily Summary:** ProcessingSummary-Formatierung hinzugefügt
-- **Threshold Alerts:** Dead Letter Schwellwert-Benachrichtigung
-
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 01.06.2025, 23:52 Uhr
-- **Entwicklungszeit bisher:** ~51 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 01.06.2025, 22:50 Uhr
+- **Entwicklungszeit bisher:** ~50 Stunden (inkl. Nachtschichten!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -371,7 +400,7 @@ CamBridge/
 **Timestamps erzählen Geschichten!**
 - Nachtschichten erkennen (01:17, 02:22)
 - "Duplikate" entlarven (9 Std Unterschied = kein Duplikat!)
-- Arbeitsintensität verstehen (51 Std in 3 Tagen)
+- Arbeitsintensität verstehen (50 Std in 3 Tagen)
 
 ### Git-History (Mit exakten Timestamps!)
 ```
@@ -395,14 +424,13 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚡️
 [pending] - 01.06. 20:52:00 - v0.4.5: Settings Page Fix
 [pending] - 01.06. 21:47:00 - v0.5.0: Mapping Editor UI
 [pending] - 01.06. 22:32:00 - v0.5.1: DICOM Browser & Protocol v2
-[pending] - 01.06. 23:52:00 - v0.5.2: Collector v2.0 & Build Fix
 ```
 
 ### Arbeitszeiten-Analyse
-- **Nachtschichten:** DICOM (01:17), GUI (02:22), jetzt (23:52)
+- **Nachtschichten:** DICOM (01:17), GUI (02:22)
 - **Schnelle Fixes:** v0.0.2 Duplikat in 78 Sekunden
-- **Lange Sessions:** Fast 24 Stunden am 01.06!
-- **Gesamt:** ~51 Stunden in 3 Tagen!
+- **Lange Sessions:** 9 Stunden zwischen v0.4.0 Commits
+- **Gesamt:** ~50 Stunden in 3 Tagen!
 
 ### Die wahre Geschichte der Duplikate
 - **v0.0.2:** Git-Anfängerfehler, 78 Sekunden später nochmal
@@ -411,7 +439,7 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚡️
   - 11:30 - Service Control hinzugefügt (ausgeschlafen)
   - Hätte v0.4.1 sein sollen!
 
-## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 01.06.2025, 23:52)
+## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 01.06.2025, 23:00)
 
 ### ⚡️ WICHTIGE KORREKTUR
 **Original-Plan sagte "WinUI 3" - wir nutzen aber WPF mit ModernWpfUI!**
@@ -447,7 +475,7 @@ Nach genauem Code-Review haben wir festgestellt:
     - Dead Letters Management UI ✅
     - Vogon Poetry Easter Egg ✅
     - Basic Folder Management ✅
-11. **Phase 10:** Configuration Management GUI - Teil 2 (v0.5.0-v0.5.1) ✅
+11. **Phase 10:** Configuration Management GUI - Teil 2 (v0.5.0-v0.5.1) ⚠️
     - Mapping Editor mit Drag & Drop ✅
     - DICOM Tag Browser ✅
     - Template System (Ricoh/Minimal/Full) ✅
@@ -455,22 +483,25 @@ Nach genauem Code-Review haben wir festgestellt:
     - Protocol v2 Parser ✅
     - ❌ Watch Folder Management GUI (nur Basic in Settings)
     - ❌ Live-Preview für komplexe Transformationen
-12. **Phase 10-FIX:** Build-Fehler Behebung (v0.5.2) ✅
-    - NotificationService Interface-Implementierung ✅
-    - Collector v2.0 mit 7 Profilen ✅
-    - Smart Git-basierte Profil-Auswahl ✅
+    - ❌ BUILD FEHLER in NotificationService
 
-#### 🔥 AKTUELLE PHASE - TESTING & BUG FIXES
-13. **Phase 11:** Testing & Parser Fix (v0.5.3-v0.5.5) - JETZT!
-    - Parser-Bug fixen (String wird abgeschnitten!) ❌
-    - v0.5.0-v0.5.1 Features gründlich testen ❌
-    - Watch Folder Management GUI erweitern ❌
-    - Live-Preview für alle Transformationen ❌
-    - Validation UI für Mappings ❌
-    - Comprehensive Testing Suite ❌
-    - **Feature-complete Beta**
+#### 🔥 AKTUELLE PHASE - BUILD FIXES & TESTING
+12. **Phase 10-FIX:** Stabilisierung & Testing (v0.5.1-fix) - JETZT!
+    - NotificationService Interface-Implementierung vervollständigen ❌
+    - Alle 6 fehlenden Methoden implementieren ❌
+    - v0.4.1-v0.5.1 Features gründlich testen ❌
+    - QRBridge Parser-Bug analysieren (OHNE QRBridge zu ändern!) ❌
+    - Fehlende GUI-Features nachrüsten ❌
 
 #### 🚧 Nächste Phasen (NEU STRUKTURIERT)
+13. **Phase 11:** Core Features Vervollständigung (v0.5.5) - 1 Chat
+    - Watch Folder Management GUI erweitern
+    - Live-Preview für alle Transformationen
+    - Validation UI für Mappings
+    - Parser-Bug fixen (in CamBridge, nicht QRBridge!)
+    - Comprehensive Testing Suite
+    - **Feature-complete Beta**
+
 14. **Phase 12:** Performance & Polish (v0.6.0) - 1 Chat
     - Batch-Verarbeitung optimieren
     - Memory-Pool für große Dateien
@@ -510,19 +541,18 @@ Nach genauem Code-Review haben wir festgestellt:
 2. **Parser-Bug wird in CamBridge gefixt**, nicht in QRBridge
 3. **Fehlende Features identifiziert**: Watch Folder GUI, Live-Preview
 4. **Neue Phasenstruktur** reflektiert tatsächlichen Stand
-5. **Collector v2.0** revolutioniert die Entwicklung!
 
 ### Was wirklich noch fehlt (Code-verifiziert):
-- **Parser-Bug Fix** (String wird abgeschnitten!) - KRITISCH!
-- **Feature Testing** (v0.5.0-v0.5.1 ungetestet)
 - **Watch Folder Management GUI** (nur Basic-Version in Settings)
 - **Live-Preview** für Transformationen (nur teilweise)
 - **Validation UI** für Mappings
 - **Performance-Optimierungen** (Batch, Memory-Pool, Parallelisierung)
 - **UI-Polish** (Animationen, Fluent Design)
+- **Parser-Bug Fix** (String wird abgeschnitten!)
 
 ### Zeitschätzung bis v1.0.0 (REVIDIERT)
-- **Phase 11:** Testing & Parser Fix - JETZT!
+- **Phase 10-FIX:** Build Fixes & Testing - JETZT!
+- **Phase 11:** Core Features - 1 Chat
 - **Phase 12:** Performance & Polish - 1 Chat
 - **Phase 13-15:** Optional Features - 4 Chats
 - **Phase 16:** Release - 1 Chat
@@ -551,20 +581,14 @@ QRBridge Integration (NEU!):
 - Protokoll-Evolution möglich
 - v2 JSON Format implementiert
 - Optimierung für Ricoh-Limits
-
-Collector Tools (NEU!):
-- collect-sources.bat mit 7 Profilen
-- collect-smart.bat für Git-Integration
-- Timestamp-basierte Outputs
 ```
 
-### Meilensteine (AKTUALISIERT)
+### Meilensteine (REVIDIERT)
 - **v0.4.5** - Settings Page Fix (Erledigt ✅)
 - **v0.5.0** - Mapping Editor (Erledigt ✅)
-- **v0.5.1** - DICOM Browser & Protocol v2 (Erledigt ✅)
-- **v0.5.2** - Build Fix & Collector v2.0 (Erledigt ✅)
-- **v0.5.3** - Parser Fix & Testing (Aktuelles Ziel 🎯)
-- **v0.5.5** - Feature Complete Beta
+- **v0.5.1** - DICOM Browser & Protocol v2 (Erledigt mit BUILD-FEHLERN ⚠️)
+- **v0.5.1-fix** - Build Fixes & Testing (Aktuelles Ziel 🎯)
+- **v0.5.5** - Feature Complete Beta (Core Features vervollständigt)
 - **v0.6.0** - Performance & Polish
 - **v0.7.0** - FTP-Server Integration [Optional]
 - **v0.8.0** - PACS Ready [Optional]
@@ -574,12 +598,11 @@ Collector Tools (NEU!):
 ### Entwicklungs-Philosophie
 "Sauberer, schöner, ästhetischer und formal korrekter Code für medizinische Software"
 
-### 🔴 KRITISCHE PLAN-ÄNDERUNGEN (01.06.2025, 23:52)
+### 🔴 KRITISCHE PLAN-ÄNDERUNGEN (01.06.2025, 23:00)
 1. **v2 Encoder GESTRICHEN** - QRBridge bleibt unverändert
 2. **Parser-Bug wird in CamBridge gefixt**, nicht in QRBridge
 3. **Fehlende Features identifiziert**: Watch Folder GUI, Live-Preview
 4. **Plan nur mit Code-Gegenprüfung ändern** - neue Regel!
-5. **Collector v2.0** macht Entwicklung effizienter!
 
 ## 🚨 Anti-Patterns (Was wir NICHT machen)
 
@@ -669,27 +692,15 @@ Collector Tools (NEU!):
 - Backward compatibility durch Fallback
 - Kürzere Feldnamen sparen Platz
 
-**NotificationService Fix (v0.5.2):**
-- Interface-Methoden müssen ALLE implementiert werden
-- Async-Pattern konsistent durchziehen
-- Exception-Handling in CriticalError-Methode
-- ProcessingSummary braucht Formatter
-
-**Collector v2.0 Revolution (v0.5.2):**
-- Ein Script für 7 verschiedene Profile
-- Git-Integration erkennt geänderte Bereiche
-- Timestamps verhindern Überschreibungen
-- Token-Effizienz durch gezielte Coverage
-
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
 ### Option 1: V.O.G.O.N. (Empfohlen!)
 ```
 1. PROJECT_WISDOM.md hochladen
-2. collect-smart.bat ausführen
-3. PROJECT_CONTEXT_[PROFILE]_[TIMESTAMP].md hochladen
-4. Sagen: "VOGON INIT"
-5. Fertig! Ich lege direkt los.
+2. PROJECT_CONTEXT_GUI_CONFIG.md hochladen (für GUI-Probleme)
+   ODER PROJECT_CONTEXT_BALANCED.md (für allgemeine Entwicklung)
+3. Sagen: "VOGON INIT"
+4. Fertig! Ich lege direkt los.
 ```
 
 ### Option 2: Traditionell (falls VOGON nicht funktioniert)
@@ -697,13 +708,13 @@ Collector Tools (NEU!):
 Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
-Aktueller Stand: v0.5.2
-- Build-Fehler behoben ✅
-- Collector v2.0 installiert ✅
-- Parser-Bug identifiziert 🐛
-- Features ungetestet 🧪
+Aktueller Stand: v0.5.1 (MIT BUILD-FEHLERN!)
+- DICOM Tag Browser implementiert ⚠️
+- QRBridge Protocol v2 Parser ⚠️
+- 6 Build-Fehler in NotificationService ❌
+- Parser-Bug: String wird abgeschnitten ❌
 
-Nächste Aufgabe: Parser-Bug fixen & Features testen!
+Nächste Aufgabe: Build-Fehler beheben, dann testen!
 
 Tech Stack: .NET 8, WPF/ModernWpfUI, MVVM
 Architektur: Enterprise-Level für medizinische Software
@@ -765,7 +776,6 @@ Architektur: Enterprise-Level für medizinische Software
 - Enterprise-ready von Tag 1
 - **NEU:** Kontrolle über beide Seiten (QRBridge + CamBridge)!
 - **NEU:** Protocol v2 mit JSON-Format und Backward Compatibility!
-- **NEU:** Collector v2.0 für effiziente Entwicklung!
 
 ### MWL-Integration (Phase 15+)
 **Modality Worklist Integration für v0.8.0+**
@@ -837,25 +847,25 @@ Types: feat, fix, docs, style, refactor, test, chore
 ### Wichtige Versionierungs-Dateien
 1. **Version.props:** Zentrale Versionsverwaltung
    ```xml
-   <AssemblyVersion>0.5.2.0</AssemblyVersion>
-   <FileVersion>0.5.2.0</FileVersion>
-   <InformationalVersion>0.5.2</InformationalVersion>
+   <AssemblyVersion>0.5.1.0</AssemblyVersion>
+   <FileVersion>0.5.1.0</FileVersion>
+   <InformationalVersion>0.5.1</InformationalVersion>
    ```
 
 2. **CHANGELOG.md:** Mit exakter Zeit
    ```markdown
-   ## [0.5.2] - 2025-06-01 23:52
+   ## [0.5.1] - 2025-06-01 22:32
    ### Added
-   - New unified source collector script
-   - Intelligent profile selection
+   - DICOM Tag Browser with search
+   - QRBridge Protocol v2 parser
    
    ### Fixed
-   - NotificationService build errors
+   - NotificationService email properties
    ```
 
 3. **MainWindow.xaml:** Title mit Version
    ```xml
-   Title="CamBridge Configuration v0.5.2"
+   Title="CamBridge Configuration v0.5.1"
    ```
 
 ## 🔄 Update-Protokoll
@@ -867,7 +877,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 - Bei neuen Konventionen
 - Bei gefundenen Anti-Patterns
 
-### Versions-Historie (Aus Git-Log + Pending)
+### Versions-Historie (Aus Git-Log)
 - **v0.0.1** - 2025-05-30: Initial project structure (fb17be8)
 - **v0.0.2** - 2025-05-30: Core domain models (588cf7b) ⚡️
 - **v0.0.2** - 2025-05-30: Core domain models (b64ba16) ⚡️ DUPLIKAT!
@@ -879,14 +889,13 @@ Types: feat, fix, docs, style, refactor, test, chore
 - **v0.3.2** - 2025-05-31: Dead-letter, notifications, web (0ab9add)
 - **v0.4.0** - 2025-06-01: WPF GUI with dashboard (e0e68f1) ⚡️
 - **v0.4.0** - 2025-06-01: WPF configuration UI (e806e31) ⚡️ DUPLIKAT!
-- **v0.4.1** - 2025-06-01: Settings Page (pending)
-- **v0.4.2** - 2025-06-01: Dead Letters UI ✅
-- **v0.4.3** - 2025-06-01: Vogon Poetry & Dead Letters Fix ✅
-- **v0.4.4** - 2025-06-01: Core Test mit Ricoh JPEG ✅
+- **v0.4.1** - 2025-06-01: Settings Page (noch nicht committed)
+- **v0.4.2** - 2025-06-01: Dead Letters UI (funktioniert)
+- **v0.4.3** - 2025-06-01: Vogon Poetry & Dead Letters Fix
+- **v0.4.4** - 2025-06-01: Core Test mit Ricoh JPEG
 - **v0.4.5** - 2025-06-01: Settings Page Fix ✅
 - **v0.5.0** - 2025-06-01: Mapping Editor UI ✅
-- **v0.5.1** - 2025-06-01: DICOM Browser & Protocol v2 ✅
-- **v0.5.2** - 2025-06-01: Collector v2.0 & Build Fix ✅
+- **v0.5.1** - 2025-06-01: DICOM Browser & Protocol v2 ⚠️
 
 ### Versionierungs-Lektionen
 1. **v0.0.2 Duplikat:** Gleich am Anfang passiert
@@ -896,7 +905,6 @@ Types: feat, fix, docs, style, refactor, test, chore
 5. **Babysteps:** Besser 0.0.1 Schritte als große Sprünge!
 6. **v0.5.0 Synergie:** QRBridge + CamBridge = Optimierungspotenzial!
 7. **v0.5.1 Evolution:** Protocol v2 zeigt die Macht der Kontrolle!
-8. **v0.5.2 Revolution:** Collector v2.0 macht alles effizienter!
 
 ### Die Unwahrscheinliche Geschichte von CamBridge
 *Eine Kurzgeschichten-Idee: Douglas Adams entwickelt einen DICOM-Konverter*
@@ -938,29 +946,13 @@ v0.5.1 Erfolge:
 - **JSON Protocol v2:** Implementiert mit Backward Compatibility
 - **Auto-Detection:** StartsWith("v2:") oder Contains("|")
 - **Parser:** QRBridgeProtocolV2Parser vollständig
-- **Templates:** Ricoh, Minimal, Full funktionieren
+- **Templates:** Ricoh, Minimal, Full funktioniern
 - **DICOM Browser:** Suche mit Gruppierung nach Modulen
 
-Nächste Schritte (v0.5.3+):
-- **Parser-Bug fixen:** String wird abgeschnitten!
-- **Testing:** Alle Features von v0.5.0-v0.5.1
+Nächste Schritte (v0.5.2):
+- **QRBridge.exe Update:** v2 Encoder implementieren
+- **Testing:** Beide Protokolle mit Ricoh testen
 - **Dokumentation:** Protocol Evolution Guide
-
-### Collector v2.0 Revolution (v0.5.2) 🚀
-**Die neue Ära der Source Collection!**
-
-Features:
-- **Ein Script:** collect-sources.bat ersetzt 6 alte Scripts
-- **7 Profile:** minimal, core, gui, balanced, mapping, full, custom
-- **Smart Selection:** collect-smart.bat analysiert Git-Änderungen
-- **Timestamps:** Keine Überschreibungen mehr
-- **Token-Effizienz:** Gezielte Coverage je nach Aufgabe
-
-Workflow:
-1. `collect-smart.bat` ausführen
-2. Automatische Profil-Wahl basierend auf Änderungen
-3. Upload mit PROJECT_WISDOM.md
-4. VOGON INIT!
 
 ### NEUE REGEL: Versionierungs-Disziplin
 - IMMER Version erhöhen, auch für kleine Änderungen
@@ -1003,27 +995,27 @@ Workflow:
 - 2025-06-01 23:00: WISDOM - Phasenplan revidiert, v2 Encoder gestrichen, fehlende Features identifiziert!
 - 2025-06-01 23:05: collect-sources-gui-config.bat dokumentiert für GUI-Debugging
 - 2025-06-01 23:10: Upload-Strategie geklärt: PROJECT_CONTEXT sind Transport-Container, keine Wahrheit!
-- 2025-06-01 23:52: v0.5.2 - Collector v2.0 Revolution! Build-Fehler behoben, Git-Integration!
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.5.2
+### Aktuelle Version: v0.5.1 (MIT BUILD-FEHLERN!)
 ### Tatsächlicher Stand: 
-- ✅ NotificationService Build-Fehler behoben
-- ✅ Collector v2.0 installiert und getestet
 - ✅ DICOM Tag Browser mit Suche
 - ✅ Template-System funktioniert
 - ✅ QRBridge Protocol v2 Parser
 - ✅ Import/Export für Mappings
+- ❌ NotificationService BUILD FEHLER (6 fehlende Methoden)
 - ❌ Watch Folder Management GUI (nur Basic)
 - ❌ Live-Preview (nur teilweise)
 - ❌ Alle Features UNGETESTET
+- 🔥 Protocol v2 JSON Format (aber nicht nötig!)
 - 🔥 Parser-Bug: String wird ABGESCHNITTEN!
 ### Nächste Aufgabe: 
+- Build-Fehler beheben
+- v0.5.0-0.5.1 Features TESTEN
 - Parser-Bug in CAMBRIDGE fixen (nicht QRBridge!)
-- v0.5.0-v0.5.1 Features TESTEN
 - Fehlende GUI-Features nachrüsten
-- Collector v2.0 weiter nutzen
+- KEIN neuer Code bis alles läuft!
 ### Architektur: Enterprise-Level (und das ist GUT so!)
 ### Kontext: Medizinische Software mit 0% Fehlertoleranz
 ### Geschätzte v1.0.0: 3-7 Chats (realistisch nach Plan-Revision)
@@ -1033,9 +1025,723 @@ Workflow:
 - **WISDOM:** - Live-Updates ins PROJECT_WISDOM
 - **CLAUDE:** - Notizen für nächste Instanz
 - **VOGON CLOSE** - Chat-Abschluss mit Versionierung
+```
+ 
+## Version.props 
+```
+<Project>
+	<PropertyGroup>
+		<AssemblyVersion>0.5.1.0</AssemblyVersion>
+		<FileVersion>0.5.1.0</FileVersion>
+		<InformationalVersion>0.5.1</InformationalVersion>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Authors>Claude's Improbably Reliable Software Solutions</Authors>
+		<Company>Claude's Improbably Reliable Software Solutions</Company>
+		<Product>CamBridge</Product>
+		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
+		<Description>JPEG to DICOM converter for medical imaging from Ricoh cameras</Description>
+	</PropertyGroup>
+</Project>
+```
+ 
+## CHANGELOG.md 
+```
+# CamBridge Changelog
 
-### Collector v2.0 Commands:
-- **collect-sources.bat [profile]** - Spezifisches Profil
-- **collect-sources.bat list** - Zeige alle Profile
-- **collect-smart.bat** - Automatische Profil-Auswahl
-- **cleanup-old-collectors.bat** - Archiviere alte Scripts
+All notable changes to CamBridge will be documented in this file.  
+© 2025 Claude's Improbably Reliable Software Solutions
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.5.1] - 2025-06-01 22:32
+### Added
+- DICOM Tag Browser Dialog with search and grouping by module
+- Template system fully functional (Ricoh, Minimal, Full templates)
+- QRBridge Protocol v2 parser with JSON format support
+- Import/Export functionality for mapping configurations
+- Backward compatibility for v1 pipe-delimited format
+- DicomTagBrowserDialog for intuitive tag selection
+- EnumToCollectionConverter integrated into ValueConverters.cs
+
+### Changed
+- RicohQRBridgeParser now supports both v1 and v2 protocols
+- Template buttons now use MVVM commands instead of click handlers
+- Improved error handling in protocol parsing
+- NotificationService updated for nested EmailSettings structure
+
+### Fixed
+- Project references: CamBridge.Config now references Infrastructure
+- System.Drawing.Common version conflict resolved (8.0.10)
+- XAML markup errors in MappingEditorPage (Run opacity issue)
+- NotificationService email property access corrected
+
+### Technical
+- QRBridgeProtocolV2Parser for JSON-based format
+- Protocol version detection with automatic fallback
+- MappingConfigurationLoader integration
+- Complete drag & drop implementation in MappingEditorPage
+
+## [0.5.0] - 2025-06-01 21:47
+### Added
+- Mapping Editor with drag & drop UI for EXIF to DICOM configuration
+- Live preview for field transformations
+- Template system for quick mapping setup (UI only)
+- PasswordBoxHelper for secure password binding in Settings
+- NotificationSettings model with comprehensive email configuration
+- MappingEditorViewModel with validation logic
+- QRBridge source code integration - full control over both sides!
+
+### Fixed
+- PasswordBox security issue - now uses proper attached property
+- BorderStyle error in MappingEditorPage XAML
+- AboutPage _spriteTimer nullable reference warning
+- DI registration for MappingEditorViewModel
+
+### Changed
+- MainWindow size increased to 1200x800 for better usability
+- Mapping Editor layout with proportional scaling (2* for middle column)
+- Navigation includes Mapping Editor item
+
+### Discovered
+- QRBridge source available - can optimize protocol (planned for v0.5.1)
+- Bidirectional control enables better field encoding than pipes
+- Ricoh limitation workarounds possible with custom protocol
+
+### Known Issues
+- Template buttons not yet functional
+- DICOM tag selector shows placeholder dialog
+- Import/Export not implemented
+- Mappings not persisted to configuration yet
+
+## [0.4.5] - 2025-06-01 20:52
+### Added
+- ConfigurationService with JSON persistence to %APPDATA%\CamBridge
+- NotificationSettings model with comprehensive email configuration
+- Global converter registration in App.xaml for all pages
+- PasswordBoxHelper class for secure password binding (implementation pending)
+
+### Fixed
+- Settings page crash on navigation - DI registration for ConfigurationService
+- All value converters now properly registered and accessible
+- Navigation between all pages now stable
+
+### Changed
+- Temporary TextBox for SMTP password field (PasswordBox binding workaround)
+- Settings are now persisted between application sessions
+- Improved error handling during page initialization
+
+### Known Issues
+- PasswordBox still uses TextBox temporarily (security concern)
+- Ricoh G900 II only saves 3 of 5 QRBridge fields
+- Service connection shows "Service Offline" (service not running)
+
+## [0.4.4] - 2025-06-01 19:21
+### Added
+- Core functionality test with real Ricoh G900 II JPEG
+- Enhanced EXIF parser with line break and encoding fixes
+- Flexible QRBridge parser for incomplete data
+- mappings.json for TestConsole
+- Hex dump debugging in TestConsole
+
+### Fixed
+- EXIF encoding issues with German umlauts
+- Parser handling of camera line breaks in barcode data
+- NotificationService null reference warnings
+
+### Changed
+- Parser now handles incomplete QRBridge data (3 of 5 fields)
+- Improved debug logging for QRBridge parsing
+
+### Discovered
+- Ricoh G900 II only saves first 3 QRBridge fields (gender/comment missing)
+- Camera inserts "GCM_TAG " prefix in UserComment
+
+### Known Issues
+- Settings page still crashes on navigation
+- QRBridge data truncation needs investigation
+
+## [0.4.3] - 2025-06-01 17:15
+### Added
+- Vogon Poetry Easter Egg - tribute to Douglas Adams
+  - Activated by typing "42" on About page
+  - Amiga-style Boing Ball sprite animation (WritePixels implementation)
+  - Scrolling rainbow text with retro effects
+  - Vogonian poetry about DICOM with ERROR HAIKU
+  - Guru Meditation error messages
+- Dead Letters page basic functionality
+  - DataGrid with items display
+  - Connection status indicator
+  - Retry functionality per item
+
+### Fixed
+- Dead Letters navigation crash - fixed DI registration
+- AboutPage keyboard focus issues
+- Removed unsafe code for better stability
+- Fixed nullable reference warnings
+
+### Known Issues
+- Settings page crashes on navigation (ViewModel initialization)
+
+## [0.4.2] - 2025-06-01 15:10
+### Added
+- Dead Letters management page with full CRUD operations
+- Real-time filtering and sorting
+- Export functionality (CSV/JSON)
+- Batch operations for retry/delete
+
+### Known Issues
+- Dead Letters page crashes on navigation (DI issue)
+
+## [0.4.1] - 2025-06-01 13:30 (pending commit)
+### Added
+- Complete Settings page with 4-tab TabView layout
+- Real JSON persistence to appsettings.json with auto-backup
+- Comprehensive MVVM data binding with CommunityToolkit.Mvvm
+- Watch folder management with add/remove functionality
+- Input validation with Data Annotations
+- Folder browse dialogs using Win32 interop
+- Status bar with loading indicators and change tracking
+- Value converters for visibility bindings
+- PROJECT_WISDOM.md - Cross-session documentation system
+
+### Fixed
+- WPF/ModernWPF compatibility (removed WinUI3 Spacing attributes)
+
+### Changed
+- ConfigurationService from mock to real implementation
+- Version management to prevent duplicates (lessons learned from v0.4.0)
+
+## [0.4.0] - 2025-06-01 11:30:55 (Duplicate version! Should have been v0.4.1)
+### Added
+- Service Control implementation (Phase 9)
+- Start/Stop/Restart functionality with UAC handling
+- Automatic status updates every 2 seconds
+- Uptime display for running service
+- "Restart as Administrator" feature
+- Quick Actions for Services.msc and EventVwr.msc
+- Service installation detection
+
+### Note
+- This was committed 9 hours after the first v0.4.0 commit
+- Should have incremented version number
+
+## [0.4.0] - 2025-06-01 02:22:32 (Night shift development)
+### Added
+- WPF Configuration GUI with ModernWPF UI framework
+- Real-time dashboard with auto-refresh (5 seconds)
+- HttpApiService for REST API communication  
+- StatusController API endpoints for service monitoring
+- Connection status indicator with visual feedback
+- Active processing items display
+- Recent activity tracking
+- Full dependency injection for ViewModels and Services
+
+### Fixed
+- Platform-specific CA1416 warnings for Windows-only features
+- Missing package references for HTTP client
+- Dependency injection setup for ViewModels
+- Proper error handling for offline service
+
+### Changed
+- Dashboard now shows live data from ProcessingQueue
+- Added loading states during API calls
+- Display of processing statistics and queue status
+
+### Breaking Change
+- INotificationService now includes NotifyErrorAsync method
+
+## [0.3.2] - 2025-05-31 23:10:22
+### Added
+- Complete error handling with dead-letter queue persistence and reprocessing
+- Email/event log notifications with daily summaries and threshold alerts
+- Web dashboard (port 5050) with REST API and real-time monitoring
+- PowerShell installation script with automated setup
+- Build and deployment automation
+
+### Known Issues
+- Integration tests have build errors (later fixed)
+
+## [0.3.1] - 2025-05-31 16:51:44
+### Fixed
+- Dependency injection issue where singleton ProcessingQueue tried to consume scoped IFileProcessor
+- ProcessingQueue now uses IServiceScopeFactory to create scopes for file processing
+- Removed duplicate IFileProcessor registration in Program.cs
+
+### Added
+- Batch and PowerShell scripts for collecting source files for deployment
+
+## [0.3.0] - 2025-05-31 15:45:17
+### Added
+- FileProcessor service orchestrating complete conversion pipeline
+- ProcessingQueue with thread-safe operation and retry logic
+- FolderWatcherService monitoring multiple folders via FileSystemWatcher
+- Comprehensive configuration system via appsettings.json
+- Health check endpoint for service monitoring
+- Statistics reporting and performance metrics
+- PowerShell installation script and documentation
+
+### Changed
+- Worker service now coordinates all processing components
+- Enhanced logging with structured output
+- Target framework to net8.0-windows for Windows Service
+
+### Breaking Change
+- Target framework changed to net8.0-windows
+
+## [0.2.0] - 2025-05-31 10:34:17
+### Added
+- Flexible JSON-based mapping configuration system
+- MappingConfigurationLoader for JSON serialization
+- DicomTagMapper service for dynamic EXIF to DICOM mapping
+- Support for value transformations (date, gender, truncation)
+- Comprehensive tests for mapping system
+
+## [Missing Version] - 2025-05-31 01:17:17 (Night shift!)
+### Added
+- DICOM conversion implementation with fo-dicom v5.1.2
+- DicomConverter for JPEG to DICOM transformation
+- Preserve JPEG compression using encapsulated pixel data
+- Support YBR_FULL_422 photometric interpretation
+
+### Note
+- This commit was missing version number in git commit message
+
+## [0.1.0] - 2025-05-30 23:49:44
+### Added
+- EXIF extraction with QRBridge support
+- Support for pipe-delimited and command-line QRBridge formats
+- RicohExifReader for specialized Ricoh G900 II support
+- Infrastructure layer with comprehensive unit tests
+
+## [0.0.2] - 2025-05-30 21:34:12 (Git duplicate - 78 seconds after first)
+### Added
+- Core domain models (second commit)
+
+## [0.0.2] - 2025-05-30 21:32:54
+### Added
+- Core domain models (Patient, Study, Metadata)
+- Value objects (DicomTag, ExifTag, PatientId, StudyId)
+- Repository interfaces
+
+## [0.0.1] - 2025-05-30 20:34:20
+### Added
+- Initial project structure with 4 projects (Core, Infrastructure, Service, Config)
+- Automatic versioning via Version.props
+- Documentation (README, CHANGELOG, LICENSE)
+
+### Note
+- Project started at 20:30:44 with .gitattributes
+- First real commit 4 minutes later
+
+---
+
+## Version History Summary
+- Total development time: ~44.7 hours over 2.8 days
+- Night shifts: DICOM (01:17), GUI (02:22)
+- Version duplicates: v0.0.2 (78 sec), v0.4.0 (9 hours)
+- Missing versions: DICOM commit, v0.3.3 (was in old CHANGELOG but not in git)
+
+## Lessons Learned
+- Always increment version numbers, even for small changes
+- Use "babysteps" versioning (v0.0.1 → v0.0.2 → v0.0.3)
+- Check git history before committing to avoid duplicates
+- Night shift commits need extra attention to versioning
+```
+ 
+## README.md 
+```
+# CamBridge
+
+JPEG to DICOM converter for medical imaging from Ricoh cameras with QRBridge integration.
+
+© 2025 Claude's Improbably Reliable Software Solutions
+
+## Overview
+
+CamBridge is a Windows service that monitors folders for JPEG images from Ricoh G900 II cameras and automatically converts them to DICOM format. Patient and examination data embedded via QRBridge QR codes is extracted from EXIF metadata and mapped to appropriate DICOM tags.
+
+## Features
+
+- **Automatic JPEG to DICOM conversion** preserving original compression
+- **QRBridge data extraction** from EXIF User Comment field
+- **Flexible mapping configuration** via JSON files
+- **Ricoh G900 II camera support** with specialized EXIF reading
+- **Windows Service** for background operation
+- **Dead Letter Queue** for failed conversions
+- **Email & Event Log notifications** for critical errors
+- **Web Dashboard** for real-time monitoring
+- **REST API** for integration and monitoring
+- **Comprehensive logging** with Serilog
+
+## System Requirements
+
+- Windows 10/11 or Windows Server 2016+
+- .NET 8.0 Runtime
+- Ricoh G900 II camera with QRBridge-encoded QR codes
+- Administrator privileges for service installation
+
+## Quick Start
+
+1. Download the latest release
+2. Extract to a temporary folder
+3. Run PowerShell as Administrator:
+   ```powershell
+   .\Install-CamBridge.ps1
+   ```
+4. Access the dashboard at http://localhost:5050
+
+## Installation
+
+### Automated Installation
+
+The PowerShell installation script handles:
+- Service creation and configuration
+- Directory structure setup
+- Firewall rule configuration
+- Event Log source creation
+
+```powershell
+# Install with custom path
+.\Install-CamBridge.ps1 -InstallPath "D:\CamBridge"
+
+# Uninstall
+.\Install-CamBridge.ps1 -Uninstall
+```
+
+### Manual Installation
+
+1. Extract files to installation directory
+2. Create required directories:
+   - `C:\CamBridge\Input`
+   - `C:\CamBridge\Output`
+   - `C:\CamBridge\Archive`
+   - `C:\CamBridge\Errors`
+   - `C:\CamBridge\Backup`
+   - `C:\CamBridge\Logs`
+
+3. Install as Windows Service:
+   ```cmd
+   sc create CamBridgeService binPath="C:\Program Files\CamBridge\CamBridge.Service.exe"
+   ```
+
+## Configuration
+
+### Basic Settings (appsettings.json)
+
+```json
+{
+  "CamBridge": {
+    "WatchFolders": [
+      {
+        "Path": "C:\\Images\\Input",
+        "OutputPath": "C:\\Images\\DICOM",
+        "Enabled": true
+      }
+    ],
+    "Processing": {
+      "MaxRetryAttempts": 3,
+      "RetryDelaySeconds": 5
+    },
+    "Notifications": {
+      "EnableEmail": true,
+      "EmailTo": "admin@hospital.com",
+      "SmtpHost": "smtp.hospital.com"
+    }
+  }
+}
+```
+
+### Mapping Configuration (mappings.json)
+
+CamBridge uses a flexible JSON-based mapping system to convert EXIF and QRBridge data to DICOM tags:
+
+```json
+{
+  "mappings": [
+    {
+      "name": "PatientName",
+      "sourceType": "QRBridge",
+      "sourceField": "name",
+      "targetTag": "(0010,0010)",
+      "transform": "None",
+      "required": true
+    }
+  ]
+}
+```
+
+## QRBridge Format
+
+QRBridge encodes patient data as pipe-delimited strings:
+```
+EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
+```
+
+Fields:
+1. Exam ID
+2. Patient Name
+3. Birth Date
+4. Gender (M/F/O)
+5. Comment/Study Description
+
+## Monitoring
+
+### Web Dashboard
+
+Access the real-time monitoring dashboard at http://localhost:5050
+
+Features:
+- Service status and uptime
+- Processing queue statistics
+- Success/failure rates
+- Dead letter queue management
+- Active processing items
+
+### REST API
+
+API documentation available at http://localhost:5050/swagger
+
+Key endpoints:
+- `GET /api/status` - Service status
+- `GET /api/status/statistics` - Processing statistics
+- `GET /api/status/deadletters` - Dead letter items
+- `POST /api/status/deadletters/{id}/reprocess` - Reprocess failed item
+- `GET /api/status/health` - Health check
+
+### Event Log
+
+CamBridge logs to Windows Event Log under "Application" source "CamBridge Service".
+
+## Dead Letter Queue
+
+Files that fail processing after all retry attempts are moved to the dead letter queue:
+
+- Located in `C:\CamBridge\Errors\dead-letters`
+- Organized by date
+- Metadata stored in `dead-letters.json`
+- Can be reprocessed via dashboard or API
+
+## Notifications
+
+### Email Notifications
+
+Configure SMTP settings for email alerts:
+- Critical errors
+- Dead letter threshold exceeded
+- Daily processing summaries
+
+### Event Log Notifications
+
+All notifications are also logged to Windows Event Log.
+
+## Troubleshooting
+
+### Service Won't Start
+
+1. Check Event Viewer for errors
+2. Verify all directories exist and have proper permissions
+3. Ensure .NET 8.0 runtime is installed
+4. Check `C:\CamBridge\Logs` for detailed logs
+
+### Files Not Processing
+
+1. Verify watch folder configuration
+2. Check file permissions
+3. Ensure JPEG files contain valid EXIF data
+4. Review dead letter queue for errors
+
+### DICOM Validation Errors
+
+1. Check mapping configuration
+2. Verify required patient data is present
+3. Review DICOM validation logs
+
+## Development
+
+### Building from Source
+
+```bash
+# Clone repository
+git clone https://github.com/claude/cambridge.git
+
+# Build
+dotnet build --configuration Release
+
+# Run tests
+dotnet test
+
+# Publish
+dotnet publish -c Release -r win-x64
+```
+
+### Project Structure
+
+```
+CamBridge/
+├── src/
+│   ├── CamBridge.Core/          # Domain models and interfaces
+│   ├── CamBridge.Infrastructure/ # Service implementations
+│   └── CamBridge.Service/       # Windows Service & Web API
+└── tests/
+    └── CamBridge.Infrastructure.Tests/
+```
+
+### Running Tests
+
+```powershell
+# Run all tests with coverage
+.\Run-Tests.ps1
+
+# Run specific test category
+dotnet test --filter Category=Integration
+```
+
+## Version History
+
+- **0.3.2** - Dead letter queue, notifications, web dashboard
+- **0.3.1** - Fixed dependency injection issues
+- **0.3.0** - Windows Service implementation
+- **0.2.0** - Dynamic mapping configuration
+- **0.1.0** - Core EXIF/DICOM functionality
+- **0.0.1** - Initial project structure
+
+## Roadmap
+
+### Phase 7: Dateiverarbeitung Pipeline (1 Chat)
+- Ordnerüberwachung
+- Datei-Queue System
+- Fehlerbehandlung
+- Backup-Funktionalität
+
+- 
+### Phase 8: WinUI 3 GUI Basis (2 Chats)
+- CamBridge Config Projekt
+- Moderne UI mit Animationen
+- Navigation-Framework
+- MVVM-Struktur
+
+
+### Phase 9: Service-Steuerung GUI (1 Chat)
+- Service Installation/Deinstallation
+- Start/Stop/Status
+- Uptime-Anzeige
+- Admin-Rechte Handling
+
+
+### Phase 10: Konfigurationsverwaltung (1 Chat)
+- JSON-Konfiguration
+- Settings-UI
+- Ordner-Auswahl Dialoge
+- Mapping-Editor
+
+
+## License
+
+Proprietary - © 2025 Claude's Improbably Reliable Software Solutions
+
+## Support
+
+For issues and feature requests, please contact support.
+
+## Acknowledgments
+
+- fo-dicom for DICOM processing
+- MetadataExtractor for EXIF reading
+- Serilog for structured logging
+- QRBridge for patient data encoding
+```
+ 
+## CamBridge.sln 
+```
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5B3E4D7C-8A2F-4C1B-9E3D-7A5C6F9B2E4A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{9C2E7A4B-5D1F-4A3C-8B6E-3F8D9C1A7E5B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CamBridge.Core", "src\CamBridge.Core\CamBridge.Core.csproj", "{8A7C5D2E-3F1B-4E9A-8D6B-2C7F9E4A1B3D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CamBridge.Infrastructure", "src\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj", "{2B7F5A8C-9D4E-4F3A-8B6C-1E9D4F7A3B2C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4E8C9A2D-7B5F-4D1A-9C3E-8A6B2F7D9E1C}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitignore = .gitignore
+		CHANGELOG.md = CHANGELOG.md
+		collect-sources.bat = collect-sources.bat
+		GUI-Readme.md = GUI-Readme.md
+		LICENSE = LICENSE
+		PROJECT_WISDOM.md = PROJECT_WISDOM.md
+		README.md = README.md
+		Version.props = Version.props
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Infrastructure.Tests", "tests\CamBridge.Infrastructure.Tests\CamBridge.Infrastructure.Tests.csproj", "{03AA1FFC-7FEF-1400-5F70-86F61601BB3B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Service", "src\CamBridge.Service\CamBridge.Service.csproj", "{BD06EA45-212C-409E-1365-BE7D576ED3D5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Config", "src\CamBridge.Config\CamBridge.Config.csproj", "{0A650D8D-A3A3-86BD-C080-239D78DF7F94}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.TestConsole", "tests\CamBridge.TestConsole\CamBridge.TestConsole.csproj", "{CAD5A30F-79F7-2870-07F0-FB872FA134CB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8A7C5D2E-3F1B-4E9A-8D6B-2C7F9E4A1B3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A7C5D2E-3F1B-4E9A-8D6B-2C7F9E4A1B3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A7C5D2E-3F1B-4E9A-8D6B-2C7F9E4A1B3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A7C5D2E-3F1B-4E9A-8D6B-2C7F9E4A1B3D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B7F5A8C-9D4E-4F3A-8B6C-1E9D4F7A3B2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B7F5A8C-9D4E-4F3A-8B6C-1E9D4F7A3B2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B7F5A8C-9D4E-4F3A-8B6C-1E9D4F7A3B2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B7F5A8C-9D4E-4F3A-8B6C-1E9D4F7A3B2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03AA1FFC-7FEF-1400-5F70-86F61601BB3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03AA1FFC-7FEF-1400-5F70-86F61601BB3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03AA1FFC-7FEF-1400-5F70-86F61601BB3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03AA1FFC-7FEF-1400-5F70-86F61601BB3B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD06EA45-212C-409E-1365-BE7D576ED3D5}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{BD06EA45-212C-409E-1365-BE7D576ED3D5}.Debug|Any CPU.Build.0 = Debug|x64
+		{BD06EA45-212C-409E-1365-BE7D576ED3D5}.Release|Any CPU.ActiveCfg = Release|x64
+		{BD06EA45-212C-409E-1365-BE7D576ED3D5}.Release|Any CPU.Build.0 = Release|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Debug|Any CPU.Build.0 = Debug|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Debug|Any CPU.Deploy.0 = Debug|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.ActiveCfg = Release|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.Build.0 = Release|x64
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.Deploy.0 = Release|x64
+		{CAD5A30F-79F7-2870-07F0-FB872FA134CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CAD5A30F-79F7-2870-07F0-FB872FA134CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CAD5A30F-79F7-2870-07F0-FB872FA134CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CAD5A30F-79F7-2870-07F0-FB872FA134CB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8A7C5D2E-3F1B-4E9A-8D6B-2C7F9E4A1B3D} = {5B3E4D7C-8A2F-4C1B-9E3D-7A5C6F9B2E4A}
+		{2B7F5A8C-9D4E-4F3A-8B6C-1E9D4F7A3B2C} = {5B3E4D7C-8A2F-4C1B-9E3D-7A5C6F9B2E4A}
+		{BD06EA45-212C-409E-1365-BE7D576ED3D5} = {5B3E4D7C-8A2F-4C1B-9E3D-7A5C6F9B2E4A}
+		{0A650D8D-A3A3-86BD-C080-239D78DF7F94} = {5B3E4D7C-8A2F-4C1B-9E3D-7A5C6F9B2E4A}
+		{CAD5A30F-79F7-2870-07F0-FB872FA134CB} = {9C2E7A4B-5D1F-4A3C-8B6E-3F8D9C1A7E5B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}
+	EndGlobalSection
+EndGlobal
+```
+ 
+ 
+## Summary 
+- Profile: minimal 
+- Files collected: 5 
+- Purpose: Minimal collection for quick checks 
+- Next steps: Check PROJECT_WISDOM.md for current tasks 

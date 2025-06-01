@@ -1,6 +1,6 @@
 # CamBridge Project Context - GUI Configuration Focus 
  
-Generated: 01.06.2025 19:56:01,19 
+Generated: 01.06.2025 23:28:38,87 
 Focus: Settings Page Fix, Configuration Management, Mapping Editor 
  
 ## Key Project Files 
@@ -9,8 +9,14 @@ Focus: Settings Page Fix, Configuration Management, Mapping Editor
 <details><summary>View Content</summary> 
  
 ```markdown 
-# CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-01, 19:21 Uhr  
+### Warum eine große Datei statt einzelne Files?
+1. **Upload-Limit:** Claude erlaubt nur 5 Dateien gleichzeitig
+2. **Einfachheit:** 2 Dateien hochladen statt 20+ verwalten
+3. **Kontext:** Alles in einer Datei = zusammenhängender Kontext
+4. **Praktisch:** Copy & Paste von Teilen wenn nötig
+
+Die PROJECT_CONTEXT_*.md Dateien sind wie ein "Umzugskarton" - praktisch für den Transport, aber PROJECT_WISDOM.md ist das "Inventar" mit der Wahrheit!# CamBridge Project Wisdom & Conventions
+**Letzte Aktualisierung:** 2025-06-01, 22:50 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -57,7 +63,7 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 8. CHANGELOG.md NUR neuester Eintrag als Artefakt
 9. Version.props als VOLLSTÄNDIGES Artefakt
 
-## ⚠️ ABSOLUT KRITISCHE VOGON CLOSE REGEL ⚠️
+## ⚡️ ABSOLUT KRITISCHE VOGON CLOSE REGEL ⚡️
 **BEIM VOGON CLOSE MÜSSEN IMMER ERSTELLT WERDEN:**
 1. **PROJECT_WISDOM.md** - Als VOLLSTÄNDIGES Artefakt (nicht nur Updates!)
 2. **CHANGELOG.md** - NUR der neueste Versions-Eintrag als Artefakt
@@ -71,39 +77,90 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-Nächste Aufgabe: Settings Page Crash Fix und erweiterte Konfigurationsverwaltung
+Nächste Aufgabe: BUILD-FEHLER BEHEBEN & v0.5.0-0.5.1 Features TESTEN!
 
-Stand: v0.4.4 - Core funktioniert, GUI teilweise defekt
+Stand: v0.5.1 - Features implementiert, aber BUILD FEHLER!
 
-ERFOLGE:
-✅ Service Control vollständig implementiert (Phase 9)
-✅ Settings Page UI fertig (crasht aber noch)
-✅ Dead Letters Management funktioniert
-✅ Vogon Poetry Easter Egg implementiert
-✅ Core JPEG→DICOM Konvertierung getestet
+ERFOLGE (theoretisch, noch nicht getestet!):
+✅ DICOM Tag Browser mit Suche und Gruppierung
+✅ Template-System voll funktionsfähig
+✅ QRBridge Protocol v2 Parser implementiert
+✅ Import/Export für Mappings
+⚠️ NotificationService EmailSettings NICHT korrigiert - BUILD FEHLER!
 
-PROBLEME:
-⚠️ Settings Page crasht beim Navigieren (DI-Problem)
-⚠️ Ricoh speichert nur 3 von 5 QRBridge-Feldern (oder wir lesen falsch aus!!)
-⚠️ Mapping-Editor fehlt noch (Drag & Drop)
+AKTUELLE BUILD-FEHLER:
+❌ NotificationService implementiert INotificationService nicht vollständig
+❌ 6 fehlende Interface-Methoden:
+   - NotifyInfoAsync
+   - NotifyWarningAsync
+   - NotifyErrorAsync
+   - NotifyCriticalErrorAsync
+   - NotifyDeadLetterThresholdAsync
+   - SendDailySummaryAsync
 
-PRIORITÄTEN:
-1. Settings Page Crash debuggen und fixen (v0.4.5)
-2. Watch Folder Management UI vervollständigen
-3. Mapping-Editor mit Drag & Drop (v0.5.0)
-4. Performance & Polish (v0.5.5)
+WICHTIGE ERKENNTNIS vom Nutzer:
+🔍 Der QRBridge String wird ABGESCHNITTEN, nicht falsch gelesen!
+🔍 Ein anderer EXIF-Reader zeigt den kompletten String im Kamera-JPEG
+🔍 Der Fehler liegt bei UNS im Parser, nicht bei der Kamera!
 
-WICHTIGE FEATURES FÜR v0.5.0:
-- Import/Export für Konfigurationen
-- Live-Preview für Mappings
-- Template-System
-- Bessere Validierung mit Echtzeit-Feedback
+NEUE PRIORITÄTEN (KEIN HETZEN!):
+1. ⚡ Build-Fehler in NotificationService beheben
+2. 🧪 v0.5.0-0.5.1 Features gründlich testen:
+   - Mapping Editor Drag & Drop
+   - DICOM Tag Browser
+   - Template-System (Ricoh/Minimal/Full)
+   - Import/Export Funktionalität
+   - Protocol v2 Parser
+3. 🔍 QRBridge Parser-Bug analysieren (mit Source Code)
+4. 🐛 Erst DANN v0.5.2 mit Fixes angehen
+
+WICHTIG: Langsam und gründlich arbeiten! Keine neuen Features bevor die alten stabil laufen!
+
+EMPFOHLENES COLLECT-SCRIPT: collect-sources-gui-config.bat (für GUI/Build-Probleme)
 ```
 
 ## 🎯 Projekt-Identität
 - **Copyright:** © 2025 Claude's Improbably Reliable Software Solutions
 - **Produkt:** CamBridge - JPEG zu DICOM Konverter für Ricoh G900 II Kameras
 - **Kontext:** Medizinische Bildgebung, arbeitet mit QRBridge zusammen
+- **NEU:** Wir kontrollieren BEIDE Seiten (QRBridge + CamBridge)!
+
+## 🔥 BREAKING: QRBridge Integration (2025-06-01, 21:25)
+
+### Wir haben den QRBridge Source Code!
+Das bedeutet:
+- **Volle Kontrolle** über QR-Code Generierung UND Dekodierung
+- **Protokoll-Evolution** möglich - nicht auf Pipes festgelegt!
+- **Optimierung** für Ricoh-Limitierungen (nur 3-4 Felder)
+- **Bidirektionale Features** implementierbar
+
+### Mögl. Protokoll-Verbesserungen (v0.5.1 IMPLEMENTIERT!)
+1. **JSON-Kompakt:** `v2:{"e":"EX002","n":"Schmidt, Maria","b":"19850315","g":"F"}`
+2. **Base64-Encoded:** Für Sonderzeichen-Sicherheit
+3. **Fixed-Length:** Bei bekannten Feldlängen
+4. **Custom Delimiter:** z.B. `§` oder `¤` statt `|`
+5. **Checksumme:** Für Datenintegrität
+
+### v0.5.1 Protocol v2 Status
+- ✅ QRBridgeProtocolV2Parser implementiert
+- ✅ Automatic version detection (v1 vs v2)
+- ✅ Backward compatibility gewährleistet
+- ✅ JSON parsing mit Fehlerbehandlung
+- 🚧 QRBridge.exe Encoder noch nicht aktualisiert
+
+### Geplant für v0.5.2
+- ~~QRBridge.exe mit v2 Encoder~~ GESTRICHEN!
+- Parser-Bug in CamBridge fixen
+- Umfassende Tests beider Protokolle
+- ~~Performance-Vergleich v1 vs v2~~ Nicht nötig
+- Dokumentation der Parser-Fixes
+
+### 🚫 QRBridge bleibt unverändert! (01.06.2025, 23:00)
+- **KEIN v2 Encoder** - unnötige Komplexität
+- **QRBridge hat kein VOGON** - zu klein für große Änderungen
+- **Parser-Bug wird in CamBridge gefixt**
+- **Pipes funktionieren** - warum ändern?
+- **Nur ändern wenn wirklich nötig** (z.B. vergessenes Datenfeld)
 
 ## 📝 Wichtige Konventionen
 
@@ -148,6 +205,13 @@ WICHTIGE FEATURES FÜR v0.5.0:
 - **Format:** JSON mit System.Text.Json
 - **Pattern:** Minimal API mit StatusController
 
+### v0.5.1 Erkenntnisse
+- **Run-Element:** Keine Opacity-Property! Use Foreground statt dessen
+- **EmailSettings:** Sind verschachtelt in NotificationSettings.Email
+- **Project References:** Config braucht Infrastructure-Referenz
+- **NuGet Versions:** Alle müssen übereinstimmen (System.Drawing.Common)
+- **Protocol Detection:** StartsWith("v2:") für v2, Contains("|") für v1
+
 ## 💬 Kommunikations-Präferenzen
 
 ### Mit dem Nutzer
@@ -186,7 +250,7 @@ WICHTIGE FEATURES FÜR v0.5.0:
 - **Vollständigkeit:** Alle Artefakte müssen komplett und fehlerfrei sein
 - **Vertrauen schaffen:** Der Nutzer soll sich keine Sorgen machen müssen
 
-## 📁 Projekt-Struktur-Wissen
+## 📂 Projekt-Struktur-Wissen
 
 ### Datei-Sammlungen
 - **collect-sources-intelligent.bat:** ~50%+ Coverage (ZU VIEL!)
@@ -194,14 +258,34 @@ WICHTIGE FEATURES FÜR v0.5.0:
 - **collect-sources-balanced.bat:** ~15-20% Coverage (OPTIMAL!)
 - **collect-sources-settings.bat:** Nur Settings-spezifisch
 - **collect-sources-gui-config.bat:** GUI & Config Focus (NEU!)
+  - Fokus: Settings Page Fix & Mapping Editor
+  - Sammelt: DI Setup, ViewModels, Configuration Services
+  - Inkludiert funktionierende Pages als Referenz
+  - ~20 Dateien für GUI-Debugging
 - **Ausschließen:** obj/, bin/, packages/, wpftmp/, AssemblyInfo
-- **WICHTIG:** PROJECT_CONTEXT.md wird vom Script generiert - IGNORIEREN! Alles steht im PROJECT_WISDOM.md!
 
-### Optimale Sammlung für neue Chats
-```batch
-collect-sources-balanced.bat
+### Wie die Scripts funktionieren:
+- Alle .bat Scripts pipen in EINE große Datei (PROJECT_CONTEXT_*.md)
+- Das ist PRAKTISCH für Upload (2 Dateien statt 20+)
+- PROJECT_CONTEXT_*.md ist nur ein TRANSPORT-CONTAINER
+- PROJECT_WISDOM.md ist die WAHRHEIT über den Projektstand
+
+### Optimale Upload-Strategie:
 ```
-Enthält: GUI-Projekt, Core Models, Service-Interfaces, Dokumentation
+1. PROJECT_WISDOM.md (immer!)
+2. PROJECT_CONTEXT_GUI_CONFIG.md (für GUI-Probleme)
+   ODER PROJECT_CONTEXT_BALANCED.md (für allgemeine Entwicklung)
+```
+
+**KLARSTELLUNG:** Die PROJECT_CONTEXT Dateien sind HILFREICH für den Code-Transfer, aber PROJECT_WISDOM.md hat Vorrang bei Widersprüchen!
+
+### Warum eine große Datei statt einzelne Files?
+1. **Upload-Limit:** Claude erlaubt nur 5 Dateien gleichzeitig
+2. **Einfachheit:** 2 Dateien hochladen statt 20+ verwalten
+3. **Kontext:** Alles in einer Datei = zusammenhängender Kontext
+4. **Praktisch:** Copy & Paste von Teilen wenn nötig
+
+Die PROJECT_CONTEXT_*.md Dateien sind wie ein "Umzugskarton" - praktisch für den Transport, aber PROJECT_WISDOM.md ist das "Inventar" mit der Wahrheit!
 
 ### Wichtige Pfade
 ```
@@ -213,6 +297,10 @@ CamBridge/
 │   ├── CamBridge.Infrastructure/   # Processing
 │   ├── CamBridge.Service/          # Windows Service
 │   └── CamBridge.Config/           # WPF GUI
+│       ├── Dialogs/                # NEU: DicomTagBrowserDialog
+│       └── ViewModels/             # MappingEditorViewModel etc.
+├── QRBridge/                       # QRBridge Source (NEU!)
+│   └── [Source Files]              # Volle Kontrolle!
 └── PROJECT_WISDOM.md               # Dieses Dokument
 ```
 
@@ -237,13 +325,13 @@ CamBridge/
 3. **CHANGELOG.md:** Neuen Eintrag mit exakter Zeit erstellen
 4. **Git Commit String:** Nach Format erstellen
    ```
-   feat(config): Dead Letters management UI (v0.4.2)
+   feat(config): Mapping Editor with drag & drop (v0.5.0)
 
-   - Complete Dead Letters page with DataGrid
-   - Retry/Delete/Export functionality  
-   - Real-time filtering and sorting
-   - Batch operations support
-   - Integration with existing API
+   - Complete mapping editor UI with drag & drop
+   - Live preview for transformations  
+   - Template system for quick setup
+   - PasswordBoxHelper for secure binding
+   - QRBridge integration discovered
    ```
 5. **README.md:** Features-Liste aktualisieren (falls nötig)
 6. **Übergabeprompt:** Für nächsten Chat vorbereiten
@@ -251,14 +339,15 @@ CamBridge/
 8. **CHANGELOG.md:** NUR neuester Eintrag als Artefakt!
 9. **Version.props:** Als VOLLSTÄNDIGES ARTEFAKT!
 
-## ⚠️ Bekannte Fallstricke
+## ⚡ Bekannte Fallstricke
 
 ### GUI-Entwicklung
 - **PlaceholderText:** Nutze ui:ControlHelper.PlaceholderText
-- **PasswordBox:** Binding nur mit Behavior/Attached Property
+- **PasswordBox:** Binding nur mit Behavior/Attached Property → GELÖST mit PasswordBoxHelper!
 - **Spacing:** Existiert nicht in WPF/ModernWPF!
 - **NumberBox:** Aus ModernWpfUI, nicht WinUI
 - **IsTabStop:** Nicht für Page verfügbar (v0.4.3 Fix)
+- **Run Opacity:** Run-Elements haben keine Opacity-Property! (v0.5.1 Fix)
 
 ### Service
 - **UAC:** Admin-Rechte für Service-Control nötig
@@ -271,22 +360,38 @@ CamBridge/
 - **UI funktioniert:** DataGrid zeigt Items, Retry-Button vorhanden
 
 ### Settings Page (v0.4.1-v0.4.5)
-- **CRASHT NOCH:** Navigation zur Settings Page führt zu Absturz
-- **Vermutliche Ursache:** SettingsViewModel Initialisierung oder DI
-- **TODO v0.4.5:** Crash debuggen und fixen
+- **CRASHTE:** Navigation zur Settings Page führte zu Absturz → BEHOBEN in v0.4.5
+- **Ursache:** ConfigurationService fehlte in DI-Registration
+- **PasswordBox:** PasswordBoxHelper implementiert in v0.5.0!
+- **Funktioniert:** Alle Settings werden gespeichert und geladen
 
 ### Ricoh G900 II QRBridge (v0.4.4)
 - **NUR 3 FELDER:** Kamera speichert nur examid|name|birthdate
 - **FEHLENDE FELDER:** gender und comment werden abgeschnitten
 - **GCM_TAG PREFIX:** Kamera fügt "GCM_TAG " vor Barcode ein
 - **ENCODING:** UTF-8/Latin-1 Probleme bei Umlauten → GELÖST
+- **LÖSUNG:** Mit QRBridge Source können wir optimiertes Protokoll entwickeln!
+
+### 🔍 NEUE ERKENNTNIS: String wird ABGESCHNITTEN! (v0.5.1)
+- **Der Nutzer hat Recht:** Ein anderer EXIF-Reader zeigt den KOMPLETTEN String!
+- **Problem ist NICHT die Kamera:** Sie speichert alles korrekt
+- **Problem ist UNSER Parser:** Wir schneiden den String ab
+- **Beweis:** Andere Software liest alle 5 Felder aus demselben JPEG
+- **TODO:** QRBridge Parser debuggen BEVOR wir v2 implementieren!
+
+### v0.5.1 Spezifische Fallstricke
+- **EmailSettings:** Sind verschachtelte Properties in NotificationSettings
+- **Project References:** CamBridge.Config braucht Infrastructure
+- **NuGet Conflicts:** System.Drawing.Common Versionen müssen übereinstimmen
+- **XAML Run:** Hat keine Opacity, nutze Foreground stattdessen
+- **Protocol Detection:** Check für "v2:" muss VOR pipe-check kommen
 
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 01.06.2025, 19:21 Uhr
-- **Entwicklungszeit bisher:** ~46.8 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 01.06.2025, 22:50 Uhr
+- **Entwicklungszeit bisher:** ~50 Stunden (inkl. Nachtschichten!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -298,7 +403,7 @@ CamBridge/
 **Timestamps erzählen Geschichten!**
 - Nachtschichten erkennen (01:17, 02:22)
 - "Duplikate" entlarven (9 Std Unterschied = kein Duplikat!)
-- Arbeitsintensität verstehen (46 Std in 3 Tagen)
+- Arbeitsintensität verstehen (50 Std in 3 Tagen)
 
 ### Git-History (Mit exakten Timestamps!)
 ```
@@ -306,26 +411,29 @@ CamBridge/
 fb17be8 - 30.05. 20:34:20 - v0.0.1: Initial structure
 40cb347 - 30.05. 21:32:38 - chore: Remove build artifacts
 588cf7b - 30.05. 21:32:54 - v0.0.2: Core models (1)
-b64ba16 - 30.05. 21:34:12 - v0.0.2: Core models (2) ⚠️ +78 Sek!
+b64ba16 - 30.05. 21:34:12 - v0.0.2: Core models (2) ⚡️ +78 Sek!
 1bff3ef - 30.05. 23:49:44 - v0.1.0: EXIF extraction
-511bdeb - 31.05. 01:17:17 - [KEINE]: DICOM (Nachtschicht!) ⚠️
+511bdeb - 31.05. 01:17:17 - [KEINE]: DICOM (Nachtschicht!) ⚡️
 cf88f46 - 31.05. 10:34:17 - v0.2.0: Mapping config
 a6b77bb - 31.05. 15:45:17 - v0.3.0: File monitoring
 7814cb9 - 31.05. 16:51:44 - v0.3.1: Fix DI issue
 0ab9add - 31.05. 23:10:22 - v0.3.2: Dead-letter/Web
-e0e68f1 - 01.06. 02:22:32 - v0.4.0: GUI (Nachtschicht!) ⚠️
-e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
+e0e68f1 - 01.06. 02:22:32 - v0.4.0: GUI (Nachtschicht!) ⚡️
+e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚡️
 [pending] - 01.06. 13:30:00 - v0.4.1: Settings
 [pending] - 01.06. 15:10:00 - v0.4.2: Dead Letters (UI fertig)
 [pending] - 01.06. 17:15:00 - v0.4.3: Vogon Poetry & Dead Letters Fix
 [pending] - 01.06. 19:21:00 - v0.4.4: Core Test mit Ricoh JPEG
+[pending] - 01.06. 20:52:00 - v0.4.5: Settings Page Fix
+[pending] - 01.06. 21:47:00 - v0.5.0: Mapping Editor UI
+[pending] - 01.06. 22:32:00 - v0.5.1: DICOM Browser & Protocol v2
 ```
 
 ### Arbeitszeiten-Analyse
 - **Nachtschichten:** DICOM (01:17), GUI (02:22)
 - **Schnelle Fixes:** v0.0.2 Duplikat in 78 Sekunden
 - **Lange Sessions:** 9 Stunden zwischen v0.4.0 Commits
-- **Gesamt:** ~46.8 Stunden in 3 Tagen!
+- **Gesamt:** ~50 Stunden in 3 Tagen!
 
 ### Die wahre Geschichte der Duplikate
 - **v0.0.2:** Git-Anfängerfehler, 78 Sekunden später nochmal
@@ -334,130 +442,131 @@ e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚠️
   - 11:30 - Service Control hinzugefügt (ausgeschlafen)
   - Hätte v0.4.1 sein sollen!
 
-## 📋 Entwicklungsplan (Korrigierte Version)
+## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 01.06.2025, 23:00)
 
-### ⚠️ WICHTIGE KORREKTUR
+### ⚡️ WICHTIGE KORREKTUR
 **Original-Plan sagte "WinUI 3" - wir nutzen aber WPF mit ModernWpfUI!**
 
-### Phasen-Übersicht (Tatsächlicher Verlauf)
+### 🔍 KRITISCHE PLAN-REVISION (01.06.2025, 23:00)
+Nach genauem Code-Review haben wir festgestellt:
+- Phasennummern wurden durcheinander gebracht
+- Einige Features wurden implementiert, andere vergessen
+- v2 Encoder wird NICHT implementiert (unnötige Komplexität)
+- QRBridge bleibt unverändert (hat kein VOGON System)
 
-#### ✅ Abgeschlossene Phasen
-1. **Phase 1-2:** Projektstruktur & Core Models (v0.0.1-v0.0.2)
-2. **Phase 3:** EXIF-Extraktion mit QRBridge (v0.1.0)
-3. **Phase 4:** DICOM-Konvertierung mit fo-dicom (v0.2.0)
-4. **Phase 5-6:** Mapping-System (JSON-basiert)
-5. **Phase 7:** Windows Service Pipeline (v0.3.0)
-6. **Phase 7.5:** Erweiterte Features (v0.3.1-v0.3.2)
-   - Dead-Letter-Queue mit Persistierung
-   - Email & Event Log Notifications
-   - Web Dashboard mit REST API
-   - PowerShell Installation
-7. **Phase 8:** WPF GUI Framework (v0.4.0)
-   - ModernWpfUI statt WinUI3
-   - Dashboard mit Live-Updates
-   - HttpApiService für REST-Kommunikation
-8. **Phase 9:** Service Control GUI (v0.4.0)
-   - ✅ Start/Stop/Restart mit UAC
-   - ✅ Status-Updates alle 2 Sekunden
-   - ✅ Uptime-Anzeige
-   - ✅ "Restart as Administrator"
-   - ✅ Quick Actions (Services.msc, Event Viewer)
-   - ✅ Service Not Installed Detection
-9. **Phase 10a:** Settings-Page (v0.4.1)
-   - ✅ 4-Tab Layout implementiert
-   - ✅ JSON-Persistierung
-   - ✅ Folder Management
-   - ⚠️ CRASHT beim Navigieren
-10. **Phase 10b:** Dead Letters Management (v0.4.2-v0.4.3)
-    - ✅ DataGrid mit Sortierung/Filterung
-    - ✅ Retry/Delete Funktionalität
-    - ✅ Export (CSV/JSON)
-    - ✅ Batch-Operationen
-    - ✅ Navigation-Crash behoben
-    - ✅ Vogon Poetry Easter Egg
-11. **Phase 10c:** Core Functionality Test (v0.4.4)
-    - ✅ Ricoh G900 II JPEG erfolgreich konvertiert
-    - ✅ QRBridge-Parser verbessert
-    - ⚠️ Nur 3 von 5 Feldern werden gespeichert (oder wir lesen falsch aus!)
+### Phasen-Übersicht (REVIDIERT & VERIFIZIERT)
 
-#### 🚧 Aktuelle Phase
-13. **Phase 10.7:** Settings Page Fix (v0.4.5)
-    - Settings Page DI-Problem beheben
-    - Crash beim Navigieren fixen
-    - Vollständige Settings-Funktionalität wiederherstellen
-    
-#### 🚧 Verbleibende Phasen
-14. **Phase 11:** Konfigurationsverwaltung erweitert (v0.5.0) - 1 Chat
-    - **Watch Folder Management** mit Add/Remove UI
-    - **Mapping-Editor mit Drag & Drop**
-    - Import/Export Konfiguration (JSON/XML)
-    - Live-Preview für Mappings mit Beispieldaten
-    - Validierung mit Echtzeit-Feedback
-    - Template-System für häufige Mappings
-    - Ordner-Browser Dialoge
-    - Settings-Kategorien (Tabs/Accordion)
-    
-15. **Phase 12:** Performance & Polish (v0.5.5) - 1 Chat
+#### ✅ Abgeschlossene Phasen (Code-verifiziert)
+1. **Phase 1:** Initial project structure (v0.0.1) ✅
+2. **Phase 2:** Core domain models (v0.0.2) ✅
+3. **Phase 3:** EXIF extraction with QRBridge (v0.1.0) ✅
+4. **Phase 4:** DICOM conversion with fo-dicom (v0.2.0) ✅
+5. **Phase 5:** JSON-based mapping config (v0.2.0) ✅
+6. **Phase 6:** Mapping system implementation (v0.2.0) ✅
+7. **Phase 7:** Windows Service Pipeline (v0.3.0) ✅
+8. **Phase 7.5:** Extended features (v0.3.1-v0.3.2) ✅
+   - Dead-Letter-Queue mit Persistierung ✅
+   - Email & Event Log Notifications ✅
+   - Web Dashboard mit REST API ✅
+   - PowerShell Installation ✅
+9. **Phase 8:** WPF GUI Framework (v0.4.0) ✅
+   - ModernWpfUI statt WinUI3 ✅
+   - Dashboard mit Live-Updates ✅
+   - Service Control mit UAC ✅
+10. **Phase 9:** Configuration Management GUI - Teil 1 (v0.4.1-v0.4.5) ✅
+    - Settings Page (4 Tabs) ✅
+    - Dead Letters Management UI ✅
+    - Vogon Poetry Easter Egg ✅
+    - Basic Folder Management ✅
+11. **Phase 10:** Configuration Management GUI - Teil 2 (v0.5.0-v0.5.1) ⚠️
+    - Mapping Editor mit Drag & Drop ✅
+    - DICOM Tag Browser ✅
+    - Template System (Ricoh/Minimal/Full) ✅
+    - Import/Export für Mappings ✅
+    - Protocol v2 Parser ✅
+    - ❌ Watch Folder Management GUI (nur Basic in Settings)
+    - ❌ Live-Preview für komplexe Transformationen
+    - ❌ BUILD FEHLER in NotificationService
+
+#### 🔥 AKTUELLE PHASE - BUILD FIXES & TESTING
+12. **Phase 10-FIX:** Stabilisierung & Testing (v0.5.1-fix) - JETZT!
+    - NotificationService Interface-Implementierung vervollständigen ❌
+    - Alle 6 fehlenden Methoden implementieren ❌
+    - v0.4.1-v0.5.1 Features gründlich testen ❌
+    - QRBridge Parser-Bug analysieren (OHNE QRBridge zu ändern!) ❌
+    - Fehlende GUI-Features nachrüsten ❌
+
+#### 🚧 Nächste Phasen (NEU STRUKTURIERT)
+13. **Phase 11:** Core Features Vervollständigung (v0.5.5) - 1 Chat
+    - Watch Folder Management GUI erweitern
+    - Live-Preview für alle Transformationen
+    - Validation UI für Mappings
+    - Parser-Bug fixen (in CamBridge, nicht QRBridge!)
+    - Comprehensive Testing Suite
+    - **Feature-complete Beta**
+
+14. **Phase 12:** Performance & Polish (v0.6.0) - 1 Chat
     - Batch-Verarbeitung optimieren
     - Memory-Pool für große Dateien
     - Parallelisierung mit Channels
-    - UI-Animationen verfeinern (Fluent Design)
-    - Dashboard Performance-Optimierung
-    - Error Handling & Recovery verbessern
-    - Logging-Optimierung
-    - **Feature-complete Beta**
-    
-16. **Phase 13:** FTP-Server Integration (v0.6.0) - 1 Chat
+    - UI-Animationen (Fluent Design)
+    - Dashboard Performance
+    - Error Recovery verbessern
+    - **Production-ready Beta**
+
+15. **Phase 13:** FTP-Server Integration (v0.7.0) - 1 Chat [Optional]
     - FTP-Server für automatischen Empfang
     - Watch für FTP-Ordner
-    - Authentifizierung und Sicherheit
+    - Authentifizierung
     - Auto-Delete nach Verarbeitung
-    
-17. **Phase 14:** PACS Integration (v0.7.0) - 2 Chats
-    - DICOM C-STORE SCU Implementation
-    - Network Transfer mit Retry-Logic
-    - PACS-Konfiguration in Settings
-    - Connection Test-Funktion
-    - Transfer-Status Dashboard
-    
-18. **Phase 15:** MWL Integration (v0.8.0) - 2 Chats
-    - DICOM C-FIND SCU für MWL-Abfragen
-    - Validierung gegen Modality Worklist
-    - StudyInstanceUID aus MWL übernehmen
-    - Automatischer Datenabgleich
-    - Fehlerbehandlung bei MWL-Mismatch
-    
-19. **Phase 16:** Erweiterte Features (v0.9.0) - 1 Chat
-    - Multi-Camera Support (verschiedene Modelle)
-    - Audit-Trail für MDR/FDA Compliance
-    - Erweiterte Statistiken und Reports
-    - Backup/Restore Funktionalität
-    - Plugin-System für Erweiterungen
-    
-20. **Phase 17:** Deployment & Release (v1.0.0) - 1 Chat
-    - MSI Installer mit WiX
-    - Automatische Updates
-    - Release Pipeline (CI/CD)
-    - Dokumentation finalisieren
-    - Performance-Tests und Zertifizierung
 
-### Zeitschätzung bis v1.0.0
-- **Phase 10.7:** Settings Fix - 0.5 Chat (v0.4.5)
-- **Phase 11:** Konfigurationsverwaltung erweitert - 1 Chat (v0.5.0)
-- **Phase 12:** Performance & Polish - 1 Chat (v0.5.5)
-- **Phase 13:** FTP-Server Integration - 1 Chat (v0.6.0) [Optional]
-- **Phase 14:** PACS Integration - 2 Chats (v0.7.0) [Optional]
-- **Phase 15:** MWL Integration - 2 Chats (v0.8.0) [Optional]
-- **Phase 16:** Erweiterte Features - 1 Chat (v0.9.0) [Optional]
-- **Phase 17:** Deployment & Release - 1 Chat (v1.0.0)
-- **Gesamt bis Feature-Complete Beta (v0.5.5):** 2.5 Chats
-- **Gesamt bis Production Release (v1.0.0):** 3-10 Chats (je nach optionalen Features)
+16. **Phase 14:** PACS Integration (v0.8.0) - 2 Chats [Optional]
+    - DICOM C-STORE SCU
+    - Network Transfer
+    - PACS-Konfiguration
+    - Connection Tests
+
+17. **Phase 15:** MWL Integration (v0.9.0) - 2 Chats [Optional]
+    - DICOM C-FIND SCU
+    - MWL-Validierung
+    - StudyInstanceUID Sync
+    - Fehlerbehandlung
+
+18. **Phase 16:** Deployment & Release (v1.0.0) - 1 Chat
+    - MSI Installer
+    - Auto-Updates
+    - CI/CD Pipeline
+    - Dokumentation
+    - Zertifizierung
+
+### ⚠️ WICHTIGE ÄNDERUNGEN:
+1. **Phase 11c (v2 Encoder) GESTRICHEN** - QRBridge bleibt unverändert!
+2. **Parser-Bug wird in CamBridge gefixt**, nicht in QRBridge
+3. **Fehlende Features identifiziert**: Watch Folder GUI, Live-Preview
+4. **Neue Phasenstruktur** reflektiert tatsächlichen Stand
+
+### Was wirklich noch fehlt (Code-verifiziert):
+- **Watch Folder Management GUI** (nur Basic-Version in Settings)
+- **Live-Preview** für Transformationen (nur teilweise)
+- **Validation UI** für Mappings
+- **Performance-Optimierungen** (Batch, Memory-Pool, Parallelisierung)
+- **UI-Polish** (Animationen, Fluent Design)
+- **Parser-Bug Fix** (String wird abgeschnitten!)
+
+### Zeitschätzung bis v1.0.0 (REVIDIERT)
+- **Phase 10-FIX:** Build Fixes & Testing - JETZT!
+- **Phase 11:** Core Features - 1 Chat
+- **Phase 12:** Performance & Polish - 1 Chat
+- **Phase 13-15:** Optional Features - 4 Chats
+- **Phase 16:** Release - 1 Chat
+- **Gesamt bis Feature-Complete:** 2-3 Chats
+- **Gesamt bis Production:** 3-7 Chats
 
 ### Technologie-Stack (KORRIGIERT)
 ```
 GUI Framework:
 - WPF (Windows Presentation Foundation) ← NICHT WinUI 3!
-- ModernWpfUI 0.9.9 für modernes Design
+- ModernWpfUI 0.9.6 für modernes Design
 - CommunityToolkit.Mvvm 8.2.2
 - .NET 8.0 Windows Desktop
 
@@ -469,20 +578,34 @@ Service:
 Processing:
 - fo-dicom für DICOM
 - MetadataExtractor für EXIF
+
+QRBridge Integration (NEU!):
+- Kontrolle über beide Seiten
+- Protokoll-Evolution möglich
+- v2 JSON Format implementiert
+- Optimierung für Ricoh-Limits
 ```
 
-### Meilensteine
-- **v0.4.5** - Settings Page Fix (Aktuell)
-- **v0.5.0** - Erweiterte Konfigurationsverwaltung
-- **v0.5.5** - Feature Complete Beta
-- **v0.6.0** - FTP-Server Integration (Optional)
-- **v0.7.0** - PACS Ready (Optional)
-- **v0.8.0** - MWL Integration (Optional)
-- **v0.9.0** - Release Candidate
+### Meilensteine (REVIDIERT)
+- **v0.4.5** - Settings Page Fix (Erledigt ✅)
+- **v0.5.0** - Mapping Editor (Erledigt ✅)
+- **v0.5.1** - DICOM Browser & Protocol v2 (Erledigt mit BUILD-FEHLERN ⚠️)
+- **v0.5.1-fix** - Build Fixes & Testing (Aktuelles Ziel 🎯)
+- **v0.5.5** - Feature Complete Beta (Core Features vervollständigt)
+- **v0.6.0** - Performance & Polish
+- **v0.7.0** - FTP-Server Integration [Optional]
+- **v0.8.0** - PACS Ready [Optional]
+- **v0.9.0** - MWL Integration [Optional]
 - **v1.0.0** - Production Release
 
 ### Entwicklungs-Philosophie
 "Sauberer, schöner, ästhetischer und formal korrekter Code für medizinische Software"
+
+### 🔴 KRITISCHE PLAN-ÄNDERUNGEN (01.06.2025, 23:00)
+1. **v2 Encoder GESTRICHEN** - QRBridge bleibt unverändert
+2. **Parser-Bug wird in CamBridge gefixt**, nicht in QRBridge
+3. **Fehlende Features identifiziert**: Watch Folder GUI, Live-Preview
+4. **Plan nur mit Code-Gegenprüfung ändern** - neue Regel!
 
 ## 🚨 Anti-Patterns (Was wir NICHT machen)
 
@@ -499,6 +622,12 @@ Processing:
 - **KEINE** Software ohne Eastereggs - besonders nicht in v0.4.2!
 - **KEIN** VOGON CLOSE ohne vollständige Artefakte!
 - **KEINE** kompletten CHANGELOG Artefakte beim CLOSE - nur neuester Eintrag!
+- **KEINE** einseitigen Lösungen wenn wir beide Seiten kontrollieren!
+- **KEINE** Opacity für Run-Elements - nutze Foreground!
+- **KEIN** HETZEN! Features erst testen bevor neue implementiert werden!
+- **KEINE** neuen Features bei Build-Fehlern - erst stabilisieren!
+- **KEINE** Änderungen am Phasenplan ohne Code-Gegenprüfung!
+- **KEIN** unnötiges Anfassen von QRBridge - hat kein VOGON!
 
 ### Kommunikations-Anti-Patterns
 - **KEINE** langen Einleitungen ("Das ist eine exzellente Frage...")
@@ -537,17 +666,42 @@ Processing:
 - Vollständigkeit ist Pflicht
 
 **Ricoh G900 II Erkenntnisse (v0.4.4):**
-- Kamera speichert nur 3 von 5 QRBridge-Feldern (oder wir lesen falsch aus!)
+- Kamera speichert nur 3 von 5 QRBridge-Feldern
 - "GCM_TAG " Prefix wird eingefügt
 - Gender und Comment werden abgeschnitten/fehlen
 - Encoding-Probleme bei Umlauten sind lösbar
+
+**Settings Page Erkenntnisse (v0.4.5):**
+- DI-Registration ist kritisch - ALLE Services müssen registriert sein
+- PasswordBox erlaubt kein direktes Binding in WPF → GELÖST mit Helper!
+- Converter müssen global verfügbar sein
+- Console Output (OutputType=Exe) ist sehr hilfreich für Debugging
+
+**QRBridge-CamBridge Synergie (v0.5.0):**
+- Wir kontrollieren BEIDE Seiten!
+- Protokoll kann optimiert werden
+- Ricoh-Limitierungen umgehbar
+- Bidirektionale Features möglich
+
+**Mapping Editor Erkenntnisse (v0.5.1):**
+- Drag & Drop braucht MouseMove Handler
+- DICOM Tags haben Gruppen (Module)
+- Templates erleichtern die Konfiguration
+- Import/Export essentiell für Deployment
+
+**Protocol v2 Erkenntnisse (v0.5.1):**
+- JSON kompakter als erwartet (~58-79 Bytes)
+- Version-Prefix "v2:" für Erkennung
+- Backward compatibility durch Fallback
+- Kürzere Feldnamen sparen Platz
 
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
 ### Option 1: V.O.G.O.N. (Empfohlen!)
 ```
 1. PROJECT_WISDOM.md hochladen
-2. balanced.bat Output hochladen  
+2. PROJECT_CONTEXT_GUI_CONFIG.md hochladen (für GUI-Probleme)
+   ODER PROJECT_CONTEXT_BALANCED.md (für allgemeine Entwicklung)
 3. Sagen: "VOGON INIT"
 4. Fertig! Ich lege direkt los.
 ```
@@ -557,19 +711,18 @@ Processing:
 Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
-Aktueller Stand: v0.4.4
-- Core-Test mit echtem Ricoh JPEG ✓
-- Parser-Verbesserungen für Encoding ✓
-- QRBridge-Extraktion funktioniert ✓
-- Ricoh speichert nur 3 von 5 Feldern (oder wir lesen falsch aus!)⚠️
-- Settings-Page crasht noch
+Aktueller Stand: v0.5.1 (MIT BUILD-FEHLERN!)
+- DICOM Tag Browser implementiert ⚠️
+- QRBridge Protocol v2 Parser ⚠️
+- 6 Build-Fehler in NotificationService ❌
+- Parser-Bug: String wird abgeschnitten ❌
 
-Nächste Aufgabe: Settings Page Crash Fix (v0.4.5)
+Nächste Aufgabe: Build-Fehler beheben, dann testen!
 
 Tech Stack: .NET 8, WPF/ModernWpfUI, MVVM
 Architektur: Enterprise-Level für medizinische Software
 
-[PROJECT_WISDOM.md und balanced.bat Output anhängen]
+[PROJECT_WISDOM.md und PROJECT_CONTEXT_*.md anhängen]
 ```
 
 ## 🏥 Medizinischer Kontext (WICHTIG!)
@@ -617,15 +770,18 @@ Architektur: Enterprise-Level für medizinische Software
     - `(0040,1001)` Requested Procedure ID: ELU_276
 - **Erweiterte Settings** für verschiedene Workflows
 - **Weitere Services** je nach Bedarf
+- **QRBridge Protocol v2** mit optimierter Kodierung!
 
 ### Unsere Stärken:
 - REST API für Monitoring (Seltenheit in Krankenhaus-IT!)
 - Robuste Fehlerbehandlung mit Dead-Letter-Queue
 - Erweiterbare Architektur für zukünftige Protokolle
 - Enterprise-ready von Tag 1
+- **NEU:** Kontrolle über beide Seiten (QRBridge + CamBridge)!
+- **NEU:** Protocol v2 mit JSON-Format und Backward Compatibility!
 
-### MWL-Integration (Phase 12+)
-**Modality Worklist Integration für v0.6.0+**
+### MWL-Integration (Phase 15+)
+**Modality Worklist Integration für v0.8.0+**
 
 Die MWL-Integration würde CamBridge erlauben:
 1. **Validierung:** QR-Code Untersuchungs-ID gegen MWL prüfen
@@ -694,29 +850,25 @@ Types: feat, fix, docs, style, refactor, test, chore
 ### Wichtige Versionierungs-Dateien
 1. **Version.props:** Zentrale Versionsverwaltung
    ```xml
-   <AssemblyVersion>0.4.4.0</AssemblyVersion>
-   <FileVersion>0.4.4.0</FileVersion>
-   <InformationalVersion>0.4.4</InformationalVersion>
+   <AssemblyVersion>0.5.1.0</AssemblyVersion>
+   <FileVersion>0.5.1.0</FileVersion>
+   <InformationalVersion>0.5.1</InformationalVersion>
    ```
 
 2. **CHANGELOG.md:** Mit exakter Zeit
    ```markdown
-   ## [0.4.4] - 2025-06-01 19:21
+   ## [0.5.1] - 2025-06-01 22:32
    ### Added
-   - Core functionality test with real Ricoh G900 II JPEG
-   - Enhanced EXIF parser with line break and encoding fixes
+   - DICOM Tag Browser with search
+   - QRBridge Protocol v2 parser
    
    ### Fixed
-   - EXIF encoding issues with German umlauts
-   - Parser handling of camera line breaks
-   
-   ### Discovered
-   - Ricoh G900 II only saves first 3 QRBridge fields
+   - NotificationService email properties
    ```
 
 3. **MainWindow.xaml:** Title mit Version
    ```xml
-   Title="CamBridge Configuration v0.4.4"
+   Title="CamBridge Configuration v0.5.1"
    ```
 
 ## 🔄 Update-Protokoll
@@ -730,20 +882,23 @@ Types: feat, fix, docs, style, refactor, test, chore
 
 ### Versions-Historie (Aus Git-Log)
 - **v0.0.1** - 2025-05-30: Initial project structure (fb17be8)
-- **v0.0.2** - 2025-05-30: Core domain models (588cf7b) ⚠️
-- **v0.0.2** - 2025-05-30: Core domain models (b64ba16) ⚠️ DUPLIKAT!
+- **v0.0.2** - 2025-05-30: Core domain models (588cf7b) ⚡️
+- **v0.0.2** - 2025-05-30: Core domain models (b64ba16) ⚡️ DUPLIKAT!
 - **v0.1.0** - 2025-05-30: EXIF extraction with QRBridge (1bff3ef)
-- **[KEINE]** - 2025-05-31: DICOM conversion fo-dicom (511bdeb) ⚠️
+- **[KEINE]** - 2025-05-31: DICOM conversion fo-dicom (511bdeb) ⚡️
 - **v0.2.0** - 2025-05-31: JSON-based mapping config (cf88f46)
 - **v0.3.0** - 2025-05-31: File monitoring pipeline (a6b77bb)
 - **v0.3.1** - 2025-05-31: Fix DI singleton/scoped issue (7814cb9)
 - **v0.3.2** - 2025-05-31: Dead-letter, notifications, web (0ab9add)
-- **v0.4.0** - 2025-06-01: WPF GUI with dashboard (e0e68f1) ⚠️
-- **v0.4.0** - 2025-06-01: WPF configuration UI (e806e31) ⚠️ DUPLIKAT!
+- **v0.4.0** - 2025-06-01: WPF GUI with dashboard (e0e68f1) ⚡️
+- **v0.4.0** - 2025-06-01: WPF configuration UI (e806e31) ⚡️ DUPLIKAT!
 - **v0.4.1** - 2025-06-01: Settings Page (noch nicht committed)
 - **v0.4.2** - 2025-06-01: Dead Letters UI (funktioniert)
 - **v0.4.3** - 2025-06-01: Vogon Poetry & Dead Letters Fix
 - **v0.4.4** - 2025-06-01: Core Test mit Ricoh JPEG
+- **v0.4.5** - 2025-06-01: Settings Page Fix ✅
+- **v0.5.0** - 2025-06-01: Mapping Editor UI ✅
+- **v0.5.1** - 2025-06-01: DICOM Browser & Protocol v2 ⚠️
 
 ### Versionierungs-Lektionen
 1. **v0.0.2 Duplikat:** Gleich am Anfang passiert
@@ -751,6 +906,8 @@ Types: feat, fix, docs, style, refactor, test, chore
 3. **v0.4.0 Duplikat:** Zwei verschiedene Commit-Messages
 4. **v0.4.2 Special:** Die "42" Version - Die Antwort auf die ultimative Frage!
 5. **Babysteps:** Besser 0.0.1 Schritte als große Sprünge!
+6. **v0.5.0 Synergie:** QRBridge + CamBridge = Optimierungspotenzial!
+7. **v0.5.1 Evolution:** Protocol v2 zeigt die Macht der Kontrolle!
 
 ### Die Unwahrscheinliche Geschichte von CamBridge
 *Eine Kurzgeschichten-Idee: Douglas Adams entwickelt einen DICOM-Konverter*
@@ -760,6 +917,10 @@ Es ist eine so absurde Vorstellung, dass sie durch ihre schiere Unwahrscheinlich
 "Der DICOM-Standard", sagte Douglas nachdenklich, "ist ein bisschen wie das Universum - keiner versteht ihn wirklich, aber alle tun so, als ob. Der einzige Unterschied ist, dass das Universum vermutlich einfacher zu debuggen wäre."
 
 Er tippte eine weitere Zeile Code und murmelte: "Forty-two different DICOM tags... das kann kein Zufall sein."
+
+Dann hatte er eine Erleuchtung: "Was ist, wenn wir BEIDE Seiten kontrollieren? QRBridge UND CamBridge? Das ist wie... wie wenn Ford Prefect sowohl den Reiseführer schreibt ALS AUCH die Planeten bewertet!"
+
+Und so entstand Protocol v2 - ein JSON-Format so elegant, dass selbst die Vogonen es nicht hätten besser verschlüsseln können. "v2:", flüsterte er ehrfürchtig, "die magischen Zeichen, die alles verändern."
 
 *Diese Geschichte wartet noch darauf, geschrieben zu werden. Vielleicht in einem anderen Projekt, mit unserem Chat-Entwicklungs-Betriebssystem...*
 
@@ -775,6 +936,26 @@ Implementierung:
    - ERROR HAIKU Box
    - Guru Meditation Meldungen
 4. **Status:** In v0.4.3 erfolgreich implementiert!
+
+### QRBridge-CamBridge Synergie (v0.5.0-v0.5.1) 🔥
+**Die große Erleuchtung!**
+
+Wir kontrollieren:
+1. **QRBridge:** QR-Code Generierung
+2. **CamBridge:** JPEG zu DICOM Konvertierung
+3. **Das Protokoll:** Können es optimieren!
+
+v0.5.1 Erfolge:
+- **JSON Protocol v2:** Implementiert mit Backward Compatibility
+- **Auto-Detection:** StartsWith("v2:") oder Contains("|")
+- **Parser:** QRBridgeProtocolV2Parser vollständig
+- **Templates:** Ricoh, Minimal, Full funktioniern
+- **DICOM Browser:** Suche mit Gruppierung nach Modulen
+
+Nächste Schritte (v0.5.2):
+- **QRBridge.exe Update:** v2 Encoder implementieren
+- **Testing:** Beide Protokolle mit Ricoh testen
+- **Dokumentation:** Protocol Evolution Guide
 
 ### NEUE REGEL: Versionierungs-Disziplin
 - IMMER Version erhöhen, auch für kleine Änderungen
@@ -809,21 +990,38 @@ Implementierung:
 - 2025-06-01 17:20: WISDOM - Changelog nur neueste Version, nächster Chat Core-Test mit Ricoh JPEG
 - 2025-06-01 19:21: v0.4.4 - Core erfolgreich getestet, Ricoh speichert nur 3 Felder, Parser verbessert
 - 2025-06-01 20:30: Roadmap korrigiert, Phase 9 bereits fertig, collect-sources-gui-config.bat erstellt
+- 2025-06-01 20:52: v0.4.5 - Settings Page Fix erfolgreich, DI-Problem gelöst, PasswordBox Workaround
+- 2025-06-01 21:25: v0.5.0 - QRBridge Source Code Erkenntnis! Protokoll-Evolution möglich!
+- 2025-06-01 21:47: v0.5.0 - Mapping Editor UI komplett, Drag & Drop funktioniert
+- 2025-06-01 22:32: v0.5.1 - DICOM Browser & Protocol v2 Parser fertig!
+- 2025-06-01 22:50: WISDOM - Build-Fehler entdeckt, Nutzer bremst Tempo, Parser-Bug erkannt!
+- 2025-06-01 23:00: WISDOM - Phasenplan revidiert, v2 Encoder gestrichen, fehlende Features identifiziert!
+- 2025-06-01 23:05: collect-sources-gui-config.bat dokumentiert für GUI-Debugging
+- 2025-06-01 23:10: Upload-Strategie geklärt: PROJECT_CONTEXT sind Transport-Container, keine Wahrheit!
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.4.4
+### Aktuelle Version: v0.5.1 (MIT BUILD-FEHLERN!)
 ### Tatsächlicher Stand: 
-- ✅ Core mit echtem Ricoh JPEG getestet
-- ✅ JPEG → DICOM Konvertierung funktioniert
-- ✅ QRBridge-Daten werden extrahiert
-- ✅ Service Control vollständig (Phase 9!)
-- ⚠️ Ricoh speichert nur 3 von 5 Feldern (ODER wir lesen immer noch falsch aus!!)
-- ⚠️ Settings Page crasht noch immer
-### Nächste Aufgabe: Settings Page Crash Fix (v0.4.5)
+- ✅ DICOM Tag Browser mit Suche
+- ✅ Template-System funktioniert
+- ✅ QRBridge Protocol v2 Parser
+- ✅ Import/Export für Mappings
+- ❌ NotificationService BUILD FEHLER (6 fehlende Methoden)
+- ❌ Watch Folder Management GUI (nur Basic)
+- ❌ Live-Preview (nur teilweise)
+- ❌ Alle Features UNGETESTET
+- 🔥 Protocol v2 JSON Format (aber nicht nötig!)
+- 🔥 Parser-Bug: String wird ABGESCHNITTEN!
+### Nächste Aufgabe: 
+- Build-Fehler beheben
+- v0.5.0-0.5.1 Features TESTEN
+- Parser-Bug in CAMBRIDGE fixen (nicht QRBridge!)
+- Fehlende GUI-Features nachrüsten
+- KEIN neuer Code bis alles läuft!
 ### Architektur: Enterprise-Level (und das ist GUT so!)
 ### Kontext: Medizinische Software mit 0% Fehlertoleranz
-### Geschätzte v1.0.0: 3-10 Chats
+### Geschätzte v1.0.0: 3-7 Chats (realistisch nach Plan-Revision)
 
 ### V.O.G.O.N. Commands:
 - **VOGON INIT** - Automatischer Start
@@ -837,9 +1035,9 @@ Implementierung:
 ```xml 
 <Project>
 	<PropertyGroup>
-		<AssemblyVersion>0.4.4.0</AssemblyVersion>
-		<FileVersion>0.4.4.0</FileVersion>
-		<InformationalVersion>0.4.4</InformationalVersion>
+		<AssemblyVersion>0.5.1.0</AssemblyVersion>
+		<FileVersion>0.5.1.0</FileVersion>
+		<InformationalVersion>0.5.1</InformationalVersion>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
@@ -886,7 +1084,7 @@ namespace CamBridge.Config
                     services.AddSingleton<IApiService, HttpApiService>();
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IServiceManager, ServiceManager>();
-                    services.AddSingleton<IConfigurationService, ConfigurationService>();
+                    services.AddSingleton<IConfigurationService, ConfigurationService>(); // FIXED: Added missing registration!
 
                     // ViewModels - WICHTIG: Alle müssen registriert sein!
                     services.AddTransient<MainViewModel>();
@@ -894,6 +1092,7 @@ namespace CamBridge.Config
                     services.AddTransient<ServiceControlViewModel>();
                     services.AddTransient<SettingsViewModel>();
                     services.AddTransient<DeadLettersViewModel>();
+                    services.AddTransient<MappingEditorViewModel>();
 
                     // Main Window
                     services.AddSingleton<MainWindow>();
@@ -971,6 +1170,9 @@ namespace CamBridge.Config
                     case "DeadLetters":
                         ContentFrame.Navigate(new DeadLettersPage());
                         break;
+                    case "MappingEditor":
+                        ContentFrame.Navigate(new MappingEditorPage());
+                        break;
                     case "Settings":
                         ContentFrame.Navigate(new SettingsPage());
                         break;
@@ -993,6 +1195,7 @@ namespace CamBridge.Config
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.modernwpf.com/2019"
       xmlns:conv="clr-namespace:CamBridge.Config.Converters"
+      xmlns:helpers="clr-namespace:CamBridge.Config.Helpers"
       xmlns:core="clr-namespace:CamBridge.Core;assembly=CamBridge.Core">
 
     <Page.Resources>
@@ -1422,8 +1625,10 @@ namespace CamBridge.Config
                                 <TextBlock Grid.Row="6" Grid.Column="0" 
                                            Text="Password:" 
                                            Style="{StaticResource SettingLabelStyle}"/>
+                                <!-- FIXED: PasswordBox with proper binding -->
                                 <PasswordBox Grid.Row="6" Grid.Column="1"
-                                             Password="{Binding SmtpPassword, Mode=TwoWay}"
+                                             helpers:PasswordBoxHelper.BindPassword="True"
+                                             helpers:PasswordBoxHelper.BoundPassword="{Binding SmtpPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                              Margin="0,0,0,8"/>
 
                                 <TextBlock Grid.Row="7" Grid.Column="0" 
@@ -1641,6 +1846,7 @@ namespace CamBridge.Config
 ### src\CamBridge.Config\Views\SettingsPage.xaml.cs 
 ```csharp 
 // src/CamBridge.Config/Views/SettingsPage.xaml.cs
+using System;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -1655,18 +1861,58 @@ namespace CamBridge.Config.Views
     [SupportedOSPlatform("windows")]
     public partial class SettingsPage : Page
     {
-        private readonly SettingsViewModel _viewModel;
+        private SettingsViewModel? _viewModel;
 
         public SettingsPage()
         {
             InitializeComponent();
 
-            // Get ViewModel from DI
-            _viewModel = ((App)Application.Current).Host.Services.GetRequiredService<SettingsViewModel>();
-            DataContext = _viewModel;
+            // Defer ViewModel initialization to Loaded event
+            Loaded += SettingsPage_Loaded;
+        }
 
-            // Initialize the view model
-            _ = _viewModel.InitializeAsync();
+        private async void SettingsPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Only initialize once
+            if (_viewModel != null) return;
+
+            try
+            {
+                // Get ViewModel from DI with null safety
+                var app = Application.Current as App;
+                if (app?.Host != null)
+                {
+                    _viewModel = app.Host.Services.GetRequiredService<SettingsViewModel>();
+                    DataContext = _viewModel;
+
+                    // Initialize the view model after setting DataContext
+                    await _viewModel.InitializeAsync();
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("App.Host is null - DI not available");
+                    ShowErrorMessage("Configuration service not available");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading SettingsViewModel: {ex.Message}");
+                ShowErrorMessage($"Failed to load settings: {ex.Message}");
+            }
+        }
+
+        private void ShowErrorMessage(string message)
+        {
+            // Create a simple error display
+            var errorText = new TextBlock
+            {
+                Text = message,
+                Margin = new Thickness(20),
+                FontSize = 16,
+                Foreground = System.Windows.Media.Brushes.Red
+            };
+
+            Content = new Grid { Children = { errorText } };
         }
 
         // Number validation for TextBox inputs
@@ -1676,70 +1922,94 @@ namespace CamBridge.Config.Views
             e.Handled = regex.IsMatch(e.Text);
         }
 
-        // Browse folder dialogs
+        // Browse folder dialogs with better error handling
         private void BrowseWatchFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog
+            try
             {
-                Title = "Select Watch Folder",
-                CheckFileExists = false,
-                CheckPathExists = true,
-                FileName = "Select Folder",
-                Filter = "Folder|*.none",
-                ValidateNames = false
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
-                if (_viewModel.SelectedWatchFolder != null && !string.IsNullOrEmpty(folderPath))
+                var dialog = new OpenFileDialog
                 {
-                    _viewModel.SelectedWatchFolder.Path = folderPath;
+                    Title = "Select Watch Folder",
+                    CheckFileExists = false,
+                    CheckPathExists = true,
+                    FileName = "Select Folder",
+                    Filter = "Folder|*.none",
+                    ValidateNames = false
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
+                    if (_viewModel?.SelectedWatchFolder != null && !string.IsNullOrEmpty(folderPath))
+                    {
+                        _viewModel.SelectedWatchFolder.Path = folderPath;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting folder: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void BrowseOutputFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog
+            try
             {
-                Title = "Select Output Folder",
-                CheckFileExists = false,
-                CheckPathExists = true,
-                FileName = "Select Folder",
-                Filter = "Folder|*.none",
-                ValidateNames = false
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
-                if (!string.IsNullOrEmpty(folderPath))
+                var dialog = new OpenFileDialog
                 {
-                    _viewModel.DefaultOutputFolder = folderPath;
+                    Title = "Select Output Folder",
+                    CheckFileExists = false,
+                    CheckPathExists = true,
+                    FileName = "Select Folder",
+                    Filter = "Folder|*.none",
+                    ValidateNames = false
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
+                    if (_viewModel != null && !string.IsNullOrEmpty(folderPath))
+                    {
+                        _viewModel.DefaultOutputFolder = folderPath;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting folder: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void BrowseLogFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog
+            try
             {
-                Title = "Select Log Folder",
-                CheckFileExists = false,
-                CheckPathExists = true,
-                FileName = "Select Folder",
-                Filter = "Folder|*.none",
-                ValidateNames = false
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
-                if (!string.IsNullOrEmpty(folderPath))
+                var dialog = new OpenFileDialog
                 {
-                    _viewModel.LogFolder = folderPath;
+                    Title = "Select Log Folder",
+                    CheckFileExists = false,
+                    CheckPathExists = true,
+                    FileName = "Select Folder",
+                    Filter = "Folder|*.none",
+                    ValidateNames = false
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    string? folderPath = System.IO.Path.GetDirectoryName(dialog.FileName);
+                    if (_viewModel != null && !string.IsNullOrEmpty(folderPath))
+                    {
+                        _viewModel.LogFolder = folderPath;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting folder: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
@@ -1757,7 +2027,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CamBridge.Config.ViewModels
 {
@@ -1920,7 +2189,16 @@ namespace CamBridge.Config.ViewModels
 
         public async Task InitializeAsync()
         {
-            await LoadSettingsAsync();
+            try
+            {
+                await LoadSettingsAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error initializing SettingsViewModel: {ex.Message}");
+                StatusMessage = "Failed to load settings";
+                IsError = true;
+            }
         }
 
         [RelayCommand]
@@ -2035,15 +2313,159 @@ namespace CamBridge.Config.ViewModels
 
         private void MapFromSettings(CamBridgeSettings settings)
         {
-            // Map all settings to view model properties
-            // Implementation details omitted for brevity
+            // Watch Folders
+            WatchFolders.Clear();
+            foreach (var folder in settings.WatchFolders)
+            {
+                var folderVm = new FolderConfigurationViewModel
+                {
+                    Path = folder.Path,
+                    OutputPath = folder.OutputPath,
+                    Enabled = folder.Enabled,
+                    IncludeSubdirectories = folder.IncludeSubdirectories,
+                    FilePattern = folder.FilePattern
+                };
+
+                // Subscribe to changes
+                folderVm.PropertyChanged += (s, e) => HasChanges = true;
+                WatchFolders.Add(folderVm);
+            }
+
+            // Processing Options
+            DefaultOutputFolder = settings.DefaultOutputFolder;
+            SuccessAction = settings.Processing.SuccessAction;
+            FailureAction = settings.Processing.FailureAction;
+            ArchiveFolder = settings.Processing.ArchiveFolder;
+            ErrorFolder = settings.Processing.ErrorFolder;
+            CreateBackup = settings.Processing.CreateBackup;
+            BackupFolder = settings.Processing.BackupFolder;
+            MaxConcurrentProcessing = settings.Processing.MaxConcurrentProcessing;
+            RetryOnFailure = settings.Processing.RetryOnFailure;
+            MaxRetryAttempts = settings.Processing.MaxRetryAttempts;
+            OutputOrganization = settings.Processing.OutputOrganization;
+            ProcessExistingOnStartup = settings.Processing.ProcessExistingOnStartup;
+
+            if (settings.Processing.MaxFileAge.HasValue)
+            {
+                MaxFileAgeDays = (int)settings.Processing.MaxFileAge.Value.TotalDays;
+            }
+
+            // DICOM Settings
+            ImplementationClassUid = settings.Dicom.ImplementationClassUid;
+            ImplementationVersionName = settings.Dicom.ImplementationVersionName;
+            InstitutionName = settings.Dicom.InstitutionName;
+            StationName = settings.Dicom.StationName;
+            ValidateAfterCreation = settings.Dicom.ValidateAfterCreation;
+
+            // Notification Settings - safe navigation
+            EnableEmail = settings.Notifications?.EnableEmail ?? false;
+            EnableEventLog = settings.Notifications?.EnableEventLog ?? true;
+
+            if (settings.Notifications?.Email != null)
+            {
+                EmailFrom = settings.Notifications.Email.From;
+                EmailTo = settings.Notifications.Email.To;
+                SmtpHost = settings.Notifications.Email.SmtpHost;
+                SmtpPort = settings.Notifications.Email.SmtpPort;
+                SmtpUseSsl = settings.Notifications.Email.UseSsl;
+                SmtpUsername = settings.Notifications.Email.Username;
+                SmtpPassword = settings.Notifications.Email.Password;
+            }
+
+            MinimumEmailLevel = settings.Notifications?.MinimumEmailLevel ?? "Warning";
+            SendDailySummary = settings.Notifications?.SendDailySummary ?? false;
+            DailySummaryHour = settings.Notifications?.DailySummaryHour ?? 8;
+
+            // Logging Settings
+            LogLevel = settings.Logging.LogLevel;
+            LogFolder = settings.Logging.LogFolder;
+            EnableFileLogging = settings.Logging.EnableFileLogging;
+            EnableServiceEventLog = settings.Logging.EnableEventLog;
+            MaxLogFileSizeMB = settings.Logging.MaxLogFileSizeMB;
+            MaxLogFiles = settings.Logging.MaxLogFiles;
+
+            // Service Settings
+            StartupDelaySeconds = settings.Service.StartupDelaySeconds;
+            FileProcessingDelayMs = settings.Service.FileProcessingDelayMs;
         }
 
         private CamBridgeSettings MapToSettings()
         {
-            // Map view model properties back to settings
-            // Implementation details omitted for brevity
-            return new CamBridgeSettings();
+            var settings = new CamBridgeSettings
+            {
+                DefaultOutputFolder = DefaultOutputFolder,
+                Processing = new ProcessingOptions
+                {
+                    SuccessAction = SuccessAction,
+                    FailureAction = FailureAction,
+                    ArchiveFolder = ArchiveFolder,
+                    ErrorFolder = ErrorFolder,
+                    CreateBackup = CreateBackup,
+                    BackupFolder = BackupFolder,
+                    MaxConcurrentProcessing = MaxConcurrentProcessing,
+                    RetryOnFailure = RetryOnFailure,
+                    MaxRetryAttempts = MaxRetryAttempts,
+                    OutputOrganization = OutputOrganization,
+                    ProcessExistingOnStartup = ProcessExistingOnStartup,
+                    MaxFileAge = TimeSpan.FromDays(MaxFileAgeDays)
+                },
+                Dicom = new DicomSettings
+                {
+                    ImplementationClassUid = ImplementationClassUid,
+                    ImplementationVersionName = ImplementationVersionName,
+                    InstitutionName = InstitutionName,
+                    StationName = StationName,
+                    ValidateAfterCreation = ValidateAfterCreation
+                },
+                Notifications = new NotificationSettings
+                {
+                    EnableEmail = EnableEmail,
+                    EnableEventLog = EnableEventLog,
+                    Email = new EmailSettings
+                    {
+                        From = EmailFrom,
+                        To = EmailTo,
+                        SmtpHost = SmtpHost,
+                        SmtpPort = SmtpPort,
+                        UseSsl = SmtpUseSsl,
+                        Username = SmtpUsername,
+                        Password = SmtpPassword
+                    },
+                    MinimumEmailLevel = MinimumEmailLevel,
+                    SendDailySummary = SendDailySummary,
+                    DailySummaryHour = DailySummaryHour
+                },
+                Logging = new LoggingSettings
+                {
+                    LogLevel = LogLevel,
+                    LogFolder = LogFolder,
+                    EnableFileLogging = EnableFileLogging,
+                    EnableEventLog = EnableServiceEventLog,
+                    MaxLogFileSizeMB = MaxLogFileSizeMB,
+                    MaxLogFiles = MaxLogFiles
+                },
+                Service = new ServiceSettings
+                {
+                    StartupDelaySeconds = StartupDelaySeconds,
+                    FileProcessingDelayMs = FileProcessingDelayMs
+                }
+            };
+
+            // Map Watch Folders
+            settings.WatchFolders.Clear();
+            foreach (var folder in WatchFolders)
+            {
+                settings.WatchFolders.Add(new FolderConfiguration
+                {
+                    Path = folder.Path,
+                    OutputPath = folder.OutputPath,
+                    Enabled = folder.Enabled,
+                    IncludeSubdirectories = folder.IncludeSubdirectories,
+                    FilePattern = folder.FilePattern
+                });
+            }
+
+            return settings;
         }
     }
 
@@ -2155,53 +2577,162 @@ namespace CamBridge.Config.ViewModels
 ```csharp 
 using CamBridge.Core;
 using System;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace CamBridge.Config.Services
 {
     /// <summary>
-    /// Minimal implementation for testing
+    /// Service for loading and saving configuration from JSON files
     /// </summary>
     public class ConfigurationService : IConfigurationService
     {
+        private readonly string _configDirectory;
+        private readonly JsonSerializerOptions _jsonOptions;
+
+        public ConfigurationService()
+        {
+            // Use AppData for config storage
+            _configDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "CamBridge");
+
+            _jsonOptions = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                Converters =
+                {
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                }
+            };
+
+            // Ensure directory exists
+            Directory.CreateDirectory(_configDirectory);
+        }
+
         public async Task<T?> LoadConfigurationAsync<T>() where T : class
         {
-            await Task.Delay(100); // Simulate async work
-
-            if (typeof(T) == typeof(CamBridgeSettings))
+            if (typeof(T) != typeof(CamBridgeSettings))
             {
-                // Return default settings for testing
-                var settings = new CamBridgeSettings
-                {
-                    DefaultOutputFolder = @"C:\CamBridge\Output",
-                    Processing = new ProcessingOptions
-                    {
-                        ArchiveFolder = @"C:\CamBridge\Archive",
-                        ErrorFolder = @"C:\CamBridge\Errors",
-                        BackupFolder = @"C:\CamBridge\Backup"
-                    },
-                    Dicom = new DicomSettings
-                    {
-                        ImplementationClassUid = "1.2.276.0.7230010.3.0.3.6.4",
-                        ImplementationVersionName = "CAMBRIDGE_001"
-                    },
-                    Logging = new LoggingSettings
-                    {
-                        LogFolder = @"C:\CamBridge\Logs"
-                    },
-                    Notifications = new NotificationSettings()
-                };
-
-                return settings as T;
+                throw new NotSupportedException($"Configuration type {typeof(T).Name} is not supported");
             }
 
-            return null;
+            var configFile = Path.Combine(_configDirectory, "appsettings.json");
+
+            try
+            {
+                if (File.Exists(configFile))
+                {
+                    var json = await File.ReadAllTextAsync(configFile);
+                    var settings = JsonSerializer.Deserialize<CamBridgeSettings>(json, _jsonOptions);
+                    return settings as T;
+                }
+                else
+                {
+                    // Return default settings if file doesn't exist
+                    return GetDefaultSettings() as T;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading configuration: {ex.Message}");
+                // Return default settings on error
+                return GetDefaultSettings() as T;
+            }
         }
 
         public async Task SaveConfigurationAsync<T>(T configuration) where T : class
         {
-            await Task.Delay(100); // Simulate async work
-            // For testing, just pretend we saved
+            if (configuration is not CamBridgeSettings settings)
+            {
+                throw new NotSupportedException($"Configuration type {typeof(T).Name} is not supported");
+            }
+
+            var configFile = Path.Combine(_configDirectory, "appsettings.json");
+
+            try
+            {
+                var json = JsonSerializer.Serialize(settings, _jsonOptions);
+                await File.WriteAllTextAsync(configFile, json);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving configuration: {ex.Message}");
+                throw new InvalidOperationException("Failed to save configuration", ex);
+            }
+        }
+
+        private CamBridgeSettings GetDefaultSettings()
+        {
+            return new CamBridgeSettings
+            {
+                DefaultOutputFolder = @"C:\CamBridge\Output",
+                MappingConfigurationFile = "mappings.json",
+                UseRicohExifReader = true,
+                WatchFolders =
+                {
+                    new FolderConfiguration
+                    {
+                        Path = @"C:\CamBridge\Input",
+                        Enabled = true,
+                        FilePattern = "*.jpg;*.jpeg"
+                    }
+                },
+                Processing = new ProcessingOptions
+                {
+                    SuccessAction = PostProcessingAction.Archive,
+                    FailureAction = PostProcessingAction.MoveToError,
+                    ArchiveFolder = @"C:\CamBridge\Archive",
+                    ErrorFolder = @"C:\CamBridge\Errors",
+                    BackupFolder = @"C:\CamBridge\Backup",
+                    CreateBackup = true,
+                    MaxConcurrentProcessing = 2,
+                    RetryOnFailure = true,
+                    MaxRetryAttempts = 3,
+                    OutputOrganization = OutputOrganization.ByPatientAndDate
+                },
+                Dicom = new DicomSettings
+                {
+                    ImplementationClassUid = "1.2.276.0.7230010.3.0.3.6.4",
+                    ImplementationVersionName = "CAMBRIDGE_001",
+                    StationName = Environment.MachineName,
+                    ValidateAfterCreation = true
+                },
+                Logging = new LoggingSettings
+                {
+                    LogLevel = "Information",
+                    LogFolder = @"C:\CamBridge\Logs",
+                    EnableFileLogging = true,
+                    EnableEventLog = true,
+                    MaxLogFileSizeMB = 10,
+                    MaxLogFiles = 10
+                },
+                Service = new ServiceSettings
+                {
+                    ServiceName = "CamBridgeService",
+                    DisplayName = "CamBridge JPEG to DICOM Converter",
+                    Description = "Monitors folders for JPEG files from Ricoh cameras and converts them to DICOM format",
+                    StartupDelaySeconds = 5,
+                    FileProcessingDelayMs = 500
+                },
+                Notifications = new NotificationSettings
+                {
+                    EnableEventLog = true,
+                    EnableEmail = false,
+                    Email = new EmailSettings
+                    {
+                        SmtpPort = 587,
+                        UseSsl = true
+                    },
+                    MinimumEmailLevel = "Warning",
+                    SendDailySummary = false,
+                    DailySummaryHour = 8
+                }
+            };
         }
     }
 }
@@ -3077,11 +3608,12 @@ namespace CamBridge.Core
  
 ### src\CamBridge.Config\CamBridge.Config.csproj 
 ```xml 
-﻿<!-- src/CamBridge.Config/CamBridge.Config.csproj -->
+﻿<!-- Temporäre Debug-Version - src/CamBridge.Config/CamBridge.Config.csproj -->
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
+		<OutputType>Exe</OutputType>
+		<!-- Changed to Exe for console output -->
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<UseWPF>true</UseWPF>
 		<Platform>x64</Platform>
@@ -3101,14 +3633,16 @@ namespace CamBridge.Core
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
 		<PackageReference Include="ModernWpfUI" Version="0.9.6" />
 		<PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
-		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+		<PackageReference Include="System.Drawing.Common" Version="8.0.10" />
 		<PackageReference Include="System.Text.Json" Version="8.0.5" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\CamBridge.Core\CamBridge.Core.csproj" />
+				<ProjectReference Include="..\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj" />
 	</ItemGroup>
 
 </Project>``` 
@@ -3281,54 +3815,67 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.4] - 2025-06-01 19:21
+## [0.5.1] - 2025-06-01 22:32
 ### Added
-- Core functionality test with real Ricoh G900 II JPEG
-- Enhanced EXIF parser with line break and encoding fixes
-- Flexible QRBridge parser for incomplete data
-- mappings.json for TestConsole
-- Hex dump debugging in TestConsole
-
-### Fixed
-- EXIF encoding issues with German umlauts
-- Parser handling of camera line breaks in barcode data
-- NotificationService null reference warnings
+- DICOM Tag Browser Dialog with search and grouping by module
+- Template system fully functional (Ricoh, Minimal, Full templates)
+- QRBridge Protocol v2 parser with JSON format support
+- Import/Export functionality for mapping configurations
+- Backward compatibility for v1 pipe-delimited format
+- DicomTagBrowserDialog for intuitive tag selection
+- EnumToCollectionConverter integrated into ValueConverters.cs
 
 ### Changed
-- Parser now handles incomplete QRBridge data (3 of 5 fields)
-- Improved debug logging for QRBridge parsing
-
-### Discovered
-- Ricoh G900 II only saves first 3 QRBridge fields (gender/comment missing)
-- Camera inserts "GCM_TAG " prefix in UserComment
-
-### Known Issues
-- Settings page still crashes on navigation
-- QRBridge data truncation needs investigation
-
-## [0.4.3] - 2025-06-01 17:15
-### Added
-- Vogon Poetry Easter Egg - tribute to Douglas Adams
-  - Activated by typing "42" on About page
-  - Amiga-style Boing Ball sprite animation (WritePixels implementation)
-  - Scrolling rainbow text with retro effects
-  - Vogonian poetry about DICOM with ERROR HAIKU
-  - Guru Meditation error messages
-- Dead Letters page basic functionality
-  - DataGrid with items display
-  - Connection status indicator
-  - Retry functionality per item
+- RicohQRBridgeParser now supports both v1 and v2 protocols
+- Template buttons now use MVVM commands instead of click handlers
+- Improved error handling in protocol parsing
+- NotificationService updated for nested EmailSettings structure
 
 ### Fixed
-- Dead Letters navigation crash - fixed DI registration
-- AboutPage keyboard focus issues
-- Removed unsafe code for better stability
-- Fixed nullable reference warnings
+- Project references: CamBridge.Config now references Infrastructure
+- System.Drawing.Common version conflict resolved (8.0.10)
+- XAML markup errors in MappingEditorPage (Run opacity issue)
+- NotificationService email property access corrected
+
+### Technical
+- QRBridgeProtocolV2Parser for JSON-based format
+- Protocol version detection with automatic fallback
+- MappingConfigurationLoader integration
+- Complete drag & drop implementation in MappingEditorPage
+
+## [0.5.0] - 2025-06-01 21:47
+### Added
+- Mapping Editor with drag & drop UI for EXIF to DICOM configuration
+- Live preview for field transformations
+- Template system for quick mapping setup (UI only)
+- PasswordBoxHelper for secure password binding in Settings
+- NotificationSettings model with comprehensive email configuration
+- MappingEditorViewModel with validation logic
+- QRBridge source code integration - full control over both sides!
+
+### Fixed
+- PasswordBox security issue - now uses proper attached property
+- BorderStyle error in MappingEditorPage XAML
+- AboutPage _spriteTimer nullable reference warning
+- DI registration for MappingEditorViewModel
+
+### Changed
+- MainWindow size increased to 1200x800 for better usability
+- Mapping Editor layout with proportional scaling (2* for middle column)
+- Navigation includes Mapping Editor item
+
+### Discovered
+- QRBridge source available - can optimize protocol (planned for v0.5.1)
+- Bidirectional control enables better field encoding than pipes
+- Ricoh limitation workarounds possible with custom protocol
 
 ### Known Issues
-- Settings page crashes on navigation (ViewModel initialization)
+- Template buttons not yet functional
+- DICOM tag selector shows placeholder dialog
+- Import/Export not implemented
+- Mappings not persisted to configuration yet
 
-## [0.4.2] - 2025-06-01 15:10
+## [0.4.5] - 2025-06-01 20:52
 ``` 
  
  

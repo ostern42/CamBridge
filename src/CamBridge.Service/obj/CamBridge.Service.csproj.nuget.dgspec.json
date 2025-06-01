@@ -143,7 +143,7 @@
             },
             "System.Drawing.Common": {
               "target": "Package",
-              "version": "[9.0.5, )"
+              "version": "[8.0.10, )"
             },
             "fo-dicom": {
               "target": "Package",

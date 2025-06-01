@@ -1,36 +1,135 @@
+<!-- src/CamBridge.Config/Views/MappingEditorPage.xaml -->
 <Page x:Class="CamBridge.Config.Views.MappingEditorPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.modernwpf.com/2019"
       xmlns:conv="clr-namespace:CamBridge.Config.Converters"
-      Title="Mapping Editor">
+      xmlns:vm="clr-namespace:CamBridge.Config.ViewModels"
+      xmlns:core="clr-namespace:CamBridge.Core;assembly=CamBridge.Core">
 
     <Page.Resources>
-        <!-- Drag & Drop Styles -->
-        <Style x:Key="DraggableItemStyle" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightBaseMediumBrush}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
+        <!-- Data Templates -->
+        <DataTemplate x:Key="SourceFieldTemplate" DataType="{x:Type vm:MappingEditorViewModel+SourceFieldInfo}">
+            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8,4"
+                    Margin="0,2"
+                    Cursor="Hand"
+                    AllowDrop="False"
+                    MouseMove="SourceField_MouseMove"
+                    Tag="{Binding}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightChromeAltLowBrush}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
 
-        <Style x:Key="DropTargetStyle" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="MinHeight" Value="60"/>
-            <Setter Property="Opacity" Value="0.8"/>
-        </Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ui:SymbolIcon Symbol="Tag" 
+                                   Grid.Column="0" 
+                                   Margin="0,0,8,0"
+                                   VerticalAlignment="Center"/>
+
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding FieldName}" 
+                                   FontFamily="Consolas"
+                                   FontSize="12"/>
+                        <TextBlock Text="{Binding DisplayName}" 
+                                   FontSize="11"
+                                   Opacity="0.7"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="2" 
+                               Text="{Binding DataType}"
+                               FontSize="10"
+                               Opacity="0.6"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="MappingRuleTemplate" DataType="{x:Type vm:MappingRuleViewModel}">
+            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="12"
+                    Margin="0,4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock FontWeight="SemiBold" FontSize="14">
+                            <Run Text="{Binding Name}"/>
+                            <Run Text=" - " Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                            <Run Text="{Binding TargetTagString}" FontFamily="Consolas"/>
+                        </TextBlock>
+
+                        <TextBlock Margin="0,4,0,0" Opacity="0.8">
+                            <Run Text="{Binding SourceType}"/>
+                            <Run Text="."/>
+                            <Run Text="{Binding SourceField}"/>
+                            <Run Text=" → "/>
+                            <Run Text="{Binding Transform}"/>
+                        </TextBlock>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <CheckBox IsChecked="{Binding IsRequired}" 
+                                      Content="Required" 
+                                      Margin="0,0,16,0"/>
+                            <TextBlock Text="Default: " 
+                                       VerticalAlignment="Center"
+                                       Visibility="{Binding DefaultValue, Converter={StaticResource NullToVisibility}}"/>
+                            <TextBlock Text="{Binding DefaultValue}" 
+                                       FontStyle="Italic"
+                                       VerticalAlignment="Center"
+                                       Visibility="{Binding DefaultValue, Converter={StaticResource NullToVisibility}}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" 
+                                Orientation="Horizontal"
+                                VerticalAlignment="Top">
+                        <Button ToolTip="Move Up"
+                                Command="{Binding DataContext.MoveRuleUpCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                Margin="0,0,4,0"
+                                Width="32"
+                                Height="32">
+                            <ui:SymbolIcon Symbol="Up" Width="16" Height="16"/>
+                        </Button>
+                        <Button ToolTip="Move Down"
+                                Command="{Binding DataContext.MoveRuleDownCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                Margin="0,0,4,0"
+                                Width="32"
+                                Height="32">
+                            <ui:SymbolIcon Symbol="Down" Width="16" Height="16"/>
+                        </Button>
+                        <Button ToolTip="Remove"
+                                Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                Width="32"
+                                Height="32">
+                            <ui:SymbolIcon Symbol="Delete" Width="16" Height="16"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </Page.Resources>
 
     <Grid>
@@ -48,11 +147,11 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel>
+                <StackPanel Grid.Column="0">
                     <TextBlock Text="Mapping Editor" 
                                FontSize="32" 
                                FontWeight="SemiBold"/>
-                    <TextBlock Text="Configure EXIF to DICOM tag mappings with drag and drop" 
+                    <TextBlock Text="Configure EXIF to DICOM field mappings" 
                                FontSize="14" 
                                Opacity="0.7"
                                Margin="0,4,0,0"/>
@@ -60,20 +159,26 @@
 
                 <StackPanel Grid.Column="1" 
                             Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <Button Margin="0,0,8,0">
+                            VerticalAlignment="Bottom">
+                    <Button Command="{Binding ImportMappingsCommand}"
+                            Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
                             <ui:SymbolIcon Symbol="Download" Margin="0,0,4,0"/>
                             <TextBlock Text="Import"/>
                         </StackPanel>
                     </Button>
-                    <Button Margin="0,0,8,0">
+
+                    <Button Command="{Binding ExportMappingsCommand}"
+                            Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
                             <ui:SymbolIcon Symbol="Upload" Margin="0,0,4,0"/>
                             <TextBlock Text="Export"/>
                         </StackPanel>
                     </Button>
-                    <Button Style="{StaticResource AccentButtonStyle}">
+
+                    <Button Command="{Binding SaveMappingsCommand}"
+                            IsEnabled="{Binding IsModified}"
+                            Style="{StaticResource AccentButtonStyle}">
                         <StackPanel Orientation="Horizontal">
                             <ui:SymbolIcon Symbol="Save" Margin="0,0,4,0"/>
                             <TextBlock Text="Save"/>
@@ -84,256 +189,237 @@
         </Border>
 
         <!-- Main Content -->
-        <Grid Grid.Row="1" Margin="24,0,24,16">
+        <Grid Grid.Row="1" Margin="24,0,24,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300" MinWidth="250"/>
-                <ColumnDefinition Width="2*" MinWidth="400"/>
-                <ColumnDefinition Width="400" MinWidth="350"/>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="300"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Left Panel: Available Fields -->
-            <Border Grid.Column="0" 
-                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-                    CornerRadius="8"
-                    Padding="16"
-                    Margin="0,0,12,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0"
-                               Text="Available Fields" 
-                               FontSize="18" 
+            <!-- Left Panel: Source Fields -->
+            <ScrollViewer Grid.Column="0" 
+                          VerticalScrollBarVisibility="Auto"
+                          Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="Available Source Fields" 
                                FontWeight="SemiBold"
-                               Margin="0,0,0,12"/>
+                               FontSize="16"
+                               Margin="0,0,0,8"/>
 
-                    <!-- Source Type Selector -->
-                    <ComboBox Grid.Row="1"
-                              SelectedIndex="0"
-                              Margin="0,0,0,12">
-                        <ComboBoxItem>QRBridge Fields</ComboBoxItem>
-                        <ComboBoxItem>EXIF Fields</ComboBoxItem>
-                        <ComboBoxItem>Static Values</ComboBoxItem>
-                    </ComboBox>
-
-                    <!-- Draggable Items -->
-                    <ScrollViewer Grid.Row="2" 
-                                  VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <!-- QRBridge Fields -->
-                            <Border Style="{StaticResource DraggableItemStyle}"
-                                    MouseLeftButtonDown="DraggableItem_MouseLeftButtonDown"
-                                    Tag="QRBridge|examid">
-                                <StackPanel>
-                                    <TextBlock Text="Exam ID" FontWeight="SemiBold"/>
-                                    <TextBlock Text="QRBridge.examid" FontSize="12" Opacity="0.7"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Style="{StaticResource DraggableItemStyle}"
-                                    MouseLeftButtonDown="DraggableItem_MouseLeftButtonDown"
-                                    Tag="QRBridge|name">
-                                <StackPanel>
-                                    <TextBlock Text="Patient Name" FontWeight="SemiBold"/>
-                                    <TextBlock Text="QRBridge.name" FontSize="12" Opacity="0.7"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Style="{StaticResource DraggableItemStyle}"
-                                    MouseLeftButtonDown="DraggableItem_MouseLeftButtonDown"
-                                    Tag="QRBridge|birthdate">
-                                <StackPanel>
-                                    <TextBlock Text="Birth Date" FontWeight="SemiBold"/>
-                                    <TextBlock Text="QRBridge.birthdate" FontSize="12" Opacity="0.7"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Style="{StaticResource DraggableItemStyle}"
-                                    MouseLeftButtonDown="DraggableItem_MouseLeftButtonDown"
-                                    Tag="QRBridge|gender">
-                                <StackPanel>
-                                    <TextBlock Text="Gender" FontWeight="SemiBold"/>
-                                    <TextBlock Text="QRBridge.gender" FontSize="12" Opacity="0.7"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Style="{StaticResource DraggableItemStyle}"
-                                    MouseLeftButtonDown="DraggableItem_MouseLeftButtonDown"
-                                    Tag="QRBridge|comment">
-                                <StackPanel>
-                                    <TextBlock Text="Comment" FontWeight="SemiBold"/>
-                                    <TextBlock Text="QRBridge.comment" FontSize="12" Opacity="0.7"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
-
-            <!-- Middle Panel: Active Mappings -->
-            <Border Grid.Column="1" 
-                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-                    CornerRadius="8"
-                    Padding="16"
-                    Margin="0,0,12,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0"
-                               Text="Active Mappings" 
-                               FontSize="18" 
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,12"/>
-
-                    <!-- Mappings List -->
-                    <ScrollViewer Grid.Row="1" 
-                                  VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="MappingsList">
-                            <!-- Sample Mapping -->
-                            <Border Margin="0,0,0,8"
-                                    Padding="12"
-                                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                                    CornerRadius="4">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock FontWeight="SemiBold">
-                                            <Run Text="Patient Name"/>
-                                            <Run Text="→" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                                            <Run Text="(0010,0010)"/>
-                                        </TextBlock>
-                                        <TextBlock Text="QRBridge.name → PatientName" 
-                                                   FontSize="12" 
-                                                   Opacity="0.7"/>
-                                    </StackPanel>
-
-                                    <Button Grid.Column="1"
-                                            Width="32"
-                                            Height="32"
-                                            Style="{StaticResource DefaultButtonStyle}">
-                                        <ui:SymbolIcon Symbol="Delete" Width="16" Height="16"/>
-                                    </Button>
-                                </Grid>
-                            </Border>
-
-                            <!-- Drop Zone -->
-                            <Border x:Name="DropZone"
-                                    Style="{StaticResource DropTargetStyle}"
-                                    AllowDrop="True"
-                                    Drop="DropZone_Drop"
-                                    DragOver="DropZone_DragOver"
-                                    DragLeave="DropZone_DragLeave"
-                                    Margin="0,8,0,0">
-                                <TextBlock Text="Drop fields here to create mapping"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           Opacity="0.5"/>
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
-
-                    <!-- Templates -->
-                    <StackPanel Grid.Row="2" 
-                                Orientation="Horizontal"
-                                Margin="0,12,0,0">
+                    <!-- Template Buttons -->
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <TextBlock Text="Templates:" 
                                    VerticalAlignment="Center"
                                    Margin="0,0,8,0"/>
-                        <Button Content="Basic Patient"
-                                ToolTip="Add basic patient mappings"
-                                Margin="0,0,4,0"/>
-                        <Button Content="Study Info"
-                                ToolTip="Add study information mappings"
-                                Margin="0,0,4,0"/>
-                        <Button Content="Equipment"
-                                ToolTip="Add equipment mappings"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
 
-            <!-- Right Panel: Properties & Preview -->
-            <Grid Grid.Column="2">
+                        <Button Content="Ricoh G900"
+                                Command="{Binding ApplyRicohTemplateCommand}"
+                                Margin="0,0,4,0"
+                                ToolTip="Apply standard Ricoh G900 II mapping template"/>
+
+                        <Button Content="Minimal"
+                                Command="{Binding ApplyMinimalTemplateCommand}"
+                                Margin="0,0,4,0"
+                                ToolTip="Apply minimal required fields only"/>
+
+                        <Button Content="Full"
+                                Command="{Binding ApplyFullTemplateCommand}"
+                                ToolTip="Apply comprehensive mapping template"/>
+                    </StackPanel>
+
+                    <!-- QRBridge Fields -->
+                    <Expander Header="QRBridge Fields" 
+                              IsExpanded="True"
+                              Margin="0,16,0,0">
+                        <ItemsControl ItemsSource="{Binding QRBridgeFields}"
+                                      ItemTemplate="{StaticResource SourceFieldTemplate}"
+                                      Margin="0,8,0,0"/>
+                    </Expander>
+
+                    <!-- EXIF Fields -->
+                    <Expander Header="EXIF Fields" 
+                              IsExpanded="True"
+                              Margin="0,16,0,0">
+                        <ItemsControl ItemsSource="{Binding ExifFields}"
+                                      ItemTemplate="{StaticResource SourceFieldTemplate}"
+                                      Margin="0,8,0,0"/>
+                    </Expander>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Middle Panel: Mapping Rules -->
+            <Grid Grid.Column="1" Margin="12,0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Properties -->
-                <Border Grid.Row="0"
-                        Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-                        CornerRadius="8"
-                        Padding="16"
-                        Margin="0,0,0,8">
-                    <StackPanel>
-                        <TextBlock Text="Mapping Properties" 
-                                   FontSize="18" 
+                <!-- Mapping Rules Header -->
+                <Border Grid.Row="0" 
+                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                        CornerRadius="4,4,0,0"
+                        Padding="12,8">
+                    <Grid>
+                        <TextBlock Text="Active Mapping Rules" 
                                    FontWeight="SemiBold"
-                                   Margin="0,0,0,12"/>
+                                   VerticalAlignment="Center"/>
 
-                        <TextBlock Text="No mapping selected"
-                                   Opacity="0.5"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Margin="0,24"/>
-                    </StackPanel>
+                        <Button HorizontalAlignment="Right"
+                                Command="{Binding AddRuleCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Add" Margin="0,0,4,0"/>
+                                <TextBlock Text="Add Rule"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                 </Border>
 
-                <!-- Splitter -->
-                <GridSplitter Grid.Row="1"
-                              Height="8"
-                              HorizontalAlignment="Stretch"
-                              Background="Transparent"/>
+                <!-- Mapping Rules List -->
+                <Border Grid.Row="1"
+                        Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                        BorderThickness="1,0,1,1"
+                        AllowDrop="True"
+                        Drop="MappingArea_Drop"
+                        DragOver="MappingArea_DragOver">
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding MappingRules}"
+                                      ItemTemplate="{StaticResource MappingRuleTemplate}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Margin="8"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
 
                 <!-- Live Preview -->
                 <Border Grid.Row="2"
-                        Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-                        CornerRadius="8"
-                        Padding="16"
-                        Margin="0,8,0,0">
+                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                        CornerRadius="0,0,4,4"
+                        Padding="12"
+                        Visibility="{Binding SelectedRule, Converter={StaticResource NullToVisibility}}">
                     <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Row="0"
-                                   Text="Live Preview" 
-                                   FontSize="18" 
-                                   FontWeight="SemiBold"
-                                   Margin="0,0,0,12"/>
+                        <TextBlock Grid.Column="0" 
+                                   Text="Preview Input:" 
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
 
-                        <Border Grid.Row="1"
-                                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                                CornerRadius="4"
-                                Padding="12">
-                            <TextBlock FontFamily="Consolas"
-                                       FontSize="12">
-                                <Run Text="Source: " FontWeight="SemiBold"/>
-                                <Run Text="Schmidt, Maria"/>
-                                <LineBreak/>
-                                <Run Text="Result: " FontWeight="SemiBold"/>
-                                <Run Text="Schmidt^Maria"/>
-                                <LineBreak/>
-                                <LineBreak/>
-                                <Run Text="DICOM Tag: " FontWeight="SemiBold"/>
-                                <Run Text="(0010,0010) PatientName"/>
-                            </TextBlock>
-                        </Border>
+                        <TextBox Grid.Column="1" 
+                                 Text="{Binding PreviewInput, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,0,16,0"/>
+
+                        <TextBlock Grid.Column="2" 
+                                   Text="Output:" 
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+
+                        <TextBox Grid.Column="3" 
+                                 Text="{Binding PreviewOutput}"
+                                 IsReadOnly="True"
+                                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
                     </Grid>
                 </Border>
             </Grid>
+
+            <!-- Right Panel: Properties -->
+            <Border Grid.Column="2" 
+                    Margin="12,0,0,0"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                    CornerRadius="4"
+                    Padding="16"
+                    Visibility="{Binding SelectedRule, Converter={StaticResource NullToVisibility}}">
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="Rule Properties" 
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,16"/>
+
+                        <!-- Rule Name -->
+                        <TextBlock Text="Rule Name" 
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding SelectedRule.Name, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,0,0,12"/>
+
+                        <!-- Source -->
+                        <TextBlock Text="Source Type" 
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,4"/>
+                        <ComboBox SelectedItem="{Binding SelectedRule.SourceType}"
+                                  Margin="0,0,0,8">
+                            <ComboBoxItem>QRBridge</ComboBoxItem>
+                            <ComboBoxItem>EXIF</ComboBoxItem>
+                        </ComboBox>
+
+                        <TextBlock Text="Source Field" 
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding SelectedRule.SourceField, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,0,0,12"/>
+
+                        <!-- Target -->
+                        <TextBlock Text="Target DICOM Tag" 
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,4"/>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox Grid.Column="0" 
+                                     Text="{Binding SelectedRule.TargetTagString}"
+                                     IsReadOnly="True"
+                                     Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
+
+                            <Button Grid.Column="1" 
+                                    Content="..."
+                                    Width="32"
+                                    Margin="4,0,0,0"
+                                    Command="{Binding SelectDicomTagCommand}"/>
+                        </Grid>
+
+                        <!-- Transform -->
+                        <TextBlock Text="Transform" 
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,4"/>
+                        <ComboBox SelectedItem="{Binding SelectedRule.Transform}"
+                                  Margin="0,0,0,12">
+                            <core:ValueTransform>None</core:ValueTransform>
+                            <core:ValueTransform>ToUpper</core:ValueTransform>
+                            <core:ValueTransform>ToLower</core:ValueTransform>
+                            <core:ValueTransform>DateToDicom</core:ValueTransform>
+                            <core:ValueTransform>TimeToDicom</core:ValueTransform>
+                            <core:ValueTransform>GenderToDicom</core:ValueTransform>
+                            <core:ValueTransform>TruncateTo16</core:ValueTransform>
+                            <core:ValueTransform>TruncateTo64</core:ValueTransform>
+                        </ComboBox>
+
+                        <!-- Options -->
+                        <CheckBox IsChecked="{Binding SelectedRule.IsRequired}"
+                                  Content="Required Field"
+                                  Margin="0,0,0,8"/>
+
+                        <TextBlock Text="Default Value (if empty)" 
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding SelectedRule.DefaultValue, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
         </Grid>
 
         <!-- Status Bar -->
@@ -341,12 +427,32 @@
                 Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                 Padding="24,8">
             <Grid>
-                <TextBlock Text="12 active mappings"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Loading Indicator -->
+                <ui:ProgressRing Grid.Column="0"
+                                 IsActive="{Binding IsLoading}"
+                                 Width="16"
+                                 Height="16"
+                                 Margin="0,0,8,0"
+                                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
+
+                <!-- Status Message -->
+                <TextBlock Grid.Column="1"
+                           Text="{Binding StatusMessage}"
                            VerticalAlignment="Center"/>
-                <TextBlock Text="Validation: All required fields mapped"
-                           HorizontalAlignment="Right"
+
+                <!-- Modified Indicator -->
+                <TextBlock Grid.Column="2"
+                           Text="Modified"
+                           FontStyle="Italic"
+                           Foreground="{DynamicResource SystemControlForegroundAccentBrush}"
                            VerticalAlignment="Center"
-                           Foreground="{DynamicResource SystemControlForegroundAccentBrush}"/>
+                           Visibility="{Binding IsModified, Converter={StaticResource BoolToVisibility}}"/>
             </Grid>
         </Border>
     </Grid>

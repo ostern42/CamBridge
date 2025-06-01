@@ -5,9 +5,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
-using System.Runtime.Versioning;
+using System.Text;
 using System.Threading.Tasks;
 using CamBridge.Core;
+using CamBridge.Core.Entities;
 using CamBridge.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,326 +16,438 @@ using Microsoft.Extensions.Options;
 namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
-    /// Implementation of notification service for email and event log
+    /// Service for sending notifications via email and Windows Event Log
     /// </summary>
-    [SupportedOSPlatform("windows")]
     public class NotificationService : INotificationService
     {
         private readonly ILogger<NotificationService> _logger;
         private readonly NotificationSettings _settings;
-        private readonly Dictionary<string, DateTime> _emailThrottle = new();
-        private readonly object _throttleLock = new();
-        private int _emailsSentInCurrentHour = 0;
-        private DateTime _currentHourStart = DateTime.UtcNow;
+        private readonly string _eventSource = "CamBridge";
+        private readonly string _eventLog = "Application";
+        private readonly List<ProcessingResult> _dailySummaryBuffer = new();
+        private DateTime _lastSummaryDate = DateTime.MinValue;
 
         public NotificationService(
             ILogger<NotificationService> logger,
             IOptions<NotificationSettings> settings)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
-        }
+            _logger = logger;
+            _settings = settings.Value;
 
-        public Task NotifyInfoAsync(string subject, string message)
-        {
-            _logger.LogInformation("Notification: {Subject} - {Message}", subject, message);
-
+            // Initialize Windows Event Log source if enabled
             if (_settings.EnableEventLog)
             {
-                WriteEventLog(subject, message, EventLogEntryType.Information);
+                InitializeEventLog();
             }
-
-            // Info messages typically don't trigger emails unless configured
-            return Task.CompletedTask;
         }
 
-        public async Task NotifyWarningAsync(string subject, string message)
+        /// <summary>
+        /// Send notification about processing result
+        /// </summary>
+        public async Task NotifyAsync(ProcessingResult result)
         {
-            _logger.LogWarning("Notification: {Subject} - {Message}", subject, message);
+            if (result == null) return;
 
-            if (_settings.EnableEventLog)
+            try
             {
-                WriteEventLog(subject, message, EventLogEntryType.Warning);
-            }
+                // Add to daily summary buffer if enabled
+                if (_settings.SendDailySummary)
+                {
+                    lock (_dailySummaryBuffer)
+                    {
+                        _dailySummaryBuffer.Add(result);
+                    }
+                }
 
-            if (ShouldSendEmail("Warning"))
-            {
-                await SendEmailAsync(subject, message, "Warning");
-            }
-        }
+                // Check if we should send daily summary
+                await CheckAndSendDailySummaryAsync();
 
-        public async Task NotifyErrorAsync(string subject, string message, Exception? exception = null)
-        {
-            if (exception != null)
-            {
-                _logger.LogError(exception, "Notification: {Subject} - {Message}", subject, message);
-            }
-            else
-            {
-                _logger.LogError("Notification: {Subject} - {Message}", subject, message);
-            }
+                // Determine notification level based on result
+                var logLevel = result.Success ? LogLevel.Information : LogLevel.Error;
 
-            if (_settings.EnableEventLog)
-            {
-                var fullMessage = exception != null
-                    ? $"{message}\n\nException:\n{exception}"
-                    : message;
-                WriteEventLog(subject, fullMessage, EventLogEntryType.Error);
-            }
+                // Send notifications based on settings
+                if (_settings.EnableEventLog)
+                {
+                    WriteEventLog(result, logLevel);
+                }
 
-            if (ShouldSendEmail("Error"))
+                if (ShouldSendEmail(logLevel))
+                {
+                    await SendEmailNotificationAsync(result);
+                }
+            }
+            catch (Exception ex)
             {
-                var emailMessage = exception != null
-                    ? $"{message}\n\nException Details:\n{exception}"
-                    : message;
-                await SendEmailAsync(subject, emailMessage, "Error");
+                _logger.LogError(ex, "Failed to send notification for file: {FileName}", result.FileName);
             }
         }
 
-        public async Task NotifyCriticalErrorAsync(string subject, string message, Exception? exception = null)
-        {
-            if (exception != null)
-            {
-                _logger.LogCritical(exception, "Critical Notification: {Subject} - {Message}", subject, message);
-            }
-            else
-            {
-                _logger.LogCritical("Critical Notification: {Subject} - {Message}", subject, message);
-            }
-
-            if (_settings.EnableEventLog)
-            {
-                var fullMessage = exception != null
-                    ? $"CRITICAL: {message}\n\nException:\n{exception}"
-                    : $"CRITICAL: {message}";
-                WriteEventLog(subject, fullMessage, EventLogEntryType.Error);
-            }
-
-            // Critical errors always attempt to send email if enabled
-            if (_settings.EnableEmail && IsEmailConfigured())
-            {
-                var emailMessage = exception != null
-                    ? $"CRITICAL ERROR:\n\n{message}\n\nException Details:\n{exception}"
-                    : $"CRITICAL ERROR:\n\n{message}";
-                await SendEmailAsync(subject, emailMessage, "Critical", bypassThrottle: true);
-            }
-        }
-
-        public async Task NotifyDeadLetterThresholdAsync(int count, DeadLetterStatistics statistics)
-        {
-            var subject = $"CamBridge: Dead Letter Threshold Exceeded ({count} items)";
-            var message = $"The dead letter queue has {count} items, which exceeds the configured threshold of {_settings.DeadLetterThreshold}.\n\n" +
-                         $"Please investigate and reprocess or remove failed items.\n\n" +
-                         $"Statistics:\n{statistics}";
-
-            await NotifyWarningAsync(subject, message);
-        }
-
-        public async Task SendDailySummaryAsync(ProcessingSummary summary)
-        {
-            var subject = $"CamBridge Daily Summary - {summary.Date:yyyy-MM-dd}";
-            var message = FormatDailySummary(summary);
-
-            _logger.LogInformation("Sending daily summary for {Date}", summary.Date);
-
-            if (_settings.EnableEventLog)
-            {
-                WriteEventLog(subject, message, EventLogEntryType.Information);
-            }
-
-            if (_settings.EnableEmail && _settings.SendDailySummary)
-            {
-                await SendEmailAsync(subject, message, "DailySummary", bypassThrottle: true);
-            }
-        }
-
-        private bool ShouldSendEmail(string level)
-        {
-            if (!_settings.EnableEmail || !IsEmailConfigured())
-                return false;
-
-            var configuredLevel = Enum.Parse<LogLevel>(_settings.MinimumEmailLevel, true);
-            var currentLevel = level switch
-            {
-                "Warning" => LogLevel.Warning,
-                "Error" => LogLevel.Error,
-                "Critical" => LogLevel.Critical,
-                _ => LogLevel.Information
-            };
-
-            return currentLevel >= configuredLevel;
-        }
-
-        private bool IsEmailConfigured()
-        {
-            return !string.IsNullOrWhiteSpace(_settings.SmtpHost) &&
-                   !string.IsNullOrWhiteSpace(_settings.EmailFrom) &&
-                   !string.IsNullOrWhiteSpace(_settings.EmailTo);
-        }
-
-        private async Task SendEmailAsync(string subject, string body, string category, bool bypassThrottle = false)
+        /// <summary>
+        /// Send notification for critical errors
+        /// </summary>
+        public async Task NotifyErrorAsync(string message, Exception? exception = null)
         {
             try
             {
-                if (!bypassThrottle && !CanSendEmail(category))
+                if (_settings.EnableEventLog)
                 {
-                    _logger.LogWarning("Email throttled for category {Category}", category);
+                    WriteEventLog(message, EventLogEntryType.Error, exception);
+                }
+
+                if (ShouldSendEmail(LogLevel.Error))
+                {
+                    var subject = "Critical Error";
+                    var body = BuildErrorEmailBody(message, exception);
+                    await SendEmailAsync(subject, body);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send error notification");
+            }
+        }
+
+        /// <summary>
+        /// Send notification for warnings
+        /// </summary>
+        public async Task NotifyWarningAsync(string message)
+        {
+            try
+            {
+                if (_settings.EnableEventLog)
+                {
+                    WriteEventLog(message, EventLogEntryType.Warning);
+                }
+
+                if (ShouldSendEmail(LogLevel.Warning))
+                {
+                    await SendEmailAsync("Warning", message);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send warning notification");
+            }
+        }
+
+        /// <summary>
+        /// Send daily summary report
+        /// </summary>
+        public async Task SendDailySummaryAsync()
+        {
+            if (!_settings.SendDailySummary || _settings.Email == null)
+                return;
+
+            try
+            {
+                List<ProcessingResult> summaryData;
+                lock (_dailySummaryBuffer)
+                {
+                    if (_dailySummaryBuffer.Count == 0)
+                        return;
+
+                    summaryData = new List<ProcessingResult>(_dailySummaryBuffer);
+                    _dailySummaryBuffer.Clear();
+                }
+
+                var subject = $"Daily Processing Summary - {DateTime.Now:yyyy-MM-dd}";
+                var body = BuildDailySummaryBody(summaryData);
+
+                await SendEmailAsync(subject, body);
+                _logger.LogInformation("Daily summary sent with {Count} items", summaryData.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send daily summary");
+            }
+        }
+
+        #region Private Methods
+
+        private void InitializeEventLog()
+        {
+            try
+            {
+                if (!EventLog.SourceExists(_eventSource))
+                {
+                    EventLog.CreateEventSource(_eventSource, _eventLog);
+                    _logger.LogInformation("Created Windows Event Log source: {Source}", _eventSource);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to create Event Log source. Event logging may not work properly.");
+            }
+        }
+
+        private bool ShouldSendEmail(LogLevel logLevel)
+        {
+            return _settings.EnableEmail &&
+                   _settings.Email != null &&
+                   logLevel >= ParseLogLevel(_settings.MinimumEmailLevel);
+        }
+
+        private async Task SendEmailAsync(string subject, string body)
+        {
+            try
+            {
+                // Check if email settings are properly configured
+                if (_settings.Email == null ||
+                    string.IsNullOrWhiteSpace(_settings.Email.SmtpHost) ||
+                    string.IsNullOrWhiteSpace(_settings.Email.From) ||
+                    string.IsNullOrWhiteSpace(_settings.Email.To))
+                {
+                    _logger.LogWarning("Email settings not properly configured, skipping email notification");
                     return;
                 }
 
-                using var client = new SmtpClient(_settings.SmtpHost, _settings.SmtpPort)
+                using var client = new SmtpClient(_settings.Email.SmtpHost, _settings.Email.SmtpPort)
                 {
-                    EnableSsl = _settings.SmtpUseSsl,
+                    EnableSsl = _settings.Email.UseSsl,
                     DeliveryMethod = SmtpDeliveryMethod.Network,
-                    UseDefaultCredentials = false
+                    UseDefaultCredentials = false,
+                    Timeout = 30000 // 30 seconds
                 };
 
-                if (!string.IsNullOrWhiteSpace(_settings.SmtpUsername))
+                // Set credentials if provided
+                if (!string.IsNullOrWhiteSpace(_settings.Email.Username))
                 {
-                    client.Credentials = new NetworkCredential(_settings.SmtpUsername, _settings.SmtpPassword);
+                    client.Credentials = new NetworkCredential(_settings.Email.Username, _settings.Email.Password);
                 }
 
-                // Fix: Check for null before creating MailAddress
-                if (string.IsNullOrWhiteSpace(_settings.EmailFrom))
+                using var message = new MailMessage
                 {
-                    _logger.LogError("Cannot send email: EmailFrom is not configured");
-                    return;
-                }
-
-                var message = new MailMessage
-                {
-                    From = new MailAddress(_settings.EmailFrom),
+                    From = new MailAddress(_settings.Email.From),
                     Subject = $"[CamBridge] {subject}",
                     Body = body,
-                    IsBodyHtml = false
+                    IsBodyHtml = false,
+                    Priority = MailPriority.Normal
                 };
 
-                // Add recipients - Fix: Check for null EmailTo
-                if (!string.IsNullOrWhiteSpace(_settings.EmailTo))
+                // Add recipients
+                var recipients = _settings.Email.To?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+                foreach (var recipient in recipients)
                 {
-                    foreach (var recipient in _settings.EmailTo.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                    var trimmedRecipient = recipient.Trim();
+                    if (!string.IsNullOrWhiteSpace(trimmedRecipient))
                     {
-                        message.To.Add(recipient.Trim());
+                        message.To.Add(new MailAddress(trimmedRecipient));
                     }
                 }
-                else
+
+                if (message.To.Count == 0)
                 {
-                    _logger.LogError("Cannot send email: EmailTo is not configured");
+                    _logger.LogWarning("No valid email recipients configured");
                     return;
                 }
 
                 await client.SendMailAsync(message);
-
-                RecordEmailSent(category);
-                _logger.LogInformation("Email sent: {Subject} to {Recipients}", subject, _settings.EmailTo);
+                _logger.LogInformation("Email sent successfully to {RecipientCount} recipients", message.To.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send email: {Subject}", subject);
+                _logger.LogError(ex, "Failed to send email notification: {Subject}", subject);
             }
         }
 
-        [SupportedOSPlatform("windows")]
-        private void WriteEventLog(string source, string message, EventLogEntryType type)
+        private async Task SendEmailNotificationAsync(ProcessingResult result)
+        {
+            var subject = result.Success
+                ? $"Processing Successful: {result.FileName}"
+                : $"Processing Failed: {result.FileName}";
+
+            var body = BuildProcessingEmailBody(result);
+            await SendEmailAsync(subject, body);
+        }
+
+        private void WriteEventLog(ProcessingResult result, LogLevel logLevel)
+        {
+            var eventType = logLevel switch
+            {
+                LogLevel.Error => EventLogEntryType.Error,
+                LogLevel.Warning => EventLogEntryType.Warning,
+                _ => EventLogEntryType.Information
+            };
+
+            var message = result.Success
+                ? $"Successfully processed: {result.FileName}\nOutput: {result.OutputFile}"
+                : $"Failed to process: {result.FileName}\nError: {result.ErrorMessage}";
+
+            WriteEventLog(message, eventType);
+        }
+
+        private void WriteEventLog(string message, EventLogEntryType type, Exception? exception = null)
         {
             try
             {
-                const string logName = "Application";
-                const string sourceName = "CamBridge Service";
-
-                if (!EventLog.SourceExists(sourceName))
+                if (exception != null)
                 {
-                    EventLog.CreateEventSource(sourceName, logName);
+                    message += $"\n\nException: {exception.GetType().Name}\n{exception.Message}\n\nStack Trace:\n{exception.StackTrace}";
                 }
 
-                EventLog.WriteEntry(sourceName, $"{source}\n\n{message}", type);
+                EventLog.WriteEntry(_eventSource, message, type);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to write to event log");
+                _logger.LogError(ex, "Failed to write to Windows Event Log");
             }
         }
 
-        private bool CanSendEmail(string category)
+        private string BuildProcessingEmailBody(ProcessingResult result)
         {
-            lock (_throttleLock)
+            var sb = new StringBuilder();
+            sb.AppendLine($"File Processing Notification");
+            sb.AppendLine($"==========================");
+            sb.AppendLine();
+            sb.AppendLine($"Timestamp: {result.ProcessedAt:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine($"File: {result.FileName}");
+            sb.AppendLine($"Status: {(result.Success ? "SUCCESS" : "FAILED")}");
+
+            if (result.Success)
             {
-                // Check hourly limit
-                var now = DateTime.UtcNow;
-                if (now.Subtract(_currentHourStart).TotalHours >= 1)
+                sb.AppendLine($"Output: {result.OutputFile}");
+                if (result.ProcessingTime.HasValue)
                 {
-                    _currentHourStart = now;
-                    _emailsSentInCurrentHour = 0;
+                    sb.AppendLine($"Processing Time: {result.ProcessingTime.Value.TotalMilliseconds:F2} ms");
                 }
-
-                if (_emailsSentInCurrentHour >= _settings.MaxEmailsPerHour)
-                {
-                    return false;
-                }
-
-                // Check category throttle
-                var throttleKey = $"{category}_{now:yyyyMMddHH}";
-                if (_emailThrottle.TryGetValue(throttleKey, out var lastSent))
-                {
-                    if (now.Subtract(lastSent).TotalMinutes < _settings.ThrottleMinutes)
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
             }
+            else
+            {
+                sb.AppendLine($"Error: {result.ErrorMessage}");
+            }
+
+            if (result.PatientInfo != null)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Patient Information:");
+                sb.AppendLine($"  Name: {result.PatientInfo.PatientName}");
+                sb.AppendLine($"  ID: {result.PatientInfo.PatientId}");
+                sb.AppendLine($"  Study ID: {result.PatientInfo.StudyId}");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("---");
+            sb.AppendLine($"CamBridge Service v{typeof(NotificationService).Assembly.GetName().Version}");
+
+            return sb.ToString();
         }
 
-        private void RecordEmailSent(string category)
+        private string BuildErrorEmailBody(string message, Exception? exception)
         {
-            lock (_throttleLock)
+            var sb = new StringBuilder();
+            sb.AppendLine("Critical Error Notification");
+            sb.AppendLine("==========================");
+            sb.AppendLine();
+            sb.AppendLine($"Timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine($"Message: {message}");
+
+            if (exception != null)
             {
-                _emailsSentInCurrentHour++;
-                var now = DateTime.UtcNow;
-                var throttleKey = $"{category}_{now:yyyyMMddHH}";
-                _emailThrottle[throttleKey] = now;
+                sb.AppendLine();
+                sb.AppendLine("Exception Details:");
+                sb.AppendLine($"  Type: {exception.GetType().FullName}");
+                sb.AppendLine($"  Message: {exception.Message}");
+                sb.AppendLine();
+                sb.AppendLine("Stack Trace:");
+                sb.AppendLine(exception.StackTrace);
 
-                // Clean up old entries
-                var cutoff = now.AddHours(-2);
-                var keysToRemove = _emailThrottle
-                    .Where(kvp => kvp.Value < cutoff)
-                    .Select(kvp => kvp.Key)
-                    .ToList();
-
-                foreach (var key in keysToRemove)
+                if (exception.InnerException != null)
                 {
-                    _emailThrottle.Remove(key);
+                    sb.AppendLine();
+                    sb.AppendLine("Inner Exception:");
+                    sb.AppendLine($"  Type: {exception.InnerException.GetType().FullName}");
+                    sb.AppendLine($"  Message: {exception.InnerException.Message}");
                 }
             }
+
+            sb.AppendLine();
+            sb.AppendLine("---");
+            sb.AppendLine($"CamBridge Service v{typeof(NotificationService).Assembly.GetName().Version}");
+            sb.AppendLine($"Machine: {Environment.MachineName}");
+
+            return sb.ToString();
         }
 
-        private string FormatDailySummary(ProcessingSummary summary)
+        private string BuildDailySummaryBody(List<ProcessingResult> results)
         {
-            var message = $@"Daily Processing Summary for {summary.Date:yyyy-MM-dd}
+            var sb = new StringBuilder();
+            sb.AppendLine($"Daily Processing Summary - {DateTime.Now:yyyy-MM-dd}");
+            sb.AppendLine("=====================================");
+            sb.AppendLine();
 
-Total Files Processed: {summary.TotalProcessed:N0}
-Successful: {summary.Successful:N0} ({summary.SuccessRate:F1}%)
-Failed: {summary.Failed:N0}
-Dead Letters: {summary.DeadLetterCount:N0}
+            var successful = results.Count(r => r.Success);
+            var failed = results.Count(r => !r.Success);
 
-Processing Time: {summary.ProcessingTimeSeconds:F1} seconds
-Average Time per File: {summary.AverageProcessingTime:F2} seconds
-Service Uptime: {summary.Uptime:d\.hh\:mm\:ss}";
+            sb.AppendLine($"Total Files Processed: {results.Count}");
+            sb.AppendLine($"Successful: {successful}");
+            sb.AppendLine($"Failed: {failed}");
+            sb.AppendLine($"Success Rate: {(results.Count > 0 ? (successful * 100.0 / results.Count) : 0):F1}%");
 
-            if (summary.TopErrors.Any())
+            if (results.Any(r => r.ProcessingTime.HasValue))
             {
-                message += "\n\nTop Errors:\n";
-                foreach (var error in summary.TopErrors.OrderByDescending(e => e.Value).Take(5))
+                var avgTime = results.Where(r => r.ProcessingTime.HasValue)
+                    .Average(r => r.ProcessingTime!.Value.TotalMilliseconds);
+                sb.AppendLine($"Average Processing Time: {avgTime:F2} ms");
+            }
+
+            if (failed > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Failed Files:");
+                sb.AppendLine("--------------");
+                foreach (var failure in results.Where(r => !r.Success))
                 {
-                    message += $"  - {error.Key}: {error.Value} occurrences\n";
+                    sb.AppendLine($"  • {failure.FileName}: {failure.ErrorMessage}");
                 }
             }
 
-            message += $"\n\nGenerated at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
-            message += "\n\n© 2025 Claude's Improbably Reliable Software Solutions";
+            sb.AppendLine();
+            sb.AppendLine("Processed Files by Hour:");
+            sb.AppendLine("------------------------");
+            var byHour = results.GroupBy(r => r.ProcessedAt.Hour)
+                               .OrderBy(g => g.Key);
+            foreach (var hourGroup in byHour)
+            {
+                sb.AppendLine($"  {hourGroup.Key:00}:00 - {hourGroup.Key:00}:59: {hourGroup.Count()} files");
+            }
 
-            return message;
+            sb.AppendLine();
+            sb.AppendLine("---");
+            sb.AppendLine($"CamBridge Service v{typeof(NotificationService).Assembly.GetName().Version}");
+            sb.AppendLine($"Report generated at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+
+            return sb.ToString();
         }
+
+        private async Task CheckAndSendDailySummaryAsync()
+        {
+            if (!_settings.SendDailySummary)
+                return;
+
+            var now = DateTime.Now;
+
+            // Check if we've crossed into a new day and it's the configured hour
+            if (now.Date > _lastSummaryDate && now.Hour >= _settings.DailySummaryHour)
+            {
+                await SendDailySummaryAsync();
+                _lastSummaryDate = now.Date;
+            }
+        }
+
+        private LogLevel ParseLogLevel(string level)
+        {
+            return level?.ToLower() switch
+            {
+                "trace" => LogLevel.Trace,
+                "debug" => LogLevel.Debug,
+                "information" => LogLevel.Information,
+                "warning" => LogLevel.Warning,
+                "error" => LogLevel.Error,
+                "critical" => LogLevel.Critical,
+                _ => LogLevel.Warning
+            };
+        }
+
+        #endregion
     }
 }

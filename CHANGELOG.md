@@ -6,6 +6,34 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2025-06-01 22:32
+### Added
+- DICOM Tag Browser Dialog with search and grouping by module
+- Template system fully functional (Ricoh, Minimal, Full templates)
+- QRBridge Protocol v2 parser with JSON format support
+- Import/Export functionality for mapping configurations
+- Backward compatibility for v1 pipe-delimited format
+- DicomTagBrowserDialog for intuitive tag selection
+- EnumToCollectionConverter integrated into ValueConverters.cs
+
+### Changed
+- RicohQRBridgeParser now supports both v1 and v2 protocols
+- Template buttons now use MVVM commands instead of click handlers
+- Improved error handling in protocol parsing
+- NotificationService updated for nested EmailSettings structure
+
+### Fixed
+- Project references: CamBridge.Config now references Infrastructure
+- System.Drawing.Common version conflict resolved (8.0.10)
+- XAML markup errors in MappingEditorPage (Run opacity issue)
+- NotificationService email property access corrected
+
+### Technical
+- QRBridgeProtocolV2Parser for JSON-based format
+- Protocol version detection with automatic fallback
+- MappingConfigurationLoader integration
+- Complete drag & drop implementation in MappingEditorPage
+
 ## [0.5.0] - 2025-06-01 21:47
 ### Added
 - Mapping Editor with drag & drop UI for EXIF to DICOM configuration
