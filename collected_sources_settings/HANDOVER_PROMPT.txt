@@ -1,0 +1,19 @@
+# CamBridge Settings Implementation
+
+Ich arbeite an CamBridge v0.4.0 - Settings Page Implementation.
+© 2025 Claude's Improbably Reliable Software Solutions
+
+Die GUI läuft bereits mit Dashboard und Service Control.
+Jetzt soll die Settings Page von einem Platzhalter zu einer voll funktionsfähigen Konfigurationsoberfläche werden.
+
+Bitte implementiere:
+1. SettingsPage.xaml mit TabView (4 Tabs)
+2. SettingsViewModel mit vollständigem Data Binding
+3. ConfigurationService der wirklich appsettings.json liest/schreibt
+4. Validierung und Fehlerbehandlung
+
+Die Settings sollen die gleiche Struktur wie appsettings.json haben.
+Verwende ModernWPF Controls und CommunityToolkit.Mvvm.
+Ausführliche Implementation für Anfänger bitte.
+
+[Die gesammelten Dateien befinden sich im Ordner: collected_sources_settings]

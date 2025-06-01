@@ -1,11 +1,51 @@
 # CamBridge Changelog
 
-All notable changes to CamBridge will be documented in this file.
+All notable changes to CamBridge will be documented in this file.  
+© 2025 Claude's Improbably Reliable Software Solutions
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2025-06-01 02:00
+## [Unreleased]
+### Planned
+- Dead Letters Management UI (v0.4.2)
+- Dashboard Polish & Performance (v0.5.0)
+- PACS Integration (v0.6.0)
+
+## [0.4.1] - 2025-06-01 13:30 (pending commit)
+### Added
+- Complete Settings page with 4-tab TabView layout
+- Real JSON persistence to appsettings.json with auto-backup
+- Comprehensive MVVM data binding with CommunityToolkit.Mvvm
+- Watch folder management with add/remove functionality
+- Input validation with Data Annotations
+- Folder browse dialogs using Win32 interop
+- Status bar with loading indicators and change tracking
+- Value converters for visibility bindings
+- PROJECT_WISDOM.md - Cross-session documentation system
+
+### Fixed
+- WPF/ModernWPF compatibility (removed WinUI3 Spacing attributes)
+
+### Changed
+- ConfigurationService from mock to real implementation
+- Version management to prevent duplicates (lessons learned from v0.4.0)
+
+## [0.4.0] - 2025-06-01 11:30:55 (Duplicate version! Should have been v0.4.1)
+### Added
+- Service Control implementation (Phase 9)
+- Start/Stop/Restart functionality with UAC handling
+- Automatic status updates every 2 seconds
+- Uptime display for running service
+- "Restart as Administrator" feature
+- Quick Actions for Services.msc and EventVwr.msc
+- Service installation detection
+
+### Note
+- This was committed 9 hours after the first v0.4.0 commit
+- Should have incremented version number
+
+## [0.4.0] - 2025-06-01 02:22:32 (Night shift development)
 ### Added
 - WPF Configuration GUI with ModernWPF UI framework
 - Real-time dashboard with auto-refresh (5 seconds)
@@ -14,64 +54,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Connection status indicator with visual feedback
 - Active processing items display
 - Recent activity tracking
+- Full dependency injection for ViewModels and Services
 
 ### Fixed
 - Platform-specific CA1416 warnings for Windows-only features
 - Missing package references for HTTP client
 - Dependency injection setup for ViewModels
+- Proper error handling for offline service
 
 ### Changed
 - Dashboard now shows live data from ProcessingQueue
 - Added loading states during API calls
-- Improved error handling for offline service
+- Display of processing statistics and queue status
 
-## [0.3.3] - 2025-05-31 23:30
-### Fixed
-- Fixed Encoder namespace ambiguity in JpegTestFileGenerator
-- Fixed undefined patientId variable in integration tests
-- All integration tests now compile and run successfully
-- Added missing Microsoft.Extensions.Logging.Console package to tests
-- All integration tests now compile successfully
-- Fixed namespace issues in test helpers
-- Removed duplicate INotificationService interface from Service project
-- Fixed duplicate test method in JpegToDicomIntegrationTests
-- Added missing StatusController for Web API
-- Resolved all build errors
-- 
-### Changed
-- Improved test stability and error handling
-- Enhanced JPEG test file generation with proper EXIF data
-- Improved test project dependencies
-- Enhanced build configuration
-- StatusController with comprehensive API endpoints
-- Health check endpoint for monitoring
+### Breaking Change
+- INotificationService now includes NotifyErrorAsync method
 
-## [0.3.2] - 2025-05-31 23:00
-### Fixed
-- Resolved System.Drawing.Imaging.Encoder namespace ambiguity in tests
-- Corrected EncoderParameter quality value type conversion  
-- Fixed FluentAssertions syntax for combined assertions
-- Integration tests now execute successfully
-
+## [0.3.2] - 2025-05-31 23:10:22
 ### Added
-- Dead Letter Queue for failed conversions with persistence
-- Email and Event Log notification system
-- Web Dashboard for real-time monitoring (http://localhost:5050)
-- REST API with Swagger documentation
-- Daily summary reports
+- Complete error handling with dead-letter queue persistence and reprocessing
+- Email/event log notifications with daily summaries and threshold alerts
+- Web dashboard (port 5050) with REST API and real-time monitoring
 - PowerShell installation script with automated setup
 - Build and deployment automation
 
-## [0.3.1] - 2025-05-31 16:00
+### Known Issues
+- Integration tests have build errors (later fixed)
+
+## [0.3.1] - 2025-05-31 16:51:44
 ### Fixed
-- Fixed dependency injection issue where singleton ProcessingQueue tried to consume scoped IFileProcessor
+- Dependency injection issue where singleton ProcessingQueue tried to consume scoped IFileProcessor
 - ProcessingQueue now uses IServiceScopeFactory to create scopes for file processing
 - Removed duplicate IFileProcessor registration in Program.cs
 
 ### Added
-- Batch and PowerShell scripts for collecting source files for easy deployment
+- Batch and PowerShell scripts for collecting source files for deployment
 
-## [0.3.0] - 2025-05-31 12:05
+## [0.3.0] - 2025-05-31 15:45:17
 ### Added
 - FileProcessor service orchestrating complete conversion pipeline
 - ProcessingQueue with thread-safe operation and retry logic
@@ -79,67 +98,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive configuration system via appsettings.json
 - Health check endpoint for service monitoring
 - Statistics reporting and performance metrics
-- Graceful shutdown with processing completion
-- File debouncing to avoid processing during write operations
+- PowerShell installation script and documentation
 
 ### Changed
 - Worker service now coordinates all processing components
 - Enhanced logging with structured output
-- Program.cs with full dependency injection setup
 - Target framework to net8.0-windows for Windows Service
 
-### Fixed
-- Robust error handling throughout pipeline
-- File locking detection before processing
-- Proper resource cleanup on service shutdown
+### Breaking Change
+- Target framework changed to net8.0-windows
 
-## [0.2.0] - 2025-05-30 22:00
+## [0.2.0] - 2025-05-31 10:34:17
 ### Added
-- JSON-based mapping configuration system
-- MappingConfigurationLoader for loading/saving mappings
-- DicomTagMapper service for dynamic tag mapping
-- CustomMappingConfiguration with validation
+- Flexible JSON-based mapping configuration system
+- MappingConfigurationLoader for JSON serialization
+- DicomTagMapper service for dynamic EXIF to DICOM mapping
 - Support for value transformations (date, gender, truncation)
-- Default value support for optional fields
-- Comprehensive mapping configuration tests
+- Comprehensive tests for mapping system
 
-### Changed
-- DicomConverter now supports dynamic mappings
-- ServiceCollectionExtensions enhanced with configuration options
-- Improved dependency injection setup
-
-## [0.1.1] - 2025-05-30 20:00
+## [Missing Version] - 2025-05-31 01:17:17 (Night shift!)
 ### Added
-- RicohExifReader for specialized Ricoh camera support
-- Raw EXIF data extraction fallback
-- Pipe-delimited QRBridge format parsing
-### Fixed
-- Improved barcode data detection in EXIF
-- Better handling of custom Ricoh tags
+- DICOM conversion implementation with fo-dicom v5.1.2
+- DicomConverter for JPEG to DICOM transformation
+- Preserve JPEG compression using encapsulated pixel data
+- Support YBR_FULL_422 photometric interpretation
 
-## [0.1.0] - 2025-05-30 18:00
+### Note
+- This commit was missing version number in git commit message
+
+## [0.1.0] - 2025-05-30 23:49:44
 ### Added
-- EXIF extraction with MetadataExtractor
-- QRBridge data parsing from User Comment
-- DICOM conversion with fo-dicom
-- JPEG compression preservation
-- Core entity models (Patient, Study, Metadata)
+- EXIF extraction with QRBridge support
+- Support for pipe-delimited and command-line QRBridge formats
+- RicohExifReader for specialized Ricoh G900 II support
+- Infrastructure layer with comprehensive unit tests
+
+## [0.0.2] - 2025-05-30 21:34:12 (Git duplicate - 78 seconds after first)
+### Added
+- Core domain models (second commit)
+
+## [0.0.2] - 2025-05-30 21:32:54
+### Added
+- Core domain models (Patient, Study, Metadata)
 - Value objects (DicomTag, ExifTag, PatientId, StudyId)
-- Infrastructure services (ExifReader, DicomConverter)
-- Unit tests for core functionality
+- Repository interfaces
 
-## [0.0.1] - 2025-05-30 15:00
+## [0.0.1] - 2025-05-30 20:34:20
 ### Added
-- Initial project structure
-- Core interfaces and abstractions
-- Windows Service skeleton
-- Automatic versioning setup
+- Initial project structure with 4 projects (Core, Infrastructure, Service, Config)
+- Automatic versioning via Version.props
+- Documentation (README, CHANGELOG, LICENSE)
 
-[0.3.3]: https://github.com/claude/cambridge/compare/v0.3.2...v0.3.3
-[0.3.2]: https://github.com/claude/cambridge/compare/v0.3.1...v0.3.2
-[0.3.1]: https://github.com/claude/cambridge/compare/v0.3.0...v0.3.1
-[0.3.0]: https://github.com/claude/cambridge/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/claude/cambridge/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/claude/cambridge/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/claude/cambridge/compare/v0.0.1...v0.1.0
-[0.0.1]: https://github.com/claude/cambridge/releases/tag/v0.0.1
+### Note
+- Project started at 20:30:44 with .gitattributes
+- First real commit 4 minutes later
+
+---
+
+## Version History Summary
+- Total development time: ~41 hours over 2.5 days
+- Night shifts: DICOM (01:17), GUI (02:22)
+- Version duplicates: v0.0.2 (78 sec), v0.4.0 (9 hours)
+- Missing versions: DICOM commit, v0.3.3 (was in old CHANGELOG but not in git)
+
+## Lessons Learned
+- Always increment version numbers, even for small changes
+- Use "babysteps" versioning (v0.0.1 → v0.0.2 → v0.0.3)
+- Check git history before committing to avoid duplicates
+- Night shift commits need extra attention to versioning
