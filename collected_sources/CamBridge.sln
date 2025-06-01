@@ -16,6 +16,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
 		CHANGELOG.md = CHANGELOG.md
+		collect-sources.bat = collect-sources.bat
+		GUI-Readme.md = GUI-Readme.md
 		LICENSE = LICENSE
 		README.md = README.md
 		Version.props = Version.props
@@ -55,10 +57,6 @@ Global
 		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.ActiveCfg = Release|x64
 		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.Build.0 = Release|x64
 		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.Deploy.0 = Release|x64
-		{D8F3B5C2-6E1A-4D8F-9A2C-4B7E9D3F8A5C}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{D8F3B5C2-6E1A-4D8F-9A2C-4B7E9D3F8A5C}.Debug|Any CPU.Build.0 = Debug|x64
-		{D8F3B5C2-6E1A-4D8F-9A2C-4B7E9D3F8A5C}.Release|Any CPU.ActiveCfg = Release|x64
-		{D8F3B5C2-6E1A-4D8F-9A2C-4B7E9D3F8A5C}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

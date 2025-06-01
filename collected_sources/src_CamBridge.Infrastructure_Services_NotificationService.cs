@@ -1,9 +1,11 @@
+// src/CamBridge.Infrastructure/Services/NotificationService.cs
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using CamBridge.Core;
 using CamBridge.Core.Interfaces;
@@ -15,6 +17,7 @@ namespace CamBridge.Infrastructure.Services
     /// <summary>
     /// Implementation of notification service for email and event log
     /// </summary>
+    [SupportedOSPlatform("windows")]
     public class NotificationService : INotificationService
     {
         private readonly ILogger<NotificationService> _logger;
@@ -216,6 +219,7 @@ namespace CamBridge.Infrastructure.Services
             }
         }
 
+        [SupportedOSPlatform("windows")]
         private void WriteEventLog(string source, string message, EventLogEntryType type)
         {
             try

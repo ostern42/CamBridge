@@ -1,23 +1,34 @@
+// src/CamBridge.Config/MainWindow.xaml.cs
+using System;
+using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Controls;
+using CamBridge.Config.Views;
+using Microsoft.Extensions.DependencyInjection;
 using ModernWpf.Controls;
 
 namespace CamBridge.Config
 {
+    [SupportedOSPlatform("windows")]
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        private readonly IServiceProvider _serviceProvider;
+
+        public MainWindow(IServiceProvider serviceProvider)
         {
+            _serviceProvider = serviceProvider;
             InitializeComponent();
 
             // Navigate to Dashboard on startup
             if (ContentFrame != null)
             {
-                ContentFrame.Navigate(new Views.DashboardPage());
+                ContentFrame.Navigate(new DashboardPage());
             }
         }
 
-        private void NavigationView_SelectionChanged(ModernWpf.Controls.NavigationView sender, ModernWpf.Controls.NavigationViewSelectionChangedEventArgs args)
+        [SupportedOSPlatform("windows7.0")]
+        private void NavigationView_SelectionChanged(ModernWpf.Controls.NavigationView sender,
+            ModernWpf.Controls.NavigationViewSelectionChangedEventArgs args)
         {
             if (args.SelectedItemContainer != null && ContentFrame != null)
             {
@@ -26,16 +37,16 @@ namespace CamBridge.Config
                 switch (tag)
                 {
                     case "Dashboard":
-                        ContentFrame.Navigate(new Views.DashboardPage());
+                        ContentFrame.Navigate(new DashboardPage());
                         break;
                     case "ServiceControl":
-                        ContentFrame.Navigate(new Views.ServiceControlPage());
+                        ContentFrame.Navigate(new ServiceControlPage());
                         break;
                     case "DeadLetters":
-                        ContentFrame.Navigate(new Views.DeadLetterPage());
+                        ContentFrame.Navigate(new DeadLetterPage());
                         break;
                     case "Settings":
-                        ContentFrame.Navigate(new Views.SettingsPage());
+                        ContentFrame.Navigate(new SettingsPage());
                         break;
                 }
             }

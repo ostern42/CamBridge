@@ -35,6 +35,7 @@ namespace CamBridge.Config
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ServiceControlViewModel>();
                     services.AddTransient<SettingsViewModel>();
+                    services.AddTransient<ServiceControlViewModel>();
 
                     // Main Window
                     services.AddSingleton<MainWindow>();

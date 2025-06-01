@@ -1,7 +1,9 @@
+// src/CamBridge.Infrastructure.Tests/TestHelpers/JpegTestFileGenerator.cs
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.Versioning;
 using System.Text;
 
 namespace CamBridge.Infrastructure.Tests.TestHelpers
@@ -9,6 +11,7 @@ namespace CamBridge.Infrastructure.Tests.TestHelpers
     /// <summary>
     /// Helper class to generate test JPEG files with EXIF data
     /// </summary>
+    [SupportedOSPlatform("windows")]
     public static class JpegTestFileGenerator
     {
         /// <summary>
@@ -48,7 +51,6 @@ namespace CamBridge.Infrastructure.Tests.TestHelpers
 
             // Save with EXIF data
             var encoderParameters = new EncoderParameters(1);
-            // Fix: Explicitly use System.Drawing.Imaging.Encoder
             encoderParameters.Param[0] = new EncoderParameter(
                 System.Drawing.Imaging.Encoder.Quality,
                 90L);
@@ -154,6 +156,7 @@ namespace CamBridge.Infrastructure.Tests.TestHelpers
             throw new InvalidOperationException($"Encoder for {format} not found");
         }
 
+        [SupportedOSPlatform("windows6.1")]
         private static PropertyItem CreatePropertyItem(int id, string value)
         {
             // Create a dummy image to get a PropertyItem template

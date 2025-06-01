@@ -5,6 +5,26 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-06-01 02:00
+### Added
+- WPF Configuration GUI with ModernWPF UI framework
+- Real-time dashboard with auto-refresh (5 seconds)
+- HttpApiService for REST API communication  
+- StatusController API endpoints for service monitoring
+- Connection status indicator with visual feedback
+- Active processing items display
+- Recent activity tracking
+
+### Fixed
+- Platform-specific CA1416 warnings for Windows-only features
+- Missing package references for HTTP client
+- Dependency injection setup for ViewModels
+
+### Changed
+- Dashboard now shows live data from ProcessingQueue
+- Added loading states during API calls
+- Improved error handling for offline service
+
 ## [0.3.3] - 2025-05-31 23:30
 ### Fixed
 - Fixed Encoder namespace ambiguity in JpegTestFileGenerator
@@ -13,12 +33,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added missing Microsoft.Extensions.Logging.Console package to tests
 - All integration tests now compile successfully
 - Fixed namespace issues in test helpers
+- Removed duplicate INotificationService interface from Service project
+- Fixed duplicate test method in JpegToDicomIntegrationTests
+- Added missing StatusController for Web API
+- Resolved all build errors
 - 
 ### Changed
 - Improved test stability and error handling
 - Enhanced JPEG test file generation with proper EXIF data
 - Improved test project dependencies
 - Enhanced build configuration
+- StatusController with comprehensive API endpoints
+- Health check endpoint for monitoring
 
 ## [0.3.2] - 2025-05-31 23:00
 ### Fixed
