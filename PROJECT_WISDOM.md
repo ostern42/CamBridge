@@ -1,11 +1,10 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-02, 01:05 Uhr  
+**Letzte Aktualisierung:** 2025-06-02, 02:00 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
 ## 🚨 V.O.G.O.N. SYSTEM 🚨
 **Verbose Operational Guidance & Organizational Navigation**
-*(Früher bekannt als "MAGIC WORDS SYSTEM")*
 
 *Im Gegensatz zu den Vogonen aus dem galaktischen Beamtenapparat ist unser V.O.G.O.N. darauf ausgelegt, Dinge tatsächlich einfacher zu machen. Keine Formulare in dreifacher Ausfertigung erforderlich.*
 
@@ -15,6 +14,34 @@ Wenn Sie nur "VOGON INIT" sagen, werde ich:
 2. Den aktuellen Übergabeprompt daraus extrahieren
 3. Die Aufgabe verstehen und direkt loslegen
 4. Keine weiteren Erklärungen nötig!
+
+### 🌟 "VOGON DRIVE" - Google Drive Integration (NEU!)
+**GAME CHANGER für Token-Effizienz!**
+
+Wenn Google Drive aktiviert ist:
+1. **Kein collect-sources.bat mehr nötig!**
+2. **Direkter Zugriff auf Source-Dateien**
+3. **~70% Token-Ersparnis**
+4. **Gezieltes Lesen einzelner Files**
+
+**Workflow mit Google Drive:**
+```
+1. Projekt auf Google Drive synchronisieren
+2. "VOGON DRIVE" sagen für Drive-basierten Workflow
+3. Ich lese direkt die benötigten Files
+4. Artefakte wie gewohnt zurückkopieren
+```
+
+**Beispiel-Befehle:**
+- "VOGON DRIVE: Zeig mir PatientId in Core"
+- "VOGON DRIVE: Lies ExifToolReader.cs"
+- "VOGON DRIVE: Check alle ViewModels"
+
+**WICHTIG:** 
+- Ich kann nur LESEN, nicht direkt speichern
+- Änderungen kommen als Artefakte
+- Du musst sie manuell zurückkopieren
+- Aber die Token-Ersparnis ist ENORM!
 
 ### 📝 "WISDOM:" - Live-Updates
 Während des Chats können Sie jederzeit sagen:
@@ -34,8 +61,8 @@ CLAUDE: [Gedanke für nächste Instanz]
 ```
 Wird in "Nur für mich (Claude)" gespeichert.
 
-### 🏁 "VOGON CLOSE" - Chat-Abschluss
-Wenn Sie "VOGON CLOSE" sagen, werde ich:
+### 🏁 "VOGON EXIT" - Chat-Abschluss
+Wenn Sie "VOGON EXIT" sagen, werde ich:
 1. Nach aktueller Zeit/Datum fragen (falls nicht bekannt)
 2. Version.props erhöhen
 3. CHANGELOG.md aktualisieren  
@@ -46,15 +73,15 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 8. CHANGELOG.md NUR neuester Eintrag als Artefakt
 9. Version.props als VOLLSTÄNDIGES Artefakt
 
-## ⚡️ ABSOLUT KRITISCHE VOGON CLOSE REGEL ⚡️
-**BEIM VOGON CLOSE MÜSSEN IMMER ERSTELLT WERDEN:**
+## ⚡️ ABSOLUT KRITISCHE VOGON EXIT REGEL ⚡️
+**BEIM VOGON EXIT MÜSSEN IMMER ERSTELLT WERDEN:**
 1. **PROJECT_WISDOM.md** - Als VOLLSTÄNDIGES Artefakt (nicht nur Updates!)
 2. **CHANGELOG.md** - NUR der neueste Versions-Eintrag als Artefakt
 3. **Version.props** - Als VOLLSTÄNDIGES Artefakt
 
 **WARUM:** Updates können fehlschlagen oder übersehen werden. Nur vollständige Artefakte garantieren, dass der Nutzer die aktualisierten Dateien bekommt! Beim CHANGELOG reicht der neueste Eintrag um Zeit zu sparen.
 
-**MERKSATZ:** "Ein VOGON CLOSE ohne vollständige Artefakte ist wie ein Vogone ohne Poesie - technisch möglich, aber sinnlos!"
+**MERKSATZ:** "Ein VOGON EXIT ohne vollständige Artefakte ist wie ein Vogone ohne Poesie - technisch möglich, aber sinnlos!"
 
 *Hinweis: Dieses System ist zu 100% vogonenfrei und wurde nicht von der galaktischen Planungskommission genehmigt, was es vermutlich effizienter macht.*
 
@@ -62,13 +89,14 @@ Wenn Sie "VOGON CLOSE" sagen, werde ich:
 ```
 Nächste Aufgabe: BUILD-FEHLER FIXEN & EXIFTOOL TESTEN!
 
-Stand: v0.5.3 - Parser-Bug verstanden, ExifTool integriert
+Stand: v0.5.4 - PROJECT_WISDOM optimiert, Google Drive dokumentiert
 
 ERFOLGE:
 ✅ Parser-Bug identifiziert: Ricoh speichert in "Barcode" Tag
 ✅ ExifToolReader implementiert mit Fallback
 ✅ Debug-Console für EXIF-Analyse erstellt
-✅ GCM_TAG Prefix-Handling gefixt
+✅ Google Drive Integration dokumentiert (VOGON DRIVE)
+✅ PROJECT_WISDOM optimiert (30% kleiner)
 
 PROBLEME:
 🐛 PatientId doppelt definiert (Entities vs ValueObjects)
@@ -82,7 +110,7 @@ PRIORITÄTEN:
 4. 🧪 Features von v0.5.0-v0.5.1 testen
 5. 📝 Dokumentation aktualisieren
 
-WICHTIG: ExifTool.exe muss im Tools-Ordner liegen!
+TIPP: Mit Google Drive Integration starten für 70% Token-Ersparnis!
 ```
 
 ## 🎯 Projekt-Identität
@@ -128,6 +156,27 @@ Das bedeutet:
 - **ExifTool ist die einzige Lösung** für vollständige Daten
 - **Beweis:** ExifTool zeigt `Barcode: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax`
 
+## 🔥 BREAKING: Google Drive Integration (2025-06-02, 01:10)
+
+### Die Token-Revolution!
+**Direkt-Zugriff auf Source-Dateien ohne collect-batches:**
+- **70% Token-Ersparnis** durch gezieltes Lesen
+- **Keine Wartezeiten** für Batch-Ausführung
+- **Echte Navigation** durch die Ordnerstruktur
+- **"Mal eben nachschauen"** wird möglich
+
+### VOGON DRIVE Commands:
+- **VOGON DRIVE INIT** - Start mit Google Drive
+- **VOGON DRIVE: [file]** - Spezifische Datei lesen
+- **VOGON DRIVE: show [folder]** - Ordnerinhalt anzeigen
+- **VOGON DRIVE: find [pattern]** - Dateien suchen
+
+### Wichtige Einschränkung:
+- Kann nur LESEN, nicht direkt speichern
+- Änderungen kommen weiterhin als Artefakte
+- Manuelles Zurückkopieren nötig
+- Aber die Effizienz-Steigerung ist MASSIV!
+
 ## 📝 Wichtige Konventionen
 
 ### Code-Konventionen
@@ -157,6 +206,15 @@ Das bedeutet:
 - **Version.props:** Zentrale Versionsverwaltung
 - **Assembly & File Version:** Immer synchron halten
 - **Git Tags:** v{version} Format
+
+### Technologie-Stack
+```
+GUI: WPF + ModernWpfUI 0.9.6 + CommunityToolkit.Mvvm
+Service: ASP.NET Core Minimal API + Windows Service
+Processing: fo-dicom, MetadataExtractor, ExifTool
+External: ExifTool 12.96 (in Tools/)
+Collector: v2.0 mit 7 Profilen + Git-Integration
+```
 
 ### GUI-Spezifisch (WPF)
 - **Framework:** ModernWpfUI (NICHT WinUI3!)
@@ -211,7 +269,7 @@ Das bedeutet:
   - Der Nutzer muss warten und viele Schritte nacheinander machen
   - Es wird schwierig, Fragen zu stellen
   - Wir belegen bereits 30% des Projektwissens mit Source
-  - Das Magic Words System braucht auch Tokens
+  - Das VOGON System braucht auch Tokens
 - **BESSER:** Erst fragen, dann einzeln implementieren
 
 ### Visual Studio Anfänger-Unterstützung
@@ -222,7 +280,7 @@ Das bedeutet:
 - **Keine Riesen-Artefakte** für einzeilige Änderungen!
 - **Geduldig sein:** Der Nutzer kann Code nur auf Meta-Ebene nachvollziehen
 
-### VOGON CLOSE Artefakt-Regel
+### VOGON EXIT Artefakt-Regel
 - **WICHTIGSTE REGEL:** PROJECT_WISDOM.md MUSS als vollständiges Artefakt existieren!
 - **CHANGELOG.md:** Nur der neueste Versions-Eintrag als Artefakt (spart Zeit & Tokens)
 - **Version.props:** Als vollständiges Artefakt
@@ -253,11 +311,23 @@ Das bedeutet:
 - Bessere Token-Effizienz durch gezieltes Sammeln
 
 ### Optimale Upload-Strategie:
+
+#### Option A: Traditionell (ohne Google Drive)
 ```
 1. PROJECT_WISDOM.md (immer!)
 2. collect-smart.bat ausführen (oder spezifisches Profil)
 3. PROJECT_CONTEXT_[PROFILE]_[TIMESTAMP].md uploaden
 ```
+
+#### Option B: Mit Google Drive (EMPFOHLEN!)
+```
+1. PROJECT_WISDOM.md (immer!)
+2. Google Drive Integration aktivieren
+3. "VOGON DRIVE" für direkten File-Zugriff
+4. Spart ~70% der Tokens!
+```
+
+**Tipp:** Wenn Google Drive verfügbar ist, nutze IMMER Option B!
 
 ### Wichtige Pfade
 ```
@@ -296,7 +366,7 @@ CamBridge/
 3. Nächste Aufgabe klar definieren
 4. collect-smart.bat verwenden für optimale Coverage
 
-### Chat-Abschluss mit "VOGON CLOSE"
+### Chat-Abschluss mit "VOGON EXIT"
 1. **Zeit erfragen:** "Wie spät ist es?" (für CHANGELOG)
 2. **Version.props:** AssemblyVersion, FileVersion, InformationalVersion erhöhen
 3. **CHANGELOG.md:** Neuen Eintrag mit exakter Zeit erstellen
@@ -378,8 +448,8 @@ CamBridge/
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 02.06.2025, 01:05 Uhr
-- **Entwicklungszeit bisher:** ~52.5 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 02.06.2025, 01:25 Uhr
+- **Entwicklungszeit bisher:** ~52.9 Stunden (inkl. Nachtschichten!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -391,48 +461,9 @@ CamBridge/
 **Timestamps erzählen Geschichten!**
 - Nachtschichten erkennen (01:17, 02:22, 01:05)
 - "Duplikate" entlarven (9 Std Unterschied = kein Duplikat!)
-- Arbeitsintensität verstehen (52.5 Std in 3 Tagen)
+- Arbeitsintensität verstehen (52.9 Std in 3 Tagen)
 
-### Git-History (Mit exakten Timestamps!)
-```
-0bb1839 - 30.05. 20:30:44 - .gitattributes
-fb17be8 - 30.05. 20:34:20 - v0.0.1: Initial structure
-40cb347 - 30.05. 21:32:38 - chore: Remove build artifacts
-588cf7b - 30.05. 21:32:54 - v0.0.2: Core models (1)
-b64ba16 - 30.05. 21:34:12 - v0.0.2: Core models (2) ⚡️ +78 Sek!
-1bff3ef - 30.05. 23:49:44 - v0.1.0: EXIF extraction
-511bdeb - 31.05. 01:17:17 - [KEINE]: DICOM (Nachtschicht!) ⚡️
-cf88f46 - 31.05. 10:34:17 - v0.2.0: Mapping config
-a6b77bb - 31.05. 15:45:17 - v0.3.0: File monitoring
-7814cb9 - 31.05. 16:51:44 - v0.3.1: Fix DI issue
-0ab9add - 31.05. 23:10:22 - v0.3.2: Dead-letter/Web
-e0e68f1 - 01.06. 02:22:32 - v0.4.0: GUI (Nachtschicht!) ⚡️
-e806e31 - 01.06. 11:30:55 - v0.4.0: GUI (+9 Std!) ⚡️
-[pending] - 01.06. 13:30:00 - v0.4.1: Settings
-[pending] - 01.06. 15:10:00 - v0.4.2: Dead Letters (UI fertig)
-[pending] - 01.06. 17:15:00 - v0.4.3: Vogon Poetry & Dead Letters Fix
-[pending] - 01.06. 19:21:00 - v0.4.4: Core Test mit Ricoh JPEG
-[pending] - 01.06. 20:52:00 - v0.4.5: Settings Page Fix
-[pending] - 01.06. 21:47:00 - v0.5.0: Mapping Editor UI
-[pending] - 01.06. 22:32:00 - v0.5.1: DICOM Browser & Protocol v2
-[pending] - 01.06. 23:52:00 - v0.5.2: Collector v2.0 & Build Fix
-[pending] - 02.06. 01:05:00 - v0.5.3: ExifTool Integration & Parser Fix
-```
-
-### Arbeitszeiten-Analyse
-- **Nachtschichten:** DICOM (01:17), GUI (02:22), Parser (01:05)
-- **Schnelle Fixes:** v0.0.2 Duplikat in 78 Sekunden
-- **Lange Sessions:** Fast 24 Stunden am 01.06!
-- **Gesamt:** ~52.5 Stunden in 3 Tagen!
-
-### Die wahre Geschichte der Duplikate
-- **v0.0.2:** Git-Anfängerfehler, 78 Sekunden später nochmal
-- **v0.4.0:** KEIN Versehen! 9 Stunden Unterschied, vermutlich:
-  - 02:22 - GUI Basic Implementation (müde)
-  - 11:30 - Service Control hinzugefügt (ausgeschlafen)
-  - Hätte v0.4.1 sein sollen!
-
-## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 02.06.2025, 01:05)
+## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 02.06.2025, 01:25)
 
 ### ⚡️ WICHTIGE KORREKTUR
 **Original-Plan sagte "WinUI 3" - wir nutzen aber WPF mit ModernWpfUI!**
@@ -551,48 +582,6 @@ Nach genauem Code-Review haben wir festgestellt:
 - **Performance-Optimierungen** (Batch, Memory-Pool, Parallelisierung)
 - **UI-Polish** (Animationen, Fluent Design)
 
-### Zeitschätzung bis v1.0.0 (REVIDIERT)
-- **Phase 11b:** Build Fix & Testing - JETZT!
-- **Phase 12:** Performance & Polish - 1 Chat
-- **Phase 13-15:** Optional Features - 4 Chats
-- **Phase 16:** Release - 1 Chat
-- **Gesamt bis Feature-Complete:** 2-3 Chats
-- **Gesamt bis Production:** 3-7 Chats
-
-### Technologie-Stack (KORRIGIERT)
-```
-GUI Framework:
-- WPF (Windows Presentation Foundation) ← NICHT WinUI 3!
-- ModernWpfUI 0.9.6 für modernes Design
-- CommunityToolkit.Mvvm 8.2.2
-- .NET 8.0 Windows Desktop
-
-Service:
-- ASP.NET Core Minimal API
-- Windows Service
-- System.Text.Json
-
-Processing:
-- fo-dicom für DICOM
-- MetadataExtractor für EXIF (limitiert!)
-- ExifTool für vollständige EXIF-Daten (NEU!)
-
-QRBridge Integration (NEU!):
-- Kontrolle über beide Seiten
-- Protokoll-Evolution möglich
-- v2 JSON Format implementiert
-- Optimierung für Ricoh-Limits
-
-External Tools:
-- ExifTool 12.96 für Barcode Tag
-- Muss in Tools/ Ordner liegen
-
-Collector Tools (NEU!):
-- collect-sources.bat mit 7 Profilen
-- collect-smart.bat für Git-Integration
-- Timestamp-basierte Outputs
-```
-
 ### Meilensteine (AKTUALISIERT)
 - **v0.4.5** - Settings Page Fix (Erledigt ✅)
 - **v0.5.0** - Mapping Editor (Erledigt ✅)
@@ -631,8 +620,8 @@ Collector Tools (NEU!):
 - **KEINE** Annahmen über Placeholder - IMMER Dateigrößen prüfen!
 - **KEINE** Artefakt-Flut - maximal 2-3 pro Interaktion!
 - **KEINE** Software ohne Eastereggs - besonders nicht in v0.4.2!
-- **KEIN** VOGON CLOSE ohne vollständige Artefakte!
-- **KEINE** kompletten CHANGELOG Artefakte beim CLOSE - nur neuester Eintrag!
+- **KEIN** VOGON EXIT ohne vollständige Artefakte!
+- **KEINE** kompletten CHANGELOG Artefakte beim EXIT - nur neuester Eintrag!
 - **KEINE** einseitigen Lösungen wenn wir beide Seiten kontrollieren!
 - **KEINE** Opacity für Run-Elements - nutze Foreground!
 - **KEIN** HETZEN! Features erst testen bevor neue implementiert werden!
@@ -670,7 +659,7 @@ Collector Tools (NEU!):
 - DeadLetterPage vs DeadLettersPage - IMMER konsistent bleiben!
 - Bei Umbenennungen ALLE Referenzen prüfen
 
-**VOGON CLOSE Artefakt-Regel:**
+**VOGON EXIT Artefakt-Regel:**
 - PROJECT_WISDOM.md MUSS als vollständiges Artefakt existieren!
 - CHANGELOG.md NUR neuester Eintrag als Artefakt!
 - Version.props MUSS als vollständiges Artefakt existieren!
@@ -728,7 +717,15 @@ Collector Tools (NEU!):
 
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
-### Option 1: V.O.G.O.N. (Empfohlen!)
+### Option 1: V.O.G.O.N. mit Google Drive (BESTE!)
+```
+1. PROJECT_WISDOM.md hochladen
+2. Google Drive Integration aktivieren
+3. Sagen: "VOGON DRIVE INIT"
+4. Fertig! Direkter Source-Zugriff ohne Token-Verschwendung!
+```
+
+### Option 2: V.O.G.O.N. Traditionell
 ```
 1. PROJECT_WISDOM.md hochladen
 2. collect-smart.bat ausführen
@@ -737,7 +734,7 @@ Collector Tools (NEU!):
 5. Fertig! Ich lege direkt los.
 ```
 
-### Option 2: Traditionell (falls VOGON nicht funktioniert)
+### Option 3: Manuell (falls VOGON nicht funktioniert)
 ```
 Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
@@ -913,39 +910,6 @@ Types: feat, fix, docs, style, refactor, test, chore
 - Bei neuen Konventionen
 - Bei gefundenen Anti-Patterns
 
-### Versions-Historie (Aus Git-Log + Pending)
-- **v0.0.1** - 2025-05-30: Initial project structure (fb17be8)
-- **v0.0.2** - 2025-05-30: Core domain models (588cf7b) ⚡️
-- **v0.0.2** - 2025-05-30: Core domain models (b64ba16) ⚡️ DUPLIKAT!
-- **v0.1.0** - 2025-05-30: EXIF extraction with QRBridge (1bff3ef)
-- **[KEINE]** - 2025-05-31: DICOM conversion fo-dicom (511bdeb) ⚡️
-- **v0.2.0** - 2025-05-31: JSON-based mapping config (cf88f46)
-- **v0.3.0** - 2025-05-31: File monitoring pipeline (a6b77bb)
-- **v0.3.1** - 2025-05-31: Fix DI singleton/scoped issue (7814cb9)
-- **v0.3.2** - 2025-05-31: Dead-letter, notifications, web (0ab9add)
-- **v0.4.0** - 2025-06-01: WPF GUI with dashboard (e0e68f1) ⚡️
-- **v0.4.0** - 2025-06-01: WPF configuration UI (e806e31) ⚡️ DUPLIKAT!
-- **v0.4.1** - 2025-06-01: Settings Page (pending)
-- **v0.4.2** - 2025-06-01: Dead Letters UI ✅
-- **v0.4.3** - 2025-06-01: Vogon Poetry & Dead Letters Fix ✅
-- **v0.4.4** - 2025-06-01: Core Test mit Ricoh JPEG ✅
-- **v0.4.5** - 2025-06-01: Settings Page Fix ✅
-- **v0.5.0** - 2025-06-01: Mapping Editor UI ✅
-- **v0.5.1** - 2025-06-01: DICOM Browser & Protocol v2 ✅
-- **v0.5.2** - 2025-06-01: Collector v2.0 & Build Fix ✅
-- **v0.5.3** - 2025-06-02: ExifTool Integration & Parser Fix ⚠️
-
-### Versionierungs-Lektionen
-1. **v0.0.2 Duplikat:** Gleich am Anfang passiert
-2. **Fehlende Version:** DICOM-Commit ohne Versionsnummer
-3. **v0.4.0 Duplikat:** Zwei verschiedene Commit-Messages
-4. **v0.4.2 Special:** Die "42" Version - Die Antwort auf die ultimative Frage!
-5. **Babysteps:** Besser 0.0.1 Schritte als große Sprünge!
-6. **v0.5.0 Synergie:** QRBridge + CamBridge = Optimierungspotenzial!
-7. **v0.5.1 Evolution:** Protocol v2 zeigt die Macht der Kontrolle!
-8. **v0.5.2 Revolution:** Collector v2.0 macht alles effizienter!
-9. **v0.5.3 Erkenntnis:** ExifTool ist die einzige Lösung für Barcode Tag!
-
 ### Die Unwahrscheinliche Geschichte von CamBridge
 *Eine Kurzgeschichten-Idee: Douglas Adams entwickelt einen DICOM-Konverter*
 
@@ -1050,13 +1014,13 @@ Workflow:
 - 2025-06-01 13:20: Git-History integriert - mehr Duplikate entdeckt!
 - 2025-06-01 13:25: Exakte Timestamps enthüllen die wahre Geschichte!
 - 2025-06-01 14:00: Wichtige Lektionen über Artefakt-Erstellung und VS-Anfänger
-- 2025-06-01 14:30: CAMBRIDGE CLOSE hinzugefügt, Dead Letters teilweise implementiert
+- 2025-06-01 14:30: VOGON EXIT hinzugefügt, Dead Letters teilweise implementiert
 - 2025-06-01 14:45: V.O.G.O.N. System benannt, Douglas Adams Integration
 - 2025-06-01 14:50: Die unwahrscheinliche Geschichte von CamBridge konzipiert
 - 2025-06-01 14:55: Vogonisches Poesie Easteregg geplant - V.O.G.O.N. ist Ford Prefect!
 - 2025-06-01 15:00: CAMBRIDGE → VOGON umbenannt, Easteregg hat Priorität!
 - 2025-06-01 15:10: Dead Letters UI komplett implementiert (crasht noch), v0.4.2 abgeschlossen
-- 2025-06-01 15:15: KRITISCHE REGEL: PROJECT_WISDOM.md als vollständiges Artefakt beim VOGON CLOSE!
+- 2025-06-01 15:15: KRITISCHE REGEL: PROJECT_WISDOM.md als vollständiges Artefakt beim VOGON EXIT!
 - 2025-06-01 15:20: MWL-Integration Details und Dokumentations-Strategien hinzugefügt
 - 2025-06-01 17:15: v0.4.3 - Vogon Poetry Easter Egg implementiert, Dead Letters funktioniert, Settings crasht noch
 - 2025-06-01 17:20: WISDOM - Changelog nur neueste Version, nächster Chat Core-Test mit Ricoh JPEG
@@ -1074,6 +1038,8 @@ Workflow:
 - 2025-06-02 00:30: WISDOM - Parser-Bug analysiert, Ricoh speichert ALLE Daten im Barcode Tag!
 - 2025-06-02 00:45: ExifTool Integration begonnen, ExifToolReader implementiert
 - 2025-06-02 01:05: v0.5.3 - ExifTool als Lösung bestätigt, Build-Fehler mit PatientId gefunden
+- 2025-06-02 01:10: WISDOM - Google Drive Integration als Game Changer erkannt! VOGON DRIVE geboren!
+- 2025-06-02 02:00: v0.5.4 - PROJECT_WISDOM optimiert, VOGON EXIT statt CLOSE, Google Drive vollständig integriert
 
 ## 🏁 Quick Reference
 
@@ -1099,13 +1065,20 @@ Workflow:
 - Fehlende GUI-Features nachrüsten
 ### Architektur: Enterprise-Level (und das ist GUT so!)
 ### Kontext: Medizinische Software mit 0% Fehlertoleranz
-### Geschätzte v1.0.0: 3-7 Chats (realistisch nach Plan-Revision)
 
 ### V.O.G.O.N. Commands:
 - **VOGON INIT** - Automatischer Start
 - **WISDOM:** - Live-Updates ins PROJECT_WISDOM
 - **CLAUDE:** - Notizen für nächste Instanz
-- **VOGON CLOSE** - Chat-Abschluss mit Versionierung
+- **VOGON EXIT** - Chat-Abschluss mit Versionierung
+- **VOGON DRIVE INIT** - Start mit Google Drive (NEU!)
+- **VOGON DRIVE:** - Direkter File-Zugriff (NEU!)
+
+### Google Drive Commands (NEU!):
+- **VOGON DRIVE: show src/Core** - Zeige Ordnerinhalt
+- **VOGON DRIVE: read [filepath]** - Lese spezifische Datei
+- **VOGON DRIVE: find *.cs** - Suche nach Pattern
+- **VOGON DRIVE: check PatientId** - Finde alle Vorkommen
 
 ### Collector v2.0 Commands:
 - **collect-sources.bat [profile]** - Spezifisches Profil

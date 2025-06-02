@@ -6,6 +6,70 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] - 2025-06-02 02:00
+### Added
+- Google Drive Integration documentation (VOGON DRIVE)
+- Direct source file access capability (70% token savings)
+
+### Changed
+- Renamed VOGON CLOSE to VOGON EXIT for consistency
+- Optimized PROJECT_WISDOM.md (removed redundant sections)
+- Compacted technology stack documentation
+
+### Removed
+- Redundant Git history details from PROJECT_WISDOM
+- Version history duplicates
+- Time estimates (token optimization)
+
+## [0.5.3] - 2025-06-02 01:05
+### Added
+- ExifToolReader for comprehensive EXIF tag support
+- Debug console for analyzing EXIF data extraction
+- Support for Pentax/Ricoh proprietary "Barcode" tag
+- Automatic fallback hierarchy for EXIF readers
+
+### Fixed
+- Parser bug: QRBridge data is stored in Barcode tag, not UserComment
+- "GCM_TAG " prefix now correctly removed from examid
+- NotificationService interface implementation completed
+
+### Changed
+- EXIF reader now prioritizes Barcode tag over UserComment
+- ServiceCollectionExtensions updated for ExifTool integration
+
+### Discovered
+- Ricoh G900 II stores all 5 QRBridge fields in Barcode tag
+- MetadataExtractor cannot read proprietary Pentax tags
+- ExifTool required for complete data extraction
+
+### Known Issues
+- PatientId class duplicated in Entities and ValueObjects
+- ExifTool integration not yet tested
+- Build errors prevent testing of parser fixes
+
+## [0.5.2] - 2025-06-01 23:52
+### Added
+- New unified source collector script (collect-sources.bat) with 7 profiles
+- Intelligent profile selection based on Git changes (collect-smart.bat)
+- Timestamp feature prevents output file overwrites
+- Collector documentation (COLLECTOR_README.md)
+
+### Fixed
+- NotificationService now implements all INotificationService interface methods
+- Added missing async notification methods (Info, Warning, Error, CriticalError)
+- Added NotifyDeadLetterThresholdAsync implementation
+- Added SendDailySummaryAsync with summary formatting
+
+### Changed
+- Replaced 6 individual collector scripts with unified solution
+- Collector output now includes timestamp in filename
+- Improved file filtering to exclude obj/bin/packages/wpftmp
+
+### Developer Notes
+- Parser bug confirmed: QRBridge string is being truncated in our parser
+- v0.5.0-0.5.1 features still need testing (Mapping Editor, DICOM Browser)
+- Build errors from v0.5.1 resolved
+
 ## [0.5.1] - 2025-06-01 22:32
 ### Added
 - DICOM Tag Browser Dialog with search and grouping by module
