@@ -107,23 +107,25 @@
                                 Orientation="Horizontal"
                                 VerticalAlignment="Top">
                         <Button ToolTip="Move Up"
-                                Command="{Binding DataContext.MoveRuleUpCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                Margin="0,0,4,0"
-                                Width="32"
-                                Height="32">
-                            <ui:SymbolIcon Symbol="Up" Width="16" Height="16"/>
+        Command="{Binding DataContext.MoveRuleUpCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+        Margin="0,0,4,0"
+        Width="32"
+        Height="32">
+                            <TextBlock Text="▲" FontSize="12"/>
                         </Button>
+
                         <Button ToolTip="Move Down"
-                                Command="{Binding DataContext.MoveRuleDownCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                Margin="0,0,4,0"
-                                Width="32"
-                                Height="32">
-                            <ui:SymbolIcon Symbol="Down" Width="16" Height="16"/>
+        Command="{Binding DataContext.MoveRuleDownCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+        Margin="0,0,4,0"
+        Width="32"
+        Height="32">
+                            <TextBlock Text="▼" FontSize="12"/>
                         </Button>
+
                         <Button ToolTip="Remove"
-                                Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                Width="32"
-                                Height="32">
+        Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+        Width="32"
+        Height="32">
                             <ui:SymbolIcon Symbol="Delete" Width="16" Height="16"/>
                         </Button>
                     </StackPanel>

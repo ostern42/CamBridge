@@ -18,6 +18,8 @@ namespace CamBridge.Config.Services
             _pages["ServiceControl"] = typeof(ServiceControlPage);
             _pages["DeadLetters"] = typeof(DeadLettersPage);
             _pages["Settings"] = typeof(SettingsPage);
+            _pages["MappingEditor"] = typeof(MappingEditorPage);  // FIXED: Added missing registration!
+            _pages["About"] = typeof(AboutPage);                    // ADDED: Also register AboutPage
         }
 
         public bool CanGoBack => _frame?.CanGoBack ?? false;

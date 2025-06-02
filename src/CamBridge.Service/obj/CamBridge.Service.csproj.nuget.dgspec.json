@@ -5,7 +5,7 @@
   },
   "projects": {
     "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Core\\CamBridge.Core.csproj": {
-      "version": "1.0.0",
+      "version": "0.5.13",
       "restore": {
         "projectUniqueName": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Core\\CamBridge.Core.csproj",
         "projectName": "CamBridge.Core",
@@ -71,7 +71,7 @@
       }
     },
     "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Infrastructure\\CamBridge.Infrastructure.csproj": {
-      "version": "1.0.0",
+      "version": "0.5.13",
       "restore": {
         "projectUniqueName": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Infrastructure\\CamBridge.Infrastructure.csproj",
         "projectName": "CamBridge.Infrastructure",
@@ -171,7 +171,7 @@
       }
     },
     "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Service\\CamBridge.Service.csproj": {
-      "version": "1.0.0",
+      "version": "0.5.13",
       "restore": {
         "projectUniqueName": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Service\\CamBridge.Service.csproj",
         "projectName": "CamBridge.Service",

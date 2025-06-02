@@ -6,6 +6,31 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.12] - 2025-06-02 22:50
+### Fixed
+- Navigation: MappingEditor und AboutPage in NavigationService registriert
+- DataContext wird jetzt korrekt über DI für MappingEditorViewModel gesetzt
+- XAML Parse-Fehler durch ersetzen von Symbol="Up/Down" mit Unicode-Pfeilen behoben
+- Build-Fehler durch entfernen von MockConfigurationService Referenzen gefixt
+
+### Changed
+- MappingEditor Buttons verwenden jetzt ▲▼ statt SymbolIcons für bessere Kompatibilität
+- PreviewInputChanged Methodenaufruf durch Property-Setter ersetzt
+
+### Tested
+- ✅ Mapping Editor öffnet sich ohne Crash
+- ✅ Templates (Ricoh G900, Minimal, Full) funktionieren
+- ✅ Drag & Drop von Source Fields funktioniert
+- ✅ Add Rule erstellt neue Mappings
+- ✅ Import/Export/Save Dialoge öffnen sich
+- ✅ Modified-Flag wird bei Save zurückgesetzt
+- ⚠️ Rule Properties Panel reagiert noch nicht (Fix in v0.5.13)
+
+### Developer Notes
+- Navigation-Probleme immer zuerst in NavigationService Dictionary prüfen
+- ModernWpfUI hat begrenzte Symbol-Namen - Unicode oft sicherer
+- "Das Offensichtliche zuerst" - 1-Zeilen-Fix löste komplexes Problem
+
 ## [0.5.11] - 2025-06-02 20:33
 ### Fixed
 - Mapping Editor crash resolved - duplicate converter registration removed
