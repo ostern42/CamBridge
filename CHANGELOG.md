@@ -6,24 +6,100 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.6] - 2025-06-02 15:00
-### Fixed
-- NotificationService.cs: Fixed MinimumEmailLevel type conversion (string to enum)
-- MappingEditorViewModel.cs: Added NullLoggerFactory for MappingConfigurationLoader
-- SettingsViewModel.cs: Changed MinimumEmailLevel from string to NotificationLevel enum
-- ConfigurationService.cs: Fixed MinimumEmailLevel initialization with enum value
-- MappingEditorPage.xaml.cs: Changed UpdatePreview method call to public
-- ValueConverters.cs: Added missing GreaterThanZeroConverter and ZeroToVisibilityConverter
+## [0.5.8] - 2025-06-02 17:25
+
+### Added
+- Install Service button in Service Control GUI
+- Uninstall Service button in Quick Actions
+- Service installation/uninstall functionality with sc.exe
+- Improved error messages with detailed path information
+- Debug output for service executable discovery
+- Parser Debug Console with interactive file selection
+- Windows Forms file dialog support for Parser Debug
+- Direct ExifTool process execution (no dependency on ExifToolReader)
 
 ### Changed
-- Version.props updated from 0.5.4 to 0.5.6 (sync with CHANGELOG)
-- All build errors resolved - successful compilation achieved
+- ServiceManager now searches x64 build paths correctly
+- Event Viewer and Services buttons use ProcessStartInfo with UseShellExecute
+- Parser Debug Console supports nullable return types
+- Improved service path discovery with multiple fallback locations
 
-### Technical Notes
-- Build now completes with only harmless warnings (nullable refs, Windows-specific APIs)
-- Ready for ExifTool integration testing
-- All 5 QRBridge fields verification pending
-- VOGON POETRY CORE remains initialized but unimplemented
+### Fixed
+- Service.exe is now correctly built as executable (was DLL)
+- Event Viewer "working directory cannot be null" error
+- Parser Debug Console no longer requires command line argument
+- Async method warnings in Parser Debug
+
+### Discovered
+- 52+ features implemented but 0% tested
+- Mapping Editor crashes on open (not fixed yet)
+- Service installation still fails despite exe existing
+- Complete feature testing backlog documented
+
+### Development Notes
+- NEW PHILOSOPHY: One feature = One version = Immediate testing
+- Estimated 30+ micro-versions needed to reach stable v0.6.0
+- Focus on fixing blocking issues before adding ANY new features
+- Next priority: Fix service installation path problem in v0.5.9
+
+## [0.5.7] - 2025-06-02 16:52
+
+### Added
+- Service Control GUI Install Service button
+- Service Control GUI Uninstall Service button in Quick Actions
+- ServiceManager implementation with Install/Uninstall methods
+- IServiceManager interface extended with installation methods
+- Parser Debug Console file dialog support (no more command line required)
+- Parser Debug Console sample file search functionality
+- ServiceManager searches multiple locations including x64 paths
+
+### Changed
+- Parser Debug Console now shows interactive menu when no file provided
+- ServiceControlViewModel includes InstallServiceAsync and UninstallServiceAsync commands
+- ServiceControlPage.xaml improved layout with better messaging
+- Service installation uses sc.exe for Windows service management
+
+### Fixed
+- Build errors related to duplicate IServiceManager definitions
+- Parser Debug Console nullable reference warnings
+- ParserDebug.csproj now targets net8.0-windows with UseWindowsForms
+
+### Known Issues
+- Service installation fails with "not a valid application for this OS platform"
+- Mapping Editor crashes when opening
+- Event Viewer button shows "working directory cannot be null" error
+- No features have been tested end-to-end yet
+
+### Development Notes
+- Discovered Service.exe was being built as DLL instead of EXE
+- Found 52+ implemented features with 0% test coverage
+- Decision made to switch to micro-version development approach
+
+## [0.5.6] - 2025-06-02 15:42
+
+### Added
+- ParserDebug tool ExifTool integration for direct testing
+- Interactive menu system in ParserDebug console
+- Hex dump visualization for EXIF data analysis
+
+### Fixed
+- Build errors resolved (PatientId false alarm - no duplicate)
+- ParserDebug namespace conflicts (MetadataExtractor vs System.IO)
+- ParserDebug now properly shows UserComment raw bytes
+
+### Verified
+- ExifTool successfully reads Barcode tag with ALL 5 QRBridge fields
+- Ricoh G900 II stores data in two locations:
+  - UserComment: 3 fields only (with GCM_TAG prefix)
+  - Barcode: All 5 fields complete (ExifTool required)
+- Encoding issue confirmed: Umlauts in Barcode tag (Latin-1)
+
+### Known Issues
+- Service Control GUI missing "Install Service" button
+- Debug Console path resolution error
+- Windows Service never tested
+- ExifTool integration in main app untested
+
 
 ## [0.5.5] - 2025-06-02 10:42
 ### Added

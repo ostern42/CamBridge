@@ -5,44 +5,54 @@ using System.Threading.Tasks;
 namespace CamBridge.Config.Services
 {
     /// <summary>
-    /// Interface for Windows Service management
+    /// Interface for managing the CamBridge Windows Service
     /// </summary>
     public interface IServiceManager
     {
         /// <summary>
-        /// Checks if the CamBridge Service is installed
+        /// Checks if the application is running with administrator privileges
+        /// </summary>
+        bool IsRunningAsAdministrator();
+
+        /// <summary>
+        /// Checks if the CamBridge service is installed
         /// </summary>
         Task<bool> IsServiceInstalledAsync();
 
         /// <summary>
-        /// Gets the current service status
+        /// Gets the current status of the CamBridge service
         /// </summary>
         Task<ServiceStatus> GetServiceStatusAsync();
 
         /// <summary>
-        /// Starts the CamBridge Service
-        /// </summary>
-        Task<bool> StartServiceAsync();
-
-        /// <summary>
-        /// Stops the CamBridge Service
-        /// </summary>
-        Task<bool> StopServiceAsync();
-
-        /// <summary>
-        /// Restarts the CamBridge Service
-        /// </summary>
-        Task<bool> RestartServiceAsync();
-
-        /// <summary>
-        /// Gets the service start time if running
+        /// Gets the start time of the service if it's running
         /// </summary>
         Task<DateTime?> GetServiceStartTimeAsync();
 
         /// <summary>
-        /// Checks if the application is running with administrator privileges
+        /// Installs the CamBridge service
         /// </summary>
-        bool IsRunningAsAdministrator();
+        Task<bool> InstallServiceAsync();
+
+        /// <summary>
+        /// Uninstalls the CamBridge service
+        /// </summary>
+        Task<bool> UninstallServiceAsync();
+
+        /// <summary>
+        /// Starts the CamBridge service
+        /// </summary>
+        Task<bool> StartServiceAsync();
+
+        /// <summary>
+        /// Stops the CamBridge service
+        /// </summary>
+        Task<bool> StopServiceAsync();
+
+        /// <summary>
+        /// Restarts the CamBridge service
+        /// </summary>
+        Task<bool> RestartServiceAsync();
     }
 
     /// <summary>
@@ -50,10 +60,10 @@ namespace CamBridge.Config.Services
     /// </summary>
     public enum ServiceStatus
     {
+        Unknown,
+        Running,
         Stopped,
         Starting,
-        Running,
-        Stopping,
-        Unknown
+        Stopping
     }
 }

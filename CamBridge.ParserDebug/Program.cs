@@ -1,7 +1,10 @@
+// CamBridge.ParserDebug/Program.cs
 using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Diagnostics;
 using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 
@@ -12,29 +15,62 @@ namespace CamBridge.TestConsole
     /// </summary>
     class ParserDebugConsole
     {
+        [STAThread]
         static async Task Main(string[] args)
         {
-            Console.WriteLine("=== CamBridge Parser Debug Console ===\n");
+            Console.WriteLine("=== CamBridge Parser Debug Console ===");
+            Console.WriteLine($"Version: 0.5.7");
+            Console.WriteLine($"© 2025 Claude's Improbably Reliable Software Solutions\n");
 
-            if (args.Length == 0)
+            string? filePath = null;
+
+            // Check if file was provided as argument
+            if (args.Length > 0)
             {
-                Console.WriteLine("Usage: ParserDebugConsole <jpeg-file-path>");
-                Console.WriteLine("\nThis tool will:");
-                Console.WriteLine("1. Read EXIF data using multiple methods");
-                Console.WriteLine("2. Show raw UserComment bytes");
-                Console.WriteLine("3. Try different decodings");
-                Console.WriteLine("4. Display parsed QRBridge fields");
+                filePath = args[0];
+            }
+            else
+            {
+                // No argument provided, show options
+                Console.WriteLine("No file specified. Choose an option:");
+                Console.WriteLine("1. Browse for a JPEG file");
+                Console.WriteLine("2. Use sample file (if available)");
+                Console.WriteLine("3. Exit");
+                Console.Write("\nChoice (1-3): ");
+
+                var choice = Console.ReadLine();
+
+                switch (choice)
+                {
+                    case "1":
+                        filePath = BrowseForFile();
+                        break;
+                    case "2":
+                        filePath = FindSampleFile();
+                        break;
+                    case "3":
+                        return;
+                    default:
+                        Console.WriteLine("Invalid choice. Exiting...");
+                        return;
+                }
+            }
+
+            if (string.IsNullOrEmpty(filePath))
+            {
+                Console.WriteLine("No file selected. Exiting...");
                 return;
             }
 
-            var filePath = args[0];
             if (!File.Exists(filePath))
             {
                 Console.WriteLine($"Error: File not found: {filePath}");
+                Console.WriteLine("\nPress any key to exit...");
+                Console.ReadKey();
                 return;
             }
 
-            Console.WriteLine($"Analyzing: {filePath}\n");
+            Console.WriteLine($"\nAnalyzing: {filePath}\n");
 
             try
             {
@@ -42,12 +78,16 @@ namespace CamBridge.TestConsole
                 Console.WriteLine("=== Method 1: MetadataExtractor ===");
                 await AnalyzeWithMetadataExtractor(filePath);
 
-                // Method 2: Raw EXIF reading
-                Console.WriteLine("\n=== Method 2: Raw EXIF Data ===");
+                // Method 2: Using ExifTool (if available)
+                Console.WriteLine("\n=== Method 2: ExifTool Analysis ===");
+                await AnalyzeWithExifTool(filePath);
+
+                // Method 3: Raw EXIF reading
+                Console.WriteLine("\n=== Method 3: Raw EXIF Data ===");
                 await AnalyzeRawExifData(filePath);
 
-                // Method 3: Direct UserComment extraction
-                Console.WriteLine("\n=== Method 3: Direct UserComment ===");
+                // Method 4: Direct UserComment extraction
+                Console.WriteLine("\n=== Method 4: Direct UserComment ===");
                 await ExtractUserCommentDirectly(filePath);
             }
             catch (Exception ex)
@@ -58,6 +98,175 @@ namespace CamBridge.TestConsole
 
             Console.WriteLine("\nPress any key to exit...");
             Console.ReadKey();
+        }
+
+        static string? BrowseForFile()
+        {
+            using var dialog = new OpenFileDialog
+            {
+                Title = "Select a JPEG file from Ricoh G900 II",
+                Filter = "JPEG files (*.jpg;*.jpeg)|*.jpg;*.jpeg|All files (*.*)|*.*",
+                FilterIndex = 1,
+                RestoreDirectory = true
+            };
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                return dialog.FileName;
+            }
+
+            return null;
+        }
+
+        static string? FindSampleFile()
+        {
+            // Look for sample files in common locations
+            var possiblePaths = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Samples", "ricoh_sample.jpg"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "Samples", "ricoh_sample.jpg"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ricoh_sample.jpg"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "ricoh_sample.jpg")
+            };
+
+            foreach (var path in possiblePaths)
+            {
+                if (File.Exists(path))
+                {
+                    Console.WriteLine($"Found sample file: {path}");
+                    return path;
+                }
+            }
+
+            Console.WriteLine("No sample file found in standard locations.");
+            return null;
+        }
+
+        static async Task AnalyzeWithExifTool(string filePath)
+        {
+            try
+            {
+                // Try to use ExifTool directly
+                var exifToolPath = FindExifTool();
+                if (string.IsNullOrEmpty(exifToolPath))
+                {
+                    Console.WriteLine("ExifTool not found. Skipping ExifTool analysis.");
+                    return;
+                }
+
+                Console.WriteLine($"Found ExifTool at: {exifToolPath}");
+
+                // Run ExifTool directly
+                var processInfo = new ProcessStartInfo
+                {
+                    FileName = exifToolPath,
+                    Arguments = $"-j \"{filePath}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(processInfo);
+                if (process == null)
+                {
+                    Console.WriteLine("Failed to start ExifTool process");
+                    return;
+                }
+
+                var output = await process.StandardOutput.ReadToEndAsync();
+                var error = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (!string.IsNullOrEmpty(error))
+                {
+                    Console.WriteLine($"ExifTool error: {error}");
+                }
+
+                if (!string.IsNullOrEmpty(output))
+                {
+                    Console.WriteLine("\n=== ExifTool Raw Output ===");
+
+                    // Parse JSON output manually
+                    try
+                    {
+                        // Simple JSON parsing to find Barcode and UserComment
+                        var lines = output.Split('\n');
+                        foreach (var line in lines)
+                        {
+                            if (line.Contains("Barcode", StringComparison.OrdinalIgnoreCase) ||
+                                line.Contains("UserComment", StringComparison.OrdinalIgnoreCase) ||
+                                (line.Contains("\"") && line.Contains("|")))
+                            {
+                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                Console.WriteLine(line.Trim());
+                                Console.ResetColor();
+
+                                // Extract value if it contains pipe
+                                var colonIndex = line.IndexOf(':');
+                                if (colonIndex > 0 && colonIndex < line.Length - 1)
+                                {
+                                    var value = line.Substring(colonIndex + 1).Trim().Trim('"', ',');
+                                    if (value.Contains('|'))
+                                    {
+                                        Console.WriteLine("\n  Parsing as QRBridge data:");
+                                        ParseAndDisplayPipeData(value);
+                                    }
+                                }
+                            }
+                            else if (line.Trim().Length > 0 && line.Trim().Length < 100)
+                            {
+                                Console.WriteLine(line.Trim());
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to parse ExifTool output: {ex.Message}");
+                        Console.WriteLine("\nRaw output:");
+                        Console.WriteLine(output);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ExifTool analysis failed: {ex.Message}");
+            }
+        }
+
+        static string? FindExifTool()
+        {
+            var possiblePaths = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "exiftool.exe"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "Tools", "exiftool.exe"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "exiftool.exe"),
+                Path.Combine(Environment.GetEnvironmentVariable("ProgramFiles") ?? "", "ExifTool", "exiftool.exe")
+            };
+
+            foreach (var path in possiblePaths)
+            {
+                if (File.Exists(path))
+                {
+                    return path;
+                }
+            }
+
+            // Try to find in PATH
+            var pathEnv = Environment.GetEnvironmentVariable("PATH");
+            if (!string.IsNullOrEmpty(pathEnv))
+            {
+                foreach (var dir in pathEnv.Split(';'))
+                {
+                    var exifToolPath = Path.Combine(dir, "exiftool.exe");
+                    if (File.Exists(exifToolPath))
+                    {
+                        return exifToolPath;
+                    }
+                }
+            }
+
+            return null;
         }
 
         static async Task AnalyzeWithMetadataExtractor(string filePath)
@@ -175,56 +384,59 @@ namespace CamBridge.TestConsole
 
         static async Task AnalyzeRawExifData(string filePath)
         {
-            using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            using var reader = new BinaryReader(fs);
-
-            // Check JPEG SOI marker
-            if (reader.ReadUInt16() != 0xD8FF) // Note: little-endian
+            await Task.Run(() =>
             {
-                Console.WriteLine("Not a valid JPEG file");
-                return;
-            }
+                using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                using var reader = new BinaryReader(fs);
 
-            // Look for EXIF APP1 segment
-            while (fs.Position < fs.Length - 2)
-            {
-                var marker = ReadBigEndianUInt16(reader);
-
-                if (marker == 0xFFE1) // APP1
+                // Check JPEG SOI marker
+                if (reader.ReadUInt16() != 0xD8FF) // Note: little-endian
                 {
-                    var segmentLength = ReadBigEndianUInt16(reader);
-                    Console.WriteLine($"Found APP1 segment, length: {segmentLength}");
+                    Console.WriteLine("Not a valid JPEG file");
+                    return;
+                }
 
-                    var startPos = fs.Position;
-                    var identifier = reader.ReadBytes(6);
-                    if (Encoding.ASCII.GetString(identifier) == "Exif\0\0")
+                // Look for EXIF APP1 segment
+                while (fs.Position < fs.Length - 2)
+                {
+                    var marker = ReadBigEndianUInt16(reader);
+
+                    if (marker == 0xFFE1) // APP1
                     {
-                        Console.WriteLine("Found EXIF data");
+                        var segmentLength = ReadBigEndianUInt16(reader);
+                        Console.WriteLine($"Found APP1 segment, length: {segmentLength}");
 
-                        // Read some EXIF data to show structure
-                        var tiffHeader = reader.ReadBytes(8);
-                        Console.WriteLine($"TIFF header: {BitConverter.ToString(tiffHeader)}");
+                        var startPos = fs.Position;
+                        var identifier = reader.ReadBytes(6);
+                        if (Encoding.ASCII.GetString(identifier) == "Exif\0\0")
+                        {
+                            Console.WriteLine("Found EXIF data");
 
-                        // Skip to where UserComment might be
-                        // This is just for demonstration
-                        break;
+                            // Read some EXIF data to show structure
+                            var tiffHeader = reader.ReadBytes(8);
+                            Console.WriteLine($"TIFF header: {BitConverter.ToString(tiffHeader)}");
+
+                            // Skip to where UserComment might be
+                            // This is just for demonstration
+                            break;
+                        }
+                        else
+                        {
+                            // Skip rest of segment
+                            fs.Seek(startPos + segmentLength - 8, SeekOrigin.Begin);
+                        }
+                    }
+                    else if ((marker & 0xFF00) == 0xFF00)
+                    {
+                        var segmentLength = ReadBigEndianUInt16(reader);
+                        fs.Seek(segmentLength - 2, SeekOrigin.Current);
                     }
                     else
                     {
-                        // Skip rest of segment
-                        fs.Seek(startPos + segmentLength - 8, SeekOrigin.Begin);
+                        fs.Seek(-1, SeekOrigin.Current);
                     }
                 }
-                else if ((marker & 0xFF00) == 0xFF00)
-                {
-                    var segmentLength = ReadBigEndianUInt16(reader);
-                    fs.Seek(segmentLength - 2, SeekOrigin.Current);
-                }
-                else
-                {
-                    fs.Seek(-1, SeekOrigin.Current);
-                }
-            }
+            });
         }
 
         static async Task ExtractUserCommentDirectly(string filePath)
@@ -322,6 +534,25 @@ namespace CamBridge.TestConsole
                 };
 
                 Console.WriteLine($"  [{i}] {fieldName}: '{part}' (length: {part.Length})");
+            }
+
+            // Show detected encoding issues
+            Console.WriteLine("\n=== Encoding Analysis ===");
+            foreach (var part in parts)
+            {
+                bool hasNonAscii = false;
+                foreach (char c in part)
+                {
+                    if (c > 127)
+                    {
+                        hasNonAscii = true;
+                        Console.WriteLine($"  Non-ASCII character found: '{c}' (code: {(int)c})");
+                    }
+                }
+                if (!hasNonAscii && part.Length > 0)
+                {
+                    Console.WriteLine($"  '{part}' - Pure ASCII");
+                }
             }
         }
 

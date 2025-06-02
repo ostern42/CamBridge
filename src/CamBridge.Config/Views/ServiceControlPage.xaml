@@ -74,6 +74,18 @@
 
                 <!-- Control Buttons -->
                 <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
+                    <!-- Install Service Button (NEW!) -->
+                    <Button Command="{Binding InstallServiceCommand}" 
+                            Visibility="{Binding IsServiceInstalled, 
+                                       Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                            Margin="0,0,8,0" MinWidth="140"
+                            Style="{StaticResource AccentButtonStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Add" Margin="0,0,8,0"/>
+                            <TextBlock Text="Install Service"/>
+                        </StackPanel>
+                    </Button>
+
                     <Button Command="{Binding StartServiceCommand}" 
                             IsEnabled="{Binding CanStart}"
                             Margin="0,0,8,0" MinWidth="120">
@@ -107,11 +119,15 @@
                                Width="24" Height="24"
                                HorizontalAlignment="Right" VerticalAlignment="Center"/>
 
-                <!-- Not Installed Message -->
-                <TextBlock Grid.Row="3" Text="Service is not installed. Please run the installer."
-                          Foreground="Red" Margin="0,16,0,0"
+                <!-- Not Installed Message - jetzt mit besserem Text -->
+                <TextBlock Grid.Row="3" Margin="0,16,0,0"
+                          Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                           Visibility="{Binding IsServiceInstalled, 
-                                     Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                     Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                    <Run Text="The CamBridge Windows Service is not installed. Click"/>
+                    <Run Text="Install Service" FontWeight="SemiBold"/>
+                    <Run Text="above to install it."/>
+                </TextBlock>
             </Grid>
         </Border>
 
@@ -131,10 +147,20 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Command="{Binding OpenEventViewerCommand}">
+                    <Button Command="{Binding OpenEventViewerCommand}" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
                             <ui:SymbolIcon Symbol="Document" Margin="0,0,8,0"/>
                             <TextBlock Text="Event Viewer"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Uninstall Button (NEW!) -->
+                    <Button Command="{Binding UninstallServiceCommand}"
+                            Visibility="{Binding IsServiceInstalled, 
+                                       Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Delete" Margin="0,0,8,0"/>
+                            <TextBlock Text="Uninstall Service"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

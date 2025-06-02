@@ -1,24 +1,30 @@
 // src/CamBridge.Config/Services/ServiceManager.cs
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.Versioning;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace CamBridge.Config.Services
 {
-    [SupportedOSPlatform("windows")]
+    /// <summary>
+    /// Implementation of service management functionality
+    /// </summary>
     public class ServiceManager : IServiceManager
     {
-        private readonly ILogger<ServiceManager> _logger;
-        private const string SERVICE_NAME = "CamBridgeService";
-        private const int TIMEOUT_SECONDS = 30;
+        private const string ServiceName = "CamBridgeService";
+        private const string ServiceDisplayName = "CamBridge Image Processing Service";
+        private const string ServiceDescription = "Monitors folders for JPEG images and converts them to DICOM format.";
 
-        public ServiceManager(ILogger<ServiceManager> logger)
+        public bool IsRunningAsAdministrator()
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
 
         public async Task<bool> IsServiceInstalledAsync()
@@ -27,11 +33,11 @@ namespace CamBridge.Config.Services
             {
                 try
                 {
-                    using var controller = new ServiceController(SERVICE_NAME);
-                    _ = controller.Status; // Will throw if not found
-                    return true;
+                    using var controller = ServiceController.GetServices()
+                        .FirstOrDefault(s => s.ServiceName == ServiceName);
+                    return controller != null;
                 }
-                catch (InvalidOperationException)
+                catch
                 {
                     return false;
                 }
@@ -44,7 +50,9 @@ namespace CamBridge.Config.Services
             {
                 try
                 {
-                    using var controller = new ServiceController(SERVICE_NAME);
+                    using var controller = new ServiceController(ServiceName);
+                    controller.Refresh();
+
                     return controller.Status switch
                     {
                         ServiceControllerStatus.Running => ServiceStatus.Running,
@@ -54,95 +62,11 @@ namespace CamBridge.Config.Services
                         _ => ServiceStatus.Unknown
                     };
                 }
-                catch (Exception ex)
+                catch
                 {
-                    _logger.LogError(ex, "Failed to get service status");
                     return ServiceStatus.Unknown;
                 }
             });
-        }
-
-        public async Task<bool> StartServiceAsync()
-        {
-            if (!IsRunningAsAdministrator())
-            {
-                _logger.LogWarning("Start service requires administrator privileges");
-                return await RunElevatedAsync("start");
-            }
-
-            return await Task.Run(async () =>
-            {
-                try
-                {
-                    using var controller = new ServiceController(SERVICE_NAME);
-
-                    if (controller.Status == ServiceControllerStatus.Running)
-                    {
-                        _logger.LogInformation("Service is already running");
-                        return true;
-                    }
-
-                    controller.Start();
-                    await WaitForStatusAsync(controller, ServiceControllerStatus.Running);
-
-                    _logger.LogInformation("Service started successfully");
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to start service");
-                    return false;
-                }
-            });
-        }
-
-        public async Task<bool> StopServiceAsync()
-        {
-            if (!IsRunningAsAdministrator())
-            {
-                _logger.LogWarning("Stop service requires administrator privileges");
-                return await RunElevatedAsync("stop");
-            }
-
-            return await Task.Run(async () =>
-            {
-                try
-                {
-                    using var controller = new ServiceController(SERVICE_NAME);
-
-                    if (controller.Status == ServiceControllerStatus.Stopped)
-                    {
-                        _logger.LogInformation("Service is already stopped");
-                        return true;
-                    }
-
-                    controller.Stop();
-                    await WaitForStatusAsync(controller, ServiceControllerStatus.Stopped);
-
-                    _logger.LogInformation("Service stopped successfully");
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to stop service");
-                    return false;
-                }
-            });
-        }
-
-        public async Task<bool> RestartServiceAsync()
-        {
-            _logger.LogInformation("Restarting service");
-
-            if (!await StopServiceAsync())
-            {
-                return false;
-            }
-
-            // Wait a moment between stop and start
-            await Task.Delay(1000);
-
-            return await StartServiceAsync();
         }
 
         public async Task<DateTime?> GetServiceStartTimeAsync()
@@ -151,64 +75,279 @@ namespace CamBridge.Config.Services
             {
                 try
                 {
-                    // Get process start time via WMI
-                    using var process = GetServiceProcess();
+                    // Try to get start time from Windows Management
+                    using var process = Process.GetProcessesByName("CamBridge.Service").FirstOrDefault();
                     return process?.StartTime;
                 }
-                catch (Exception ex)
+                catch
                 {
-                    _logger.LogError(ex, "Failed to get service start time");
                     return null;
                 }
             });
         }
 
-        public bool IsRunningAsAdministrator()
+        public async Task<bool> InstallServiceAsync()
         {
-            var identity = WindowsIdentity.GetCurrent();
-            var principal = new WindowsPrincipal(identity);
-            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    // Find the service executable
+                    var serviceExePath = FindServiceExecutable();
+                    if (string.IsNullOrEmpty(serviceExePath))
+                    {
+                        // Log all searched paths for debugging
+                        var searchPaths = GetSearchPaths();
+                        var pathList = string.Join("\n", searchPaths);
+                        throw new FileNotFoundException($"Could not find CamBridge.Service.exe. Searched in:\n{pathList}");
+                    }
+
+                    // Log the found path
+                    Debug.WriteLine($"Found service executable at: {serviceExePath}");
+
+                    // Use sc.exe to install the service
+                    var processInfo = new ProcessStartInfo
+                    {
+                        FileName = "sc.exe",
+                        Arguments = $"create {ServiceName} binPath= \"{serviceExePath}\" DisplayName= \"{ServiceDisplayName}\" start= auto",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        Verb = "runas"
+                    };
+
+                    using var process = Process.Start(processInfo);
+                    process?.WaitForExit();
+
+                    if (process?.ExitCode == 0)
+                    {
+                        // Set service description
+                        var descProcessInfo = new ProcessStartInfo
+                        {
+                            FileName = "sc.exe",
+                            Arguments = $"description {ServiceName} \"{ServiceDescription}\"",
+                            UseShellExecute = false,
+                            CreateNoWindow = true,
+                            Verb = "runas"
+                        };
+
+                        using var descProcess = Process.Start(descProcessInfo);
+                        descProcess?.WaitForExit();
+
+                        // Configure recovery options
+                        ConfigureServiceRecovery();
+
+                        return true;
+                    }
+
+                    return false;
+                }
+                catch
+                {
+                    return false;
+                }
+            });
         }
 
-        private async Task<bool> RunElevatedAsync(string action)
+        public async Task<bool> UninstallServiceAsync()
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    // Use sc.exe to delete the service
+                    var processInfo = new ProcessStartInfo
+                    {
+                        FileName = "sc.exe",
+                        Arguments = $"delete {ServiceName}",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        Verb = "runas"
+                    };
+
+                    using var process = Process.Start(processInfo);
+                    process?.WaitForExit();
+
+                    return process?.ExitCode == 0;
+                }
+                catch
+                {
+                    return false;
+                }
+            });
+        }
+
+        public async Task<bool> StartServiceAsync()
         {
             try
             {
-                var startInfo = new ProcessStartInfo
+                using var controller = new ServiceController(ServiceName);
+
+                if (controller.Status == ServiceControllerStatus.Running)
+                    return true;
+
+                controller.Start();
+                await WaitForServiceStatusAsync(controller, ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+
+                return controller.Status == ServiceControllerStatus.Running;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> StopServiceAsync()
+        {
+            try
+            {
+                using var controller = new ServiceController(ServiceName);
+
+                if (controller.Status == ServiceControllerStatus.Stopped)
+                    return true;
+
+                controller.Stop();
+                await WaitForServiceStatusAsync(controller, ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
+
+                return controller.Status == ServiceControllerStatus.Stopped;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> RestartServiceAsync()
+        {
+            try
+            {
+                // Stop service
+                var stopResult = await StopServiceAsync();
+                if (!stopResult)
+                    return false;
+
+                // Wait a bit before starting
+                await Task.Delay(1000);
+
+                // Start service
+                return await StartServiceAsync();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async Task WaitForServiceStatusAsync(ServiceController controller, ServiceControllerStatus desiredStatus, TimeSpan timeout)
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    controller.WaitForStatus(desiredStatus, timeout);
+                }
+                catch (System.ServiceProcess.TimeoutException)
+                {
+                    // Status change timed out
+                }
+            });
+        }
+
+        private string? FindServiceExecutable()
+        {
+            var possiblePaths = GetSearchPaths();
+
+            foreach (var path in possiblePaths)
+            {
+                var normalizedPath = Path.GetFullPath(path);
+                Debug.WriteLine($"Checking: {normalizedPath}");
+                if (File.Exists(normalizedPath))
+                {
+                    Debug.WriteLine($"Found service at: {normalizedPath}");
+                    return normalizedPath;
+                }
+            }
+
+            return null;
+        }
+
+        private string[] GetSearchPaths()
+        {
+            var paths = new List<string>
+            {
+                // Same directory as config app
+                Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "", "CamBridge.Service.exe"),
+                // Parent directory (if config is in subfolder)
+                Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "", "..", "CamBridge.Service.exe"),
+                // Debug/Release output paths
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "CamBridge.Service.exe"),
+                // Look in common build output directories
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "Debug", "net8.0", "CamBridge.Service.exe"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "Release", "net8.0", "CamBridge.Service.exe"),
+                // x64 paths (Service is built for x64)
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "x64", "Debug", "net8.0", "win-x64", "CamBridge.Service.exe"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "x64", "Release", "net8.0", "win-x64", "CamBridge.Service.exe"),
+                // Published output
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "publish", "CamBridge.Service.exe")
+            };
+
+            // If not found in standard locations, try to find it in the solution
+            var solutionDir = FindSolutionDirectory();
+            if (!string.IsNullOrEmpty(solutionDir))
+            {
+                paths.AddRange(new[]
+                {
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "Debug", "net8.0", "CamBridge.Service.exe"),
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "Release", "net8.0", "CamBridge.Service.exe"),
+                    // x64 paths
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "x64", "Debug", "net8.0", "win-x64", "CamBridge.Service.exe"),
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "x64", "Release", "net8.0", "win-x64", "CamBridge.Service.exe")
+                });
+            }
+
+            return paths.ToArray();
+        }
+
+        private string? FindSolutionDirectory()
+        {
+            var directory = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+
+            while (directory != null)
+            {
+                if (directory.GetFiles("CamBridge.sln").Any())
+                {
+                    return directory.FullName;
+                }
+                directory = directory.Parent;
+            }
+
+            return null;
+        }
+
+        private void ConfigureServiceRecovery()
+        {
+            try
+            {
+                // Configure service to restart on failure
+                var processInfo = new ProcessStartInfo
                 {
                     FileName = "sc.exe",
-                    Arguments = $"{action} {SERVICE_NAME}",
-                    UseShellExecute = true,
-                    Verb = "runas", // Run as administrator
-                    CreateNoWindow = true
+                    Arguments = $"failure {ServiceName} reset= 86400 actions= restart/60000/restart/60000/restart/60000",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    Verb = "runas"
                 };
 
-                var process = Process.Start(startInfo);
-                if (process != null)
-                {
-                    await process.WaitForExitAsync();
-                    return process.ExitCode == 0;
-                }
-
-                return false;
+                using var process = Process.Start(processInfo);
+                process?.WaitForExit();
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Failed to run elevated command");
-                return false;
+                // Recovery configuration is optional, so we don't fail the installation
             }
-        }
-
-        private async Task WaitForStatusAsync(ServiceController controller, ServiceControllerStatus desiredStatus)
-        {
-            var timeout = TimeSpan.FromSeconds(TIMEOUT_SECONDS);
-            await Task.Run(() => controller.WaitForStatus(desiredStatus, timeout));
-        }
-
-        private Process? GetServiceProcess()
-        {
-            var processes = Process.GetProcessesByName("CamBridge.Service");
-            return processes.Length > 0 ? processes[0] : null;
         }
     }
 }

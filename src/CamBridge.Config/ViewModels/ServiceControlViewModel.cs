@@ -110,6 +110,174 @@ namespace CamBridge.Config.ViewModels
         }
 
         [RelayCommand]
+        private async Task InstallServiceAsync()
+        {
+            if (RequiresElevation)
+            {
+                var result = MessageBox.Show(
+                    "Installing the service requires administrator privileges. Restart the application as administrator?",
+                    "Administrator Required",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    RestartAsAdministrator();
+                }
+                return;
+            }
+
+            IsLoading = true;
+
+            try
+            {
+                StatusText = "Installing service...";
+                StatusColor = "Orange";
+
+                var success = await _serviceManager.InstallServiceAsync();
+
+                if (success)
+                {
+                    StatusText = "Service installed successfully";
+                    StatusColor = "Green";
+
+                    // Wait a moment for the service to be fully registered
+                    await Task.Delay(1000);
+
+                    // Refresh status to update UI
+                    await RefreshStatusAsync();
+
+                    MessageBox.Show(
+                        "CamBridge Service has been installed successfully!\n\n" +
+                        "You can now start the service using the Start button.",
+                        "Installation Complete",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                else
+                {
+                    StatusText = "Failed to install service";
+                    StatusColor = "Red";
+
+                    MessageBox.Show(
+                        "Failed to install the CamBridge Service.\n\n" +
+                        "Please check the Event Viewer for more details.",
+                        "Installation Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText = "Installation error";
+                StatusColor = "Red";
+
+                MessageBox.Show(
+                    $"An error occurred while installing the service:\n\n{ex.Message}",
+                    "Installation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        [RelayCommand]
+        private async Task UninstallServiceAsync()
+        {
+            if (RequiresElevation)
+            {
+                var result = MessageBox.Show(
+                    "Uninstalling the service requires administrator privileges. Restart the application as administrator?",
+                    "Administrator Required",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    RestartAsAdministrator();
+                }
+                return;
+            }
+
+            var confirmResult = MessageBox.Show(
+                "Are you sure you want to uninstall the CamBridge Service?\n\n" +
+                "This will permanently remove the service from your system.",
+                "Confirm Uninstall",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirmResult != MessageBoxResult.Yes)
+                return;
+
+            IsLoading = true;
+
+            try
+            {
+                // Stop service first if running
+                if (ServiceStatus == ServiceStatus.Running)
+                {
+                    StatusText = "Stopping service before uninstall...";
+                    StatusColor = "Orange";
+                    await _serviceManager.StopServiceAsync();
+                    await Task.Delay(2000); // Wait for service to stop
+                }
+
+                StatusText = "Uninstalling service...";
+                StatusColor = "Orange";
+
+                var success = await _serviceManager.UninstallServiceAsync();
+
+                if (success)
+                {
+                    StatusText = "Service uninstalled";
+                    StatusColor = "Gray";
+
+                    // Wait a moment for the service to be fully removed
+                    await Task.Delay(1000);
+
+                    // Refresh status to update UI
+                    await RefreshStatusAsync();
+
+                    MessageBox.Show(
+                        "CamBridge Service has been uninstalled successfully.",
+                        "Uninstall Complete",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                else
+                {
+                    StatusText = "Failed to uninstall service";
+                    StatusColor = "Red";
+
+                    MessageBox.Show(
+                        "Failed to uninstall the CamBridge Service.\n\n" +
+                        "Please check the Event Viewer for more details.",
+                        "Uninstall Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText = "Uninstall error";
+                StatusColor = "Red";
+
+                MessageBox.Show(
+                    $"An error occurred while uninstalling the service:\n\n{ex.Message}",
+                    "Uninstall Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        [RelayCommand]
         private async Task StartServiceAsync()
         {
             if (RequiresElevation)
@@ -264,7 +432,12 @@ namespace CamBridge.Config.ViewModels
         {
             try
             {
-                System.Diagnostics.Process.Start("services.msc");
+                var processInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "services.msc",
+                    UseShellExecute = true
+                };
+                System.Diagnostics.Process.Start(processInfo);
             }
             catch (Exception ex)
             {
@@ -278,7 +451,12 @@ namespace CamBridge.Config.ViewModels
         {
             try
             {
-                System.Diagnostics.Process.Start("eventvwr.msc");
+                var processInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "eventvwr.msc",
+                    UseShellExecute = true
+                };
+                System.Diagnostics.Process.Start(processInfo);
             }
             catch (Exception ex)
             {
