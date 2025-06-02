@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-02, 23:12 Uhr  
+**Letzte Aktualisierung:** 2025-06-03, 00:30 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -86,28 +86,35 @@ Wenn Sie "VOGON EXIT" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-🔧 v0.5.13 - Mapping Editor 100% funktionsfähig!
+🔧 v0.5.16 - GCM_TAG Problem an der WURZEL packen!
 
 STATUS:
-✅ Selection Binding gefixt (ItemsControl → ListBox)
-✅ Mapping Editor komplett funktional
-✅ 7/52 Features getestet (13.5%)
-📝 Nutzer möchte bald End-to-End Test (JPEG→DICOM)
+✅ Watch Folder funktioniert
+✅ JPEG wird erkannt & verarbeitet
+✅ ExifTool manuell getestet
+❌ GCM_TAG wird irgendwo tief im Parser hinzugefügt
+❌ ExifToolReader nicht richtig implementiert
+❌ DICOM Creation scheitert an Validation
 
-NÄCHSTES ZIEL: v0.5.14 - Watch Folder Basic
-1. Ein Folder zur Watch List hinzufügen
-2. FileSystemWatcher aktivieren
-3. "File detected" Log ausgeben
+KRITISCHE ERKENNTNIS:
+Das GCM_TAG Problem ist KEIN Tag-Problem!
+Es steckt tief in der Parser-Interpretation.
+Wir haben nur Workarounds gebaut statt die Wurzel zu finden.
 
-WICHTIG: Überlegen ob wir erst JPEG→DICOM testen sollten
-bevor wir weitere Features implementieren?
+ANALYSE-AUFTRAG für v0.6.0:
+1. ExifReader.cs - ParseQRBridgeData() analysieren
+2. RicohExifReader.cs - Warum existiert der?
+3. ExifToolReader.cs - Ist der überhaupt fertig?
+4. WO wird "GCM_TAG" hinzugefügt?
 
-GitHub URLs für Watch Folder:
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/FolderWatcherService.cs
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/ViewModels/SettingsViewModel.cs
+ENTSCHEIDUNG: Lieber Parser neu schreiben als patchen!
 
-Fortschritt: 7/52 Features (13.5%)
-Mapping versteht Nutzer noch nicht ganz - bei DICOM Test erklären!
+GitHub URLs für Analyse:
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/ExifReader.cs
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/RicohExifReader.cs
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/ExifToolReader.cs
+
+Keine Patches mehr - zur Wurzel gehen!
 ```
 
 ## 🎯 Projekt-Identität
@@ -311,76 +318,150 @@ GitHub: Public repo für direkten Source-Zugriff
 - **ERFOLG:** Mapping Editor jetzt 100% funktionsfähig!
 - **Nutzer-Feedback:** Versteht Mapping noch nicht ganz → bei DICOM Test erklären
 
-### 📊 Ungetestete Features (aus Screenshot-Analyse)
-**Folders & Processing Tab:**
-1. Watch Folder Add/Remove
-2. Output Folder Browse
-3. Output Organization (ByPatientAndDate etc.)
-4. Success/Failure Actions
-5. Max Concurrent Processing
-6. Backup Creation
-7. Process on Startup
-8. Retry on Failure
+### v0.5.14 Watch Folder Test (03.06.2025, 00:00)
+- **ERFOLG:** Folder Watcher erkennt JPEGs!
+- **ERFOLG:** Processing Pipeline läuft!
+- **ABER:** DICOM Konvertierung scheitert
+- **Grund:** "GCM_TAG" Prefix macht IDs ungültig
 
-**DICOM Configuration Tab:**
-9. Implementation Class UID
-10. Implementation Version
-11. Institution Name
-12. Station Name
-13. DICOM Validation
-14. DICOM Tag Browser
+### v0.5.15 Settings & Logging Fix (03.06.2025, 00:15)
+- **Settings Save Button:** DataContext Fix implementiert
+- **appsettings.json:** War kaputt (JSON Struktur)
+- **Logging:** Geht nur zur Konsole, nicht in Dateien
+- **Console Mode:** Zeigt detaillierte Fehler!
 
-**Notifications Tab:**
-15. Windows Event Log
-16. Email Notifications
-17. Email Server Config
-18. Email Templates
+### v0.5.16 Pipeline Analyse (03.06.2025, 00:30)
+- **Erkenntnis:** Wir patchen wild herum statt systematisch vorzugehen
+- **GCM_TAG Problem:** Muss beim Parsen entfernt werden
+- **ExifToolReader:** Nicht richtig implementiert
+- **Neuer Plan:** Systematische Pipeline-Entwicklung
 
-**Logging & Service Tab:**
-19. Log Level
-20. Log Folder
-21. File Logging Enable
-22. Event Log Enable
-23. Log File Size/Rotation
-24. Startup/Processing Delays
+## 🚀 Entwicklungs-Workflow NEU (ab v0.5.16)
 
-**Mapping Editor:**
-25. ✅ Add/Remove Rules (v0.5.12 - GUI funktioniert)
-26. ✅ Source Type Selection (v0.5.12 - Templates funktionieren)
-27. ✅ Source Field Selection (v0.5.12 - Drag&Drop funktioniert)
-28. ✅ Target DICOM Tag (v0.5.13 - Selection funktioniert)
-29. ✅ Transform Functions (v0.5.13 - Selection funktioniert)
-30. ✅ Required Field Flag (v0.5.13 - Selection funktioniert)
-31. ✅ Default Values (v0.5.13 - Selection funktioniert)
-32. ✅ Preview Function (v0.5.13 - Selection funktioniert)
-33. ✅ Import/Export (v0.5.12 - Dialoge öffnen sich)
-34. ✅ Template System (v0.5.12 - Alle 3 Templates funktionieren)
+### Systematische Pipeline-Entwicklung
 
-**Core Processing:**
-35. JPEG zu DICOM Konvertierung
-36. ExifTool Integration (Hauptapp)
-37. QRBridge Protocol Parsing
-38. File System Watcher
-39. Error Handling
-40. Notification Dispatch
+#### Pipeline-Übersicht:
+```
+JPEG → ExifTool → Raw EXIF → Parse QRBridge → Clean Data → Apply Mappings → DICOM Tags → Validate → DICOM File
+     ↑            ↑           ↑                ↑            ↑                ↑            ↑          ↑
+   Sprint 1    Sprint 1    Sprint 1        Sprint 1     Sprint 2        Sprint 2     Sprint 3   Sprint 3
+```
 
-**Service Features:**
-41. ✅ Service Installation (v0.5.9)
-42. ✅ Service Start/Stop (v0.5.10)
-43. ✅ Service Restart (v0.5.10)
-44. Service Uninstall
-45. Admin Elevation
-46. Status Monitoring
+#### Sprint 1: ExifTool Integration (v0.6.x)
+**Ziel:** ExifTool korrekt einbinden und alle EXIF Daten lesen
 
-**UI Features:**
-47. Dashboard (Stats)
-48. Dead Letters Page
-49. Settings Save/Load
-50. Reset Settings
-51. About Page
-52. Navigation
+1. **v0.6.0 - ExifTool Path Discovery**
+   - Tools Ordner suchen
+   - Relative/Absolute Pfade
+   - Fehlerbehandlung
+   - **TEST:** ExifTool wird gefunden
 
-**FORTSCHRITT: 11/52 Features getestet (21.2%)**
+2. **v0.6.1 - ExifTool JSON Parsing**
+   - Process starten
+   - JSON Output parsen
+   - Alle Tags extrahieren
+   - **TEST:** ParserDebug zeigt alle Tags
+
+3. **v0.6.2 - QRBridge Data Extraction**
+   - Barcode Tag lesen
+   - UserComment Fallback
+   - GCM_TAG Prefix entfernen
+   - **TEST:** Saubere QRBridge Daten
+
+4. **v0.6.3 - Error Handling**
+   - Timeout handling
+   - Missing ExifTool
+   - Corrupt JPEG
+   - **TEST:** Graceful degradation
+
+#### Sprint 2: Mapping Engine (v0.7.x)
+**Ziel:** Flexible Mapping von Source zu DICOM Tags
+
+1. **v0.7.0 - Transform Functions**
+   - DateToDicom (YYYYMMDD)
+   - TimeToDicom (HHMMSS)
+   - RemovePrefix
+   - StringCleaning
+   - **TEST:** Jede Transform einzeln
+
+2. **v0.7.1 - Mapping Configuration**
+   - JSON Schema
+   - Validation
+   - Default Values
+   - **TEST:** Invalid mappings rejected
+
+3. **v0.7.2 - Mapping UI**
+   - Load/Save funktioniert
+   - Preview zeigt Ergebnis
+   - Drag&Drop Sources
+   - **TEST:** Round-trip funktioniert
+
+4. **v0.7.3 - Advanced Transforms**
+   - Conditional mapping
+   - Concatenation
+   - Regex replace
+   - **TEST:** Complex mappings
+
+#### Sprint 3: DICOM Creation (v0.8.x)
+**Ziel:** Valide DICOM Dateien erstellen
+
+1. **v0.8.0 - Basic DICOM Dataset**
+   - Required Tags only
+   - No validation errors
+   - Character Set korrekt
+   - **TEST:** Minimal DICOM valid
+
+2. **v0.8.1 - Image Integration**
+   - JPEG pixel data
+   - Photometric Interpretation
+   - Rows/Columns korrekt
+   - **TEST:** Image viewable
+
+3. **v0.8.2 - DICOM Validation**
+   - Optional validation
+   - Fix common errors
+   - Warning handling
+   - **TEST:** PACS compatible
+
+4. **v0.8.3 - Performance**
+   - Batch processing
+   - Memory optimization
+   - Parallel conversion
+   - **TEST:** 100 files/minute
+
+#### Sprint 4: Production Ready (v0.9.x)
+**Ziel:** Stabil für Krankenhaus-Einsatz
+
+1. **v0.9.0 - Error Recovery**
+   - Retry logic fixed
+   - Dead letter handling
+   - Partial success
+   - **TEST:** No data loss
+
+2. **v0.9.1 - Monitoring**
+   - File logging works
+   - Email notifications
+   - Daily summaries
+   - **TEST:** Admin visibility
+
+3. **v0.9.2 - Deployment**
+   - Installer
+   - Documentation
+   - Config templates
+   - **TEST:** IT can install
+
+4. **v0.9.3 - Final Testing**
+   - Load testing
+   - Edge cases
+   - User acceptance
+   - **TEST:** Ready for v1.0
+
+### Neue Entwicklungs-Regeln ab v0.5.16:
+1. **Keine Patches** - Nur saubere Implementierungen
+2. **Test First** - Erst testen was da ist, dann ändern
+3. **Ein Sprint = Ein Ziel** - Nicht alles gleichzeitig
+4. **Console Mode** - Immer erst als Konsole testen
+5. **Logs lesen** - Nicht raten was passiert
 
 ## 💬 Kommunikations-Präferenzen
 
@@ -436,7 +517,7 @@ GitHub: Public repo für direkten Source-Zugriff
 ### Wichtige Pfade
 ```
 CamBridge/
-├── Version.props                    # Zentrale Version (jetzt 0.5.13)
+├── Version.props                    # Zentrale Version (jetzt 0.5.16)
 ├── Tools/                           # ExifTool Location
 │   └── exiftool.exe                # Muss hier liegen!
 ├── src/
@@ -456,128 +537,14 @@ CamBridge/
 └── PROJECT_WISDOM.md               # Dieses Dokument
 ```
 
-## 🚀 Entwicklungs-Workflow
-
-### Neue Features (mit GitHub)
-1. Version in Version.props erhöhen
-2. Feature implementieren
-3. CHANGELOG.md aktualisieren
-4. Git commit mit konventionellem Format
-5. **git push** zu GitHub
-6. URLs für geänderte Dateien im Chat teilen
-
-### Chat-Handover (NEU!)
-1. PROJECT_WISDOM.md hochladen
-2. Relevante GitHub URLs bereitstellen
-3. Aktuellen Stand beschreiben
-4. Nächste Aufgabe klar definieren
-5. "VOGON INIT" sagen
-
-### Chat-Abschluss mit "VOGON EXIT"
-1. **Zeit erfragen:** "Wie spät ist es?" (für CHANGELOG)
-2. **Version.props:** AssemblyVersion, FileVersion, InformationalVersion erhöhen
-3. **CHANGELOG.md:** Neuen Eintrag mit exakter Zeit erstellen
-4. **Git Commit String:** Nach Format erstellen
-5. **README.md:** Features-Liste aktualisieren (falls nötig)
-6. **Übergabeprompt:** Für nächsten Chat vorbereiten
-7. **PROJECT_WISDOM.md:** Als VOLLSTÄNDIGES ARTEFAKT finalisieren!
-8. **CHANGELOG.md:** NUR neuester Eintrag als Artefakt!
-9. **Version.props:** Als VOLLSTÄNDIGES ARTEFAKT!
-
-## ⚡ Bekannte Fallstricke
-
-### GUI-Entwicklung
-- **PlaceholderText:** Nutze ui:ControlHelper.PlaceholderText
-- **PasswordBox:** Binding nur mit Behavior/Attached Property → GELÖST mit PasswordBoxHelper!
-- **Spacing:** Existiert nicht in WPF/ModernWPF!
-- **NumberBox:** Aus ModernWpfUI, nicht WinUI
-- **IsTabStop:** Nicht für Page verfügbar (v0.4.3 Fix)
-- **Run Opacity:** Run-Elements haben keine Opacity-Property! (v0.5.1 Fix)
-- **launchSettings.json:** Kein MauiPackage für WPF! (v0.5.10 Fix)
-- **DataContext:** Muss für ViewModels gesetzt werden! (v0.5.11 Problem)
-- **Navigation:** Pages müssen im NavigationService registriert sein! (v0.5.12 Fix)
-- **ItemsControl:** Unterstützt keine Selection! Use ListBox! (v0.5.13 Fix)
-
-### Service
-- **UAC:** Admin-Rechte für Service-Control nötig
-- **Pfade:** Absolute Pfade in appsettings.json
-- **Event Log:** Source muss registriert sein
-- **Installation:** ServiceDebug Tool hilft bei Problemen (v0.5.9)
-
-### Ricoh G900 II QRBridge (v0.4.4)
-- **NUR 3 FELDER:** Kamera speichert nur examid|name|birthdate
-- **FEHLENDE FELDER:** gender und comment werden abgeschnitten
-- **GCM_TAG PREFIX:** Kamera fügt "GCM_TAG " vor Barcode ein
-- **ENCODING:** UTF-8/Latin-1 Probleme bei Umlauten → GELÖST
-- **LÖSUNG:** Mit QRBridge Source können wir optimiertes Protokoll entwickeln!
-
-### 🎯 GELÖST: Barcode Tag Erkenntnis! (v0.5.3)
-- **Ricoh speichert in 2 verschiedenen Tags:**
-  - UserComment: "GCM_TAG" + erste 3 Felder
-  - Barcode: ALLE 5 Felder komplett!
-- **MetadataExtractor kann Barcode Tag NICHT lesen**
-- **ExifTool ist die Lösung** - liest proprietäre Tags
-- **Implementation:** ExifToolReader mit Fallback
-
-### v0.5.3 Build-Fehler - GELÖST!
-- **PatientId:** War FALSE ALARM - kein Duplikat! (v0.5.6)
-- **ProcessingResult:** Properties passen nicht zu NotificationService
-- **ExifTool:** Funktioniert in Debug Console, Hauptapp ungetestet
-
-### v0.5.5 GitHub Integration
-- **URLs müssen explizit gegeben werden** - Security Feature
-- **Format beachten:** refs/heads/main im Pfad
-- **Public Repo:** Notwendig für Token-freien Zugriff
-- **Git Push:** Nach jedem Fix für aktuellen Stand
-
-### v0.5.6 Service & Testing Bugs (02.06.2025, 15:42)
-- **Build läuft:** PatientId war False Alarm
-- **ExifTool bestätigt:** Barcode Tag hat alle 5 Felder  
-- ✅ **Service GUI Bug:** GELÖST in v0.5.9!
-- ✅ **Windows Service:** ERFOLGREICH GETESTET in v0.5.10!
-- **Debug Console:** Pfad-Problem verhindert Start
-
-### v0.5.8 Erkenntnisse (02.06.2025, 17:25)
-- **Service.exe existiert:** In 3 verschiedenen Locations!
-- ✅ **Installation schlägt trotzdem fehl:** GELÖST in v0.5.9!
-- ✅ **Mapping Editor crasht:** GELÖST in v0.5.11!
-- **52+ Features ungetestet:** Kompletter Testing-Backlog
-
-### v0.5.10 ERFOLGE! (02.06.2025, 18:47)
-- ✅ Service Installation funktioniert (v0.5.9)
-- ✅ Service Start/Stop/Restart getestet (v0.5.10)
-- ✅ GUI Status-Anzeige korrekt
-- ✅ Erste Features mit 100% Test-Coverage!
-- **ServiceDebug Tool:** Erfolgreich im Einsatz
-
-### v0.5.11 Mapping Editor (02.06.2025, 20:33)
-- ✅ Crash behoben - duplicate converter registration
-- ✅ Event Handler implementiert
-- ⚠️ DataContext/ViewModel nicht gesetzt
-- ⚠️ XAML Designer zeigt Phantom-Fehler
-- **LEKTION:** Erst schauen was da ist!
-
-### v0.5.12 Navigation Fix (02.06.2025, 22:50)
-- ✅ MappingEditor in NavigationService registriert
-- ✅ AboutPage auch registriert
-- ✅ DataContext wird jetzt korrekt gesetzt
-- ✅ Alle Buttons sollten funktionieren
-- **LEKTION:** Das Offensichtliche zuerst prüfen!
-
-### v0.5.13 Mapping Editor vollständig (02.06.2025, 23:12)
-- ✅ Selection Binding mit ListBox gelöst
-- ✅ Mapping Editor jetzt 100% funktionsfähig
-- **Nutzer möchte bald End-to-End Test**
-- **Mapping-Konzept noch nicht ganz klar**
-
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 02.06.2025, 23:12 Uhr
-- **Entwicklungszeit bisher:** ~75 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 03.06.2025, 00:30 Uhr
+- **Entwicklungszeit bisher:** ~76 Stunden (inkl. Nachtschichten!)
 - **Features implementiert:** 52+
-- **Features getestet:** 11 (21.2%!)
+- **Features getestet:** 14 (26.9%!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -590,177 +557,45 @@ CamBridge/
 - Testing: 30-60 Minuten
 - Debugging: 0-120 Minuten
 - **Total pro Feature:** 1-4 Stunden
-- **41 Features übrig:** 41-164 Stunden noch!
+- **38 Features übrig:** 38-152 Stunden noch!
 
-### Realistische Timeline
-- **v0.6.0 (Basis fertig):** ~1-2 Wochen
-- **v0.7.0 (Erweitert):** ~2-3 Wochen
-- **v1.0.0 (Production):** ~3-5 Wochen
+### Realistische Timeline mit neuem Plan
+- **v0.6.0 (ExifTool fertig):** ~1 Woche
+- **v0.7.0 (Mapping fertig):** ~2 Wochen
+- **v0.8.0 (DICOM fertig):** ~3 Wochen
+- **v0.9.0 (Production):** ~4 Wochen
+- **v1.0.0 (Release):** ~5-6 Wochen
 
-## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 02.06.2025, 23:12)
+## ✅ Getestete Features (14/52 = 26.9%)
 
-### ⚡️ NEUER ANSATZ: Ein Feature = Eine Version = Sofort Testen!
+### Vollständig getestet:
+1. ✅ Service Installation (v0.5.9)
+2. ✅ Service Control (v0.5.10)
+3. ✅ Service Start/Stop/Restart (v0.5.10)
+4. ✅ Mapping Editor UI (v0.5.12)
+5. ✅ Templates (Ricoh/Minimal/Full) (v0.5.12)
+6. ✅ Drag & Drop Mapping (v0.5.12)
+7. ✅ Add Rule Function (v0.5.12)
+8. ✅ Import/Export/Save Dialogs (v0.5.12)
+9. ✅ Rule Selection (v0.5.13)
+10. ✅ Properties Panel (v0.5.13)
+11. ✅ Transform Selection (v0.5.13)
+12. ✅ Preview Function (v0.5.13)
+13. ✅ Watch Folder Detection (v0.5.14)
+14. ✅ Basic File Processing (v0.5.14)
 
-### ✅ ERLEDIGTE FEATURES
+### Teilweise getestet:
+- ⚠️ JPEG EXIF Reading (manuell ja, Service nein)
+- ⚠️ QRBridge Parsing (funktioniert, aber GCM_TAG Problem)
+- ⚠️ Dashboard (zeigt Connected, aber keine Stats)
 
-#### v0.5.9 - Service Installation Fix ✅
-- ServiceManager Pfad-Debugging verstärkt ✅
-- Tatsächlichen Fehler aus sc.exe auslesen ✅
-- Service MUSS installierbar werden ✅
-- **TEST:** Service in services.msc sichtbar? ✅
-
-#### v0.5.10 - Service Start ✅
-- Service erfolgreich starten ✅
-- Status korrekt anzeigen ✅
-- Uptime funktioniert ✅
-- **TEST:** Service läuft? Event Log Einträge? ✅
-
-#### v0.5.11 - Mapping Editor Crash Fix ✅
-- Crash beim Öffnen beheben ✅
-- Basic UI funktioniert ✅
-- **TEST:** Kann geöffnet/geschlossen werden? ✅
-
-#### v0.5.12 - Mapping Editor DataContext ✅
-- ViewModel/DataContext korrekt setzen ✅
-- Buttons müssen funktionieren ✅
-- **TEST:** Add Rule erstellt neue Regel? ✅
-- **BONUS:** Templates, Drag&Drop, Import/Export funktionieren auch! ✅
-
-#### v0.5.13 - Mapping Editor Selection ✅
-- ItemsControl durch ListBox ersetzt ✅
-- SelectedItem Binding funktioniert ✅
-- Selection Visual Feedback ✅
-- **TEST:** Properties Panel zeigt ausgewählte Rule? ✅
-
-### 📁 CORE FEATURES (Basis-Funktionalität)
-
-#### v0.5.14 - Watch Folder Basic
-- Ein Folder hinzufügen
-- Folder wird überwacht
-- **TEST:** JPEG reinkopieren, wird erkannt?
-
-#### v0.5.15 - JPEG Processing
-- JPEG wird gelesen
-- EXIF Daten extrahiert
-- **TEST:** Console Output der Daten?
-
-#### v0.5.16 - DICOM Creation
-- Basic DICOM erstellt
-- Output Folder funktioniert
-- **TEST:** DICOM Datei existiert?
-
-#### v0.5.17 - QRBridge Parser
-- Pipe-delimited Daten parsen
-- Alle 5 Felder extrahieren
-- **TEST:** Parser Debug Console Vergleich?
-
-#### v0.5.18 - ExifTool Integration
-- ExifTool wird gefunden
-- Barcode Tag lesen
-- **TEST:** Alle 5 Felder korrekt?
-
-### 🔧 SETTINGS (Jeder Tab einzeln!)
-
-#### v0.5.19 - Folders Tab
-- Add/Remove Folder
-- Output Folder Browse
-- Settings speichern/laden
-- **TEST:** Neustart behält Settings?
-
-#### v0.5.20 - Processing Options
-- Archive/Error Actions
-- Max Concurrent ändern
-- Backup erstellen
-- **TEST:** Funktioniert wie konfiguriert?
-
-#### v0.5.21 - DICOM Settings
-- Implementation UID setzen
-- Institution/Station Name
-- Validate Option
-- **TEST:** DICOM hat korrekte Tags?
-
-#### v0.5.22 - Logging Settings
-- Log Level ändern
-- Log Folder setzen
-- File Rotation
-- **TEST:** Logs werden geschrieben?
-
-#### v0.5.23 - Service Settings
-- Startup Delay
-- Processing Delay
-- **TEST:** Delays funktionieren?
-
-### 🗺️ MAPPING FEATURES
-
-#### v0.5.24 - Mapping Basic UI
-- Rule hinzufügen
-- Source/Target wählen
-- **TEST:** Rule wird angezeigt?
-
-#### v0.5.25 - QRBridge Mapping
-- QRBridge Felder mappen
-- Default Values
-- **TEST:** Werte kommen in DICOM an?
-
-#### v0.5.26 - EXIF Mapping
-- EXIF Felder mappen
-- Transform Functions
-- **TEST:** Transformationen korrekt?
-
-#### v0.5.27 - Template System
-- Ricoh G900 Template
-- Template wechseln
-- **TEST:** Unterschiedliche Outputs?
-
-#### v0.5.28 - Import/Export
-- Mappings exportieren
-- Mappings importieren
-- **TEST:** Roundtrip funktioniert?
-
-### 📊 MONITORING FEATURES
-
-#### v0.5.29 - Dashboard Stats
-- Processed Count
-- Error Count
-- Performance Metrics
-- **TEST:** Zahlen stimmen?
-
-#### v0.5.30 - Dead Letters
-- Failed Files anzeigen
-- Retry Funktion
-- Clear Funktion
-- **TEST:** Nach Error sichtbar?
-
-#### v0.5.31 - Notifications
-- Event Log Entries
-- Email Setup (optional)
-- **TEST:** Notifications kommen an?
-
-### 🚀 ERWEITERTE FEATURES
-
-#### v0.5.32 - Batch Processing
-- Mehrere Files gleichzeitig
-- Queue Management
-- **TEST:** Performance OK?
-
-#### v0.5.33 - Error Recovery
-- Auto-Retry
-- Error Details
-- **TEST:** Recovery funktioniert?
-
-#### v0.6.0 - Production Ready
-- Alle Features getestet
-- Performance optimiert
-- Dokumentation komplett
-- **FINAL TEST:** 100 Bilder durchlaufen
-
-### Test-Checkliste pro Version:
-1. ✅ Feature implementiert
-2. ✅ Unit Test geschrieben
-3. ✅ Manuell getestet
-4. ✅ Edge Cases getestet
-5. ✅ Dokumentiert
-6. ✅ Git Commit & Push
+### Noch nicht getestet:
+- ❌ DICOM Creation (Validation Fehler)
+- ❌ File Logging
+- ❌ Email Notifications
+- ❌ Settings Save/Load
+- ❌ Dead Letters Recovery
+- ... und 35+ weitere Features
 
 ## 🚨 Anti-Patterns (Was wir NICHT machen)
 
@@ -780,13 +615,13 @@ CamBridge/
 - **KEINE** DTOs als Domain Models verwenden
 - **KEINE** statischen Service-Klassen für DI-Services
 
-### Prozess-Anti-Patterns
+### Prozess-Anti-Patterns (NEU ab v0.5.16!)
+- **KEINE** wilden Patches mehr - systematisch vorgehen!
+- **KEINE** Features ohne vorherige Pipeline-Analyse
+- **KEINE** Annahmen - immer testen was wirklich passiert
+- **KEINE** komplexen Features vor den Basics
+- **KEINE** Produktiv-Tests ohne Console Mode
 - **KEINE** collect-sources.bat mehr! GitHub URLs verwenden!
-- **KEINE** Annahmen über automatischen Dateizugriff - URLs müssen gegeben werden!
-- **KEINE** Features implementieren ohne vorherige zu testen!
-- **KEINE** großen Versionssprünge mehr - micro-increments!
-- **KEINE** Commits ohne aussagekräftige Messages
-- **KEINE** Features ohne Dokumentation
 
 ### Wichtige Lektionen
 
@@ -802,18 +637,21 @@ CamBridge/
 - Event Log Source muss registriert werden
 - Service und GUI müssen getrennt funktionieren
 - ServiceDebug Tool hilft bei Diagnose (v0.5.9)
+- Console Mode ist essentiell für Debugging (v0.5.16)
 
 **DICOM-spezifisch:**
 - Implementation Class UID muss unique sein
 - Character Set muss korrekt gesetzt werden
 - Private Tags brauchen Private Creator
 - Validation ist kritisch für PACS-Kompatibilität
+- Keine Unterstriche in PatientID/StudyID! (v0.5.16)
 
 **Testing:**
 - Ungetesteter Code = nicht existenter Code
 - Edge Cases sind wichtiger als Happy Path
 - Performance-Tests mit realistischen Datenmengen
 - Immer mit echten Ricoh-Bildern testen
+- Console Mode vor Service Mode (v0.5.16)
 
 **GitHub Integration (v0.5.5):**
 - Public Repo ermöglicht Token-freien Zugriff
@@ -844,6 +682,13 @@ CamBridge/
 - ListBox ist die richtige Wahl für selektierbare Listen
 - Custom Styles können Standard-Selection verbergen
 - DataTrigger für visuelles Feedback nutzen
+
+**Pipeline-Entwicklung (v0.5.16):**
+- Systematisch vorgehen, nicht wild patchen
+- ExifToolReader ist der Schlüssel
+- Jeder Schritt muss einzeln funktionieren
+- Transforms gehören in die Mapping Engine
+- DICOM Validation kann Probleme verursachen
 
 ## 💬 Nur für mich (Claude)
 
@@ -957,6 +802,35 @@ Der Nutzer versteht das Mapping noch nicht ganz. Bei der DICOM-Konvertierung erk
 
 Das wird klarer wenn wir echte DICOM Files erzeugen!
 
+### CLAUDE: Console Mode ist Gold wert! (03.06.2025, 00:15)
+**Wichtige Erkenntnis:** Der Service als Windows Service zeigt keine Details, aber im Console Mode sehen wir ALLES!
+- Detaillierte Fehlermeldungen
+- Stack Traces
+- Processing Steps
+- Validation Errors
+
+**Neue Regel:** IMMER erst als Console testen, dann als Service!
+
+### CLAUDE: Systematisch statt Patches! (03.06.2025, 00:30)
+Der Nutzer hat es perfekt erkannt: Wir patchen wild herum statt die Pipeline systematisch durchzuarbeiten. Die neue Sprint-Planung fokussiert auf:
+1. **Sprint 1:** ExifTool richtig einbinden
+2. **Sprint 2:** Mapping Engine bauen
+3. **Sprint 3:** DICOM sauber erstellen
+4. **Sprint 4:** Production Ready
+
+**Keine Patches mehr!** Jeder Teil der Pipeline muss einzeln funktionieren bevor wir weitergehen.
+
+### CLAUDE: GCM_TAG - Die Wurzel des Problems! (03.06.2025, 00:33)
+**KRITISCHE ERKENNTNIS vom Nutzer:** Das GCM_TAG Problem steckt ganz tief in der Interpretation am Anfang! Wir haben ewig an den Tags rumgebastelt als Workaround für ein tieferliegendes Problem.
+
+**Analyse-Auftrag für v0.6.0:**
+1. **ExifReader.cs** - Was macht ParseQRBridgeData() wirklich?
+2. **RicohExifReader.cs** - Warum gibt es überhaupt einen separaten Reader?
+3. **ExifToolReader.cs** - Ist der überhaupt implementiert?
+4. **Wo wird "GCM_TAG" hinzugefügt?** - Von der Kamera oder von uns?
+
+**Nutzer-Weisheit:** "Lieber schnell neu schreiben als ewig rumverzweifeln!" - 100% richtig! Wenn der Parser Mist ist, schreiben wir einen sauberen neuen.
+
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
 ```
@@ -964,30 +838,31 @@ Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
 GitHub: https://github.com/ostern42/CamBridge
-Aktueller Stand: v0.5.13
+Aktueller Stand: v0.5.16
 
-ERFOLG: Mapping Editor 100% funktionsfähig!
-✅ Selection Binding gefixt
-✅ 11/52 Features getestet (21.2%)
+ERFOLG: Watch Folder funktioniert, JPEG wird erkannt!
+PROBLEM: GCM_TAG wird tief im Parser hinzugefügt!
 
-NÄCHSTE ENTSCHEIDUNG:
-A) v0.5.14 Watch Folder implementieren
-B) Erst End-to-End Test (JPEG→DICOM)
+KRITISCHE ERKENNTNIS: 
+Das GCM_TAG Problem ist KEIN Tag-Problem sondern ein Parser-Problem!
+Wir müssen zur Wurzel gehen statt Workarounds zu bauen.
 
-Nutzer möchte bald DICOM Konvertierung testen.
-Mapping-Konzept bei Test erklären!
+ANALYSE-AUFTRAG für v0.6.0:
+- ExifReader ParseQRBridgeData() untersuchen
+- Warum gibt es RicohExifReader?
+- Ist ExifToolReader überhaupt implementiert?
+- WO kommt "GCM_TAG" her?
 
-URLs für Option A (Watch Folder):
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/FolderWatcherService.cs
-
-URLs für Option B (DICOM Test):
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/DicomConverter.cs
+URLs für Parser-Analyse:
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/ExifReader.cs
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/RicohExifReader.cs
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/ExifToolReader.cs
 
 1. PROJECT_WISDOM.md hochladen
-2. URLs bereitstellen
+2. Parser URLs bereitstellen
 3. "VOGON INIT" sagen
 
-WICHTIG: Ein Feature = Eine Version = Sofort testen!
+WICHTIG: Parser neu schreiben statt patchen!
 ```
 
 ## 🏥 Medizinischer Kontext (WICHTIG!)
@@ -1067,9 +942,12 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - **Updates:** Automatisch via Windows Update (geplant)
 - **Support:** SLA-basiert, Remote-Zugriff
 
-### Roadmap
-- **v1.0:** Basis-Funktionalität (Q2 2025)
-- **v1.5:** PACS-Integration (Q3 2025)
+### Roadmap (UPDATED)
+- **v0.6.0:** ExifTool Integration (Q2 2025)
+- **v0.7.0:** Mapping Engine (Q2 2025)
+- **v0.8.0:** DICOM Creation (Q3 2025)
+- **v0.9.0:** Production Ready (Q3 2025)
+- **v1.0.0:** Release (Q3 2025)
 - **v2.0:** Cloud-Support (Q4 2025)
 - **v3.0:** AI-Features (2026)
 
@@ -1096,23 +974,26 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - 2025-06-02 20:33: v0.5.11 - Mapping Editor Crash gefixt! "Nachts mit Sonnenbrille" Lektion gelernt. ValueConverters.cs existierte bereits. DataContext Problem bleibt offen.
 - 2025-06-02 22:50: v0.5.12 - Navigation & DataContext komplett gefixt! Mapping Editor zu 90% funktionsfähig. Templates, Drag&Drop, Add Rule getestet. Nur Selection Binding fehlt noch.
 - 2025-06-02 23:12: v0.5.13 - Selection Binding gefixt! Mapping Editor 100% funktionsfähig. Nutzer möchte bald End-to-End Test. Mapping-Konzept noch unklar.
+- 2025-06-03 00:00: v0.5.14 - Watch Folder Test erfolgreich! JPEG wird erkannt und verarbeitet. DICOM Creation schlägt fehl wegen GCM_TAG Prefix.
+- 2025-06-03 00:15: v0.5.15 - Settings DataContext gefixt, appsettings.json repariert. Console Mode zeigt detaillierte Fehler. File Logging funktioniert nicht.
+- 2025-06-03 00:30: v0.5.16 - Pipeline-Analyse abgeschlossen. Systematischer Entwicklungsplan erstellt. Keine Patches mehr - ExifToolReader zuerst!
+- 2025-06-03 00:33: WISDOM Update - GCM_TAG Problem ist tief im Parser versteckt, nicht in den Tags! Entscheidung: Parser neu schreiben statt patchen.
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.5.13
+### Aktuelle Version: v0.5.16
 ### Tatsächlicher Stand: 
 - ✅ GUI sieht professionell aus
-- ✅ Service Installation funktioniert (v0.5.9)
-- ✅ Service Start/Stop/Restart getestet (v0.5.10)
-- ✅ Mapping Editor 100% funktionsfähig (v0.5.13)
-- ❌ Nur 11/52 Features getestet
-- ❌ Kein JPEG wurde je verarbeitet
-- ❌ Kein DICOM wurde je erstellt
-### Nächste Entscheidung: 
-- Option A: v0.5.14 Watch Folder implementieren
-- Option B: End-to-End Test (JPEG→DICOM) machen
-### Neue Philosophie: Ein Feature = Eine Version = Sofort testen!
-### Geschätzte Zeit bis v1.0: 3-5 Wochen bei Vollzeit
+- ✅ Service Installation/Control funktioniert
+- ✅ Mapping Editor 100% funktionsfähig
+- ✅ Watch Folder erkennt JPEGs
+- ✅ Basic Processing Pipeline läuft
+- ❌ DICOM Creation scheitert (GCM_TAG Problem)
+- ❌ ExifToolReader nicht richtig implementiert
+- ❌ Nur 14/52 Features getestet
+### Nächster Sprint: v0.6.0 - ExifTool Integration
+### Neue Philosophie: Systematisch die Pipeline durcharbeiten!
+### Geschätzte Zeit bis v1.0: 5-6 Wochen bei systematischem Vorgehen
 
 ### V.O.G.O.N. Commands:
 - **VOGON INIT** - Automatischer Start
@@ -1120,38 +1001,33 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - **CLAUDE:** - Notizen für nächste Instanz
 - **VOGON EXIT** - Chat-Abschluss mit Versionierung
 
-### Getestete Features (11/52 = 21.2%):
-- ✅ Service Installation (v0.5.9)
-- ✅ Service Control (v0.5.10)
-- ✅ Mapping Editor UI (v0.5.12)
-- ✅ Templates (Ricoh/Minimal/Full) (v0.5.12)
-- ✅ Drag & Drop Mapping (v0.5.12)
-- ✅ Add Rule Function (v0.5.12)
-- ✅ Import/Export/Save Dialogs (v0.5.12)
-- ✅ Rule Selection (v0.5.13)
-- ✅ Properties Panel (v0.5.13)
-- ✅ Transform Selection (v0.5.13)
-- ✅ Preview Function (v0.5.13)
+### Pipeline-Übersicht:
+```
+JPEG → ExifTool → Raw EXIF → Parse QRBridge → Clean Data → Apply Mappings → DICOM Tags → Validate → DICOM File
+     ↑            ↑           ↑                ↑            ↑                ↑            ↑          ↑
+   Sprint 1    Sprint 1    Sprint 1        Sprint 1     Sprint 2        Sprint 2     Sprint 3   Sprint 3
+```
 
-### Test-Kriterien für v0.5.14 (Watch Folder):
-- [ ] Folder zur Liste hinzufügen
-- [ ] FileSystemWatcher startet
-- [ ] JPEG Copy wird erkannt
-- [ ] Log-Eintrag erscheint
+### Console Output beim Test:
+```
+[00:15:29 INF] Found QRBridge data in Barcode field: GCM_TAGEX002|Schmidt, Maria|1985-03-15|
+[00:15:29 ERR] Failed to add tag (0010,0020) with value GCM_TAGEX002
+FellowOakDicom.DicomValidationException: Content "GCM_TAGEX002" does not validate VR LO: value contains invalid character
+```
 
-### Git Commits der Session:
+### Git Commit für diese Session:
 ```bash
-# v0.5.13
+# v0.5.16
 git add -A
-git commit -m "fix(config): Mapping Editor selection binding working (v0.5.13)
+git commit -m "analysis(pipeline): Systematic development plan created (v0.5.16)
 
-- Replaced ItemsControl with ListBox for selection support
-- Added SelectedItem binding to ViewModel
-- Custom ItemContainerStyle for clean appearance
-- Selection visual feedback via DataTrigger
+- Identified core issue: GCM_TAG prefix breaks DICOM validation
+- ExifToolReader not properly integrated
+- Created sprint-based development plan
+- Decision: Fix pipeline step by step, no more patches
 
-TESTED: Rule selection ✅ Properties update ✅ Preview works ✅
-Templates/Drag&Drop remain functional"
+TESTED: Watch Folder ✅ Processing ✅ DICOM Creation ❌
+NEXT: Implement ExifToolReader properly in v0.6.0"
 
 git push
 ```

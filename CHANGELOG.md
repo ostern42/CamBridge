@@ -6,6 +6,44 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+[0.5.16] - 2025-06-02 00:30
+Added
+
+Console logging for service debugging
+Detailed error messages for DICOM conversion failures
+Pipeline analysis and systematic development plan
+
+Fixed
+
+Settings page DataContext initialization
+PropertyChanged event handler (removed problematic OnPropertyChanged call)
+Dashboard API connection (shows green/connected status)
+
+Discovered
+
+ExifToolReader not properly integrated - uses MetadataExtractor only
+GCM_TAG prefix causes DICOM validation errors
+Missing Transform functions in mapping engine
+File logging not working despite configuration
+Retry logic tries to process already moved files
+
+Changed
+
+Identified systematic approach needed: JPEG→ExifTool→Parse→Map→DICOM
+Decision to implement ExifToolReader properly instead of patching RicohExifReader
+New sprint plan focusing on pipeline components one at a time
+
+Testing
+
+✅ Watch Folder detects JPEGs
+✅ Basic file processing pipeline runs
+✅ QRBridge data successfully extracted
+❌ DICOM creation fails due to validation errors
+❌ ExifTool integration incomplete
+
+TESTED: File detection and parsing work, but DICOM creation needs systematic fixes
+
+
 ## [0.5.13] - 2025-06-02 23:12
 
 ### Fixed
