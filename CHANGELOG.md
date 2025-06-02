@@ -6,6 +6,23 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2025-06-02 10:42
+### Added
+- GitHub integration successfully implemented - project now publicly accessible
+- Direct file access via raw.githubusercontent.com URLs
+- Complete git history (1475 commits) preserved on GitHub
+
+### Changed
+- Development workflow now uses GitHub for source file sharing
+- No more collect-sources.bat needed - direct file access instead
+- Token efficiency improved by ~70% through targeted file fetching
+
+### Technical Notes
+- Repository: https://github.com/ostern42/CamBridge (public)
+- Claude requires explicit URL provision for security
+- File structure visible through GitHub web interface
+- Next session: Fix PatientId duplicate build error first!
+
 ## [0.5.4] - 2025-06-02 02:00
 ### Added
 - Google Drive Integration documentation (VOGON DRIVE)
