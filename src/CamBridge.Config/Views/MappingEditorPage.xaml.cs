@@ -130,7 +130,7 @@ namespace CamBridge.Config.Views
             {
                 _viewModel.IsModified = true;
                 if (s == _viewModel.SelectedRule)
-                    _viewModel.PreviewInputChanged("");
+                    _viewModel.UpdatePreview();
             };
 
             _viewModel.MappingRules.Add(ruleVm);

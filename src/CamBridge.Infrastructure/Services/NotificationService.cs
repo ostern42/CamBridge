@@ -8,10 +8,15 @@ using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 using CamBridge.Core;
-using CamBridge.Core.Entities;
+using CamBridge.Core.Entities; // Für ProcessingResult
 using CamBridge.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using DeadLetterStatistics = CamBridge.Infrastructure.Services.DeadLetterStatistics;
+
+
+// Explicit using alias to avoid ambiguity
+using ProcessingResult = CamBridge.Core.Entities.ProcessingResult;
 
 namespace CamBridge.Infrastructure.Services
 {
@@ -150,18 +155,19 @@ namespace CamBridge.Infrastructure.Services
                 details.AppendLine(message);
                 details.AppendLine();
                 details.AppendLine("Statistics:");
-                details.AppendLine($"  Total Items: {statistics.TotalItems}");
-                details.AppendLine($"  Items Last Hour: {statistics.ItemsLastHour}");
-                details.AppendLine($"  Items Last 24 Hours: {statistics.ItemsLast24Hours}");
-                details.AppendLine($"  Oldest Item: {statistics.OldestItem:yyyy-MM-dd HH:mm:ss}");
+                details.AppendLine($"  Total Items: {statistics.TotalCount}");
+                details.AppendLine($"  Oldest Item: {statistics.OldestItem?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A"}");
+                details.AppendLine($"  Newest Item: {statistics.NewestItem?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A"}");
+                details.AppendLine($"  Total Size: {statistics.GetFormattedSize()}");
+                details.AppendLine($"  Average Attempts: {statistics.AverageAttempts:F1}");
 
-                if (statistics.TopErrors.Any())
+                if (statistics.ErrorCategories.Any())
                 {
                     details.AppendLine();
-                    details.AppendLine("Top Errors:");
-                    foreach (var error in statistics.TopErrors.Take(5))
+                    details.AppendLine("Error Categories:");
+                    foreach (var category in statistics.ErrorCategories.OrderByDescending(x => x.Value).Take(5))
                     {
-                        details.AppendLine($"  - {error.Key}: {error.Value} occurrences");
+                        details.AppendLine($"  - {category.Key}: {category.Value} occurrences");
                     }
                 }
 
@@ -258,7 +264,7 @@ namespace CamBridge.Infrastructure.Services
         {
             return _settings.EnableEmail &&
                    _settings.Email != null &&
-                   logLevel >= ParseLogLevel(_settings.MinimumEmailLevel);
+                   (int)logLevel >= (int)_settings.MinimumEmailLevel;
         }
 
         private async Task SendEmailAsync(string subject, string body)
@@ -395,8 +401,19 @@ namespace CamBridge.Infrastructure.Services
                 sb.AppendLine($"Error: {result.ErrorMessage}");
             }
 
-            // Note: PatientInfo is not available on ProcessingResult in the current implementation
-            // This would need to be added if patient information should be included in notifications
+            // Include patient information if available
+            if (result.PatientInfo != null)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Patient Information:");
+                sb.AppendLine($"  ID: {result.PatientInfo.Id.Value}");
+                sb.AppendLine($"  Name: {result.PatientInfo.Name}");
+                if (result.PatientInfo.BirthDate.HasValue)
+                {
+                    sb.AppendLine($"  Birth Date: {result.PatientInfo.BirthDate.Value:yyyy-MM-dd}");
+                }
+                sb.AppendLine($"  Gender: {result.PatientInfo.Gender}");
+            }
 
             sb.AppendLine();
             sb.AppendLine("---");
@@ -510,7 +527,7 @@ namespace CamBridge.Infrastructure.Services
             var now = DateTime.Now;
 
             // Check if we've crossed into a new day and it's the configured hour
-            if (now.Date > _lastSummaryDate && now.Hour >= (_settings.DailySummaryHour ?? 8))
+            if (now.Date > _lastSummaryDate && now.Hour >= _settings.DailySummaryHour)
             {
                 List<ProcessingResult> summaryData;
                 lock (_dailySummaryBuffer)

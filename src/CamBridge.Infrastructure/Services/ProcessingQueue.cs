@@ -216,7 +216,7 @@ namespace CamBridge.Infrastructure.Services
                     item.FilePath, item.AttemptCount);
 
                 // Process the file with a new scope
-                ProcessingResult result;
+                FileProcessingResult result;
                 using (var scope = _scopeFactory.CreateScope())
                 {
                     var fileProcessor = scope.ServiceProvider.GetRequiredService<IFileProcessor>();

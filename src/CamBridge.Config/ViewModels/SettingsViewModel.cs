@@ -37,6 +37,14 @@ namespace CamBridge.Config.ViewModels
             OutputOrganization.ByPatientAndDate
         };
 
+        public ObservableCollection<NotificationLevel> NotificationLevels { get; } = new()
+        {
+            NotificationLevel.Information,
+            NotificationLevel.Warning,
+            NotificationLevel.Error,
+            NotificationLevel.Critical
+        };
+
         // Watch Folders
         [ObservableProperty] private ObservableCollection<FolderConfigurationViewModel> _watchFolders = new();
         [ObservableProperty] private FolderConfigurationViewModel? _selectedWatchFolder;
@@ -109,7 +117,7 @@ namespace CamBridge.Config.ViewModels
         [ObservableProperty] private bool _smtpUseSsl = true;
         [ObservableProperty] private string? _smtpUsername;
         [ObservableProperty] private string? _smtpPassword;
-        [ObservableProperty] private string _minimumEmailLevel = "Warning";
+        [ObservableProperty] private NotificationLevel _minimumEmailLevel = NotificationLevel.Warning;
         [ObservableProperty] private bool _sendDailySummary = true;
 
         [ObservableProperty]
@@ -352,7 +360,7 @@ namespace CamBridge.Config.ViewModels
                 SmtpPassword = settings.Notifications.Email.Password;
             }
 
-            MinimumEmailLevel = settings.Notifications?.MinimumEmailLevel ?? "Warning";
+            MinimumEmailLevel = settings.Notifications?.MinimumEmailLevel ?? NotificationLevel.Warning;
             SendDailySummary = settings.Notifications?.SendDailySummary ?? false;
             DailySummaryHour = settings.Notifications?.DailySummaryHour ?? 8;
 

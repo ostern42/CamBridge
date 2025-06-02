@@ -5,6 +5,8 @@ using CamBridge.Infrastructure;
 using CamBridge.Infrastructure.Services;
 using CamBridge.Service;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -222,13 +224,13 @@ static async Task ValidateConfigurationAsync(IServiceProvider services)
     var notificationSettings = settings.Notifications;
     if (notificationSettings?.EnableEmail == true)
     {
-        if (string.IsNullOrEmpty(notificationSettings.SmtpHost))
+        if (string.IsNullOrEmpty(notificationSettings.SmtpServer))
         {
-            Log.Warning("Email notifications enabled but SMTP host not configured");
+            Log.Warning("Email notifications enabled but SMTP server not configured");
         }
-        if (string.IsNullOrEmpty(notificationSettings.EmailTo))
+        if (string.IsNullOrEmpty(notificationSettings.SmtpFrom))
         {
-            Log.Warning("Email notifications enabled but recipient email not configured");
+            Log.Warning("Email notifications enabled but sender email not configured");
         }
     }
 

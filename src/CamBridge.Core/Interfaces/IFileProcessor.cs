@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 
 namespace CamBridge.Core.Interfaces
@@ -11,7 +11,7 @@ namespace CamBridge.Core.Interfaces
         /// <summary>
         /// Processes a single JPEG file
         /// </summary>
-        Task<ProcessingResult> ProcessFileAsync(string filePath);
+        Task<FileProcessingResult> ProcessFileAsync(string filePath);
 
         /// <summary>
         /// Checks if a file should be processed
@@ -34,7 +34,14 @@ namespace CamBridge.Core.Interfaces
         event EventHandler<FileProcessingErrorEventArgs> ProcessingError;
     }
 
-    public class ProcessingResult
+    /// <summary>
+    /// Result of file processing operation
+    /// </summary>
+    /// <remarks>
+    /// Renamed from ProcessingResult to FileProcessingResult to avoid naming conflict
+    /// with CamBridge.Core.Entities.ProcessingResult
+    /// </remarks>
+    public class FileProcessingResult
     {
         public string SourceFile { get; init; } = string.Empty;
         public string? OutputFile { get; init; }
@@ -43,7 +50,7 @@ namespace CamBridge.Core.Interfaces
         public DateTime ProcessedAt { get; init; } = DateTime.UtcNow;
         public TimeSpan ProcessingTime { get; init; }
 
-        public static ProcessingResult CreateSuccess(string source, string output, TimeSpan time)
+        public static FileProcessingResult CreateSuccess(string source, string output, TimeSpan time)
             => new()
             {
                 SourceFile = source,
@@ -52,7 +59,7 @@ namespace CamBridge.Core.Interfaces
                 ProcessingTime = time
             };
 
-        public static ProcessingResult CreateFailure(string source, string error, TimeSpan time)
+        public static FileProcessingResult CreateFailure(string source, string error, TimeSpan time)
             => new()
             {
                 SourceFile = source,

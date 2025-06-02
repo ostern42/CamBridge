@@ -1,9 +1,14 @@
+using System;
 using System.Threading;
+using System.Threading.Tasks;
 using CamBridge.Core;
 using CamBridge.Core.Interfaces;
 using CamBridge.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Moq;
+using Xunit;
 
 namespace CamBridge.Infrastructure.Tests
 {
@@ -148,7 +153,7 @@ namespace CamBridge.Infrastructure.Tests
                 _deadLetterQueue);
 
             const string filePath = @"C:\test\image.jpg";
-            var processingResult = ProcessingResult.CreateSuccess(
+            var processingResult = FileProcessingResult.CreateSuccess(
                 filePath,
                 @"C:\output\image.dcm",
                 TimeSpan.FromSeconds(1));
@@ -206,7 +211,7 @@ namespace CamBridge.Infrastructure.Tests
                 _deadLetterQueue);
 
             const string filePath = @"C:\test\image.jpg";
-            var failureResult = ProcessingResult.CreateFailure(
+            var failureResult = FileProcessingResult.CreateFailure(
                 filePath,
                 "Test error",
                 TimeSpan.FromSeconds(1));

@@ -8,6 +8,7 @@ using CamBridge.Infrastructure.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
@@ -49,7 +50,10 @@ namespace CamBridge.Config.ViewModels
         {
             _logger = logger;
             _configurationService = configurationService;
-            _mappingLoader = new MappingConfigurationLoader(_logger);
+            // Create a NullLogger for MappingConfigurationLoader since it expects ILogger<MappingConfigurationLoader>
+            var nullLoggerFactory = new NullLoggerFactory();
+            var mappingLoaderLogger = nullLoggerFactory.CreateLogger<MappingConfigurationLoader>();
+            _mappingLoader = new MappingConfigurationLoader(mappingLoaderLogger);
 
             InitializeSourceFields();
             _ = LoadMappingsAsync();
@@ -466,7 +470,8 @@ namespace CamBridge.Config.ViewModels
 
         #region Preview
 
-        private void UpdatePreview()
+        // Make UpdatePreview public so it can be called from MappingEditorPage
+        public void UpdatePreview()
         {
             if (SelectedRule == null || string.IsNullOrWhiteSpace(PreviewInput))
             {

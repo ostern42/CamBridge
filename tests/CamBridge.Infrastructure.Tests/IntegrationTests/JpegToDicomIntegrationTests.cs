@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using CamBridge.Core;
@@ -81,16 +82,14 @@ namespace CamBridge.Infrastructure.Tests.IntegrationTests
             var dicomFile = await FellowOakDicom.DicomFile.OpenAsync(result.OutputFile!);
             var dataset = dicomFile.Dataset;
 
-            // FIX: Extract patient ID from dataset instead of using undefined variable
-            var actualPatientId = dataset.GetString(FellowOakDicom.DicomTag.PatientID);
-            actualPatientId.Should().NotBeNullOrEmpty();
+            // Extract patient name from dataset
+            var actualPatientName = dataset.GetString(FellowOakDicom.DicomTag.PatientName);
+            actualPatientName.Should().NotBeNullOrEmpty();
+            actualPatientName.Should().Contain("Müller-Lüdenscheidt");
 
             // Verify character encoding
             dataset.GetString(FellowOakDicom.DicomTag.SpecificCharacterSet)
                 .Should().Be("ISO_IR 100");
-
-            dataset.GetString(FellowOakDicom.DicomTag.PatientName)
-                .Should().Contain("Müller-Lüdenscheidt");
         }
 
         [Fact]
@@ -171,7 +170,7 @@ namespace CamBridge.Infrastructure.Tests.IntegrationTests
             var testFiles = JpegTestFileGenerator.CreateBatchTestImages(inputDir, 5);
 
             // Act
-            var results = new List<ProcessingResult>();
+            var results = new List<FileProcessingResult>();
             foreach (var file in testFiles)
             {
                 var result = await _fileProcessor.ProcessFileAsync(file);

@@ -189,4 +189,60 @@ namespace CamBridge.Config.Converters
             throw new NotImplementedException();
         }
     }
+
+    /// <summary>
+    /// Converter that returns true if the value is greater than zero
+    /// </summary>
+    public class GreaterThanZeroConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null)
+                return false;
+
+            return value switch
+            {
+                int intValue => intValue > 0,
+                long longValue => longValue > 0,
+                double doubleValue => doubleValue > 0,
+                float floatValue => floatValue > 0,
+                decimal decimalValue => decimalValue > 0,
+                _ => false
+            };
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converter that returns Visibility.Visible if the value is zero, Collapsed otherwise
+    /// </summary>
+    public class ZeroToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null)
+                return Visibility.Collapsed;
+
+            var isZero = value switch
+            {
+                int intValue => intValue == 0,
+                long longValue => longValue == 0,
+                double doubleValue => Math.Abs(doubleValue) < double.Epsilon,
+                float floatValue => Math.Abs(floatValue) < float.Epsilon,
+                decimal decimalValue => decimalValue == 0,
+                _ => false
+            };
+
+            return isZero ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

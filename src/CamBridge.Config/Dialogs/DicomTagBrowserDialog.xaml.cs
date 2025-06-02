@@ -9,8 +9,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
-using CamBridge.Core.ValueObjects;
 using ModernWpf.Controls;
+// Use alias to avoid conflicts
+using CoreDicomTag = CamBridge.Core.ValueObjects.DicomTag;
 
 namespace CamBridge.Config.Dialogs
 {
@@ -37,7 +38,7 @@ namespace CamBridge.Config.Dialogs
             }
         }
 
-        public DicomTag? SelectedTag { get; private set; }
+        public CoreDicomTag? SelectedTag { get; private set; }
 
         private CollectionViewSource _tagsViewSource;
         public ICollectionView TagsView => _tagsViewSource.View;
@@ -62,43 +63,43 @@ namespace CamBridge.Config.Dialogs
             _allTags = new List<DicomTagInfo>();
 
             // Patient Module
-            AddTag("Patient", DicomTag.PatientModule.PatientName, "Patient's Name", "PN");
-            AddTag("Patient", DicomTag.PatientModule.PatientID, "Patient ID", "LO");
-            AddTag("Patient", DicomTag.PatientModule.PatientBirthDate, "Patient's Birth Date", "DA");
-            AddTag("Patient", DicomTag.PatientModule.PatientSex, "Patient's Sex", "CS");
-            AddTag("Patient", DicomTag.PatientModule.OtherPatientIDs, "Other Patient IDs", "LO");
-            AddTag("Patient", DicomTag.PatientModule.PatientComments, "Patient Comments", "LT");
+            AddTag("Patient", CoreDicomTag.PatientModule.PatientName, "Patient's Name", "PN");
+            AddTag("Patient", CoreDicomTag.PatientModule.PatientID, "Patient ID", "LO");
+            AddTag("Patient", CoreDicomTag.PatientModule.PatientBirthDate, "Patient's Birth Date", "DA");
+            AddTag("Patient", CoreDicomTag.PatientModule.PatientSex, "Patient's Sex", "CS");
+            AddTag("Patient", CoreDicomTag.PatientModule.OtherPatientIDs, "Other Patient IDs", "LO");
+            AddTag("Patient", CoreDicomTag.PatientModule.PatientComments, "Patient Comments", "LT");
 
             // Study Module
-            AddTag("Study", DicomTag.StudyModule.StudyInstanceUID, "Study Instance UID", "UI");
-            AddTag("Study", DicomTag.StudyModule.StudyDate, "Study Date", "DA");
-            AddTag("Study", DicomTag.StudyModule.StudyTime, "Study Time", "TM");
-            AddTag("Study", DicomTag.StudyModule.StudyID, "Study ID", "SH");
-            AddTag("Study", DicomTag.StudyModule.AccessionNumber, "Accession Number", "SH");
-            AddTag("Study", DicomTag.StudyModule.StudyDescription, "Study Description", "LO");
-            AddTag("Study", DicomTag.StudyModule.ReferringPhysicianName, "Referring Physician's Name", "PN");
+            AddTag("Study", CoreDicomTag.StudyModule.StudyInstanceUID, "Study Instance UID", "UI");
+            AddTag("Study", CoreDicomTag.StudyModule.StudyDate, "Study Date", "DA");
+            AddTag("Study", CoreDicomTag.StudyModule.StudyTime, "Study Time", "TM");
+            AddTag("Study", CoreDicomTag.StudyModule.StudyID, "Study ID", "SH");
+            AddTag("Study", CoreDicomTag.StudyModule.AccessionNumber, "Accession Number", "SH");
+            AddTag("Study", CoreDicomTag.StudyModule.StudyDescription, "Study Description", "LO");
+            AddTag("Study", CoreDicomTag.StudyModule.ReferringPhysicianName, "Referring Physician's Name", "PN");
 
             // Series Module
-            AddTag("Series", DicomTag.SeriesModule.SeriesInstanceUID, "Series Instance UID", "UI");
-            AddTag("Series", DicomTag.SeriesModule.SeriesNumber, "Series Number", "IS");
-            AddTag("Series", DicomTag.SeriesModule.SeriesDate, "Series Date", "DA");
-            AddTag("Series", DicomTag.SeriesModule.SeriesTime, "Series Time", "TM");
-            AddTag("Series", DicomTag.SeriesModule.SeriesDescription, "Series Description", "LO");
-            AddTag("Series", DicomTag.SeriesModule.Modality, "Modality", "CS");
+            AddTag("Series", CoreDicomTag.SeriesModule.SeriesInstanceUID, "Series Instance UID", "UI");
+            AddTag("Series", CoreDicomTag.SeriesModule.SeriesNumber, "Series Number", "IS");
+            AddTag("Series", CoreDicomTag.SeriesModule.SeriesDate, "Series Date", "DA");
+            AddTag("Series", CoreDicomTag.SeriesModule.SeriesTime, "Series Time", "TM");
+            AddTag("Series", CoreDicomTag.SeriesModule.SeriesDescription, "Series Description", "LO");
+            AddTag("Series", CoreDicomTag.SeriesModule.Modality, "Modality", "CS");
 
-            // Image Module
-            AddTag("Image", DicomTag.ImageModule.SOPInstanceUID, "SOP Instance UID", "UI");
-            AddTag("Image", DicomTag.ImageModule.InstanceNumber, "Instance Number", "IS");
-            AddTag("Image", DicomTag.ImageModule.ContentDate, "Content Date", "DA");
-            AddTag("Image", DicomTag.ImageModule.ContentTime, "Content Time", "TM");
-            AddTag("Image", DicomTag.ImageModule.AcquisitionDateTime, "Acquisition DateTime", "DT");
+            // Instance Module (was ImageModule)
+            AddTag("Instance", CoreDicomTag.InstanceModule.SOPInstanceUID, "SOP Instance UID", "UI");
+            AddTag("Instance", CoreDicomTag.InstanceModule.InstanceNumber, "Instance Number", "IS");
+            AddTag("Instance", CoreDicomTag.InstanceModule.ContentDate, "Content Date", "DA");
+            AddTag("Instance", CoreDicomTag.InstanceModule.ContentTime, "Content Time", "TM");
+            AddTag("Instance", CoreDicomTag.InstanceModule.AcquisitionDateTime, "Acquisition DateTime", "DT");
 
             // Equipment Module
-            AddTag("Equipment", DicomTag.EquipmentModule.Manufacturer, "Manufacturer", "LO");
-            AddTag("Equipment", DicomTag.EquipmentModule.InstitutionName, "Institution Name", "LO");
-            AddTag("Equipment", DicomTag.EquipmentModule.StationName, "Station Name", "SH");
-            AddTag("Equipment", DicomTag.EquipmentModule.ManufacturerModelName, "Manufacturer's Model Name", "LO");
-            AddTag("Equipment", DicomTag.EquipmentModule.SoftwareVersions, "Software Versions", "LO");
+            AddTag("Equipment", CoreDicomTag.EquipmentModule.Manufacturer, "Manufacturer", "LO");
+            AddTag("Equipment", CoreDicomTag.EquipmentModule.InstitutionName, "Institution Name", "LO");
+            AddTag("Equipment", CoreDicomTag.EquipmentModule.StationName, "Station Name", "SH");
+            AddTag("Equipment", CoreDicomTag.EquipmentModule.ManufacturerModelName, "Manufacturer's Model Name", "LO");
+            AddTag("Equipment", CoreDicomTag.EquipmentModule.SoftwareVersions, "Software Versions", "LO");
 
             // Setup CollectionViewSource with grouping
             _tagsViewSource = new CollectionViewSource { Source = _allTags };
@@ -110,7 +111,7 @@ namespace CamBridge.Config.Dialogs
             OnPropertyChanged(nameof(TagsView));
         }
 
-        private void AddTag(string module, DicomTag tag, string name, string vr)
+        private void AddTag(string module, CoreDicomTag tag, string name, string vr)
         {
             _allTags.Add(new DicomTagInfo
             {
@@ -223,7 +224,7 @@ namespace CamBridge.Config.Dialogs
         public class DicomTagInfo
         {
             public string Module { get; set; } = string.Empty;
-            public DicomTag Tag { get; set; } = null!;
+            public CoreDicomTag Tag { get; set; } = null!;
             public string Name { get; set; } = string.Empty;
             public string VR { get; set; } = string.Empty;
             public string TagString { get; set; } = string.Empty;

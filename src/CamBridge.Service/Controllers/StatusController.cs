@@ -234,7 +234,7 @@ namespace CamBridge.Service.Controllers
     public class DetailedStatisticsDto
     {
         public QueueStatistics QueueStatistics { get; set; } = null!;
-        public DeadLetterStatistics DeadLetterStatistics { get; set; } = null!;
+        public CamBridge.Infrastructure.Services.DeadLetterStatistics DeadLetterStatistics { get; set; } = null!;
         public Dictionary<string, int> TopErrors { get; set; } = new();
         public Dictionary<string, int> ErrorCategories { get; set; } = new();
     }

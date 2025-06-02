@@ -151,7 +151,7 @@ namespace CamBridge.Config.Services
                         SmtpPort = 587,
                         UseSsl = true
                     },
-                    MinimumEmailLevel = "Warning",
+                    MinimumEmailLevel = NotificationLevel.Warning,
                     SendDailySummary = false,
                     DailySummaryHour = 8
                 }

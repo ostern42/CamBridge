@@ -1,4 +1,4 @@
-﻿namespace CamBridge.Core.ValueObjects
+namespace CamBridge.Core.ValueObjects
 {
     /// <summary>
     /// Represents a DICOM tag with group and element numbers
@@ -45,6 +45,7 @@
             public static readonly DicomTag PatientBirthDate = new(0x0010, 0x0030);
             public static readonly DicomTag PatientSex = new(0x0010, 0x0040);
             public static readonly DicomTag OtherPatientIDs = new(0x0010, 0x1000);
+            public static readonly DicomTag PatientComments = new(0x0010, 0x4000);
         }
 
         public static class StudyModule
@@ -76,13 +77,26 @@
             public static readonly DicomTag InstanceNumber = new(0x0020, 0x0013);
             public static readonly DicomTag ContentDate = new(0x0008, 0x0023);
             public static readonly DicomTag ContentTime = new(0x0008, 0x0033);
+            public static readonly DicomTag AcquisitionDateTime = new(0x0008, 0x002A);
         }
 
         public static class EquipmentModule
         {
             public static readonly DicomTag Manufacturer = new(0x0008, 0x0070);
+            public static readonly DicomTag InstitutionName = new(0x0008, 0x0080);
             public static readonly DicomTag ManufacturerModelName = new(0x0008, 0x1090);
+            public static readonly DicomTag StationName = new(0x0008, 0x1010);
             public static readonly DicomTag SoftwareVersions = new(0x0018, 0x1020);
+        }
+
+        // Legacy alias for compatibility
+        public static class ImageModule
+        {
+            public static readonly DicomTag SOPInstanceUID = InstanceModule.SOPInstanceUID;
+            public static readonly DicomTag InstanceNumber = InstanceModule.InstanceNumber;
+            public static readonly DicomTag ContentDate = InstanceModule.ContentDate;
+            public static readonly DicomTag ContentTime = InstanceModule.ContentTime;
+            public static readonly DicomTag AcquisitionDateTime = InstanceModule.AcquisitionDateTime;
         }
     }
 }

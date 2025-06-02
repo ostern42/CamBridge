@@ -6,6 +6,25 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2025-06-02 15:00
+### Fixed
+- NotificationService.cs: Fixed MinimumEmailLevel type conversion (string to enum)
+- MappingEditorViewModel.cs: Added NullLoggerFactory for MappingConfigurationLoader
+- SettingsViewModel.cs: Changed MinimumEmailLevel from string to NotificationLevel enum
+- ConfigurationService.cs: Fixed MinimumEmailLevel initialization with enum value
+- MappingEditorPage.xaml.cs: Changed UpdatePreview method call to public
+- ValueConverters.cs: Added missing GreaterThanZeroConverter and ZeroToVisibilityConverter
+
+### Changed
+- Version.props updated from 0.5.4 to 0.5.6 (sync with CHANGELOG)
+- All build errors resolved - successful compilation achieved
+
+### Technical Notes
+- Build now completes with only harmless warnings (nullable refs, Windows-specific APIs)
+- Ready for ExifTool integration testing
+- All 5 QRBridge fields verification pending
+- VOGON POETRY CORE remains initialized but unimplemented
+
 ## [0.5.5] - 2025-06-02 10:42
 ### Added
 - GitHub integration successfully implemented - project now publicly accessible

@@ -15,6 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
+		CAMBRIDGE_TREE_STRUCTURE.md = CAMBRIDGE_TREE_STRUCTURE.md
 		CHANGELOG.md = CHANGELOG.md
 		collect-sources.bat = collect-sources.bat
 		GUI-Readme.md = GUI-Readme.md
