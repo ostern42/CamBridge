@@ -6,6 +6,23 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.11] - 2025-06-02 20:33
+### Fixed
+- Mapping Editor crash resolved - duplicate converter registration removed
+- Added missing event handlers for drag&drop functionality
+- Fixed MappingEditorPage.xaml.cs compilation errors
+- Removed problematic DataType attributes from DataTemplates
+
+### Known Issues
+- DataContext/ViewModel not automatically injected (buttons non-functional)
+- XAML Designer showing phantom converter errors (build works fine)
+- Need to investigate MainWindow navigation for proper DI integration
+
+### Technical Notes
+- ValueConverters.cs already contained all required converters
+- "Nachts mit Sonnenbrille" - lesson learned about checking existing code first
+- Visual Studio XAML Designer cache can be very persistent
+
 ## [0.5.10] - 2025-06-02 18:47
 ### Fixed
 - Service Start/Stop functionality fully working

@@ -20,6 +20,10 @@
             <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
             <conv:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
             <conv:ZeroToVisibilityConverter x:Key="ZeroToVisibility"/>
+            <conv:EnumToCollectionConverter x:Key="EnumToCollection"/>
+            <conv:ServiceStatusToColorConverter x:Key="ServiceStatusToColor"/>
+            <conv:TimeSpanToStringConverter x:Key="TimeSpanToString"/>
+            <conv:FileSizeConverter x:Key="FileSizeConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -9,7 +9,7 @@
 
     <Page.Resources>
         <!-- Data Templates -->
-        <DataTemplate x:Key="SourceFieldTemplate" DataType="{x:Type vm:MappingEditorViewModel+SourceFieldInfo}">
+        <DataTemplate x:Key="SourceFieldTemplate">
             <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                     BorderThickness="1"
@@ -61,7 +61,7 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="MappingRuleTemplate" DataType="{x:Type vm:MappingRuleViewModel}">
+        <DataTemplate x:Key="MappingRuleTemplate">
             <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                     BorderThickness="1"

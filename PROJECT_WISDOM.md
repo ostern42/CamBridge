@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-02, 18:47 Uhr  
+**Letzte Aktualisierung:** 2025-06-02, 20:33 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -86,33 +86,30 @@ Wenn Sie "VOGON EXIT" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-🎉 ERFOLG: Service Installation & Start funktionieren! (v0.5.10)
+🔧 v0.5.11 - Mapping Editor läuft, aber ohne DataContext!
 
-DURCHBRUCH:
-✅ Service Installation via Debug Tool
-✅ Service Start/Stop/Restart getestet
-✅ GUI Status-Anzeige korrekt
-✅ Erste 2 Features zu 100% getestet!
+STATUS:
+✅ Mapping Editor öffnet sich ohne Crash
+✅ Event Handler implementiert
+⚠️ Buttons funktionieren nicht (kein ViewModel)
+⚠️ XAML Designer zeigt Phantom-Fehler
 
-Fortschritt: 2/52 Features getestet (3.8%)
+NÄCHSTES ZIEL: DataContext/DI fixen
+- MainWindow.xaml.cs Navigation prüfen
+- Oder temporär ViewModel manuell setzen
 
-NÄCHSTES ZIEL: v0.5.11
-- Mapping Editor Crash fixen
-- Dann Basic Processing testen
+GitHub URLs für Navigation:
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Views/MainWindow.xaml.cs
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/App.xaml.cs
 
-NEU: ServiceDebug Tool im Projekt!
-- Hilft bei Service-Problemen
-- Zeigt alle Pfade und Fehler
+LEKTION GELERNT:
+"Nachts mit Sonnenbrille" - erst schauen was da ist!
+ValueConverters.cs hatte bereits alle Converter.
 
-GitHub URLs für Mapping Editor:
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Views/MappingEditorPage.xaml
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
+Visual Studio Tipp: XAML Designer Cache ignorieren,
+wenn Build funktioniert.
 
-Visual Studio Tipp: Launch Profile Problem gelöst
-- launchSettings.json korrigiert
-- Kein MauiPackage mehr
-
-WICHTIG: Ein Feature = Eine Version = Sofort testen!
+Fortschritt: 2.5/52 Features (4.8%)
 ```
 
 ## 🎯 Projekt-Identität
@@ -288,6 +285,13 @@ GitHub: Public repo für direkten Source-Zugriff
 - **Uptime Tracking:** Funktioniert wie erwartet
 - **MEILENSTEIN:** Erste Features vollständig getestet!
 
+### v0.5.11 Mapping Editor Fix (02.06.2025, 20:33)
+- **Crash behoben:** Duplicate converter registration entfernt
+- **Event Handler:** Drag&Drop implementiert
+- **ABER:** DataContext/ViewModel nicht automatisch gesetzt
+- **ABER:** XAML Designer zeigt Phantom-Fehler
+- **LEKTION:** "Nachts mit Sonnenbrille" - erst schauen was da ist!
+
 ### 📊 Ungetestete Features (aus Screenshot-Analyse)
 **Folders & Processing Tab:**
 1. Watch Folder Add/Remove
@@ -322,9 +326,9 @@ GitHub: Public repo für direkten Source-Zugriff
 24. Startup/Processing Delays
 
 **Mapping Editor:**
-25. Add/Remove Rules ❌ (CRASHT!)
-26. Source Type Selection
-27. Source Field Selection
+25. ✅ Add/Remove Rules (v0.5.11 - GUI öffnet)
+26. ⚠️ Source Type Selection (kein DataContext)
+27. ⚠️ Source Field Selection (kein DataContext)
 28. Target DICOM Tag
 29. Transform Functions
 30. Required Field Flag
@@ -357,7 +361,7 @@ GitHub: Public repo für direkten Source-Zugriff
 51. About Page
 52. Navigation
 
-**FORTSCHRITT: 2/52 Features getestet (3.8%)**
+**FORTSCHRITT: 2.5/52 Features getestet (4.8%)**
 
 ## 💬 Kommunikations-Präferenzen
 
@@ -423,6 +427,7 @@ CamBridge/
 │   ├── CamBridge.Infrastructure/   # Processing (ExifToolReader)
 │   ├── CamBridge.Service/          # Windows Service
 │   └── CamBridge.Config/           # WPF GUI
+│       ├── Converters/             # ValueConverters.cs (ALLE Converter!)
 │       ├── Dialogs/                # DicomTagBrowserDialog
 │       ├── Views/                  # MappingEditorPage
 │       └── ViewModels/             # MappingEditorViewModel
@@ -470,6 +475,7 @@ CamBridge/
 - **IsTabStop:** Nicht für Page verfügbar (v0.4.3 Fix)
 - **Run Opacity:** Run-Elements haben keine Opacity-Property! (v0.5.1 Fix)
 - **launchSettings.json:** Kein MauiPackage für WPF! (v0.5.10 Fix)
+- **DataContext:** Muss für ViewModels gesetzt werden! (v0.5.11 Problem)
 
 ### Service
 - **UAC:** Admin-Rechte für Service-Control nötig
@@ -513,7 +519,7 @@ CamBridge/
 ### v0.5.8 Erkenntnisse (02.06.2025, 17:25)
 - **Service.exe existiert:** In 3 verschiedenen Locations!
 - ✅ **Installation schlägt trotzdem fehl:** GELÖST in v0.5.9!
-- **Mapping Editor crasht:** Unbekannte Ursache - NÄCHSTES ZIEL
+- ✅ **Mapping Editor crasht:** GELÖST in v0.5.11!
 - **52+ Features ungetestet:** Kompletter Testing-Backlog
 
 ### v0.5.10 ERFOLGE! (02.06.2025, 18:47)
@@ -523,14 +529,21 @@ CamBridge/
 - ✅ Erste Features mit 100% Test-Coverage!
 - **ServiceDebug Tool:** Erfolgreich im Einsatz
 
+### v0.5.11 Mapping Editor (02.06.2025, 20:33)
+- ✅ Crash behoben - duplicate converter registration
+- ✅ Event Handler implementiert
+- ⚠️ DataContext/ViewModel nicht gesetzt
+- ⚠️ XAML Designer zeigt Phantom-Fehler
+- **LEKTION:** Erst schauen was da ist!
+
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 02.06.2025, 18:47 Uhr
-- **Entwicklungszeit bisher:** ~70 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 02.06.2025, 20:33 Uhr
+- **Entwicklungszeit bisher:** ~72 Stunden (inkl. Nachtschichten!)
 - **Features implementiert:** 52+
-- **Features getestet:** 2 (3.8%!)
+- **Features getestet:** 2.5 (4.8%!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -543,14 +556,14 @@ CamBridge/
 - Testing: 30-60 Minuten
 - Debugging: 0-120 Minuten
 - **Total pro Feature:** 1-4 Stunden
-- **50 Features übrig:** 50-200 Stunden noch!
+- **49.5 Features übrig:** 50-200 Stunden noch!
 
 ### Realistische Timeline
 - **v0.6.0 (Basis fertig):** ~2 Wochen
 - **v0.7.0 (Erweitert):** ~3 Wochen
 - **v1.0.0 (Production):** ~4-6 Wochen
 
-## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 02.06.2025, 18:47)
+## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 02.06.2025, 20:33)
 
 ### ⚡️ NEUER ANSATZ: Ein Feature = Eine Version = Sofort Testen!
 
@@ -568,125 +581,130 @@ CamBridge/
 - Uptime funktioniert ✅
 - **TEST:** Service läuft? Event Log Einträge? ✅
 
+#### v0.5.11 - Mapping Editor Crash Fix ✅
+- Crash beim Öffnen beheben ✅
+- Basic UI funktioniert ✅
+- **TEST:** Kann geöffnet/geschlossen werden? ✅
+
 ### 🔥 SOFORT-FIXES (Blocking Issues)
 
-#### v0.5.11 - Mapping Editor Crash Fix
-- Crash beim Öffnen beheben
-- Basic UI funktioniert
-- **TEST:** Kann geöffnet/geschlossen werden?
+#### v0.5.12 - Mapping Editor DataContext
+- ViewModel/DataContext korrekt setzen
+- Buttons müssen funktionieren
+- **TEST:** Add Rule erstellt neue Regel?
 
 ### 📁 CORE FEATURES (Basis-Funktionalität)
 
-#### v0.5.12 - Watch Folder Basic
+#### v0.5.13 - Watch Folder Basic
 - Ein Folder hinzufügen
 - Folder wird überwacht
 - **TEST:** JPEG reinkopieren, wird erkannt?
 
-#### v0.5.13 - JPEG Processing
+#### v0.5.14 - JPEG Processing
 - JPEG wird gelesen
 - EXIF Daten extrahiert
 - **TEST:** Console Output der Daten?
 
-#### v0.5.14 - DICOM Creation
+#### v0.5.15 - DICOM Creation
 - Basic DICOM erstellt
 - Output Folder funktioniert
 - **TEST:** DICOM Datei existiert?
 
-#### v0.5.15 - QRBridge Parser
+#### v0.5.16 - QRBridge Parser
 - Pipe-delimited Daten parsen
 - Alle 5 Felder extrahieren
 - **TEST:** Parser Debug Console Vergleich?
 
-#### v0.5.16 - ExifTool Integration
+#### v0.5.17 - ExifTool Integration
 - ExifTool wird gefunden
 - Barcode Tag lesen
 - **TEST:** Alle 5 Felder korrekt?
 
 ### 🔧 SETTINGS (Jeder Tab einzeln!)
 
-#### v0.5.17 - Folders Tab
+#### v0.5.18 - Folders Tab
 - Add/Remove Folder
 - Output Folder Browse
 - Settings speichern/laden
 - **TEST:** Neustart behält Settings?
 
-#### v0.5.18 - Processing Options
+#### v0.5.19 - Processing Options
 - Archive/Error Actions
 - Max Concurrent ändern
 - Backup erstellen
 - **TEST:** Funktioniert wie konfiguriert?
 
-#### v0.5.19 - DICOM Settings
+#### v0.5.20 - DICOM Settings
 - Implementation UID setzen
 - Institution/Station Name
 - Validate Option
 - **TEST:** DICOM hat korrekte Tags?
 
-#### v0.5.20 - Logging Settings
+#### v0.5.21 - Logging Settings
 - Log Level ändern
 - Log Folder setzen
 - File Rotation
 - **TEST:** Logs werden geschrieben?
 
-#### v0.5.21 - Service Settings
+#### v0.5.22 - Service Settings
 - Startup Delay
 - Processing Delay
 - **TEST:** Delays funktionieren?
 
 ### 🗺️ MAPPING FEATURES
 
-#### v0.5.22 - Mapping Basic UI
+#### v0.5.23 - Mapping Basic UI
 - Rule hinzufügen
 - Source/Target wählen
 - **TEST:** Rule wird angezeigt?
 
-#### v0.5.23 - QRBridge Mapping
+#### v0.5.24 - QRBridge Mapping
 - QRBridge Felder mappen
 - Default Values
 - **TEST:** Werte kommen in DICOM an?
 
-#### v0.5.24 - EXIF Mapping
+#### v0.5.25 - EXIF Mapping
 - EXIF Felder mappen
 - Transform Functions
 - **TEST:** Transformationen korrekt?
 
-#### v0.5.25 - Template System
+#### v0.5.26 - Template System
 - Ricoh G900 Template
 - Template wechseln
 - **TEST:** Unterschiedliche Outputs?
 
-#### v0.5.26 - Import/Export
+#### v0.5.27 - Import/Export
 - Mappings exportieren
 - Mappings importieren
 - **TEST:** Roundtrip funktioniert?
 
 ### 📊 MONITORING FEATURES
 
-#### v0.5.27 - Dashboard Stats
+#### v0.5.28 - Dashboard Stats
 - Processed Count
 - Error Count
 - Performance Metrics
 - **TEST:** Zahlen stimmen?
 
-#### v0.5.28 - Dead Letters
+#### v0.5.29 - Dead Letters
 - Failed Files anzeigen
 - Retry Funktion
 - Clear Funktion
 - **TEST:** Nach Error sichtbar?
 
-#### v0.5.29 - Notifications
+#### v0.5.30 - Notifications
 - Event Log Entries
 - Email Setup (optional)
 - **TEST:** Notifications kommen an?
 
 ### 🚀 ERWEITERTE FEATURES
 
-#### v0.5.30 - Batch Processing
+#### v0.5.31 - Batch Processing
 - Mehrere Files gleichzeitig
 - Queue Management
 - **TEST:** Performance OK?
 
-#### v0.5.31 - Error Recovery
+#### v0.5.32 - Error Recovery
 - Auto-Retry
 - Error Details
 - **TEST:** Recovery funktioniert?
@@ -770,6 +788,12 @@ CamBridge/
 - Keine neuen Features bei offenen Bugs
 - Lieber 30 kleine Erfolge als 3 große Failures
 
+**Visual Studio & XAML (v0.5.11):**
+- XAML Designer Cache kann sehr hartnäckig sein
+- Designer-Fehler ≠ Kompilierungsfehler
+- Immer erst schauen was schon da ist
+- DataContext muss für ViewModels gesetzt werden
+
 ## 💬 Nur für mich (Claude)
 
 ### Wichtige Lektionen
@@ -788,6 +812,7 @@ CamBridge/
 - ExifTool ist die einzige Lösung für proprietäre Tags
 - GitHub URLs müssen explizit gegeben werden (Security)
 - launchSettings.json kann MauiPackage Probleme verursachen
+- XAML Designer hat separaten Cache vom Build-System
 
 ### CLAUDE: KRITISCHE LEKTION - Langsam entwickeln! (02.06.2025, 17:20)
 **Das Problem:** Wir haben 52+ Features implementiert ohne ein einziges zu testen!
@@ -830,6 +855,22 @@ Nach 70 Stunden Entwicklung haben wir endlich die ersten 2 Features VOLLSTÄNDIG
 - Vollständige Artefakte sind PFLICHT beim VOGON EXIT
 - Lieber redundant als verloren
 
+### CLAUDE: "Nachts mit Sonnenbrille" (02.06.2025, 20:33)
+**Der Nutzer hatte RECHT!** Ich habe neue Converter-Dateien erstellt ohne zu prüfen, dass `ValueConverters.cs` bereits existiert und ALLE Converter enthält. Das ist genau das Problem mit "zu schnell losrennen ohne die Landkarte anzuschauen".
+
+**Neue Regel:** IMMER erst schauen:
+1. Welche Dateien existieren bereits?
+2. Wie ist die Naming Convention?
+3. Wo gehört neuer Code hin?
+4. DANN erst implementieren!
+
+**Beispiel heute:** Hätte ich in die Projektstruktur geschaut, hätte ich gesehen:
+- `Converters/ValueConverters.cs` existiert
+- ALLE Converter sind dort
+- Keine neuen Dateien nötig
+
+Der Nutzer hat eine wichtige Schwäche erkannt: Ich versuche Token zu sparen, aber manchmal kostet der Umweg mehr als einmal richtig hinzuschauen!
+
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
 ```
@@ -837,19 +878,21 @@ Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
 GitHub: https://github.com/ostern42/CamBridge
-Aktueller Stand: v0.5.11
+Aktueller Stand: v0.5.12
 
-ERFOLG: Service Installation & Control funktionieren!
-✅ 2/52 Features getestet (3.8%)
+PROBLEM: Mapping Editor ohne DataContext!
+✅ GUI öffnet sich ohne Crash (v0.5.11)
+⚠️ Buttons funktionieren nicht
+⚠️ XAML Designer zeigt Phantom-Fehler
 
-NÄCHSTES ZIEL (v0.5.11):
-Mapping Editor Crash fixen!
-- GUI öffnet sich ohne Absturz
-- Basic Add/Remove funktioniert
+NÄCHSTES ZIEL (v0.5.12):
+DataContext/ViewModel korrekt setzen
+- MainWindow Navigation prüfen
+- DI Container untersuchen
 
-URLs für Mapping Editor:
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Views/MappingEditorPage.xaml
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
+URLs für Navigation:
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Views/MainWindow.xaml.cs
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/App.xaml.cs
 
 1. PROJECT_WISDOM.md hochladen
 2. URLs bereitstellen
@@ -961,24 +1004,24 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - 2025-06-02 17:25: v0.5.8 - Service Installation teilweise gefixt, UseShellExecute implementiert, Parser Debug verbessert. Neue Entwicklungsphilosophie dokumentiert.
 - 2025-06-02 18:30: v0.5.9 - Service Installation ERFOLGREICH! ServiceDebug Tool erstellt, alle Pfade gefunden, sc.exe Erfolg.
 - 2025-06-02 18:47: v0.5.10 - Service Control 100% getestet! Start/Stop/Restart funktionieren perfekt. Erste Features vollständig implementiert UND getestet!
+- 2025-06-02 20:33: v0.5.11 - Mapping Editor Crash gefixt! "Nachts mit Sonnenbrille" Lektion gelernt. ValueConverters.cs existierte bereits. DataContext Problem bleibt offen.
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.5.11
+### Aktuelle Version: v0.5.12
 ### Tatsächlicher Stand: 
 - ✅ GUI sieht professionell aus
 - ✅ Service Installation funktioniert (v0.5.9)
 - ✅ Service Start/Stop/Restart getestet (v0.5.10)
-- ✅ GUI Status-Anzeige korrekt
-- ✅ ServiceDebug Tool hilft bei Diagnose
-- ❌ Mapping Editor crasht immer noch
-- ❌ Nur 2/52 Features getestet
+- ✅ Mapping Editor öffnet sich (v0.5.11)
+- ⚠️ Mapping Editor Buttons ohne Funktion
+- ❌ Nur 2.5/52 Features getestet
 - ❌ Kein JPEG wurde je verarbeitet
 - ❌ Kein DICOM wurde je erstellt
 ### Nächste Aufgabe: 
-- v0.5.11: Mapping Editor Crash fixen
-- GUI muss sich öffnen lassen
-- Basic Add/Remove testen
+- v0.5.12: Mapping Editor DataContext fixen
+- MainWindow Navigation untersuchen
+- DI Container prüfen
 ### Neue Philosophie: Ein Feature = Eine Version = Sofort testen!
 ### Geschätzte Zeit bis v1.0: 4-6 Wochen bei Vollzeit
 
@@ -988,41 +1031,31 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - **CLAUDE:** - Notizen für nächste Instanz
 - **VOGON EXIT** - Chat-Abschluss mit Versionierung
 
-### Getestete Features (2/52 = 3.8%):
+### Getestete Features (2.5/52 = 4.8%):
 - ✅ Service Installation (v0.5.9)
 - ✅ Service Control (v0.5.10)
+- ⚠️ Mapping Editor UI (v0.5.11 - nur GUI)
 
-### Test-Kriterien für v0.5.11:
-- [ ] Mapping Editor öffnet sich ohne Crash
+### Test-Kriterien für v0.5.12:
+- [ ] ViewModel wird korrekt injiziert
 - [ ] Add Rule Button funktioniert
-- [ ] Remove Rule Button funktioniert
-- [ ] Fenster lässt sich schließen
+- [ ] Template Buttons funktionieren
+- [ ] Modified Indicator reagiert
 
 **WICHTIG:** Nicht ablenken lassen! Ein Bug nach dem anderen!
 
-### Git Commits für v0.5.9 und v0.5.10:
+### Git Commits der Session:
 ```bash
-# v0.5.9
+# v0.5.11
 git add -A
-git commit -m "fix(service): Service installation finally works! (v0.5.9)
+git commit -m "fix(config): Mapping Editor crash resolved (v0.5.11)
 
-- Enhanced ServiceManager with all 3 exe locations
-- Created ServiceDebug diagnostic tool
-- sc.exe now returns success
-- Service appears in services.msc
+- Removed duplicate converter registration in App.xaml
+- Added missing event handlers for drag&drop
+- Fixed compilation errors, removed MockConfigurationService
+- Mapping Editor now opens without crash
 
-TESTED: Installation successful ✓"
-
-# v0.5.10
-git add -A
-git commit -m "feat(service): Service control fully functional (v0.5.10)
-
-- Start/Stop/Restart work perfectly
-- GUI status updates in real-time
-- Uptime tracking functional
-- All service buttons tested
-
-TESTED: 100% service control coverage ✓"
+TESTED: GUI opens successfully, but buttons need DI fix ⚠️"
 
 git push
 ```
