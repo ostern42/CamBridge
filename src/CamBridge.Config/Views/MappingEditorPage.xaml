@@ -62,12 +62,23 @@
         </DataTemplate>
 
         <DataTemplate x:Key="MappingRuleTemplate">
-            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                    BorderThickness="1"
+            <Border BorderThickness="1"
                     CornerRadius="4"
                     Padding="12"
                     Margin="0,4">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -107,25 +118,28 @@
                                 Orientation="Horizontal"
                                 VerticalAlignment="Top">
                         <Button ToolTip="Move Up"
-        Command="{Binding DataContext.MoveRuleUpCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-        Margin="0,0,4,0"
-        Width="32"
-        Height="32">
+                                Command="{Binding DataContext.MoveRuleUpCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                CommandParameter="{Binding}"
+                                Margin="0,0,4,0"
+                                Width="32"
+                                Height="32">
                             <TextBlock Text="▲" FontSize="12"/>
                         </Button>
 
                         <Button ToolTip="Move Down"
-        Command="{Binding DataContext.MoveRuleDownCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-        Margin="0,0,4,0"
-        Width="32"
-        Height="32">
+                                Command="{Binding DataContext.MoveRuleDownCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                CommandParameter="{Binding}"
+                                Margin="0,0,4,0"
+                                Width="32"
+                                Height="32">
                             <TextBlock Text="▼" FontSize="12"/>
                         </Button>
 
                         <Button ToolTip="Remove"
-        Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-        Width="32"
-        Height="32">
+                                Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                CommandParameter="{Binding}"
+                                Width="32"
+                                Height="32">
                             <ui:SymbolIcon Symbol="Delete" Width="16" Height="16"/>
                         </Button>
                     </StackPanel>
@@ -277,7 +291,7 @@
                     </Grid>
                 </Border>
 
-                <!-- Mapping Rules List -->
+                <!-- Mapping Rules List - CHANGED TO LISTBOX -->
                 <Border Grid.Row="1"
                         Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
                         BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
@@ -286,16 +300,28 @@
                         Drop="MappingArea_Drop"
                         DragOver="MappingArea_DragOver">
 
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding MappingRules}"
-                                      ItemTemplate="{StaticResource MappingRuleTemplate}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Margin="8"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                        </ItemsControl>
-                    </ScrollViewer>
+                    <ListBox ItemsSource="{Binding MappingRules}"
+                             SelectedItem="{Binding SelectedRule}"
+                             ItemTemplate="{StaticResource MappingRuleTemplate}"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             Margin="8">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter/>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
                 </Border>
 
                 <!-- Live Preview -->

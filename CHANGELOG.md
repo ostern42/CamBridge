@@ -6,6 +6,29 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.13] - 2025-06-02 23:12
+
+### Fixed
+- Mapping Editor selection binding now working
+- Replaced ItemsControl with ListBox for proper selection support
+- Added visual feedback for selected mapping rules
+
+### Added
+- Selection highlight with accent border
+- SelectedItem two-way binding to ViewModel
+
+### Technical
+- Custom ItemContainerStyle for clean ListBox appearance
+- DataTrigger for selection visual state
+- Properties panel now correctly updates on selection
+
+### Status
+- Mapping Editor: 100% functional ✅
+- Templates: Working
+- Drag & Drop: Working
+- Selection: Fixed
+- Next: Watch Folder implementation
+
 ## [0.5.12] - 2025-06-02 22:50
 ### Fixed
 - Navigation: MappingEditor und AboutPage in NavigationService registriert

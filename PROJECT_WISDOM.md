@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-02, 22:50 Uhr  
+**Letzte Aktualisierung:** 2025-06-02, 23:12 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -86,29 +86,28 @@ Wenn Sie "VOGON EXIT" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-🔧 v0.5.12 - Mapping Editor funktioniert! (fast)
+🔧 v0.5.13 - Mapping Editor 100% funktionsfähig!
 
 STATUS:
-✅ Navigation/DataContext gefixt (v0.5.12)
-✅ Templates, Drag&Drop, Add Rule funktionieren
-✅ Import/Export/Save Dialoge öffnen sich
-⚠️ Rule Properties reagieren nicht beim Auswählen
+✅ Selection Binding gefixt (ItemsControl → ListBox)
+✅ Mapping Editor komplett funktional
+✅ 7/52 Features getestet (13.5%)
+📝 Nutzer möchte bald End-to-End Test (JPEG→DICOM)
 
-NÄCHSTES ZIEL: v0.5.13 - Zwei kleine Fixes
-1. Rule Properties Selection Binding fixen
-2. Dann Watch Folder Basic implementieren
+NÄCHSTES ZIEL: v0.5.14 - Watch Folder Basic
+1. Ein Folder zur Watch List hinzufügen
+2. FileSystemWatcher aktivieren
+3. "File detected" Log ausgeben
 
-GitHub URLs für Properties Fix:
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Views/MappingEditorPage.xaml
+WICHTIG: Überlegen ob wir erst JPEG→DICOM testen sollten
+bevor wir weitere Features implementieren?
 
-ERFOLG: Mapping Editor zu 90% funktionsfähig!
-Nur Selection Binding fehlt noch.
+GitHub URLs für Watch Folder:
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/FolderWatcherService.cs
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/ViewModels/SettingsViewModel.cs
 
-Visual Studio Tipp: Bei Binding-Problemen
-Output Window > Debug für Binding-Fehler prüfen.
-
-Fortschritt: 4/52 Features (7.7%)
+Fortschritt: 7/52 Features (13.5%)
+Mapping versteht Nutzer noch nicht ganz - bei DICOM Test erklären!
 ```
 
 ## 🎯 Projekt-Identität
@@ -304,6 +303,14 @@ GitHub: Public repo für direkten Source-Zugriff
   - ⚠️ Rule Properties Selection reagiert nicht (Minor Bug)
 - **LEKTION:** "Das Offensichtliche zuerst" - Navigation Dictionary prüfen!
 
+### v0.5.13 Selection Binding Fix (02.06.2025, 23:12)
+- **Problem:** ItemsControl unterstützt keine Selection!
+- **Lösung:** ListBox mit SelectedItem Binding
+- **Visual Feedback:** DataTrigger für Selection Highlight
+- **Custom Style:** Keine Standard ListBox Appearance
+- **ERFOLG:** Mapping Editor jetzt 100% funktionsfähig!
+- **Nutzer-Feedback:** Versteht Mapping noch nicht ganz → bei DICOM Test erklären
+
 ### 📊 Ungetestete Features (aus Screenshot-Analyse)
 **Folders & Processing Tab:**
 1. Watch Folder Add/Remove
@@ -341,11 +348,11 @@ GitHub: Public repo für direkten Source-Zugriff
 25. ✅ Add/Remove Rules (v0.5.12 - GUI funktioniert)
 26. ✅ Source Type Selection (v0.5.12 - Templates funktionieren)
 27. ✅ Source Field Selection (v0.5.12 - Drag&Drop funktioniert)
-28. ⚠️ Target DICOM Tag (Selection Binding fehlt)
-29. ⚠️ Transform Functions (Selection Binding fehlt)
-30. ⚠️ Required Field Flag (Selection Binding fehlt)
-31. ⚠️ Default Values (Selection Binding fehlt)
-32. ⚠️ Preview Function (Selection Binding fehlt)
+28. ✅ Target DICOM Tag (v0.5.13 - Selection funktioniert)
+29. ✅ Transform Functions (v0.5.13 - Selection funktioniert)
+30. ✅ Required Field Flag (v0.5.13 - Selection funktioniert)
+31. ✅ Default Values (v0.5.13 - Selection funktioniert)
+32. ✅ Preview Function (v0.5.13 - Selection funktioniert)
 33. ✅ Import/Export (v0.5.12 - Dialoge öffnen sich)
 34. ✅ Template System (v0.5.12 - Alle 3 Templates funktionieren)
 
@@ -373,7 +380,7 @@ GitHub: Public repo für direkten Source-Zugriff
 51. About Page
 52. Navigation
 
-**FORTSCHRITT: 7/52 Features getestet (13.5%)**
+**FORTSCHRITT: 11/52 Features getestet (21.2%)**
 
 ## 💬 Kommunikations-Präferenzen
 
@@ -429,7 +436,7 @@ GitHub: Public repo für direkten Source-Zugriff
 ### Wichtige Pfade
 ```
 CamBridge/
-├── Version.props                    # Zentrale Version (jetzt 0.5.12)
+├── Version.props                    # Zentrale Version (jetzt 0.5.13)
 ├── Tools/                           # ExifTool Location
 │   └── exiftool.exe                # Muss hier liegen!
 ├── src/
@@ -489,6 +496,7 @@ CamBridge/
 - **launchSettings.json:** Kein MauiPackage für WPF! (v0.5.10 Fix)
 - **DataContext:** Muss für ViewModels gesetzt werden! (v0.5.11 Problem)
 - **Navigation:** Pages müssen im NavigationService registriert sein! (v0.5.12 Fix)
+- **ItemsControl:** Unterstützt keine Selection! Use ListBox! (v0.5.13 Fix)
 
 ### Service
 - **UAC:** Admin-Rechte für Service-Control nötig
@@ -549,21 +557,27 @@ CamBridge/
 - ⚠️ XAML Designer zeigt Phantom-Fehler
 - **LEKTION:** Erst schauen was da ist!
 
-### v0.5.12 Navigation Fix (02.06.2025, [ZEIT])
+### v0.5.12 Navigation Fix (02.06.2025, 22:50)
 - ✅ MappingEditor in NavigationService registriert
 - ✅ AboutPage auch registriert
 - ✅ DataContext wird jetzt korrekt gesetzt
 - ✅ Alle Buttons sollten funktionieren
 - **LEKTION:** Das Offensichtliche zuerst prüfen!
 
+### v0.5.13 Mapping Editor vollständig (02.06.2025, 23:12)
+- ✅ Selection Binding mit ListBox gelöst
+- ✅ Mapping Editor jetzt 100% funktionsfähig
+- **Nutzer möchte bald End-to-End Test**
+- **Mapping-Konzept noch nicht ganz klar**
+
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 02.06.2025, 22:50 Uhr
-- **Entwicklungszeit bisher:** ~74 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 02.06.2025, 23:12 Uhr
+- **Entwicklungszeit bisher:** ~75 Stunden (inkl. Nachtschichten!)
 - **Features implementiert:** 52+
-- **Features getestet:** 7 (13.5%!)
+- **Features getestet:** 11 (21.2%!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -576,14 +590,14 @@ CamBridge/
 - Testing: 30-60 Minuten
 - Debugging: 0-120 Minuten
 - **Total pro Feature:** 1-4 Stunden
-- **49 Features übrig:** 49-196 Stunden noch!
+- **41 Features übrig:** 41-164 Stunden noch!
 
 ### Realistische Timeline
 - **v0.6.0 (Basis fertig):** ~1-2 Wochen
 - **v0.7.0 (Erweitert):** ~2-3 Wochen
 - **v1.0.0 (Production):** ~3-5 Wochen
 
-## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 02.06.2025, [ZEIT])
+## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 02.06.2025, 23:12)
 
 ### ⚡️ NEUER ANSATZ: Ein Feature = Eine Version = Sofort Testen!
 
@@ -612,118 +626,124 @@ CamBridge/
 - **TEST:** Add Rule erstellt neue Regel? ✅
 - **BONUS:** Templates, Drag&Drop, Import/Export funktionieren auch! ✅
 
+#### v0.5.13 - Mapping Editor Selection ✅
+- ItemsControl durch ListBox ersetzt ✅
+- SelectedItem Binding funktioniert ✅
+- Selection Visual Feedback ✅
+- **TEST:** Properties Panel zeigt ausgewählte Rule? ✅
+
 ### 📁 CORE FEATURES (Basis-Funktionalität)
 
-#### v0.5.13 - Watch Folder Basic
+#### v0.5.14 - Watch Folder Basic
 - Ein Folder hinzufügen
 - Folder wird überwacht
 - **TEST:** JPEG reinkopieren, wird erkannt?
 
-#### v0.5.14 - JPEG Processing
+#### v0.5.15 - JPEG Processing
 - JPEG wird gelesen
 - EXIF Daten extrahiert
 - **TEST:** Console Output der Daten?
 
-#### v0.5.15 - DICOM Creation
+#### v0.5.16 - DICOM Creation
 - Basic DICOM erstellt
 - Output Folder funktioniert
 - **TEST:** DICOM Datei existiert?
 
-#### v0.5.16 - QRBridge Parser
+#### v0.5.17 - QRBridge Parser
 - Pipe-delimited Daten parsen
 - Alle 5 Felder extrahieren
 - **TEST:** Parser Debug Console Vergleich?
 
-#### v0.5.17 - ExifTool Integration
+#### v0.5.18 - ExifTool Integration
 - ExifTool wird gefunden
 - Barcode Tag lesen
 - **TEST:** Alle 5 Felder korrekt?
 
 ### 🔧 SETTINGS (Jeder Tab einzeln!)
 
-#### v0.5.18 - Folders Tab
+#### v0.5.19 - Folders Tab
 - Add/Remove Folder
 - Output Folder Browse
 - Settings speichern/laden
 - **TEST:** Neustart behält Settings?
 
-#### v0.5.19 - Processing Options
+#### v0.5.20 - Processing Options
 - Archive/Error Actions
 - Max Concurrent ändern
 - Backup erstellen
 - **TEST:** Funktioniert wie konfiguriert?
 
-#### v0.5.20 - DICOM Settings
+#### v0.5.21 - DICOM Settings
 - Implementation UID setzen
 - Institution/Station Name
 - Validate Option
 - **TEST:** DICOM hat korrekte Tags?
 
-#### v0.5.21 - Logging Settings
+#### v0.5.22 - Logging Settings
 - Log Level ändern
 - Log Folder setzen
 - File Rotation
 - **TEST:** Logs werden geschrieben?
 
-#### v0.5.22 - Service Settings
+#### v0.5.23 - Service Settings
 - Startup Delay
 - Processing Delay
 - **TEST:** Delays funktionieren?
 
 ### 🗺️ MAPPING FEATURES
 
-#### v0.5.23 - Mapping Basic UI
+#### v0.5.24 - Mapping Basic UI
 - Rule hinzufügen
 - Source/Target wählen
 - **TEST:** Rule wird angezeigt?
 
-#### v0.5.24 - QRBridge Mapping
+#### v0.5.25 - QRBridge Mapping
 - QRBridge Felder mappen
 - Default Values
 - **TEST:** Werte kommen in DICOM an?
 
-#### v0.5.25 - EXIF Mapping
+#### v0.5.26 - EXIF Mapping
 - EXIF Felder mappen
 - Transform Functions
 - **TEST:** Transformationen korrekt?
 
-#### v0.5.26 - Template System
+#### v0.5.27 - Template System
 - Ricoh G900 Template
 - Template wechseln
 - **TEST:** Unterschiedliche Outputs?
 
-#### v0.5.27 - Import/Export
+#### v0.5.28 - Import/Export
 - Mappings exportieren
 - Mappings importieren
 - **TEST:** Roundtrip funktioniert?
 
 ### 📊 MONITORING FEATURES
 
-#### v0.5.28 - Dashboard Stats
+#### v0.5.29 - Dashboard Stats
 - Processed Count
 - Error Count
 - Performance Metrics
 - **TEST:** Zahlen stimmen?
 
-#### v0.5.29 - Dead Letters
+#### v0.5.30 - Dead Letters
 - Failed Files anzeigen
 - Retry Funktion
 - Clear Funktion
 - **TEST:** Nach Error sichtbar?
 
-#### v0.5.30 - Notifications
+#### v0.5.31 - Notifications
 - Event Log Entries
 - Email Setup (optional)
 - **TEST:** Notifications kommen an?
 
 ### 🚀 ERWEITERTE FEATURES
 
-#### v0.5.31 - Batch Processing
+#### v0.5.32 - Batch Processing
 - Mehrere Files gleichzeitig
 - Queue Management
 - **TEST:** Performance OK?
 
-#### v0.5.32 - Error Recovery
+#### v0.5.33 - Error Recovery
 - Auto-Retry
 - Error Details
 - **TEST:** Recovery funktioniert?
@@ -819,6 +839,12 @@ CamBridge/
 - Dictionary zuerst prüfen bei Navigation-Problemen
 - Das Offensichtliche ist oft die Lösung
 
+**Selection in WPF (v0.5.13):**
+- ItemsControl hat KEINE Selection-Unterstützung
+- ListBox ist die richtige Wahl für selektierbare Listen
+- Custom Styles können Standard-Selection verbergen
+- DataTrigger für visuelles Feedback nutzen
+
 ## 💬 Nur für mich (Claude)
 
 ### Wichtige Lektionen
@@ -839,6 +865,7 @@ CamBridge/
 - launchSettings.json kann MauiPackage Probleme verursachen
 - XAML Designer hat separaten Cache vom Build-System
 - NavigationService muss Pages kennen bevor Navigation möglich ist
+- ItemsControl vs ListBox - fundamentaler Unterschied!
 
 ### CLAUDE: KRITISCHE LEKTION - Langsam entwickeln! (02.06.2025, 17:20)
 **Das Problem:** Wir haben 52+ Features implementiert ohne ein einziges zu testen!
@@ -910,6 +937,26 @@ Der Nutzer hat eine wichtige Schwäche erkannt: Ich versuche Token zu sparen, ab
 
 **Testing-Erkenntnis:** Der Nutzer testet gründlich und berichtet präzise was funktioniert und was nicht. Das ist Gold wert für effizientes Debugging!
 
+### CLAUDE: ItemsControl vs ListBox (02.06.2025, 23:12)
+**Fundamentaler Unterschied in WPF:**
+- **ItemsControl:** Nur Anzeige, KEINE Selection
+- **ListBox:** Erbt von Selector, HAT Selection Support
+- **ListView:** Erweiterte ListBox mit Columns
+- **DataGrid:** Für tabellarische Daten mit Editing
+
+**Merksatz:** "Wenn Selection gebraucht wird, ItemsControl ist verkehrt!"
+
+Der Nutzer hat Recht - bald sollten wir einen End-to-End Test machen. Die ganzen schönen Features nützen nichts wenn die Kern-Funktionalität (JPEG→DICOM) nicht läuft!
+
+### CLAUDE: Mapping-Konzept Erklärung nötig (02.06.2025, 23:12)
+Der Nutzer versteht das Mapping noch nicht ganz. Bei der DICOM-Konvertierung erklären:
+1. **Source:** Woher kommen die Daten (QRBridge/EXIF)
+2. **Target:** Welches DICOM Tag soll befüllt werden
+3. **Transform:** Wie wird der Wert umgewandelt (z.B. "M" → "Male")
+4. **Flexibilität:** Jedes Feld kann frei gemappt werden
+
+Das wird klarer wenn wir echte DICOM Files erzeugen!
+
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
 ```
@@ -919,17 +966,22 @@ Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 GitHub: https://github.com/ostern42/CamBridge
 Aktueller Stand: v0.5.13
 
-ERFOLG: Mapping Editor zu 90% funktionsfähig!
-✅ Templates, Drag&Drop, Add Rule funktionieren
-⚠️ Rule Properties Selection reagiert nicht
+ERFOLG: Mapping Editor 100% funktionsfähig!
+✅ Selection Binding gefixt
+✅ 11/52 Features getestet (21.2%)
 
-NÄCHSTES ZIEL (v0.5.13):
-1. SelectedRule Binding fixen (kleiner Bug)
-2. Dann Watch Folder implementieren
+NÄCHSTE ENTSCHEIDUNG:
+A) v0.5.14 Watch Folder implementieren
+B) Erst End-to-End Test (JPEG→DICOM)
 
-URLs für Selection Fix:
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Views/MappingEditorPage.xaml
+Nutzer möchte bald DICOM Konvertierung testen.
+Mapping-Konzept bei Test erklären!
+
+URLs für Option A (Watch Folder):
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/FolderWatcherService.cs
+
+URLs für Option B (DICOM Test):
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/DicomConverter.cs
 
 1. PROJECT_WISDOM.md hochladen
 2. URLs bereitstellen
@@ -1043,6 +1095,7 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - 2025-06-02 18:47: v0.5.10 - Service Control 100% getestet! Start/Stop/Restart funktionieren perfekt. Erste Features vollständig implementiert UND getestet!
 - 2025-06-02 20:33: v0.5.11 - Mapping Editor Crash gefixt! "Nachts mit Sonnenbrille" Lektion gelernt. ValueConverters.cs existierte bereits. DataContext Problem bleibt offen.
 - 2025-06-02 22:50: v0.5.12 - Navigation & DataContext komplett gefixt! Mapping Editor zu 90% funktionsfähig. Templates, Drag&Drop, Add Rule getestet. Nur Selection Binding fehlt noch.
+- 2025-06-02 23:12: v0.5.13 - Selection Binding gefixt! Mapping Editor 100% funktionsfähig. Nutzer möchte bald End-to-End Test. Mapping-Konzept noch unklar.
 
 ## 🏁 Quick Reference
 
@@ -1051,15 +1104,13 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - ✅ GUI sieht professionell aus
 - ✅ Service Installation funktioniert (v0.5.9)
 - ✅ Service Start/Stop/Restart getestet (v0.5.10)
-- ✅ Mapping Editor öffnet sich (v0.5.11)
-- ✅ Mapping Editor funktioniert zu 90% (v0.5.12)
-- ⚠️ Rule Properties Selection Binding fehlt
-- ❌ Nur 7/52 Features getestet
+- ✅ Mapping Editor 100% funktionsfähig (v0.5.13)
+- ❌ Nur 11/52 Features getestet
 - ❌ Kein JPEG wurde je verarbeitet
 - ❌ Kein DICOM wurde je erstellt
-### Nächste Aufgabe: 
-- v0.5.13: Rule Properties Selection fixen
-- Dann Watch Folder Basic implementieren
+### Nächste Entscheidung: 
+- Option A: v0.5.14 Watch Folder implementieren
+- Option B: End-to-End Test (JPEG→DICOM) machen
 ### Neue Philosophie: Ein Feature = Eine Version = Sofort testen!
 ### Geschätzte Zeit bis v1.0: 3-5 Wochen bei Vollzeit
 
@@ -1069,7 +1120,7 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - **CLAUDE:** - Notizen für nächste Instanz
 - **VOGON EXIT** - Chat-Abschluss mit Versionierung
 
-### Getestete Features (7/52 = 13.5%):
+### Getestete Features (11/52 = 21.2%):
 - ✅ Service Installation (v0.5.9)
 - ✅ Service Control (v0.5.10)
 - ✅ Mapping Editor UI (v0.5.12)
@@ -1077,29 +1128,30 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - ✅ Drag & Drop Mapping (v0.5.12)
 - ✅ Add Rule Function (v0.5.12)
 - ✅ Import/Export/Save Dialogs (v0.5.12)
+- ✅ Rule Selection (v0.5.13)
+- ✅ Properties Panel (v0.5.13)
+- ✅ Transform Selection (v0.5.13)
+- ✅ Preview Function (v0.5.13)
 
-### Test-Kriterien für v0.5.13:
-- [ ] Rule Properties Panel zeigt ausgewählte Rule
-- [ ] SelectedRule Binding funktioniert
-- [ ] Properties können bearbeitet werden
-- [ ] Watch Folder kann hinzugefügt werden
-
-**WICHTIG:** Fast am Ziel! Mapping Editor zu 90% fertig!
+### Test-Kriterien für v0.5.14 (Watch Folder):
+- [ ] Folder zur Liste hinzufügen
+- [ ] FileSystemWatcher startet
+- [ ] JPEG Copy wird erkannt
+- [ ] Log-Eintrag erscheint
 
 ### Git Commits der Session:
 ```bash
-# v0.5.12
+# v0.5.13
 git add -A
-git commit -m "fix(config): MappingEditor fully functional except selection (v0.5.12)
+git commit -m "fix(config): Mapping Editor selection binding working (v0.5.13)
 
-- Added MappingEditor registration to NavigationService
-- Fixed DataContext injection through DI container
-- Replaced Symbol icons with Unicode arrows ▲▼
-- Removed MockConfigurationService references
-- Fixed PreviewInputChanged method call
+- Replaced ItemsControl with ListBox for selection support
+- Added SelectedItem binding to ViewModel
+- Custom ItemContainerStyle for clean appearance
+- Selection visual feedback via DataTrigger
 
-TESTED: Templates ✅ Drag&Drop ✅ Add Rule ✅ Import/Export ✅
-ISSUE: Rule Properties selection binding not working yet"
+TESTED: Rule selection ✅ Properties update ✅ Preview works ✅
+Templates/Drag&Drop remain functional"
 
 git push
 ```
