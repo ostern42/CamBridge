@@ -1,10 +1,10 @@
 {
   "profiles": {
-    "CamBridge.Config (Package)": {
-      "commandName": "MsixPackage"
-    },
-    "CamBridge.Config (Unpackaged)": {
-      "commandName": "Project"
+    "CamBridge.Config": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
     }
   }
 }

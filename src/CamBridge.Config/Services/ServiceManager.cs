@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace CamBridge.Config.Services
@@ -99,7 +100,18 @@ namespace CamBridge.Config.Services
                         // Log all searched paths for debugging
                         var searchPaths = GetSearchPaths();
                         var pathList = string.Join("\n", searchPaths);
-                        throw new FileNotFoundException($"Could not find CamBridge.Service.exe. Searched in:\n{pathList}");
+
+                        // Create a detailed error message
+                        var errorMsg = new StringBuilder();
+                        errorMsg.AppendLine("Could not find CamBridge.Service.exe");
+                        errorMsg.AppendLine("\nSearched in:");
+                        foreach (var path in searchPaths)
+                        {
+                            var exists = File.Exists(path);
+                            errorMsg.AppendLine($"  {(exists ? "✓" : "✗")} {path}");
+                        }
+
+                        throw new FileNotFoundException(errorMsg.ToString());
                     }
 
                     // Log the found path
@@ -118,9 +130,22 @@ namespace CamBridge.Config.Services
                     };
 
                     using var process = Process.Start(processInfo);
-                    process?.WaitForExit();
+                    if (process == null)
+                    {
+                        throw new InvalidOperationException("Failed to start sc.exe process");
+                    }
 
-                    if (process?.ExitCode == 0)
+                    var output = process.StandardOutput.ReadToEnd();
+                    var error = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+
+                    Debug.WriteLine($"sc.exe output: {output}");
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        Debug.WriteLine($"sc.exe error: {error}");
+                    }
+
+                    if (process.ExitCode == 0)
                     {
                         // Set service description
                         var descProcessInfo = new ProcessStartInfo
@@ -140,12 +165,25 @@ namespace CamBridge.Config.Services
 
                         return true;
                     }
+                    else
+                    {
+                        var errorMessage = $"sc.exe failed with exit code {process.ExitCode}";
+                        if (!string.IsNullOrEmpty(error))
+                        {
+                            errorMessage += $"\nError: {error}";
+                        }
+                        if (!string.IsNullOrEmpty(output) && output.Contains("error", StringComparison.OrdinalIgnoreCase))
+                        {
+                            errorMessage += $"\nOutput: {output}";
+                        }
 
-                    return false;
+                        throw new InvalidOperationException(errorMessage);
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    return false;
+                    Debug.WriteLine($"Service installation failed: {ex}");
+                    throw;
                 }
             });
         }
@@ -262,12 +300,19 @@ namespace CamBridge.Config.Services
 
             foreach (var path in possiblePaths)
             {
-                var normalizedPath = Path.GetFullPath(path);
-                Debug.WriteLine($"Checking: {normalizedPath}");
-                if (File.Exists(normalizedPath))
+                try
                 {
-                    Debug.WriteLine($"Found service at: {normalizedPath}");
-                    return normalizedPath;
+                    var normalizedPath = Path.GetFullPath(path);
+                    Debug.WriteLine($"Checking: {normalizedPath}");
+                    if (File.Exists(normalizedPath))
+                    {
+                        Debug.WriteLine($"Found service at: {normalizedPath}");
+                        return normalizedPath;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error checking path {path}: {ex.Message}");
                 }
             }
 
@@ -284,38 +329,63 @@ namespace CamBridge.Config.Services
                 Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "", "..", "CamBridge.Service.exe"),
                 // Debug/Release output paths
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "CamBridge.Service.exe"),
-                // Look in common build output directories
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "Debug", "net8.0", "CamBridge.Service.exe"),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "Release", "net8.0", "CamBridge.Service.exe"),
-                // x64 paths (Service is built for x64)
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "x64", "Debug", "net8.0", "win-x64", "CamBridge.Service.exe"),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "x64", "Release", "net8.0", "win-x64", "CamBridge.Service.exe"),
-                // Published output
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "publish", "CamBridge.Service.exe")
             };
 
-            // If not found in standard locations, try to find it in the solution
+            // Find solution directory first for more accurate paths
             var solutionDir = FindSolutionDirectory();
             if (!string.IsNullOrEmpty(solutionDir))
             {
+                // Add all known locations from PROJECT_WISDOM
                 paths.AddRange(new[]
                 {
+                    // Standard debug/release paths
                     Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "Debug", "net8.0", "CamBridge.Service.exe"),
                     Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "Release", "net8.0", "CamBridge.Service.exe"),
-                    // x64 paths
+                    
+                    // win-x64 specific paths (from PROJECT_WISDOM)
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "Debug", "net8.0", "win-x64", "CamBridge.Service.exe"),
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "Release", "net8.0", "win-x64", "CamBridge.Service.exe"),
+                    
+                    // x64 configuration paths
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "x64", "Debug", "net8.0", "CamBridge.Service.exe"),
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "x64", "Release", "net8.0", "CamBridge.Service.exe"),
                     Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "x64", "Debug", "net8.0", "win-x64", "CamBridge.Service.exe"),
-                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "x64", "Release", "net8.0", "win-x64", "CamBridge.Service.exe")
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "x64", "Release", "net8.0", "win-x64", "CamBridge.Service.exe"),
+                    
+                    // net8.0-windows paths (this was missing!)
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "Debug", "net8.0-windows", "CamBridge.Service.exe"),
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "Release", "net8.0-windows", "CamBridge.Service.exe"),
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "Debug", "net8.0-windows", "win-x64", "CamBridge.Service.exe"),
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "Release", "net8.0-windows", "win-x64", "CamBridge.Service.exe"),
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "x64", "Debug", "net8.0-windows", "win-x64", "CamBridge.Service.exe"),
+                    Path.Combine(solutionDir, "src", "CamBridge.Service", "bin", "x64", "Release", "net8.0-windows", "win-x64", "CamBridge.Service.exe"),
+                    
+                    // Published output
+                    Path.Combine(solutionDir, "publish", "CamBridge.Service.exe")
+                });
+            }
+            else
+            {
+                // Fallback paths relative to current directory
+                paths.AddRange(new[]
+                {
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "Debug", "net8.0", "CamBridge.Service.exe"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "Release", "net8.0", "CamBridge.Service.exe"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "Debug", "net8.0", "win-x64", "CamBridge.Service.exe"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "x64", "Debug", "net8.0", "win-x64", "CamBridge.Service.exe"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "CamBridge.Service", "bin", "x64", "Debug", "net8.0-windows", "win-x64", "CamBridge.Service.exe"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "publish", "CamBridge.Service.exe")
                 });
             }
 
-            return paths.ToArray();
+            return paths.Distinct().ToArray();
         }
 
         private string? FindSolutionDirectory()
         {
             var directory = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
 
-            while (directory != null)
+            while (directory != null && directory.Parent != null)
             {
                 if (directory.GetFiles("CamBridge.sln").Any())
                 {

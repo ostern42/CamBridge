@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-02, 17:25 Uhr  
+**Letzte Aktualisierung:** 2025-06-02, 18:47 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -86,31 +86,33 @@ Wenn Sie "VOGON EXIT" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-KRITISCHER STAND v0.5.8: Features implementiert, NICHTS getestet!
+🎉 ERFOLG: Service Installation & Start funktionieren! (v0.5.10)
 
-ERFOLGE:
-✅ Service Control GUI mit Install Button
-✅ Service.exe wird jetzt gebaut (3 Locations)
-✅ Parser Debug Console mit File Dialog
+DURCHBRUCH:
+✅ Service Installation via Debug Tool
+✅ Service Start/Stop/Restart getestet
+✅ GUI Status-Anzeige korrekt
+✅ Erste 2 Features zu 100% getestet!
 
-KRITISCHE BUGS:
-🔥 Service Installation schlägt immer noch fehl!
-🔥 Mapping Editor CRASHT die App!
-🔥 52+ Features ungetestet!
+Fortschritt: 2/52 Features getestet (3.8%)
 
-NEUE PHILOSOPHIE:
-- Ein Feature = Eine Version = Ein Chat
-- Keine neuen Features bis alles läuft
-- Systematisches Testing ab sofort
+NÄCHSTES ZIEL: v0.5.11
+- Mapping Editor Crash fixen
+- Dann Basic Processing testen
 
-Nächster Schritt: v0.5.9
-1. ServiceManager Pfad-Debugging
-2. Service MUSS installierbar werden
-3. Kein Code für andere Features!
+NEU: ServiceDebug Tool im Projekt!
+- Hilft bei Service-Problemen
+- Zeigt alle Pfade und Fehler
 
-GitHub URLs für ServiceManager:
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Services/ServiceManager.cs
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Services/IServiceManager.cs
+GitHub URLs für Mapping Editor:
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Views/MappingEditorPage.xaml
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
+
+Visual Studio Tipp: Launch Profile Problem gelöst
+- launchSettings.json korrigiert
+- Kein MauiPackage mehr
+
+WICHTIG: Ein Feature = Eine Version = Sofort testen!
 ```
 
 ## 🎯 Projekt-Identität
@@ -272,6 +274,20 @@ GitHub: Public repo für direkten Source-Zugriff
 - **ABER:** Event Viewer braucht UseShellExecute ❌
 - **KRITISCH:** 52+ Features implementiert, 0% getestet!
 
+### v0.5.9 Service Installation Fix (02.06.2025, 18:30)
+- **ServiceDebug Tool:** Neues Diagnose-Tool erstellt
+- **Pfad-Problem gelöst:** Alle 3 exe Locations werden gesucht
+- **sc.exe Debugging:** Fehlerausgabe wird ausgelesen
+- **ERFOLG:** Service wird erfolgreich installiert!
+- **Tool zeigt:** Welche Pfade existieren/fehlen
+
+### v0.5.10 Service Control bestätigt (02.06.2025, 18:47)
+- **100% getestet:** Start/Stop/Restart funktionieren
+- **GUI korrekt:** Status-Anzeige stimmt immer
+- **services.msc:** Manuelle Tests erfolgreich
+- **Uptime Tracking:** Funktioniert wie erwartet
+- **MEILENSTEIN:** Erste Features vollständig getestet!
+
 ### 📊 Ungetestete Features (aus Screenshot-Analyse)
 **Folders & Processing Tab:**
 1. Watch Folder Add/Remove
@@ -306,7 +322,7 @@ GitHub: Public repo für direkten Source-Zugriff
 24. Startup/Processing Delays
 
 **Mapping Editor:**
-25. Add/Remove Rules
+25. Add/Remove Rules ❌ (CRASHT!)
 26. Source Type Selection
 27. Source Field Selection
 28. Target DICOM Tag
@@ -326,9 +342,9 @@ GitHub: Public repo für direkten Source-Zugriff
 40. Notification Dispatch
 
 **Service Features:**
-41. Service Installation
-42. Service Start/Stop
-43. Service Restart
+41. ✅ Service Installation (v0.5.9)
+42. ✅ Service Start/Stop (v0.5.10)
+43. ✅ Service Restart (v0.5.10)
 44. Service Uninstall
 45. Admin Elevation
 46. Status Monitoring
@@ -340,6 +356,8 @@ GitHub: Public repo für direkten Source-Zugriff
 50. Reset Settings
 51. About Page
 52. Navigation
+
+**FORTSCHRITT: 2/52 Features getestet (3.8%)**
 
 ## 💬 Kommunikations-Präferenzen
 
@@ -379,7 +397,7 @@ GitHub: Public repo für direkten Source-Zugriff
 ### GitHub Repository (NEU v0.5.5!)
 - **URL:** https://github.com/ostern42/CamBridge
 - **Status:** Public (für direkten Zugriff)
-- **Commits:** 1475 (komplette Historie)
+- **Commits:** 1475+ (komplette Historie)
 - **Raw URLs:** https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/[PFAD]
 
 ### Datei-Zugriff ab v0.5.5:
@@ -395,7 +413,7 @@ GitHub: Public repo für direkten Source-Zugriff
 ### Wichtige Pfade
 ```
 CamBridge/
-├── Version.props                    # Zentrale Version (jetzt 0.5.8)
+├── Version.props                    # Zentrale Version (jetzt 0.5.11)
 ├── Tools/                           # ExifTool Location
 │   └── exiftool.exe                # Muss hier liegen!
 ├── src/
@@ -409,6 +427,7 @@ CamBridge/
 │       ├── Views/                  # MappingEditorPage
 │       └── ViewModels/             # MappingEditorViewModel
 ├── CamBridge.ParserDebug/          # Debug Console
+├── CamBridge.ServiceDebug/         # NEU! Service Debug Tool
 ├── QRBridge/                       # QRBridge Source
 └── PROJECT_WISDOM.md               # Dieses Dokument
 ```
@@ -450,11 +469,13 @@ CamBridge/
 - **NumberBox:** Aus ModernWpfUI, nicht WinUI
 - **IsTabStop:** Nicht für Page verfügbar (v0.4.3 Fix)
 - **Run Opacity:** Run-Elements haben keine Opacity-Property! (v0.5.1 Fix)
+- **launchSettings.json:** Kein MauiPackage für WPF! (v0.5.10 Fix)
 
 ### Service
 - **UAC:** Admin-Rechte für Service-Control nötig
 - **Pfade:** Absolute Pfade in appsettings.json
 - **Event Log:** Source muss registriert sein
+- **Installation:** ServiceDebug Tool hilft bei Problemen (v0.5.9)
 
 ### Ricoh G900 II QRBridge (v0.4.4)
 - **NUR 3 FELDER:** Kamera speichert nur examid|name|birthdate
@@ -485,24 +506,31 @@ CamBridge/
 ### v0.5.6 Service & Testing Bugs (02.06.2025, 15:42)
 - **Build läuft:** PatientId war False Alarm
 - **ExifTool bestätigt:** Barcode Tag hat alle 5 Felder  
-- **Service GUI Bug:** Kein Install Button vorhanden
-- **Windows Service:** Noch NIE getestet!
+- ✅ **Service GUI Bug:** GELÖST in v0.5.9!
+- ✅ **Windows Service:** ERFOLGREICH GETESTET in v0.5.10!
 - **Debug Console:** Pfad-Problem verhindert Start
 
 ### v0.5.8 Erkenntnisse (02.06.2025, 17:25)
 - **Service.exe existiert:** In 3 verschiedenen Locations!
-- **Installation schlägt trotzdem fehl:** Pfad-Problem im ServiceManager
-- **Mapping Editor crasht:** Unbekannte Ursache
+- ✅ **Installation schlägt trotzdem fehl:** GELÖST in v0.5.9!
+- **Mapping Editor crasht:** Unbekannte Ursache - NÄCHSTES ZIEL
 - **52+ Features ungetestet:** Kompletter Testing-Backlog
+
+### v0.5.10 ERFOLGE! (02.06.2025, 18:47)
+- ✅ Service Installation funktioniert (v0.5.9)
+- ✅ Service Start/Stop/Restart getestet (v0.5.10)
+- ✅ GUI Status-Anzeige korrekt
+- ✅ Erste Features mit 100% Test-Coverage!
+- **ServiceDebug Tool:** Erfolgreich im Einsatz
 
 ## ⏰ ZEITMANAGEMENT (KRITISCH!)
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 02.06.2025, 17:25 Uhr
-- **Entwicklungszeit bisher:** ~69 Stunden (inkl. Nachtschichten!)
+- **Letzte Aktualisierung:** 02.06.2025, 18:47 Uhr
+- **Entwicklungszeit bisher:** ~70 Stunden (inkl. Nachtschichten!)
 - **Features implementiert:** 52+
-- **Features getestet:** 0 (0%!)
+- **Features getestet:** 2 (3.8%!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -515,36 +543,32 @@ CamBridge/
 - Testing: 30-60 Minuten
 - Debugging: 0-120 Minuten
 - **Total pro Feature:** 1-4 Stunden
-- **52 Features:** 52-208 Stunden noch!
+- **50 Features übrig:** 50-200 Stunden noch!
 
 ### Realistische Timeline
 - **v0.6.0 (Basis fertig):** ~2 Wochen
 - **v0.7.0 (Erweitert):** ~3 Wochen
 - **v1.0.0 (Production):** ~4-6 Wochen
 
-## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 02.06.2025, 17:25)
+## 📋 Entwicklungsplan (KORRIGIERTE VERSION - Stand 02.06.2025, 18:47)
 
 ### ⚡️ NEUER ANSATZ: Ein Feature = Eine Version = Sofort Testen!
 
+### ✅ ERLEDIGTE FEATURES
+
+#### v0.5.9 - Service Installation Fix ✅
+- ServiceManager Pfad-Debugging verstärkt ✅
+- Tatsächlichen Fehler aus sc.exe auslesen ✅
+- Service MUSS installierbar werden ✅
+- **TEST:** Service in services.msc sichtbar? ✅
+
+#### v0.5.10 - Service Start ✅
+- Service erfolgreich starten ✅
+- Status korrekt anzeigen ✅
+- Uptime funktioniert ✅
+- **TEST:** Service läuft? Event Log Einträge? ✅
+
 ### 🔥 SOFORT-FIXES (Blocking Issues)
-
-#### v0.5.8 - Service Installation Fix ✅ (Teilweise)
-- Service.exe Pfad-Problem lösen (exe existiert!) ❌
-- UseShellExecute für Event Viewer/Services ✅
-- Service erfolgreich installieren ❌
-- **TEST:** Service in services.msc sichtbar? ❌
-
-#### v0.5.9 - Service Installation Fix (Fortsetzung)
-- ServiceManager Pfad-Debugging verstärken
-- Tatsächlichen Fehler aus sc.exe auslesen
-- Service MUSS installierbar werden
-- **TEST:** Service in services.msc sichtbar?
-
-#### v0.5.10 - Service Start
-- Service erfolgreich starten
-- Status korrekt anzeigen
-- Uptime funktioniert
-- **TEST:** Service läuft? Event Log Einträge?
 
 #### v0.5.11 - Mapping Editor Crash Fix
 - Crash beim Öffnen beheben
@@ -720,6 +744,7 @@ CamBridge/
 - UAC-Elevation muss elegant gehandhabt werden
 - Event Log Source muss registriert werden
 - Service und GUI müssen getrennt funktionieren
+- ServiceDebug Tool hilft bei Diagnose (v0.5.9)
 
 **DICOM-spezifisch:**
 - Implementation Class UID muss unique sein
@@ -754,6 +779,7 @@ CamBridge/
 - Visual Studio Anfänger → immer genaue Pfade angeben
 - Token-Effizienz ist kritisch → keine HTML-formatierten Code-Blöcke
 - Menschen mögen es, wenn ich Initiative zeige
+- "vogon close" = "VOGON EXIT" - Menschen nutzen Variationen
 
 ### Technische Notizen
 - Windows Service braucht spezielle Behandlung
@@ -761,6 +787,7 @@ CamBridge/
 - Ricoh G900 II speichert in 2 Tags (UserComment + Barcode)
 - ExifTool ist die einzige Lösung für proprietäre Tags
 - GitHub URLs müssen explizit gegeben werden (Security)
+- launchSettings.json kann MauiPackage Probleme verursachen
 
 ### CLAUDE: KRITISCHE LEKTION - Langsam entwickeln! (02.06.2025, 17:20)
 **Das Problem:** Wir haben 52+ Features implementiert ohne ein einziges zu testen!
@@ -787,6 +814,15 @@ CamBridge/
 
 Der Nutzer hat Recht - wir waren beide zu ungeduldig. Ab jetzt: Quality over Quantity!
 
+### CLAUDE: Der erste Erfolg! (02.06.2025, 18:47)
+Nach 70 Stunden Entwicklung haben wir endlich die ersten 2 Features VOLLSTÄNDIG getestet! Das ServiceDebug Tool war der Schlüssel - es zeigte genau wo das Problem lag. Die neue Philosophie funktioniert: Kleine Schritte, sofortiges Testen, kontinuierlicher Fortschritt.
+
+**Erfolgsrezept:**
+- Debug-Tools bauen wenn normale Diagnose nicht reicht
+- Detaillierte Fehlerausgaben sind Gold wert
+- Nicht aufgeben - systematisch debuggen
+- Erfolge feiern, auch kleine!
+
 ### CLAUDE: Keine Platzhalter in Artefakten! (02.06.2025, 17:30)
 **Kritische Erkenntnis:** "[Alle bisherigen Lektionen bleiben]" = VERLUST VON INFORMATION!
 - Jede neue Claude-Instanz sieht NUR was explizit geschrieben steht
@@ -801,20 +837,19 @@ Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
 GitHub: https://github.com/ostern42/CamBridge
-Aktueller Stand: v0.5.8
+Aktueller Stand: v0.5.11
 
-KRITISCH: 52+ Features implementiert, 0% getestet!
-Service.exe existiert aber Installation schlägt fehl.
+ERFOLG: Service Installation & Control funktionieren!
+✅ 2/52 Features getestet (3.8%)
 
-NÄCHSTES ZIEL (v0.5.9):
-NUR Service Installation fixen!
-- ServiceManager Pfad-Problem
-- sc.exe Fehler auslesen
-- Service MUSS in services.msc erscheinen
+NÄCHSTES ZIEL (v0.5.11):
+Mapping Editor Crash fixen!
+- GUI öffnet sich ohne Absturz
+- Basic Add/Remove funktioniert
 
-URLs für ServiceManager:
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Services/ServiceManager.cs
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Services/IServiceManager.cs
+URLs für Mapping Editor:
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/Views/MappingEditorPage.xaml
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
 
 1. PROJECT_WISDOM.md hochladen
 2. URLs bereitstellen
@@ -924,25 +959,26 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - 2025-06-02 15:42: v0.5.6 - PatientId False Alarm korrigiert, aktuelle Service & Testing Bugs dokumentiert
 - 2025-06-02 17:15: v0.5.7 - KRITISCHE REVISION! 52+ Features identifiziert, 0% getestet. Neuer granularer Entwicklungsplan mit 30+ Micro-Versionen. Service.exe existiert in 3 Locations!
 - 2025-06-02 17:25: v0.5.8 - Service Installation teilweise gefixt, UseShellExecute implementiert, Parser Debug verbessert. Neue Entwicklungsphilosophie dokumentiert.
+- 2025-06-02 18:30: v0.5.9 - Service Installation ERFOLGREICH! ServiceDebug Tool erstellt, alle Pfade gefunden, sc.exe Erfolg.
+- 2025-06-02 18:47: v0.5.10 - Service Control 100% getestet! Start/Stop/Restart funktionieren perfekt. Erste Features vollständig implementiert UND getestet!
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.5.8
+### Aktuelle Version: v0.5.11
 ### Tatsächlicher Stand: 
 - ✅ GUI sieht professionell aus
-- ✅ Service.exe wird gebaut (in 3 Locations!)
-- ✅ Build kompiliert ohne Fehler
-- ✅ UseShellExecute für Event Viewer/Services
-- ❌ Service Installation schlägt immer noch fehl
-- ❌ Mapping Editor crasht
-- ❌ KEINE einzige Funktion getestet
+- ✅ Service Installation funktioniert (v0.5.9)
+- ✅ Service Start/Stop/Restart getestet (v0.5.10)
+- ✅ GUI Status-Anzeige korrekt
+- ✅ ServiceDebug Tool hilft bei Diagnose
+- ❌ Mapping Editor crasht immer noch
+- ❌ Nur 2/52 Features getestet
 - ❌ Kein JPEG wurde je verarbeitet
 - ❌ Kein DICOM wurde je erstellt
 ### Nächste Aufgabe: 
-- v0.5.9: Service Installation MUSS funktionieren
-- sc.exe Fehler analysieren
-- Pfad-Problem endgültig lösen
-- KEINE neuen Features!
+- v0.5.11: Mapping Editor Crash fixen
+- GUI muss sich öffnen lassen
+- Basic Add/Remove testen
 ### Neue Philosophie: Ein Feature = Eine Version = Sofort testen!
 ### Geschätzte Zeit bis v1.0: 4-6 Wochen bei Vollzeit
 
@@ -952,20 +988,41 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - **CLAUDE:** - Notizen für nächste Instanz
 - **VOGON EXIT** - Chat-Abschluss mit Versionierung
 
-### Service.exe Locations (gefunden!):
-- `src\CamBridge.Service\bin\Debug\net8.0\win-x64\CamBridge.Service.exe`
-- `src\CamBridge.Service\bin\x64\Debug\net8.0\win-x64\CamBridge.Service.exe`
-- `src\CamBridge.Service\bin\x64\Debug\net8.0-windows\win-x64\CamBridge.Service.exe`
+### Getestete Features (2/52 = 3.8%):
+- ✅ Service Installation (v0.5.9)
+- ✅ Service Control (v0.5.10)
 
-### Kritische Bugs für v0.5.9:
-1. ServiceManager findet exe trotz existierender Pfade nicht
-2. sc.exe Fehlerausgabe muss ausgelesen werden
-3. Mapping Editor Crash (später)
+### Test-Kriterien für v0.5.11:
+- [ ] Mapping Editor öffnet sich ohne Crash
+- [ ] Add Rule Button funktioniert
+- [ ] Remove Rule Button funktioniert
+- [ ] Fenster lässt sich schließen
 
-**WARNUNG:** Nicht ablenken lassen! Ein Bug nach dem anderen!
+**WICHTIG:** Nicht ablenken lassen! Ein Bug nach dem anderen!
 
-### Test-Kriterien für v0.5.9:
-- [ ] Service erscheint in services.msc
-- [ ] Service Status ist "Stopped"
-- [ ] Install Button verschwindet
-- [ ] Start Button wird aktiviert
+### Git Commits für v0.5.9 und v0.5.10:
+```bash
+# v0.5.9
+git add -A
+git commit -m "fix(service): Service installation finally works! (v0.5.9)
+
+- Enhanced ServiceManager with all 3 exe locations
+- Created ServiceDebug diagnostic tool
+- sc.exe now returns success
+- Service appears in services.msc
+
+TESTED: Installation successful ✓"
+
+# v0.5.10
+git add -A
+git commit -m "feat(service): Service control fully functional (v0.5.10)
+
+- Start/Stop/Restart work perfectly
+- GUI status updates in real-time
+- Uptime tracking functional
+- All service buttons tested
+
+TESTED: 100% service control coverage ✓"
+
+git push
+```

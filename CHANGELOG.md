@@ -6,6 +6,37 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.10] - 2025-06-02 18:47
+### Fixed
+- Service Start/Stop functionality fully working
+- Service status correctly reflected in GUI
+- All service control buttons functioning as expected
+### Tested
+- ✅ Service can be started via GUI and services.msc
+- ✅ Service can be stopped via GUI and services.msc
+- ✅ Service status updates correctly in real-time
+- ✅ Restart functionality works properly
+### Notes
+- First feature with 100% test coverage!
+- Service uptime tracking functional
+
+## [0.5.9] - 2025-06-02 18:30
+### Fixed
+- Service installation path detection enhanced
+- Added missing net8.0-windows build output paths
+- ServiceManager now searches all 3 known exe locations
+- sc.exe error output now properly captured and displayed
+### Added
+- CamBridge.ServiceDebug diagnostic tool for troubleshooting
+- Detailed path checking with existence indicators
+- Better error messages showing all searched locations
+### Tested
+- ✅ Service installation successful via debug tool
+- ✅ Service appears correctly in services.msc
+- ✅ GUI correctly detects installed service
+### Notes
+- Critical bug resolved after 8 versions of attempts!
+
 ## [0.5.8] - 2025-06-02 17:25
 
 ### Added

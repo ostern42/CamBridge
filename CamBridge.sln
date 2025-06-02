@@ -35,6 +35,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.TestConsole", "te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.ParserDebug", "CamBridge.ParserDebug\CamBridge.ParserDebug.csproj", "{FB361312-B273-4AD8-BE97-F5EECCDDA344}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.ServiceDebug", "CamBridge.ServiceDebug\CamBridge.ServiceDebug.csproj", "{C19EB81C-1C33-8E17-8754-73025A9E9910}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,10 @@ Global
 		{FB361312-B273-4AD8-BE97-F5EECCDDA344}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FB361312-B273-4AD8-BE97-F5EECCDDA344}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FB361312-B273-4AD8-BE97-F5EECCDDA344}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C19EB81C-1C33-8E17-8754-73025A9E9910}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C19EB81C-1C33-8E17-8754-73025A9E9910}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C19EB81C-1C33-8E17-8754-73025A9E9910}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C19EB81C-1C33-8E17-8754-73025A9E9910}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
