@@ -6,6 +6,32 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.20] - 2025-06-03
+### Added
+- CLAUDE-TO-CLAUDE Command System for better self-guidance
+- WISDOM Garbage Collection process for VOGON EXIT
+- Architecture Manifest with original 12-phase plan
+- Development Roadmap 2.0 (realistic 40% progress assessment)
+- Project Philosophy documentation
+- PLAN: command for flexible development steering
+- Agile workflow concepts exploration
+
+### Changed
+- Enhanced VOGON INIT with Filetree awareness
+- Updated ExifTool pipeline (not yet tested)
+- Refined self-instructions with token investment rules
+- Consolidated lessons learned (15% WISDOM compression)
+
+### Fixed
+- Clarified WinUI 3 → WPF drift was pragmatic decision
+- Corrected false assumptions about missing Entity properties
+- Updated blockading problems with correct assessment
+
+### Meta
+- Established "Journey through semantic space" philosophy
+- Recognized we're building both software AND collaboration patterns
+- 180€/month well invested in development OS innovation
+
 ## [0.5.19] - 2025-06-03 20:30
 ### Added
 - ExifToolReader implementation (without IExifReader interface)
