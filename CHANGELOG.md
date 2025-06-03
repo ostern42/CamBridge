@@ -6,6 +6,31 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.18] - 2025-06-03 16:50
+
+### Changed
+- MAJOR: Simplified EXIF pipeline to use ExifTool exclusively
+- Removed IExifReader interface and all implementations
+- Removed ExifReader (MetadataExtractor-based)
+- Removed RicohExifReader (workaround reader)
+- Removed CompositeExifReader (unnecessary complexity)
+
+### Added
+- ExifToolService as the single EXIF solution
+- QRBridgeParser for centralized parsing logic
+- Enhanced ImageMetadata as central domain object
+- Simplified FileProcessor for linear pipeline
+
+### Fixed
+- GCM_TAG prefix handling (both "GCM_TAG " and "GCM_TAG")
+- Character encoding issues with German umlauts
+- Eliminated code duplication in parsing logic
+
+### Technical
+- Pipeline now: ExifToolService → ImageMetadata → DICOM
+- No more fallback readers or composite patterns
+- Requires ExifTool to be installed (hard requirement)
+
 ## [0.5.17] - 2025-06-03 16:00
 ### Added
 - ExifToolReader with automatic discovery and caching
@@ -35,19 +60,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Next: Fix XAML bindings before proceeding to DICOM tests
 
 [0.5.16] - 2025-06-02 00:30
-Added
+### Added
 
 Console logging for service debugging
 Detailed error messages for DICOM conversion failures
 Pipeline analysis and systematic development plan
 
-Fixed
+### Fixed
 
 Settings page DataContext initialization
 PropertyChanged event handler (removed problematic OnPropertyChanged call)
 Dashboard API connection (shows green/connected status)
 
-Discovered
+### Discovered
 
 ExifToolReader not properly integrated - uses MetadataExtractor only
 GCM_TAG prefix causes DICOM validation errors
@@ -55,13 +80,13 @@ Missing Transform functions in mapping engine
 File logging not working despite configuration
 Retry logic tries to process already moved files
 
-Changed
+### Changed
 
 Identified systematic approach needed: JPEG→ExifTool→Parse→Map→DICOM
 Decision to implement ExifToolReader properly instead of patching RicohExifReader
 New sprint plan focusing on pipeline components one at a time
 
-Testing
+### Testing
 
 ✅ Watch Folder detects JPEGs
 ✅ Basic file processing pipeline runs
