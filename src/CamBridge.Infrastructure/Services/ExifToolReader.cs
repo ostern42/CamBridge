@@ -155,7 +155,7 @@ namespace CamBridge.Infrastructure.Services
                 using var cts = new CancellationTokenSource(_timeoutMs);
                 try
                 {
-                    await process.WaitForExitAsync(cts.Token);
+                    await WaitForProcessExitAsync(process, cts.Token);
                     await Task.WhenAll(outputComplete.Task, errorComplete.Task);
                 }
                 catch (OperationCanceledException)
@@ -654,7 +654,6 @@ namespace CamBridge.Infrastructure.Services
             public ImageMetadata Metadata { get; set; } = null!;
             public DateTime LastModified { get; set; }
         }
-    }
 
         /// <summary>
         /// Helper method to wait for process exit with cancellation
