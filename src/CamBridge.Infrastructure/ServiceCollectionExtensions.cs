@@ -26,25 +26,15 @@ namespace CamBridge.Infrastructure
             services.AddSingleton<IDicomConverter, DicomConverter>();
             services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
 
-            // EXIF Reader Registration with Fallback Chain
-            // Register individual readers
+            // ExifTool Reader - The ONLY solution! No interfaces, no fallbacks!
             services.AddSingleton<ExifToolReader>(provider =>
             {
                 var logger = provider.GetRequiredService<ILogger<ExifToolReader>>();
-
-                var exifToolPath = configuration["CamBridge:ExifToolPath"];
-                if (string.IsNullOrEmpty(exifToolPath))
-                {
-                    // Try environment variable
-                    exifToolPath = Environment.GetEnvironmentVariable("CAMBRIDGE_EXIFTOOL_PATH");
-                }
-
                 var timeoutMs = configuration.GetValue<int>("CamBridge:ExifToolTimeoutMs", 5000);
 
-                return new ExifToolReader(logger, exifToolPath, timeoutMs);
+                // ExifToolReader handles discovery internally
+                return new ExifToolReader(logger, timeoutMs);
             });
-
-            services.AddSingleton<ExifToolReader>(); // The ONLY EXIF solution!
 
             // Queue and Processing Services
             services.AddSingleton<ProcessingQueue>();
@@ -89,9 +79,12 @@ namespace CamBridge.Infrastructure
             services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
             services.AddSingleton<DicomTagMapper>();
 
-            // Add minimal EXIF reader for testing/preview
-            services.AddSingleton<ExifReader>();
-            services.AddSingleton<IExifReader>(provider => provider.GetRequiredService<ExifReader>());
+            // Add ExifTool reader for config tool
+            services.AddSingleton<ExifToolReader>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<ExifToolReader>>();
+                return new ExifToolReader(logger);
+            });
 
             return services;
         }
@@ -110,7 +103,7 @@ namespace CamBridge.Infrastructure
                 // Validate critical services
                 var criticalServices = new[]
                 {
-                    typeof(IExifReader),
+                    typeof(ExifToolReader),  // Direct type, no interface!
                     typeof(IFileProcessor),
                     typeof(IDicomConverter),
                     typeof(ProcessingQueue),
@@ -127,19 +120,9 @@ namespace CamBridge.Infrastructure
                     }
                 }
 
-                // Check EXIF reader status
-                var exifReader = provider.GetRequiredService<IExifReader>();
-                if (exifReader is CompositeExifReader composite)
-                {
-                    var status = composite.GetReaderStatus();
-                    logger.LogInformation("EXIF Reader Status: {Status}",
-                        string.Join(", ", status.Select(kvp => $"{kvp.Key}={kvp.Value}")));
-
-                    if (!status.Any(kvp => kvp.Value))
-                    {
-                        logger.LogError("No EXIF readers are available!");
-                    }
-                }
+                // Validate ExifTool reader
+                var exifToolReader = provider.GetRequiredService<ExifToolReader>();
+                logger.LogInformation("ExifTool reader validated - the ONLY EXIF solution");
 
                 logger.LogInformation("Infrastructure validation completed successfully");
             }

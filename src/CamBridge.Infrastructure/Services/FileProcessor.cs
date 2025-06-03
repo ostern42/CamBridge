@@ -1,22 +1,26 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using CamBridge.Core;
 using CamBridge.Core.Entities;
 using CamBridge.Core.Interfaces;
+using CamBridge.Core.ValueObjects;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
-    /// Updated FileProcessor to use the new simplified ExifTool pipeline
+    /// Orchestrates the complete JPEG to DICOM conversion process
     /// </summary>
     public class FileProcessor : IFileProcessor
     {
         private readonly ILogger<FileProcessor> _logger;
-        private readonly ExifToolReader _exifToolReader;
+        private readonly ExifToolReader _exifToolReader; // Direct dependency - no interface!
         private readonly IDicomConverter _dicomConverter;
-        private readonly ProcessingQueue _processingQueue;
-        private readonly DeadLetterQueue _deadLetterQueue;
+        private readonly ProcessingOptions _processingOptions;
+        private readonly CamBridgeSettings _settings;
 
         public event EventHandler<FileProcessingEventArgs>? ProcessingStarted;
         public event EventHandler<FileProcessingEventArgs>? ProcessingCompleted;
@@ -24,97 +28,105 @@ namespace CamBridge.Infrastructure.Services
 
         public FileProcessor(
             ILogger<FileProcessor> logger,
-            ExifToolReader exifToolReader,
+            ExifToolReader exifToolReader,  // No interface!
             IDicomConverter dicomConverter,
-            ProcessingQueue processingQueue,
-            DeadLetterQueue deadLetterQueue)
+            IOptions<ProcessingOptions> processingOptions,
+            IOptions<CamBridgeSettings> settings)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _exifToolReader = exifToolReader ?? throw new ArgumentNullException(nameof(exifToolReader));
             _dicomConverter = dicomConverter ?? throw new ArgumentNullException(nameof(dicomConverter));
-            _processingQueue = processingQueue ?? throw new ArgumentNullException(nameof(processingQueue));
-            _deadLetterQueue = deadLetterQueue ?? throw new ArgumentNullException(nameof(deadLetterQueue));
+            _processingOptions = processingOptions?.Value ?? throw new ArgumentNullException(nameof(processingOptions));
+            _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
         }
 
         /// <inheritdoc />
-        public async Task<FileProcessingResult> ProcessFileAsync(string filePath)
+        public async Task<ProcessingResult> ProcessFileAsync(string filePath)
         {
-            var startTime = DateTime.UtcNow;
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+
+            var stopwatch = Stopwatch.StartNew();
 
             try
             {
-                _logger.LogInformation("Starting processing of file: {FilePath}", filePath);
+                _logger.LogInformation("Starting processing of {FilePath}", filePath);
                 ProcessingStarted?.Invoke(this, new FileProcessingEventArgs(filePath));
 
                 // Validate file
-                if (!ShouldProcessFile(filePath))
+                if (!File.Exists(filePath))
                 {
-                    var message = $"File {filePath} is not a valid JPEG for processing";
-                    _logger.LogWarning(message);
-                    return FileProcessingResult.CreateFailure(filePath, message, DateTime.UtcNow - startTime);
+                    throw new FileNotFoundException($"File not found: {filePath}");
                 }
 
-                // Add to processing queue
-                await _processingQueue.EnqueueAsync(filePath);
+                var fileInfo = new FileInfo(filePath);
+                ValidateFile(fileInfo);
 
-                try
+                // Create backup if configured
+                if (_processingOptions.CreateBackup)
                 {
-                    // Extract metadata using ExifTool (the ONLY way!)
-                    _logger.LogDebug("Extracting metadata from {FilePath}", filePath);
-                    var metadata = await _exifToolReader.ExtractMetadataAsync(filePath);
+                    await CreateBackupAsync(fileInfo);
+                }
 
-                    // Validate metadata
-                    if (string.IsNullOrWhiteSpace(metadata.Patient.PatientId) ||
-                        metadata.Patient.PatientId == "UNKNOWN")
+                // Extract metadata - simplified with new pipeline!
+                var metadata = await ExtractMetadataAsync(filePath);
+
+                // Determine output path
+                var outputPath = DetermineOutputPath(metadata, filePath);
+
+                // Convert to DICOM
+                var conversionResult = await _dicomConverter.ConvertToDicomAsync(
+                    filePath,
+                    outputPath,
+                    metadata);
+
+                if (!conversionResult.Success)
+                {
+                    throw new InvalidOperationException(
+                        $"DICOM conversion failed: {conversionResult.ErrorMessage}");
+                }
+
+                // Validate DICOM if configured
+                if (_settings.Dicom.ValidateAfterCreation)
+                {
+                    var validationResult = await _dicomConverter.ValidateDicomFileAsync(outputPath);
+                    if (!validationResult.IsValid)
                     {
-                        throw new InvalidOperationException(
-                            "No valid patient ID found in image. Ensure QRBridge data is present.");
+                        _logger.LogWarning("DICOM validation warnings: {Warnings}",
+                            string.Join("; ", validationResult.Warnings));
                     }
-
-                    // Convert to DICOM
-                    _logger.LogDebug("Converting to DICOM: {PatientId} - {StudyId}",
-                        metadata.Patient.PatientId, metadata.Study.StudyId);
-
-                    var dicomResult = await _dicomConverter.ConvertAsync(metadata);
-
-                    if (!dicomResult.Success)
-                    {
-                        throw new InvalidOperationException(
-                            $"DICOM conversion failed: {dicomResult.ErrorMessage}");
-                    }
-
-                    // Success!
-                    var processingTime = DateTime.UtcNow - startTime;
-                    _logger.LogInformation(
-                        "Successfully processed {FilePath} -> {OutputPath} in {Time:F2}s",
-                        filePath, dicomResult.OutputPath, processingTime.TotalSeconds);
-
-                    ProcessingCompleted?.Invoke(this, new FileProcessingEventArgs(filePath));
-
-                    return FileProcessingResult.CreateSuccess(
-                        filePath,
-                        dicomResult.OutputPath!,
-                        processingTime);
                 }
-                finally
-                {
-                    // Remove from processing queue
-                    await _processingQueue.DequeueAsync(filePath);
-                }
+
+                // Handle source file based on success
+                await HandleSourceFileAsync(filePath, _processingOptions.SuccessAction);
+
+                stopwatch.Stop();
+                var result = ProcessingResult.CreateSuccess(filePath, outputPath, stopwatch.Elapsed);
+
+                _logger.LogInformation("Successfully processed {FilePath} to {OutputPath} in {ElapsedMs}ms",
+                    filePath, outputPath, stopwatch.ElapsedMilliseconds);
+
+                ProcessingCompleted?.Invoke(this, new FileProcessingEventArgs(filePath));
+                return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing file: {FilePath}", filePath);
-
-                // Add to dead letter queue
-                await _deadLetterQueue.AddAsync(filePath, ex.Message);
+                stopwatch.Stop();
+                _logger.LogError(ex, "Error processing file {FilePath}", filePath);
 
                 ProcessingError?.Invoke(this, new FileProcessingErrorEventArgs(filePath, ex));
 
-                return FileProcessingResult.CreateFailure(
-                    filePath,
-                    ex.Message,
-                    DateTime.UtcNow - startTime);
+                // Handle source file based on failure
+                try
+                {
+                    await HandleSourceFileAsync(filePath, _processingOptions.FailureAction);
+                }
+                catch (Exception moveEx)
+                {
+                    _logger.LogError(moveEx, "Error handling failed file {FilePath}", filePath);
+                }
+
+                return ProcessingResult.CreateFailure(filePath, ex.Message, stopwatch.Elapsed);
             }
         }
 
@@ -123,57 +135,42 @@ namespace CamBridge.Infrastructure.Services
         {
             try
             {
-                // Check if file exists
-                if (!File.Exists(filePath))
-                {
-                    _logger.LogDebug("File does not exist: {FilePath}", filePath);
+                if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
                     return false;
-                }
+
+                var fileInfo = new FileInfo(filePath);
 
                 // Check file extension
-                var extension = Path.GetExtension(filePath)?.ToLower();
-                if (string.IsNullOrEmpty(extension) ||
-                    !(extension == ".jpg" || extension == ".jpeg" || extension == ".jpe" || extension == ".jfif"))
+                var extension = fileInfo.Extension.ToLowerInvariant();
+                if (extension != ".jpg" && extension != ".jpeg")
+                    return false;
+
+                // Check file size
+                if (fileInfo.Length < _processingOptions.MinimumFileSizeBytes ||
+                    fileInfo.Length > _processingOptions.MaximumFileSizeBytes)
                 {
-                    _logger.LogDebug("Unsupported file extension: {Extension}", extension);
+                    _logger.LogDebug("File {FilePath} size {Size} outside configured range",
+                        filePath, fileInfo.Length);
                     return false;
                 }
 
-                // Check if file is already being processed
-                if (_processingQueue.IsProcessing(filePath))
+                // Check file age
+                if (_processingOptions.MaxFileAge.HasValue)
                 {
-                    _logger.LogDebug("File is already being processed: {FilePath}", filePath);
-                    return false;
-                }
-
-                // Check if file is in dead letter queue (optional: could have retry logic)
-                if (_deadLetterQueue.Contains(filePath))
-                {
-                    _logger.LogDebug("File is in dead letter queue: {FilePath}", filePath);
-                    return false;
-                }
-
-                // Check if it's a valid JPEG by reading the header
-                try
-                {
-                    using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                    if (fs.Length < 2)
-                        return false;
-
-                    var header = new byte[2];
-                    fs.Read(header, 0, 2);
-
-                    // JPEG files start with 0xFFD8
-                    if (header[0] != 0xFF || header[1] != 0xD8)
+                    var fileAge = DateTime.UtcNow - fileInfo.CreationTimeUtc;
+                    if (fileAge > _processingOptions.MaxFileAge.Value)
                     {
-                        _logger.LogDebug("File is not a valid JPEG: {FilePath}", filePath);
+                        _logger.LogDebug("File {FilePath} is too old ({Age} days)",
+                            filePath, fileAge.TotalDays);
                         return false;
                     }
                 }
-                catch (Exception ex)
+
+                // Check if file is still being written
+                if (!IsFileReady(filePath))
                 {
-                    _logger.LogDebug(ex, "Cannot read file: {FilePath}", filePath);
+                    _logger.LogDebug("File {FilePath} is not ready (still being written)",
+                        filePath);
                     return false;
                 }
 
@@ -184,6 +181,217 @@ namespace CamBridge.Infrastructure.Services
                 _logger.LogError(ex, "Error checking if file should be processed: {FilePath}", filePath);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Simplified metadata extraction using the new ExifToolReader
+        /// </summary>
+        private async Task<ImageMetadata> ExtractMetadataAsync(string filePath)
+        {
+            // ExifToolReader does all the heavy lifting now!
+            var metadata = await _exifToolReader.ExtractMetadataAsync(filePath);
+
+            _logger.LogInformation("Extracted metadata for {Patient} - {Study}",
+                metadata.Patient.PatientId, metadata.Study.StudyId);
+
+            return metadata;
+        }
+
+        private string DetermineOutputPath(ImageMetadata metadata, string sourcePath)
+        {
+            // Find the matching watch folder configuration
+            FolderConfiguration? folderConfig = null;
+            foreach (var watchFolder in _settings.WatchFolders)
+            {
+                if (sourcePath.StartsWith(watchFolder.Path, StringComparison.OrdinalIgnoreCase))
+                {
+                    folderConfig = watchFolder;
+                    break;
+                }
+            }
+
+            // Determine base output folder
+            var baseOutputFolder = folderConfig?.OutputPath ?? _settings.DefaultOutputFolder;
+
+            // Apply output organization
+            var organizedPath = ApplyOutputOrganization(baseOutputFolder, metadata);
+
+            // Generate filename
+            var fileName = GenerateOutputFileName(metadata);
+
+            return Path.Combine(organizedPath, fileName);
+        }
+
+        private string ApplyOutputOrganization(string baseFolder, ImageMetadata metadata)
+        {
+            var path = baseFolder;
+
+            switch (_processingOptions.OutputOrganization)
+            {
+                case OutputOrganization.ByPatient:
+                    path = Path.Combine(path, SanitizePathComponent(metadata.Patient.Id.Value));
+                    break;
+
+                case OutputOrganization.ByDate:
+                    path = Path.Combine(path, metadata.Study.StudyDate.ToString("yyyy-MM-dd"));
+                    break;
+
+                case OutputOrganization.ByPatientAndDate:
+                    path = Path.Combine(path,
+                        SanitizePathComponent(metadata.Patient.Id.Value),
+                        metadata.Study.StudyDate.ToString("yyyy-MM-dd"));
+                    break;
+            }
+
+            // Ensure directory exists
+            Directory.CreateDirectory(path);
+            return path;
+        }
+
+        private string GenerateOutputFileName(ImageMetadata metadata)
+        {
+            var pattern = _processingOptions.OutputFilePattern;
+
+            // Replace tokens
+            var fileName = pattern
+                .Replace("{PatientID}", SanitizeFileName(metadata.Patient.Id.Value))
+                .Replace("{PatientName}", SanitizeFileName(metadata.Patient.Name))
+                .Replace("{StudyDate}", metadata.Study.StudyDate.ToString("yyyyMMdd"))
+                .Replace("{StudyID}", SanitizeFileName(metadata.Study.Id.Value))
+                .Replace("{ExamID}", SanitizeFileName(metadata.Study.ExamId ?? ""))
+                .Replace("{InstanceNumber}", metadata.InstanceNumber.ToString("D4"))
+                .Replace("{Timestamp}", DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
+
+            // Ensure .dcm extension
+            if (!fileName.EndsWith(".dcm", StringComparison.OrdinalIgnoreCase))
+            {
+                fileName += ".dcm";
+            }
+
+            return fileName;
+        }
+
+        private async Task CreateBackupAsync(FileInfo fileInfo)
+        {
+            var backupPath = Path.Combine(
+                _processingOptions.BackupFolder,
+                DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                fileInfo.Name);
+
+            var backupDir = Path.GetDirectoryName(backupPath)!;
+            Directory.CreateDirectory(backupDir);
+
+            await CopyFileAsync(fileInfo.FullName, backupPath);
+            _logger.LogDebug("Created backup of {SourceFile} at {BackupPath}",
+                fileInfo.FullName, backupPath);
+        }
+
+        private async Task HandleSourceFileAsync(string filePath, PostProcessingAction action)
+        {
+            switch (action)
+            {
+                case PostProcessingAction.Archive:
+                    var archivePath = Path.Combine(
+                        _processingOptions.ArchiveFolder,
+                        DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                        Path.GetFileName(filePath));
+
+                    var archiveDir = Path.GetDirectoryName(archivePath)!;
+                    Directory.CreateDirectory(archiveDir);
+
+                    await MoveFileAsync(filePath, archivePath);
+                    _logger.LogInformation("Archived {SourceFile} to {ArchivePath}",
+                        filePath, archivePath);
+                    break;
+
+                case PostProcessingAction.Delete:
+                    File.Delete(filePath);
+                    _logger.LogInformation("Deleted source file {FilePath}", filePath);
+                    break;
+
+                case PostProcessingAction.MoveToError:
+                    var errorPath = Path.Combine(
+                        _processingOptions.ErrorFolder,
+                        DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                        Path.GetFileName(filePath));
+
+                    var errorDir = Path.GetDirectoryName(errorPath)!;
+                    Directory.CreateDirectory(errorDir);
+
+                    await MoveFileAsync(filePath, errorPath);
+                    _logger.LogWarning("Moved failed file {SourceFile} to {ErrorPath}",
+                        filePath, errorPath);
+                    break;
+
+                case PostProcessingAction.Leave:
+                default:
+                    // Do nothing
+                    break;
+            }
+        }
+
+        private void ValidateFile(FileInfo fileInfo)
+        {
+            if (fileInfo.Length < _processingOptions.MinimumFileSizeBytes)
+            {
+                throw new InvalidOperationException(
+                    $"File too small: {fileInfo.Length} bytes (minimum: {_processingOptions.MinimumFileSizeBytes})");
+            }
+
+            if (fileInfo.Length > _processingOptions.MaximumFileSizeBytes)
+            {
+                throw new InvalidOperationException(
+                    $"File too large: {fileInfo.Length} bytes (maximum: {_processingOptions.MaximumFileSizeBytes})");
+            }
+        }
+
+        private bool IsFileReady(string filePath)
+        {
+            try
+            {
+                using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    return true;
+                }
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+        }
+
+        private async Task CopyFileAsync(string source, string destination)
+        {
+            using var sourceStream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var destStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None);
+            await sourceStream.CopyToAsync(destStream);
+        }
+
+        private async Task MoveFileAsync(string source, string destination)
+        {
+            // Try direct move first
+            try
+            {
+                File.Move(source, destination, true);
+            }
+            catch (IOException)
+            {
+                // Fall back to copy and delete
+                await CopyFileAsync(source, destination);
+                File.Delete(source);
+            }
+        }
+
+        private string SanitizeFileName(string fileName)
+        {
+            var invalid = Path.GetInvalidFileNameChars();
+            return string.Join("_", fileName.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private string SanitizePathComponent(string pathComponent)
+        {
+            var invalid = Path.GetInvalidPathChars();
+            return string.Join("_", pathComponent.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
         }
     }
 }

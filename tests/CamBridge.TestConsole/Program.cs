@@ -74,8 +74,13 @@ namespace CamBridge.TestConsole
                 builder.SetMinimumLevel(LogLevel.Debug);
             });
 
-            // CamBridge Core Services
-            services.AddSingleton<IExifReader, RicohExifReader>();
+            // CamBridge Core Services - ExifTool only!
+            services.AddSingleton<ExifToolReader>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<ExifToolReader>>();
+                return new ExifToolReader(logger);
+            });
+
             services.AddSingleton<IDicomTagMapper, DicomTagMapper>();
             services.AddSingleton<IMappingConfiguration, CustomMappingConfiguration>(sp =>
             {
@@ -117,7 +122,6 @@ namespace CamBridge.TestConsole
 
             services.Configure<CamBridgeSettings>(settings =>
             {
-                settings.UseRicohExifReader = true;
                 settings.DefaultOutputFolder = Path.Combine(Environment.CurrentDirectory, "output");
                 settings.Dicom.ValidateAfterCreation = true;
                 settings.Dicom.InstitutionName = "Test Hospital";
@@ -135,18 +139,18 @@ namespace CamBridge.TestConsole
     public class RicohTestRunner
     {
         private readonly ILogger<RicohTestRunner> _logger;
-        private readonly IExifReader _exifReader;
+        private readonly ExifToolReader _exifToolReader;  // Direct dependency!
         private readonly IDicomConverter _dicomConverter;
         private readonly IFileProcessor _fileProcessor;
 
         public RicohTestRunner(
             ILogger<RicohTestRunner> logger,
-            IExifReader exifReader,
+            ExifToolReader exifToolReader,  // Direct dependency!
             IDicomConverter dicomConverter,
             IFileProcessor fileProcessor)
         {
             _logger = logger;
-            _exifReader = exifReader;
+            _exifToolReader = exifToolReader;
             _dicomConverter = dicomConverter;
             _fileProcessor = fileProcessor;
         }
@@ -156,92 +160,45 @@ namespace CamBridge.TestConsole
             Console.WriteLine($"\n1. ANALYZING INPUT FILE: {Path.GetFileName(inputFile)}");
             Console.WriteLine($"   File size: {new FileInfo(inputFile).Length:N0} bytes");
 
-            // Step 1: Read EXIF data
-            Console.WriteLine("\n2. EXTRACTING EXIF DATA:");
-            var exifData = await _exifReader.ReadExifDataAsync(inputFile);
-
-            Console.WriteLine($"   Found {exifData.Count} EXIF tags");
-            foreach (var kvp in exifData.Take(10))
+            // Step 1: Extract metadata using ExifToolReader
+            Console.WriteLine("\n2. EXTRACTING METADATA WITH EXIFTOOL:");
+            try
             {
-                Console.WriteLine($"   - {kvp.Key}: {kvp.Value}");
-            }
-            if (exifData.Count > 10)
-            {
-                Console.WriteLine($"   ... and {exifData.Count - 10} more tags");
-            }
+                var metadata = await _exifToolReader.ExtractMetadataAsync(inputFile);
 
-            // Step 2: Look for QRBridge data
-            Console.WriteLine("\n3. SEARCHING FOR QRBRIDGE DATA:");
-            var userComment = await _exifReader.GetUserCommentAsync(inputFile);
+                Console.WriteLine($"   ✓ Successfully extracted metadata");
+                Console.WriteLine($"   Patient: {metadata.Patient.Name} (ID: {metadata.Patient.PatientId})");
+                Console.WriteLine($"   Study: {metadata.Study.StudyId} - {metadata.Study.StudyDescription}");
+                Console.WriteLine($"   Capture Date: {metadata.CaptureDateTime}");
+                Console.WriteLine($"   EXIF Tags found: {metadata.ExifData.Count}");
 
-            if (string.IsNullOrEmpty(userComment))
-            {
-                Console.WriteLine("   ❌ NO QRBridge data found in User Comment!");
-                Console.WriteLine("   Checking for Barcode field...");
-
-                if (exifData.TryGetValue("Barcode", out var barcode))
+                // Show some key EXIF data
+                if (metadata.ExifData.TryGetValue("Barcode", out var barcode))
                 {
-                    Console.WriteLine($"   ✓ Found in Barcode field: {barcode}");
-                    userComment = barcode;
+                    Console.WriteLine($"   Barcode field: {barcode}");
                 }
-                else
+                if (metadata.ExifData.TryGetValue("UserComment", out var userComment))
                 {
-                    Console.WriteLine("   ❌ No Barcode field found either!");
+                    Console.WriteLine($"   UserComment field: {userComment}");
+                }
+
+                // Show technical data
+                if (metadata.TechnicalData != null)
+                {
+                    Console.WriteLine($"\n   Technical Data:");
+                    Console.WriteLine($"   - Camera: {metadata.TechnicalData.Manufacturer} {metadata.TechnicalData.Model}");
+                    Console.WriteLine($"   - Dimensions: {metadata.TechnicalData.ImageWidth}x{metadata.TechnicalData.ImageHeight}");
+                    Console.WriteLine($"   - Software: {metadata.TechnicalData.Software}");
                 }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"   ✓ Found User Comment: {userComment}");
-
-                // Debug output - show hex values
-                Console.WriteLine("\n   DEBUG - Hex dump of User Comment:");
-                var bytes = Encoding.UTF8.GetBytes(userComment);
-                for (int i = 0; i < Math.Min(bytes.Length, 100); i += 16)
-                {
-                    var hex = string.Join(" ", bytes.Skip(i).Take(16).Select(b => b.ToString("X2")));
-                    var ascii = string.Join("", bytes.Skip(i).Take(16).Select(b =>
-                        (b >= 32 && b <= 126) ? (char)b : '.'));
-                    Console.WriteLine($"   {i:D4}: {hex,-48} {ascii}");
-                }
-
-                // Check for line breaks or special characters
-                if (userComment.Contains('\r') || userComment.Contains('\n'))
-                {
-                    Console.WriteLine("\n   ⚠️ Found line breaks in data!");
-                    Console.WriteLine($"   CR (\\r) count: {userComment.Count(c => c == '\r')}");
-                    Console.WriteLine($"   LF (\\n) count: {userComment.Count(c => c == '\n')}");
-                }
-
-                // Check for encoding issues
-                if (userComment.Contains('�') || userComment.Contains('\ufffd'))
-                {
-                    Console.WriteLine("\n   ⚠️ Found encoding issues (� characters)!");
-                    Console.WriteLine("   This usually means UTF-8 data was interpreted as Latin-1");
-                }
+                Console.WriteLine($"   ❌ Failed to extract metadata: {ex.Message}");
+                return; // Can't continue without metadata
             }
 
-            // Step 3: Parse QRBridge data
-            if (!string.IsNullOrEmpty(userComment))
-            {
-                Console.WriteLine("\n4. PARSING QRBRIDGE DATA:");
-                var qrBridgeData = _exifReader.ParseQRBridgeData(userComment);
-
-                if (qrBridgeData.Count > 0)
-                {
-                    Console.WriteLine("   Parsed fields:");
-                    foreach (var field in qrBridgeData)
-                    {
-                        Console.WriteLine($"   - {field.Key}: {field.Value}");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("   ❌ Failed to parse QRBridge data!");
-                }
-            }
-
-            // Step 4: Process file through full pipeline
-            Console.WriteLine("\n5. PROCESSING THROUGH FULL PIPELINE:");
+            // Step 2: Process through full pipeline
+            Console.WriteLine("\n3. PROCESSING THROUGH FULL PIPELINE:");
             var outputDir = Path.Combine(Environment.CurrentDirectory, "output");
             Directory.CreateDirectory(outputDir);
 
@@ -252,25 +209,22 @@ namespace CamBridge.TestConsole
                 Console.WriteLine($"   ✓ SUCCESS! Output: {result.OutputFile}");
                 Console.WriteLine($"   Processing time: {result.ProcessingTime.TotalMilliseconds:F0}ms");
 
-                // Step 5: Analyze generated DICOM
+                // Step 3: Analyze generated DICOM
                 await AnalyzeDicomFileAsync(result.OutputFile);
             }
             else
             {
                 Console.WriteLine($"   ❌ FAILED: {result.ErrorMessage}");
-            }
 
-            // Step 6: Direct converter test (for debugging)
-            if (!result.Success)
-            {
-                Console.WriteLine("\n6. ATTEMPTING DIRECT CONVERSION (DEBUG MODE):");
+                // Try direct conversion for debugging
+                Console.WriteLine("\n4. ATTEMPTING DIRECT CONVERSION (DEBUG MODE):");
                 await TestDirectConversionAsync(inputFile);
             }
         }
 
         private async Task AnalyzeDicomFileAsync(string dicomPath)
         {
-            Console.WriteLine("\n6. ANALYZING GENERATED DICOM:");
+            Console.WriteLine("\n4. ANALYZING GENERATED DICOM:");
 
             try
             {
@@ -333,22 +287,8 @@ namespace CamBridge.TestConsole
         {
             try
             {
-                // Create minimal metadata for testing
-                var metadata = new ImageMetadata(
-                    inputFile,
-                    DateTime.Now,
-                    new PatientInfo(
-                        new PatientId("TEST001"),
-                        "Debug, Test",
-                        null,
-                        Gender.Other),
-                    new StudyInfo(
-                        new StudyId("STUDY001"),
-                        DateTime.Now,
-                        "XC"),
-                    new Dictionary<string, string>(),
-                    new ImageTechnicalData(),
-                    1);
+                // Get metadata from ExifToolReader
+                var metadata = await _exifToolReader.ExtractMetadataAsync(inputFile);
 
                 var outputPath = Path.Combine(Environment.CurrentDirectory, "output", "debug_test.dcm");
                 var result = await _dicomConverter.ConvertToDicomAsync(inputFile, outputPath, metadata);

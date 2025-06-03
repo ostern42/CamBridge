@@ -6,38 +6,35 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.19] - 2025-06-03 18:00
+## [0.5.19] - 2025-06-03 20:30
+### Added
+- ExifToolReader implementation (without IExifReader interface)
+- WISDOM Priority System for project knowledge management
+  - 🔒 [CORE] tags for permanent information
+  - ⚡ [URGENT] tags for current sprint items  
+  - 💡 [LESSON] tags for learned experiences
+  - 📝 [TEMP] tags for disposable code
+- Strong CLAUDE self-instructions section
+- Pipeline architecture documentation
+- Git-inspired tagging system
 
-### Geplant
-- ExifTool als einzige EXIF-Lösung implementieren
-- Alte Reader-Hierarchie komplett entfernen  
-- Pipeline vereinfachen: ExifTool → ImageMetadata → DICOM
+### Changed
+- FileProcessor to use ExifToolReader directly
+- ServiceCollectionExtensions - removed composite/fallback logic
+- TestConsole adapted for new pipeline architecture
+- Complete refactor of PROJECT_WISDOM.md structure
+- Clear action plan with time estimates
 
-### Analysiert
-- Bestehende Projektstruktur untersucht
-- ImageMetadata bereits vorhanden in Entities ✓
-- IFileProcessor bereits vorhanden ✓
-- Alte Reader bereits gelöscht ✓
+### Fixed
+- Syntax error in ExifToolReader (method placement)
 
-### Theoretisch Implementiert  
-- ExifToolReader neu geschrieben:
-  - Keine IExifReader Interfaces mehr
-  - Nutzt bestehende ImageMetadata/PatientInfo/StudyInfo
-  - Integriertes QRBridge-Parsing (alle Formate)
-  - GCM_TAG Problem behandelt (mit/ohne Space)
-- FileProcessor angepasst für neue Pipeline
-- DI-Registrierung vereinfacht
-
-### Noch zu tun (nächster Chat)
-- Code tatsächlich implementieren
-- Mit ParserDebug.exe testen
-- Service im Console-Mode testen
-- Edge Cases prüfen
-
-### Development
-- PROJECT_WISDOM konsolidiert (weniger Redundanz)
-- Entwicklungsfahrplan prominenter platziert
-- VOGON System präzisiert
+### Technical
+- BREAKING: IExifReader interface removed - direct dependency only
+- Architecture: JPEG → ExifToolReader → ImageMetadata → DicomConverter → DICOM
+- Identified missing entities blocking compilation:
+  - ImageTechnicalData.cs (missing)
+  - ImageMetadata.cs (needs TechnicalData property)
+  - StudyInfo.cs (needs ExamId property)
 
 ## [0.5.18] - 2025-06-03 16:50
 
@@ -153,30 +150,31 @@ TESTED: File detection and parsing work, but DICOM creation needs systematic fix
 - Selection: Fixed
 - Next: Watch Folder implementation
 
-## [0.5.12] - 2025-06-02 22:50
+## [0.5.12] - 2025-06-02, 22:50
+
 ### Fixed
-- Navigation: MappingEditor und AboutPage in NavigationService registriert
-- DataContext wird jetzt korrekt über DI für MappingEditorViewModel gesetzt
-- XAML Parse-Fehler durch ersetzen von Symbol="Up/Down" mit Unicode-Pfeilen behoben
-- Build-Fehler durch entfernen von MockConfigurationService Referenzen gefixt
+- Navigation: Registered MappingEditor and AboutPage in NavigationService
+- DataContext now correctly set via DI for MappingEditorViewModel
+- Fixed XAML parse error by replacing Symbol="Up/Down" with Unicode arrows
+- Resolved build errors by removing MockConfigurationService references
 
 ### Changed
-- MappingEditor Buttons verwenden jetzt ▲▼ statt SymbolIcons für bessere Kompatibilität
-- PreviewInputChanged Methodenaufruf durch Property-Setter ersetzt
+- MappingEditor buttons now use ▲▼ instead of SymbolIcons for better compatibility
+- Replaced PreviewInputChanged method call with property setter
 
 ### Tested
-- ✅ Mapping Editor öffnet sich ohne Crash
-- ✅ Templates (Ricoh G900, Minimal, Full) funktionieren
-- ✅ Drag & Drop von Source Fields funktioniert
-- ✅ Add Rule erstellt neue Mappings
-- ✅ Import/Export/Save Dialoge öffnen sich
-- ✅ Modified-Flag wird bei Save zurückgesetzt
-- ⚠️ Rule Properties Panel reagiert noch nicht (Fix in v0.5.13)
+- ✅ Mapping Editor opens without crash
+- ✅ Templates (Ricoh G900, Minimal, Full) work correctly
+- ✅ Drag & Drop from Source Fields functional
+- ✅ Add Rule creates new mappings
+- ✅ Import/Export/Save dialogs open properly
+- ✅ Modified flag resets on Save
+- ⚠️ Rule Properties panel not yet responsive (Fix in v0.5.13)
 
 ### Developer Notes
-- Navigation-Probleme immer zuerst in NavigationService Dictionary prüfen
-- ModernWpfUI hat begrenzte Symbol-Namen - Unicode oft sicherer
-- "Das Offensichtliche zuerst" - 1-Zeilen-Fix löste komplexes Problem
+- Always check NavigationService Dictionary first for navigation issues
+- ModernWpfUI has limited symbol names - Unicode often safer
+- "Check the obvious first" - 1-line fix solved complex problem
 
 ## [0.5.11] - 2025-06-02 20:33
 ### Fixed
