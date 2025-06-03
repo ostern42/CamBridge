@@ -41,7 +41,7 @@ namespace CamBridge.Infrastructure.Services
         }
 
         /// <inheritdoc />
-        public async Task<ProcessingResult> ProcessFileAsync(string filePath)
+        public async Task<FileProcessingResult> ProcessFileAsync(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
@@ -101,7 +101,7 @@ namespace CamBridge.Infrastructure.Services
                 await HandleSourceFileAsync(filePath, _processingOptions.SuccessAction);
 
                 stopwatch.Stop();
-                var result = ProcessingResult.CreateSuccess(filePath, outputPath, stopwatch.Elapsed);
+                var result = FileProcessingResult.CreateSuccess(filePath, outputPath, stopwatch.Elapsed);
 
                 _logger.LogInformation("Successfully processed {FilePath} to {OutputPath} in {ElapsedMs}ms",
                     filePath, outputPath, stopwatch.ElapsedMilliseconds);
@@ -126,7 +126,7 @@ namespace CamBridge.Infrastructure.Services
                     _logger.LogError(moveEx, "Error handling failed file {FilePath}", filePath);
                 }
 
-                return ProcessingResult.CreateFailure(filePath, ex.Message, stopwatch.Elapsed);
+                return FileProcessingResult.CreateFailure(filePath, ex.Message, stopwatch.Elapsed);
             }
         }
 
@@ -192,7 +192,7 @@ namespace CamBridge.Infrastructure.Services
             var metadata = await _exifToolReader.ExtractMetadataAsync(filePath);
 
             _logger.LogInformation("Extracted metadata for {Patient} - {Study}",
-                metadata.Patient.PatientId, metadata.Study.StudyId);
+                metadata.Patient.Id.Value, metadata.Study.StudyId.Value);
 
             return metadata;
         }
@@ -257,7 +257,7 @@ namespace CamBridge.Infrastructure.Services
                 .Replace("{PatientID}", SanitizeFileName(metadata.Patient.Id.Value))
                 .Replace("{PatientName}", SanitizeFileName(metadata.Patient.Name))
                 .Replace("{StudyDate}", metadata.Study.StudyDate.ToString("yyyyMMdd"))
-                .Replace("{StudyID}", SanitizeFileName(metadata.Study.Id.Value))
+                .Replace("{StudyID}", SanitizeFileName(metadata.Study.StudyId.Value))
                 .Replace("{ExamID}", SanitizeFileName(metadata.Study.ExamId ?? ""))
                 .Replace("{InstanceNumber}", metadata.InstanceNumber.ToString("D4"))
                 .Replace("{Timestamp}", DateTime.UtcNow.ToString("yyyyMMddHHmmss"));

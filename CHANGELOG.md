@@ -7,6 +7,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.5.20] - 2025-06-03
+
+### Fixed
+- Entity contract mismatches causing compilation errors
+- PatientInfo constructor parameter naming (id vs patientId)
+- StudyInfo property naming (StudyId vs Id, Description vs StudyDescription)
+- ImageMetadata missing properties (ExifData, InstanceNumber, InstanceUid)
+- Gender type conversions between enum and string
+- DicomConverter null reference exceptions
+
+### Added
+- ImageTechnicalData entity for camera metadata
+- Entity Contract Tracker in PROJECT_WISDOM.md
+- ExifToolQuickTest project for isolated testing
+
+### Changed
+- ImageMetadata now includes all required DICOM properties
+- StudyInfo includes ExamId property from QRBridge data
+- Improved null checking in DicomConverter
+
+### Confirmed
+- ExifTool v13.30 successfully finds Ricoh G900 II Barcode field
+- QRBridge data format: "EX002|Schmidt, Maria|1985-03-15|F|R÷ntgenáThorax"
+- Infrastructure layer now compiles without errors
+
+## [0.5.20] - 2025-06-03
 ### Added
 - CLAUDE-TO-CLAUDE Command System for better self-guidance
 - WISDOM Garbage Collection process for VOGON EXIT

@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using CamBridge.Core.Entities;
+using CamBridge.Core.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace CamBridge.Infrastructure.Services
@@ -67,8 +68,10 @@ namespace CamBridge.Infrastructure.Services
                 : new Dictionary<string, string>();
 
             // Build metadata object using existing entities
+            var examId = parsedData.GetValueOrDefault("examid", "UNKNOWN");
+
             var patientInfo = new PatientInfo(
-                patientId: parsedData.GetValueOrDefault("examid", "UNKNOWN"),
+                id: new PatientId(examId),
                 name: parsedData.GetValueOrDefault("name", "Unknown Patient"),
                 birthDate: ParseBirthDate(parsedData.GetValueOrDefault("birthdate")),
                 gender: ParseGender(parsedData.GetValueOrDefault("gender"))
@@ -78,28 +81,39 @@ namespace CamBridge.Infrastructure.Services
                 ?? DateTime.UtcNow;
 
             var studyInfo = new StudyInfo(
-                studyId: $"STUDY_{patientInfo.PatientId}_{captureDateTime:yyyyMMddHHmmss}",
-                studyDate: captureDateTime,
-                studyDescription: parsedData.GetValueOrDefault("comment", "CamBridge Capture"),
-                modality: "XC" // Secondary Capture
+                studyId: new StudyId($"STUDY_{examId}_{captureDateTime:yyyyMMddHHmmss}"),
+                examId: examId,  // Added examId parameter
+                description: parsedData.GetValueOrDefault("comment", "CamBridge Capture"),
+                modality: "XC", // Secondary Capture
+                studyDate: captureDateTime
             );
 
             var technicalData = ImageTechnicalData.FromExifDictionary(exifData);
+
+            // Extract userComment and barcodeData
+            var userComment = exifData.GetValueOrDefault("UserComment");
+            var barcodeData = exifData.GetValueOrDefault("Barcode")
+                ?? exifData.GetValueOrDefault("MakerNotesPentax:Barcode")
+                ?? qrBridgeData;
 
             var metadata = new ImageMetadata(
                 sourceFilePath: filePath,
                 captureDateTime: captureDateTime,
                 patient: patientInfo,
                 study: studyInfo,
-                exifData: exifData,
-                technicalData: technicalData
+                technicalData: technicalData,
+                userComment: userComment,
+                barcodeData: barcodeData,
+                instanceNumber: 1,  // Default instance number
+                instanceUid: null,  // Will be auto-generated
+                exifData: exifData  // Pass the EXIF dictionary
             );
 
             // Cache the result
             await CacheDataAsync(filePath, metadata);
 
             _logger.LogInformation("Successfully extracted metadata from {File}: {Patient} - {Study}",
-                filePath, patientInfo.PatientId, studyInfo.StudyId);
+                filePath, patientInfo.Id.Value, studyInfo.StudyId.Value);
 
             return metadata;
         }
@@ -554,16 +568,16 @@ namespace CamBridge.Infrastructure.Services
             return null;
         }
 
-        private string ParseGender(string? value)
+        private Gender ParseGender(string? value)
         {
-            if (string.IsNullOrWhiteSpace(value)) return "O";
+            if (string.IsNullOrWhiteSpace(value)) return Gender.Other;
 
             return value.ToUpper() switch
             {
-                "M" or "MALE" => "M",
-                "F" or "FEMALE" => "F",
-                "O" or "OTHER" => "O",
-                _ => "O"
+                "M" or "MALE" => Gender.Male,
+                "F" or "FEMALE" => Gender.Female,
+                "O" or "OTHER" => Gender.Other,
+                _ => Gender.Other
             };
         }
 

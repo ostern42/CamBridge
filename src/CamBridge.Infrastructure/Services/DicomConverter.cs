@@ -210,7 +210,7 @@ namespace CamBridge.Infrastructure.Services
             var sourceData = PrepareSourceData(metadata);
 
             // Get mapping rules
-            var mappingRules = _mappingConfiguration.GetMappingRules();
+            var mappingRules = _mappingConfiguration!.GetMappingRules();
 
             // Flatten the nested dictionary if needed
             var flatSourceData = new Dictionary<string, string>();
@@ -223,7 +223,7 @@ namespace CamBridge.Infrastructure.Services
             }
 
             // Apply mappings (void method, no return value)
-            _tagMapper.MapToDataset(dataset, flatSourceData, mappingRules);
+            _tagMapper!.MapToDataset(dataset, flatSourceData, mappingRules);
 
             _logger.LogInformation("Mapping completed successfully");
 
@@ -241,7 +241,7 @@ namespace CamBridge.Infrastructure.Services
             var qrBridgeData = new Dictionary<string, string>();
 
             // Extract from parsed user comment if available
-            if (metadata.ExifData.TryGetValue("QRBridgeData", out var qrData))
+            if (metadata.ExifData != null && metadata.ExifData.TryGetValue("QRBridgeData", out var qrData))
             {
                 // Assume it's already parsed into key-value pairs
                 var parts = qrData.Split('|');
@@ -258,22 +258,32 @@ namespace CamBridge.Infrastructure.Services
             if (metadata.Patient.BirthDate.HasValue)
                 qrBridgeData["birthdate"] = metadata.Patient.BirthDate.Value.ToString("yyyy-MM-dd");
             qrBridgeData["gender"] = metadata.Patient.Gender.ToString()[0].ToString();
-            qrBridgeData["examid"] = metadata.Study.ExamId ?? metadata.Study.Id.Value;
+            qrBridgeData["examid"] = metadata.Study.ExamId ?? metadata.Study.StudyId.Value;
             if (!string.IsNullOrEmpty(metadata.Study.Comment))
                 qrBridgeData["comment"] = metadata.Study.Comment;
 
             sourceData["QRBridge"] = qrBridgeData;
 
             // Prepare EXIF data
-            sourceData["EXIF"] = new Dictionary<string, string>(metadata.ExifData);
+            if (metadata.ExifData != null)
+            {
+                sourceData["EXIF"] = new Dictionary<string, string>(metadata.ExifData);
+            }
+            else
+            {
+                sourceData["EXIF"] = new Dictionary<string, string>();
+            }
 
             // Add technical data to EXIF if not already present
-            if (metadata.TechnicalData.Manufacturer != null)
-                sourceData["EXIF"]["Make"] = metadata.TechnicalData.Manufacturer;
-            if (metadata.TechnicalData.Model != null)
-                sourceData["EXIF"]["Model"] = metadata.TechnicalData.Model;
-            if (metadata.TechnicalData.Software != null)
-                sourceData["EXIF"]["Software"] = metadata.TechnicalData.Software;
+            if (metadata.TechnicalData != null)
+            {
+                if (metadata.TechnicalData.Manufacturer != null)
+                    sourceData["EXIF"]["Make"] = metadata.TechnicalData.Manufacturer;
+                if (metadata.TechnicalData.Model != null)
+                    sourceData["EXIF"]["Model"] = metadata.TechnicalData.Model;
+                if (metadata.TechnicalData.Software != null)
+                    sourceData["EXIF"]["Software"] = metadata.TechnicalData.Software;
+            }
 
             return sourceData;
         }
@@ -342,7 +352,7 @@ namespace CamBridge.Infrastructure.Services
             // Ensure Study ID exists
             if (!dataset.Contains(DicomTag.StudyID))
             {
-                dataset.Add(DicomTag.StudyID, metadata.Study.Id.Value);
+                dataset.Add(DicomTag.StudyID, metadata.Study.StudyId.Value);
             }
         }
 
@@ -366,8 +376,8 @@ namespace CamBridge.Infrastructure.Services
             dataset.Add(DicomTag.StudyTime, metadata.Study.StudyDate.ToString("HHmmss"));
             dataset.Add(DicomTag.AccessionNumber, metadata.Study.AccessionNumber ?? "");
             dataset.Add(DicomTag.ReferringPhysicianName, metadata.Study.ReferringPhysician ?? "");
-            dataset.Add(DicomTag.StudyID, metadata.Study.Id.Value);
-            dataset.Add(DicomTag.StudyDescription, metadata.Study.StudyDescription ?? "");
+            dataset.Add(DicomTag.StudyID, metadata.Study.StudyId.Value);
+            dataset.Add(DicomTag.StudyDescription, metadata.Study.Description ?? "");
 
             // General Series Module
             dataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate());
@@ -376,12 +386,12 @@ namespace CamBridge.Infrastructure.Services
             dataset.Add(DicomTag.SeriesDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
             dataset.Add(DicomTag.SeriesTime, metadata.Study.StudyDate.ToString("HHmmss"));
             dataset.Add(DicomTag.SeriesDescription, "VL Photographic Image");
-            dataset.Add(DicomTag.PerformingPhysicianName, metadata.Study.PerformingPhysician ?? "");
+            // PerformingPhysicianName removed - not part of StudyInfo
 
             // General Equipment Module
-            dataset.Add(DicomTag.Manufacturer, metadata.TechnicalData.Manufacturer ?? "Unknown");
-            dataset.Add(DicomTag.ManufacturerModelName, metadata.TechnicalData.Model ?? "");
-            dataset.Add(DicomTag.SoftwareVersions, metadata.TechnicalData.Software ?? "");
+            dataset.Add(DicomTag.Manufacturer, metadata.TechnicalData?.Manufacturer ?? "Unknown");
+            dataset.Add(DicomTag.ManufacturerModelName, metadata.TechnicalData?.Model ?? "");
+            dataset.Add(DicomTag.SoftwareVersions, metadata.TechnicalData?.Software ?? "");
             dataset.Add(DicomTag.StationName, Environment.MachineName);
 
             // SC Equipment Module
@@ -446,7 +456,9 @@ namespace CamBridge.Infrastructure.Services
         private async Task<(int width, int height)> GetImageDimensionsAsync(string jpegPath, ImageMetadata metadata)
         {
             // First try to get from metadata
-            if (metadata.TechnicalData.ImageWidth.HasValue && metadata.TechnicalData.ImageHeight.HasValue)
+            if (metadata.TechnicalData != null &&
+                metadata.TechnicalData.ImageWidth.HasValue &&
+                metadata.TechnicalData.ImageHeight.HasValue)
             {
                 return (metadata.TechnicalData.ImageWidth.Value, metadata.TechnicalData.ImageHeight.Value);
             }
