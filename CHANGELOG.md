@@ -6,6 +6,39 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.19] - 2025-06-03 18:00
+
+### Geplant
+- ExifTool als einzige EXIF-Lösung implementieren
+- Alte Reader-Hierarchie komplett entfernen  
+- Pipeline vereinfachen: ExifTool → ImageMetadata → DICOM
+
+### Analysiert
+- Bestehende Projektstruktur untersucht
+- ImageMetadata bereits vorhanden in Entities ✓
+- IFileProcessor bereits vorhanden ✓
+- Alte Reader bereits gelöscht ✓
+
+### Theoretisch Implementiert  
+- ExifToolReader neu geschrieben:
+  - Keine IExifReader Interfaces mehr
+  - Nutzt bestehende ImageMetadata/PatientInfo/StudyInfo
+  - Integriertes QRBridge-Parsing (alle Formate)
+  - GCM_TAG Problem behandelt (mit/ohne Space)
+- FileProcessor angepasst für neue Pipeline
+- DI-Registrierung vereinfacht
+
+### Noch zu tun (nächster Chat)
+- Code tatsächlich implementieren
+- Mit ParserDebug.exe testen
+- Service im Console-Mode testen
+- Edge Cases prüfen
+
+### Development
+- PROJECT_WISDOM konsolidiert (weniger Redundanz)
+- Entwicklungsfahrplan prominenter platziert
+- VOGON System präzisiert
+
 ## [0.5.18] - 2025-06-03 16:50
 
 ### Changed

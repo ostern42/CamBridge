@@ -44,11 +44,7 @@ namespace CamBridge.Infrastructure
                 return new ExifToolReader(logger, exifToolPath, timeoutMs);
             });
 
-            services.AddSingleton<RicohExifReader>();
-            services.AddSingleton<ExifReader>();
-
-            // Register the composite reader as the primary IExifReader
-            services.AddSingleton<IExifReader, CompositeExifReader>();
+            services.AddSingleton<ExifToolReader>(); // The ONLY EXIF solution!
 
             // Queue and Processing Services
             services.AddSingleton<ProcessingQueue>();
