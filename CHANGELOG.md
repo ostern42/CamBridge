@@ -6,6 +6,34 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.17] - 2025-06-03 16:00
+### Added
+- ExifToolReader with automatic discovery and caching
+- CompositeExifReader for fallback chain (ExifTool → Ricoh → Standard)
+- DicomTagMapper service with transform functions
+- IDicomTagMapper interface for dependency injection
+- MapToDataset method for DICOM tag mapping
+- ValueTransform enum for transformation types
+
+### Fixed
+- GCM_TAG prefix removal now handles both "GCM_TAG " and "GCM_TAG" variants
+- MappingRule now has all required properties (Description, ValueRepresentation, etc.)
+- Transform property made string-based for XAML compatibility
+- ServiceCollectionExtensions registration issues
+- DicomConverter MapToDataset parameter order and flattening
+
+### Technical
+- Core and Infrastructure projects now build successfully
+- Added fo-dicom package to Core project
+- Implemented systematic error handling in ExifToolReader
+- Added encoding fixes for German umlauts
+
+### Testing Status
+- ✅ Core project builds
+- ✅ Infrastructure project builds
+- ❌ Config project has XAML/ValueTransform binding issues
+- Next: Fix XAML bindings before proceeding to DICOM tests
+
 [0.5.16] - 2025-06-02 00:30
 Added
 

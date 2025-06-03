@@ -5,7 +5,7 @@
   },
   "projects": {
     "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Core\\CamBridge.Core.csproj": {
-      "version": "0.5.16",
+      "version": "0.5.17",
       "restore": {
         "projectUniqueName": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Core\\CamBridge.Core.csproj",
         "projectName": "CamBridge.Core",
@@ -50,6 +50,12 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "fo-dicom": {
+              "target": "Package",
+              "version": "[5.1.2, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -71,7 +77,7 @@
       }
     },
     "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Infrastructure\\CamBridge.Infrastructure.csproj": {
-      "version": "0.5.16",
+      "version": "0.5.17",
       "restore": {
         "projectUniqueName": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Infrastructure\\CamBridge.Infrastructure.csproj",
         "projectName": "CamBridge.Infrastructure",
@@ -125,6 +131,10 @@
               "target": "Package",
               "version": "[2.8.1, )"
             },
+            "Microsoft.Extensions.Configuration.Binder": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
             "Microsoft.Extensions.DependencyInjection.Abstractions": {
               "target": "Package",
               "version": "[9.0.5, )"
@@ -136,6 +146,14 @@
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
               "version": "[9.0.5, )"
+            },
+            "Microsoft.Extensions.Logging.Configuration": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Options.ConfigurationExtensions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
             },
             "System.Diagnostics.EventLog": {
               "target": "Package",

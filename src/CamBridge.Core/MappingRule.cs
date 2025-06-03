@@ -1,106 +1,92 @@
-﻿using System;
-using CamBridge.Core.ValueObjects;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace CamBridge.Core
 {
     /// <summary>
-    /// Defines a mapping rule from source data to DICOM tag
+    /// Represents a mapping rule from source field to DICOM tag
     /// </summary>
     public class MappingRule
     {
-        public string Name { get; }
-        public string SourceType { get; }
-        public string SourceField { get; }
-        public DicomTag TargetTag { get; }
-        public ValueTransform Transform { get; }
-        public bool IsRequired { get; }
-        public string? DefaultValue { get; }
+        /// <summary>
+        /// The source field name from EXIF/QRBridge data
+        /// </summary>
+        [Required]
+        public string SourceField { get; set; } = string.Empty;
 
-        public MappingRule(
-            string name,
-            string sourceType,
-            string sourceField,
-            DicomTag targetTag,
-            ValueTransform transform = ValueTransform.None,
-            bool isRequired = false,
-            string? defaultValue = null)
+        /// <summary>
+        /// The target DICOM tag (e.g., "(0010,0010)")
+        /// </summary>
+        [Required]
+        public string DicomTag { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Human-readable description of the DICOM tag
+        /// </summary>
+        public string? Description { get; set; }
+
+        /// <summary>
+        /// DICOM Value Representation (e.g., "PN", "LO", "DA")
+        /// </summary>
+        public string? ValueRepresentation { get; set; }
+
+        /// <summary>
+        /// Transform function to apply (as string for XAML compatibility)
+        /// </summary>
+        public string? Transform { get; set; }
+
+        /// <summary>
+        /// Transform as enum (for internal processing)
+        /// </summary>
+        public ValueTransform? TransformEnum
         {
-            Name = name ?? throw new ArgumentNullException(nameof(name));
-            SourceType = sourceType ?? throw new ArgumentNullException(nameof(sourceType));
-            SourceField = sourceField ?? throw new ArgumentNullException(nameof(sourceField));
-            TargetTag = targetTag ?? throw new ArgumentNullException(nameof(targetTag));
-            Transform = transform;
-            IsRequired = isRequired;
-            DefaultValue = defaultValue;
+            get => Enum.TryParse<ValueTransform>(Transform, out var result) ? result : null;
+            set => Transform = value?.ToString();
         }
 
         /// <summary>
-        /// Applies the transformation to a value
+        /// Default value if source field is missing
         /// </summary>
-        public string? ApplyTransform(string? value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return DefaultValue;
+        public string? DefaultValue { get; set; }
 
-            return Transform switch
-            {
-                ValueTransform.None => value,
-                ValueTransform.ToUpper => value.ToUpper(),
-                ValueTransform.ToLower => value.ToLower(),
-                ValueTransform.DateToDicom => TransformDateToDicom(value),
-                ValueTransform.TimeToDicom => TransformTimeToDicom(value),
-                ValueTransform.GenderToDicom => TransformGenderToDicom(value),
-                ValueTransform.TruncateTo16 => value.Length > 16 ? value.Substring(0, 16) : value,
-                ValueTransform.TruncateTo64 => value.Length > 64 ? value.Substring(0, 64) : value,
-                _ => value
-            };
+        /// <summary>
+        /// Whether this mapping is required
+        /// </summary>
+        public bool Required { get; set; }
+
+        /// <summary>
+        /// Additional parameters for the transform function
+        /// </summary>
+        public Dictionary<string, string>? TransformParameters { get; set; }
+
+        // Additional properties that IMappingConfiguration might expect
+        /// <summary>
+        /// Type of the source field (for compatibility)
+        /// </summary>
+        public string? SourceType { get; set; }
+
+        /// <summary>
+        /// Alternative name property (for compatibility)
+        /// </summary>
+        public string? Name => Description;
+
+        /// <summary>
+        /// Constructor for object initializer syntax
+        /// </summary>
+        public MappingRule()
+        {
         }
 
-        private static string? TransformDateToDicom(string value)
+        /// <summary>
+        /// Constructor with parameters (for compatibility with IMappingConfiguration)
+        /// </summary>
+        public MappingRule(string sourceField, string dicomTag, string description, string valueRepresentation, string? transform = null)
         {
-            // Convert various date formats to DICOM format (YYYYMMDD)
-            if (DateTime.TryParse(value, out var date))
-            {
-                return date.ToString("yyyyMMdd");
-            }
-            return value;
+            SourceField = sourceField;
+            DicomTag = dicomTag;
+            Description = description;
+            ValueRepresentation = valueRepresentation;
+            Transform = transform;
         }
-
-        private static string? TransformTimeToDicom(string value)
-        {
-            // Convert various time formats to DICOM format (HHMMSS.FFFFFF)
-            if (DateTime.TryParse(value, out var time))
-            {
-                return time.ToString("HHmmss.ffffff");
-            }
-            return value;
-        }
-
-        private static string TransformGenderToDicom(string value)
-        {
-            // Convert gender to DICOM format (M, F, O)
-            return value?.ToUpperInvariant() switch
-            {
-                "M" or "MALE" or "MANN" or "MÄNNLICH" => "M",
-                "F" or "FEMALE" or "FRAU" or "WEIBLICH" => "F",
-                "O" or "OTHER" or "ANDERE" or "DIVERS" => "O",
-                _ => "O"
-            };
-        }
-    }
-
-    /// <summary>
-    /// Value transformation types
-    /// </summary>
-    public enum ValueTransform
-    {
-        None,
-        ToUpper,
-        ToLower,
-        DateToDicom,
-        TimeToDicom,
-        GenderToDicom,
-        TruncateTo16,
-        TruncateTo64
     }
 }

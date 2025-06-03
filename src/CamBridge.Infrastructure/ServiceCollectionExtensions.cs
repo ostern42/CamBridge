@@ -1,125 +1,159 @@
+using System;
+using System.IO;
+using System.Linq;
+using CamBridge.Core;
 using CamBridge.Core.Interfaces;
 using CamBridge.Infrastructure.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Runtime.Versioning;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CamBridge.Infrastructure
 {
     /// <summary>
-    /// Extension methods for configuring CamBridge infrastructure services
+    /// Extension methods for configuring infrastructure services
     /// </summary>
     public static class ServiceCollectionExtensions
     {
         /// <summary>
-        /// Adds CamBridge infrastructure services to the dependency injection container
+        /// Adds all infrastructure services to the dependency injection container
         /// </summary>
-        [SupportedOSPlatform("windows")]
-        public static IServiceCollection AddCamBridgeInfrastructure(this IServiceCollection services)
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
-            // Register EXIF reader services
-            services.AddScoped<IExifReader, ExifReader>();
-            services.AddScoped<RicohExifReader>(); // Can be injected directly when needed
+            // Core Processing Services
+            services.AddSingleton<IFileProcessor, FileProcessor>();
+            services.AddSingleton<IDicomConverter, DicomConverter>();
+            services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
 
-            // Register mapping configuration services
-            services.AddSingleton<IMappingConfiguration>(provider =>
+            // EXIF Reader Registration with Fallback Chain
+            // Register individual readers
+            services.AddSingleton<ExifToolReader>(provider =>
             {
-                // Default to built-in configuration
-                // Can be overridden by loading from file in startup
-                return IMappingConfiguration.GetDefault();
-            });
-            services.AddScoped<MappingConfigurationLoader>();
-            services.AddScoped<IDicomTagMapper, DicomTagMapper>();
+                var logger = provider.GetRequiredService<ILogger<ExifToolReader>>();
 
-            // Register DICOM converter service with mapper support
-            services.AddScoped<IDicomConverter, DicomConverter>();
-
-            // Register file processor service
-            services.AddScoped<IFileProcessor, FileProcessor>();
-
-            return services;
-        }
-
-        /// <summary>
-        /// Adds CamBridge infrastructure services with specific implementations
-        /// </summary>
-        [SupportedOSPlatform("windows")]
-        public static IServiceCollection AddCamBridgeInfrastructure(this IServiceCollection services,
-            bool useRicohExifReader)
-        {
-            // Register EXIF reader based on configuration
-            if (useRicohExifReader)
-            {
-                services.AddScoped<IExifReader, RicohExifReader>();
-            }
-            else
-            {
-                services.AddScoped<IExifReader, ExifReader>();
-            }
-
-            // Register mapping configuration services
-            services.AddSingleton<IMappingConfiguration>(provider =>
-            {
-                return IMappingConfiguration.GetDefault();
-            });
-            services.AddScoped<MappingConfigurationLoader>();
-            services.AddScoped<IDicomTagMapper, DicomTagMapper>();
-
-            // Register DICOM converter service
-            services.AddScoped<IDicomConverter, DicomConverter>();
-
-            // Register file processor service
-            services.AddScoped<IFileProcessor, FileProcessor>();
-
-            return services;
-        }
-
-        /// <summary>
-        /// Adds CamBridge infrastructure with custom mapping configuration from file
-        /// </summary>
-        [SupportedOSPlatform("windows")]
-        public static IServiceCollection AddCamBridgeInfrastructure(this IServiceCollection services,
-            string mappingConfigurationPath,
-            bool useRicohExifReader = false)
-        {
-            // Register EXIF reader
-            if (useRicohExifReader)
-            {
-                services.AddScoped<IExifReader, RicohExifReader>();
-            }
-            else
-            {
-                services.AddScoped<IExifReader, ExifReader>();
-            }
-
-            // Register mapping configuration loader as singleton
-            services.AddSingleton<MappingConfigurationLoader>();
-
-            // Register mapping configuration from file
-            services.AddSingleton<IMappingConfiguration>(provider =>
-            {
-                var loader = provider.GetRequiredService<MappingConfigurationLoader>();
-                var config = loader.LoadFromFileAsync(mappingConfigurationPath).GetAwaiter().GetResult();
-
-                // Validate configuration
-                if (config is CustomMappingConfiguration customConfig)
+                var exifToolPath = configuration["CamBridge:ExifToolPath"];
+                if (string.IsNullOrEmpty(exifToolPath))
                 {
-                    var validation = customConfig.Validate();
-                    if (!validation.IsValid)
+                    // Try environment variable
+                    exifToolPath = Environment.GetEnvironmentVariable("CAMBRIDGE_EXIFTOOL_PATH");
+                }
+
+                var timeoutMs = configuration.GetValue<int>("CamBridge:ExifToolTimeoutMs", 5000);
+
+                return new ExifToolReader(logger, exifToolPath, timeoutMs);
+            });
+
+            services.AddSingleton<RicohExifReader>();
+            services.AddSingleton<ExifReader>();
+
+            // Register the composite reader as the primary IExifReader
+            services.AddSingleton<IExifReader, CompositeExifReader>();
+
+            // Queue and Processing Services
+            services.AddSingleton<ProcessingQueue>();
+            services.AddSingleton<DeadLetterQueue>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<DeadLetterQueue>>();
+                var deadLetterPath = configuration["CamBridge:ProcessingOptions:DeadLetterFolder"]
+                    ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DeadLetter");
+
+                return new DeadLetterQueue(logger, deadLetterPath);
+            });
+
+            // Mapping Services
+            services.AddSingleton<IDicomTagMapper, DicomTagMapper>();
+
+            // Notification Services
+            services.AddSingleton<INotificationService, NotificationService>();
+
+            // Folder Watcher Service
+            services.AddSingleton<FolderWatcherService>();
+
+            // Note: Health checks should be added in the Service project
+            // where Microsoft.Extensions.Diagnostics.HealthChecks is referenced
+
+            // Configure Options
+            services.Configure<CamBridgeSettings>(configuration.GetSection("CamBridge"));
+            services.Configure<ProcessingOptions>(configuration.GetSection("CamBridge:ProcessingOptions"));
+            services.Configure<NotificationSettings>(configuration.GetSection("CamBridge:NotificationSettings"));
+
+            // Logging is configured in the host builder
+            // No need to configure it here
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds infrastructure services for the configuration tool
+        /// </summary>
+        public static IServiceCollection AddInfrastructureForConfig(this IServiceCollection services)
+        {
+            // Only add services needed by the configuration tool
+            services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
+            services.AddSingleton<DicomTagMapper>();
+
+            // Add minimal EXIF reader for testing/preview
+            services.AddSingleton<ExifReader>();
+            services.AddSingleton<IExifReader>(provider => provider.GetRequiredService<ExifReader>());
+
+            return services;
+        }
+
+        /// <summary>
+        /// Validates that all required services are properly configured
+        /// </summary>
+        public static IServiceProvider ValidateInfrastructure(this IServiceProvider provider)
+        {
+            // Create a logger for validation
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("Infrastructure.Validation");
+
+            try
+            {
+                // Validate critical services
+                var criticalServices = new[]
+                {
+                    typeof(IExifReader),
+                    typeof(IFileProcessor),
+                    typeof(IDicomConverter),
+                    typeof(ProcessingQueue),
+                    typeof(FolderWatcherService)
+                };
+
+                foreach (var serviceType in criticalServices)
+                {
+                    var service = provider.GetService(serviceType);
+                    if (service == null)
                     {
-                        var logger = provider.GetRequiredService<ILogger<IMappingConfiguration>>();
-                        logger.LogWarning("Mapping configuration has validation errors: {Errors}",
-                            string.Join("; ", validation.Errors));
+                        logger.LogError("Critical service {ServiceType} is not registered", serviceType.Name);
+                        throw new InvalidOperationException($"Critical service {serviceType.Name} is not registered");
                     }
                 }
 
-                return config;
-            });
+                // Check EXIF reader status
+                var exifReader = provider.GetRequiredService<IExifReader>();
+                if (exifReader is CompositeExifReader composite)
+                {
+                    var status = composite.GetReaderStatus();
+                    logger.LogInformation("EXIF Reader Status: {Status}",
+                        string.Join(", ", status.Select(kvp => $"{kvp.Key}={kvp.Value}")));
 
-            services.AddScoped<IDicomTagMapper, DicomTagMapper>();
-            services.AddScoped<IDicomConverter, DicomConverter>();
-            services.AddScoped<IFileProcessor, FileProcessor>();
+                    if (!status.Any(kvp => kvp.Value))
+                    {
+                        logger.LogError("No EXIF readers are available!");
+                    }
+                }
 
-            return services;
+                logger.LogInformation("Infrastructure validation completed successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Infrastructure validation failed");
+                throw;
+            }
+
+            return provider;
         }
     }
 }

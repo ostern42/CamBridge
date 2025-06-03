@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
-using CamBridge.Core.ValueObjects;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace CamBridge.Core.Interfaces
 {
     /// <summary>
-    /// Interface for configuring EXIF to DICOM tag mappings
+    /// Interface for managing DICOM mapping configurations
     /// </summary>
     public interface IMappingConfiguration
     {
@@ -14,9 +14,19 @@ namespace CamBridge.Core.Interfaces
         IReadOnlyList<MappingRule> GetMappingRules();
 
         /// <summary>
-        /// Gets mapping rules for a specific source type
+        /// Loads mapping configuration from a file
         /// </summary>
-        IReadOnlyList<MappingRule> GetRulesForSource(string sourceType);
+        /// <param name="filePath">Path to the configuration file (optional)</param>
+        /// <returns>True if loaded successfully, false otherwise</returns>
+        Task<bool> LoadConfigurationAsync(string? filePath = null);
+
+        /// <summary>
+        /// Saves mapping configuration to a file
+        /// </summary>
+        /// <param name="rules">The mapping rules to save</param>
+        /// <param name="filePath">Path to save the configuration (optional)</param>
+        /// <returns>True if saved successfully, false otherwise</returns>
+        Task<bool> SaveConfigurationAsync(IEnumerable<MappingRule> rules, string? filePath = null);
 
         /// <summary>
         /// Adds a new mapping rule
@@ -24,110 +34,23 @@ namespace CamBridge.Core.Interfaces
         void AddRule(MappingRule rule);
 
         /// <summary>
-        /// Removes a mapping rule
+        /// Removes mapping rules for a specific source field
         /// </summary>
-        bool RemoveRule(string ruleName);
+        void RemoveRule(string sourceField);
 
         /// <summary>
-        /// Gets the default mapping configuration
+        /// Gets the mapping rule for a specific source field
         /// </summary>
-        static IMappingConfiguration GetDefault() => new DefaultMappingConfiguration();
-    }
+        MappingRule? GetRuleForSource(string sourceField);
 
-    /// <summary>
-    /// Default implementation with standard mappings
-    /// </summary>
-    internal class DefaultMappingConfiguration : IMappingConfiguration
-    {
-        private readonly List<MappingRule> _rules = new();
+        /// <summary>
+        /// Gets all mapping rules that target a specific DICOM tag
+        /// </summary>
+        IEnumerable<MappingRule> GetRulesForTag(string dicomTag);
 
-        public DefaultMappingConfiguration()
-        {
-            InitializeDefaultRules();
-        }
-
-        public IReadOnlyList<MappingRule> GetMappingRules() => _rules.AsReadOnly();
-
-        public IReadOnlyList<MappingRule> GetRulesForSource(string sourceType)
-            => _rules.Where(r => r.SourceType == sourceType).ToList().AsReadOnly();
-
-        public void AddRule(MappingRule rule)
-        {
-            if (rule == null) throw new ArgumentNullException(nameof(rule));
-            _rules.Add(rule);
-        }
-
-        public bool RemoveRule(string ruleName)
-            => _rules.RemoveAll(r => r.Name == ruleName) > 0;
-
-        private void InitializeDefaultRules()
-        {
-            // Patient data mappings
-            _rules.Add(new MappingRule(
-                "PatientName",
-                "QRBridge",
-                "name",
-                DicomTag.PatientModule.PatientName,
-                ValueTransform.None
-            ));
-
-            _rules.Add(new MappingRule(
-                "PatientID",
-                "QRBridge",
-                "patientid",
-                DicomTag.PatientModule.PatientID,
-                ValueTransform.None
-            ));
-
-            _rules.Add(new MappingRule(
-                "PatientBirthDate",
-                "QRBridge",
-                "birthdate",
-                DicomTag.PatientModule.PatientBirthDate,
-                ValueTransform.DateToDicom
-            ));
-
-            _rules.Add(new MappingRule(
-                "PatientSex",
-                "QRBridge",
-                "gender",
-                DicomTag.PatientModule.PatientSex,
-                ValueTransform.GenderToDicom
-            ));
-
-            // Study data mappings
-            _rules.Add(new MappingRule(
-                "StudyDescription",
-                "QRBridge",
-                "comment",
-                DicomTag.StudyModule.StudyDescription,
-                ValueTransform.None
-            ));
-
-            _rules.Add(new MappingRule(
-                "StudyID",
-                "QRBridge",
-                "examid",
-                DicomTag.StudyModule.StudyID,
-                ValueTransform.TruncateTo16
-            ));
-
-            // Equipment mappings
-            _rules.Add(new MappingRule(
-                "Manufacturer",
-                "EXIF",
-                "Make",
-                DicomTag.EquipmentModule.Manufacturer,
-                ValueTransform.None
-            ));
-
-            _rules.Add(new MappingRule(
-                "Model",
-                "EXIF",
-                "Model",
-                DicomTag.EquipmentModule.ManufacturerModelName,
-                ValueTransform.None
-            ));
-        }
+        /// <summary>
+        /// Validates all mapping rules
+        /// </summary>
+        void ValidateRules();
     }
 }

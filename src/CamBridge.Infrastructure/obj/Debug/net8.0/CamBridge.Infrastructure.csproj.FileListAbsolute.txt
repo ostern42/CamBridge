@@ -1,3 +1,9 @@
+C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.AssemblyInfo.cs
+C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.sourcelink.json
 C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\bin\Debug\net8.0\CamBridge.Infrastructure.deps.json
 C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\bin\Debug\net8.0\CamBridge.Infrastructure.dll
 C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\bin\Debug\net8.0\CamBridge.Infrastructure.pdb
@@ -5,12 +11,6 @@ C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\bin\Debug\n
 C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\bin\Debug\net8.0\CamBridge.Core.dll
 C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\bin\Debug\net8.0\CamBridge.Core.pdb
 C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\bin\Debug\net8.0\CamBridge.Core.xml
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.csproj.AssemblyReference.cache
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.AssemblyInfoInputs.cache
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.AssemblyInfo.cs
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.csproj.CoreCompileInputs.cache
-C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.sourcelink.json
 C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridg.7736B743.Up2Date
 C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\CamBridge.Infrastructure.dll
 C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Infrastructure\obj\Debug\net8.0\refint\CamBridge.Infrastructure.dll

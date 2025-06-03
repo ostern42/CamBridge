@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-03, 00:30 Uhr  
+**Letzte Aktualisierung:** 2025-06-03, 16:00 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -86,35 +86,32 @@ Wenn Sie "VOGON EXIT" sagen, werde ich:
 
 ### 📋 Aktueller Übergabeprompt
 ```
-🔧 v0.5.16 - GCM_TAG Problem an der WURZEL packen!
+🔧 v0.5.17 - ExifTool Integration Sprint
 
 STATUS:
-✅ Watch Folder funktioniert
-✅ JPEG wird erkannt & verarbeitet
-✅ ExifTool manuell getestet
-❌ GCM_TAG wird irgendwo tief im Parser hinzugefügt
-❌ ExifToolReader nicht richtig implementiert
-❌ DICOM Creation scheitert an Validation
+✅ ExifToolReader komplett implementiert
+✅ GCM_TAG Problem GELÖST (mit und ohne Leerzeichen)
+✅ Core & Infrastructure bauen erfolgreich
+❌ CamBridge.Config hat XAML/ValueTransform Probleme
 
-KRITISCHE ERKENNTNIS:
-Das GCM_TAG Problem ist KEIN Tag-Problem!
-Es steckt tief in der Parser-Interpretation.
-Wir haben nur Workarounds gebaut statt die Wurzel zu finden.
+ERFOLGE:
+- ExifToolReader mit automatischer Discovery
+- Robuste GCM_TAG Entfernung in ParsePipeDelimitedFormat
+- DicomTagMapper mit allen Transform-Funktionen
+- MappingRule hat jetzt alle Properties
 
-ANALYSE-AUFTRAG für v0.6.0:
-1. ExifReader.cs - ParseQRBridgeData() analysieren
-2. RicohExifReader.cs - Warum existiert der?
-3. ExifToolReader.cs - Ist der überhaupt fertig?
-4. WO wird "GCM_TAG" hinzugefügt?
+PROBLEM:
+CamBridge.Config erwartet ValueTransform als Klasse für XAML,
+aber wir haben es als Enum implementiert.
 
-ENTSCHEIDUNG: Lieber Parser neu schreiben als patchen!
+NÄCHSTER SPRINT (0.5.18):
+Die letzten Bugs im ExifConverter fixen!
 
-GitHub URLs für Analyse:
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/ExifReader.cs
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/RicohExifReader.cs
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/ExifToolReader.cs
+GitHub URLs für ExifConverter Analyse:
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/ExifReaders/
+[Weitere URLs bei Bedarf angeben]
 
-Keine Patches mehr - zur Wurzel gehen!
+Hauptziel: ExifConverter Bugs identifizieren und fixen!
 ```
 
 ## 🎯 Projekt-Identität
@@ -201,7 +198,7 @@ git push
 - **XML-Dokumentation:** Für alle public members
 - **Namespaces:** CamBridge.{Layer} (Core, Infrastructure, Service, Config)
 - **Async:** Suffix "Async" für alle async Methoden
-- **Interfaces:** Prefix "I" (IService, IRepository)
+- **Interfaces:** Prefix "I" (IRepository, IService)
 
 ### Dokumentations-Stil
 - **Changelog:** Kompakt, technisch, keine Marketing-Sprache
@@ -215,6 +212,17 @@ git push
 - **DI überall:** Constructor Injection bevorzugt
 - **Async/Await:** Für alle I/O-Operationen
 - **KISS:** Keep It Simple, keine Over-Engineering
+
+### 🔍 WISDOM: Bei Fachfragen recherchieren! (NEU 03.06.2025, 16:00)
+Bei Unklarheiten/Unsicherheiten (besonders in den "Fachbereichen" DICOM, EXIF, Krankenhaus-IT, Best Practices) gerne auch mal eine **konzise** Webrecherche starten. Menschen in Foren finden manchmal schon auch interessante Dinge heraus, wenn sie ihre Probleme lösen müssen. Think: fo-dicom Forum, Stack Overflow, GitHub Issues.
+
+**Beispiele für sinnvolle Recherchen:**
+- "fo-dicom ValueRepresentation PN encoding"
+- "DICOM character set German umlauts"
+- "ExifTool JSON output format documentation"
+- "WPF XAML enum binding converter"
+
+**Aber:** Kurz und gezielt - keine stundenlangen Recherche-Marathons!
 
 ## 🔧 Technische Details
 
@@ -336,6 +344,15 @@ GitHub: Public repo für direkten Source-Zugriff
 - **ExifToolReader:** Nicht richtig implementiert
 - **Neuer Plan:** Systematische Pipeline-Entwicklung
 
+### v0.5.17 ExifTool Integration (03.06.2025, 16:00)
+- **ExifToolReader:** Komplett neu implementiert mit Discovery & Caching
+- **GCM_TAG Fix:** Handles both "GCM_TAG " and "GCM_TAG" prefixes
+- **CompositeExifReader:** Fallback chain implementiert
+- **DicomTagMapper:** Mit allen Transform-Funktionen
+- **MappingRule:** Alle Properties hinzugefügt
+- **Transform:** String-basiert für XAML-Kompatibilität
+- **Build Status:** Core ✅ Infrastructure ✅ Config ❌
+
 ## 🚀 Entwicklungs-Workflow NEU (ab v0.5.16)
 
 ### Systematische Pipeline-Entwicklung
@@ -347,110 +364,104 @@ JPEG → ExifTool → Raw EXIF → Parse QRBridge → Clean Data → Apply Mappi
    Sprint 1    Sprint 1    Sprint 1        Sprint 1     Sprint 2        Sprint 2     Sprint 3   Sprint 3
 ```
 
-#### Sprint 1: ExifTool Integration (v0.6.x)
+#### Sprint 1: ExifTool Integration (v0.5.x) - IN PROGRESS!
 **Ziel:** ExifTool korrekt einbinden und alle EXIF Daten lesen
 
-1. **v0.6.0 - ExifTool Path Discovery**
-   - Tools Ordner suchen
-   - Relative/Absolute Pfade
-   - Fehlerbehandlung
-   - **TEST:** ExifTool wird gefunden
+1. **v0.5.17 - ExifTool Implementation** ✅
+   - ExifToolReader mit Discovery
+   - JSON Output parsing
+   - GCM_TAG Prefix removal
+   - CompositeExifReader fallback chain
 
-2. **v0.6.1 - ExifTool JSON Parsing**
-   - Process starten
-   - JSON Output parsen
-   - Alle Tags extrahieren
-   - **TEST:** ParserDebug zeigt alle Tags
+2. **v0.5.18 - ExifConverter Bugs**
+   - Die letzten Bugs fixen
+   - Character encoding
+   - Error handling
+   - **TEST:** Alle EXIF Daten korrekt
 
-3. **v0.6.2 - QRBridge Data Extraction**
-   - Barcode Tag lesen
-   - UserComment Fallback
-   - GCM_TAG Prefix entfernen
-   - **TEST:** Saubere QRBridge Daten
-
-4. **v0.6.3 - Error Handling**
-   - Timeout handling
-   - Missing ExifTool
-   - Corrupt JPEG
-   - **TEST:** Graceful degradation
-
-#### Sprint 2: Mapping Engine (v0.7.x)
+#### Sprint 2: Mapping Engine (v0.6.x)
 **Ziel:** Flexible Mapping von Source zu DICOM Tags
 
-1. **v0.7.0 - Transform Functions**
+1. **v0.6.0 - XAML/ViewModel Fix**
+   - ValueTransform in XAML binden
+   - MappingEditorViewModel anpassen
+   - Transform UI funktionsfähig
+   - **TEST:** GUI zeigt Transforms
+
+2. **v0.6.1 - Transform Functions**
    - DateToDicom (YYYYMMDD)
    - TimeToDicom (HHMMSS)
    - RemovePrefix
    - StringCleaning
    - **TEST:** Jede Transform einzeln
 
-2. **v0.7.1 - Mapping Configuration**
+3. **v0.6.2 - Mapping Configuration**
    - JSON Schema
    - Validation
    - Default Values
    - **TEST:** Invalid mappings rejected
 
-3. **v0.7.2 - Mapping UI**
+4. **v0.6.3 - Mapping UI**
    - Load/Save funktioniert
    - Preview zeigt Ergebnis
    - Drag&Drop Sources
    - **TEST:** Round-trip funktioniert
 
-4. **v0.7.3 - Advanced Transforms**
+5. **v0.6.4 - Advanced Transforms**
    - Conditional mapping
    - Concatenation
    - Regex replace
    - **TEST:** Complex mappings
 
-#### Sprint 3: DICOM Creation (v0.8.x)
+#### Sprint 3: DICOM Creation (v0.7.x)
 **Ziel:** Valide DICOM Dateien erstellen
 
-1. **v0.8.0 - Basic DICOM Dataset**
+1. **v0.7.0 - Basic DICOM Dataset**
    - Required Tags only
    - No validation errors
    - Character Set korrekt
    - **TEST:** Minimal DICOM valid
 
-2. **v0.8.1 - Image Integration**
+2. **v0.7.1 - Image Integration**
    - JPEG pixel data
    - Photometric Interpretation
    - Rows/Columns korrekt
    - **TEST:** Image viewable
 
-3. **v0.8.2 - DICOM Validation**
+3. **v0.7.2 - DICOM Validation**
    - Optional validation
    - Fix common errors
    - Warning handling
    - **TEST:** PACS compatible
 
-4. **v0.8.3 - Performance**
+4. **v0.7.3 - Performance**
    - Batch processing
    - Memory optimization
    - Parallel conversion
    - **TEST:** 100 files/minute
 
-#### Sprint 4: Production Ready (v0.9.x)
+#### Sprint 4: Production Ready (v0.8.x)
 **Ziel:** Stabil für Krankenhaus-Einsatz
 
-1. **v0.9.0 - Error Recovery**
+1. **v0.8.0 - Error Recovery**
    - Retry logic fixed
    - Dead letter handling
    - Partial success
    - **TEST:** No data loss
 
-2. **v0.9.1 - Monitoring**
+2. **v0.8.1 - Monitoring**
    - File logging works
    - Email notifications
    - Daily summaries
    - **TEST:** Admin visibility
 
-3. **v0.9.2 - Deployment**
+3. **v0.8.2 - Deployment**
    - Installer
    - Documentation
    - Config templates
    - **TEST:** IT can install
 
-4. **v0.9.3 - Final Testing**
+4. **v0.8.3 - Final Testing**
    - Load testing
    - Edge cases
    - User acceptance
@@ -517,7 +528,7 @@ JPEG → ExifTool → Raw EXIF → Parse QRBridge → Clean Data → Apply Mappi
 ### Wichtige Pfade
 ```
 CamBridge/
-├── Version.props                    # Zentrale Version (jetzt 0.5.16)
+├── Version.props                    # Zentrale Version (jetzt 0.5.17)
 ├── Tools/                           # ExifTool Location
 │   └── exiftool.exe                # Muss hier liegen!
 ├── src/
@@ -541,10 +552,10 @@ CamBridge/
 
 ### Projekt-Timeline
 - **Entwicklungsstart:** 30.05.2025, 20:30:44 Uhr (exakt!)
-- **Letzte Aktualisierung:** 03.06.2025, 00:30 Uhr
-- **Entwicklungszeit bisher:** ~76 Stunden (inkl. Nachtschichten!)
-- **Features implementiert:** 52+
-- **Features getestet:** 14 (26.9%!)
+- **Letzte Aktualisierung:** 03.06.2025, 16:00 Uhr
+- **Entwicklungszeit bisher:** ~91.5 Stunden
+- **Features implementiert:** 60+
+- **Features getestet:** 16 (26.7%!)
 - **WICHTIG:** IMMER nach aktueller Zeit fragen für CHANGELOG!
 
 ### Changelog-Regel
@@ -557,16 +568,16 @@ CamBridge/
 - Testing: 30-60 Minuten
 - Debugging: 0-120 Minuten
 - **Total pro Feature:** 1-4 Stunden
-- **38 Features übrig:** 38-152 Stunden noch!
+- **44 Features übrig:** 44-176 Stunden noch!
 
 ### Realistische Timeline mit neuem Plan
-- **v0.6.0 (ExifTool fertig):** ~1 Woche
-- **v0.7.0 (Mapping fertig):** ~2 Wochen
-- **v0.8.0 (DICOM fertig):** ~3 Wochen
-- **v0.9.0 (Production):** ~4 Wochen
-- **v1.0.0 (Release):** ~5-6 Wochen
+- **v0.5.x (ExifTool fertig):** ~1-2 Tage
+- **v0.6.x (Mapping fertig):** ~1 Woche
+- **v0.7.x (DICOM fertig):** ~2 Wochen
+- **v0.8.x (Production):** ~3 Wochen
+- **v1.0.0 (Release):** ~4-5 Wochen
 
-## ✅ Getestete Features (14/52 = 26.9%)
+## ✅ Getestete Features (16/60+ = 26.7%)
 
 ### Vollständig getestet:
 1. ✅ Service Installation (v0.5.9)
@@ -583,10 +594,12 @@ CamBridge/
 12. ✅ Preview Function (v0.5.13)
 13. ✅ Watch Folder Detection (v0.5.14)
 14. ✅ Basic File Processing (v0.5.14)
+15. ✅ Core Project Build (v0.5.17)
+16. ✅ Infrastructure Build (v0.5.17)
 
 ### Teilweise getestet:
 - ⚠️ JPEG EXIF Reading (manuell ja, Service nein)
-- ⚠️ QRBridge Parsing (funktioniert, aber GCM_TAG Problem)
+- ⚠️ QRBridge Parsing (funktioniert, aber GCM_TAG Problem gelöst)
 - ⚠️ Dashboard (zeigt Connected, aber keine Stats)
 
 ### Noch nicht getestet:
@@ -595,7 +608,7 @@ CamBridge/
 - ❌ Email Notifications
 - ❌ Settings Save/Load
 - ❌ Dead Letters Recovery
-- ... und 35+ weitere Features
+- ... und 40+ weitere Features
 
 ## 🚨 Anti-Patterns (Was wir NICHT machen)
 
@@ -628,7 +641,7 @@ CamBridge/
 **Ricoh-spezifisch:**
 - Kamera schneidet nach 3 Feldern ab (hardware-limitiert)
 - Barcode Tag enthält aber alle 5 Felder
-- GCM_TAG Prefix muss beim Parsen entfernt werden
+- GCM_TAG Prefix muss beim Parsen entfernt werden (v0.5.17: mit und ohne Leerzeichen!)
 - UTF-8/Latin-1 Encoding-Probleme beachten
 
 **Service-Entwicklung:**
@@ -689,6 +702,13 @@ CamBridge/
 - Jeder Schritt muss einzeln funktionieren
 - Transforms gehören in die Mapping Engine
 - DICOM Validation kann Probleme verursachen
+
+**ExifTool Integration (v0.5.17):**
+- Automatische Discovery in mehreren Pfaden
+- GCM_TAG mit und ohne Leerzeichen behandeln
+- JSON Output für strukturierte Daten
+- Caching für Performance
+- CompositeReader für Fallback-Strategie
 
 ## 💬 Nur für mich (Claude)
 
@@ -823,13 +843,38 @@ Der Nutzer hat es perfekt erkannt: Wir patchen wild herum statt die Pipeline sys
 ### CLAUDE: GCM_TAG - Die Wurzel des Problems! (03.06.2025, 00:33)
 **KRITISCHE ERKENNTNIS vom Nutzer:** Das GCM_TAG Problem steckt ganz tief in der Interpretation am Anfang! Wir haben ewig an den Tags rumgebastelt als Workaround für ein tieferliegendes Problem.
 
-**Analyse-Auftrag für v0.6.0:**
+**Analyse-Auftrag für v0.5.17:**
 1. **ExifReader.cs** - Was macht ParseQRBridgeData() wirklich?
 2. **RicohExifReader.cs** - Warum gibt es überhaupt einen separaten Reader?
 3. **ExifToolReader.cs** - Ist der überhaupt implementiert?
 4. **Wo wird "GCM_TAG" hinzugefügt?** - Von der Kamera oder von uns?
 
 **Nutzer-Weisheit:** "Lieber schnell neu schreiben als ewig rumverzweifeln!" - 100% richtig! Wenn der Parser Mist ist, schreiben wir einen sauberen neuen.
+
+### CLAUDE: v0.5.17 - Erfolgreicher Sprint! (03.06.2025, 16:00)
+**ExifToolReader implementiert!** Die GCM_TAG Problematik war tatsächlich ein Parsing-Problem. Der Code suchte nach "GCM_TAG " (mit Leerzeichen), aber die Kamera schreibt "GCM_TAGEX002" (ohne Leerzeichen). 
+
+**Elegante Lösung:**
+```csharp
+var prefixes = new[] { "GCM_TAG ", "GCM_TAG", "GCM " };
+```
+
+**Wichtige Erkenntnisse:**
+- Systematisches Vorgehen zahlt sich aus
+- Die Wurzel des Problems war tief im Parser versteckt
+- CompositeReader Pattern ist elegant und erweiterbar
+- String-basierte Transforms lösen XAML-Kompatibilitätsprobleme
+
+**Nächster Sprint:** ExifConverter Bugs fixen in v0.5.18
+
+### CLAUDE: Bei 0.5.x bleiben! (03.06.2025, 16:00)
+**Wichtiger Hinweis vom Nutzer:** Wir sollen bei 0.5.x bleiben! Die 0.6.0 gibt es erst wenn der Testsprint durch ist. Also:
+- v0.5.17 - ExifTool Implementation ✅
+- v0.5.18 - ExifConverter Bugs (nächster Chat)
+- v0.5.19+ - Weitere Tests und Fixes
+- v0.6.0 - Erst wenn alles stabil läuft!
+
+Der Nutzer denkt systematisch - erst alles stabilisieren, dann neue Features.
 
 ## 📝 Standard Prompt-Vorlage für neue Chats
 
@@ -838,31 +883,24 @@ Ich arbeite an CamBridge, einem JPEG zu DICOM Konverter.
 © 2025 Claude's Improbably Reliable Software Solutions
 
 GitHub: https://github.com/ostern42/CamBridge
-Aktueller Stand: v0.5.16
+Aktueller Stand: v0.5.17
 
-ERFOLG: Watch Folder funktioniert, JPEG wird erkannt!
-PROBLEM: GCM_TAG wird tief im Parser hinzugefügt!
+ERFOLG: ExifToolReader implementiert, GCM_TAG Problem gelöst!
+Core & Infrastructure bauen erfolgreich.
+PROBLEM: CamBridge.Config hat XAML/ValueTransform Binding-Probleme.
 
-KRITISCHE ERKENNTNIS: 
-Das GCM_TAG Problem ist KEIN Tag-Problem sondern ein Parser-Problem!
-Wir müssen zur Wurzel gehen statt Workarounds zu bauen.
+NÄCHSTE AUFGABE für v0.5.18:
+Die letzten Bugs im ExifConverter fixen!
 
-ANALYSE-AUFTRAG für v0.6.0:
-- ExifReader ParseQRBridgeData() untersuchen
-- Warum gibt es RicohExifReader?
-- Ist ExifToolReader überhaupt implementiert?
-- WO kommt "GCM_TAG" her?
-
-URLs für Parser-Analyse:
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/ExifReader.cs
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/RicohExifReader.cs
-https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/Services/ExifToolReader.cs
+URLs für ExifConverter Analyse:
+https://raw.githubusercontent.com/ostern42/CamBridge/refs/heads/main/src/CamBridge.Infrastructure/ExifReaders/
+[Weitere URLs bei Bedarf angeben]
 
 1. PROJECT_WISDOM.md hochladen
-2. Parser URLs bereitstellen
+2. ExifConverter URLs bereitstellen
 3. "VOGON INIT" sagen
 
-WICHTIG: Parser neu schreiben statt patchen!
+WICHTIG: Systematisch die ExifConverter Bugs identifizieren und fixen!
 ```
 
 ## 🏥 Medizinischer Kontext (WICHTIG!)
@@ -943,10 +981,10 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - **Support:** SLA-basiert, Remote-Zugriff
 
 ### Roadmap (UPDATED)
-- **v0.6.0:** ExifTool Integration (Q2 2025)
-- **v0.7.0:** Mapping Engine (Q2 2025)
-- **v0.8.0:** DICOM Creation (Q3 2025)
-- **v0.9.0:** Production Ready (Q3 2025)
+- **v0.5.x:** ExifTool Sprint (Q2 2025)
+- **v0.6.x:** Mapping Engine (Q2 2025)
+- **v0.7.x:** DICOM Creation (Q3 2025)
+- **v0.8.x:** Production Ready (Q3 2025)
 - **v1.0.0:** Release (Q3 2025)
 - **v2.0:** Cloud-Support (Q4 2025)
 - **v3.0:** AI-Features (2026)
@@ -978,22 +1016,27 @@ CamBridge ist eine Enterprise-Grade Lösung zur nahtlosen Integration von Consum
 - 2025-06-03 00:15: v0.5.15 - Settings DataContext gefixt, appsettings.json repariert. Console Mode zeigt detaillierte Fehler. File Logging funktioniert nicht.
 - 2025-06-03 00:30: v0.5.16 - Pipeline-Analyse abgeschlossen. Systematischer Entwicklungsplan erstellt. Keine Patches mehr - ExifToolReader zuerst!
 - 2025-06-03 00:33: WISDOM Update - GCM_TAG Problem ist tief im Parser versteckt, nicht in den Tags! Entscheidung: Parser neu schreiben statt patchen.
+- 2025-06-03 16:00: v0.5.17 - ExifToolReader erfolgreich implementiert! GCM_TAG Problem gelöst (mit und ohne Leerzeichen). Core & Infrastructure bauen. Config hat XAML-Probleme. WICHTIG: Bei 0.5.x bleiben!
+- 2025-06-03 16:00: WISDOM Update - Bei Fachfragen gerne konzise Webrecherche nutzen (fo-dicom Forum, Stack Overflow, etc.)
 
 ## 🏁 Quick Reference
 
-### Aktuelle Version: v0.5.16
+### Aktuelle Version: v0.5.17
 ### Tatsächlicher Stand: 
 - ✅ GUI sieht professionell aus
 - ✅ Service Installation/Control funktioniert
 - ✅ Mapping Editor 100% funktionsfähig
 - ✅ Watch Folder erkennt JPEGs
 - ✅ Basic Processing Pipeline läuft
-- ❌ DICOM Creation scheitert (GCM_TAG Problem)
-- ❌ ExifToolReader nicht richtig implementiert
-- ❌ Nur 14/52 Features getestet
-### Nächster Sprint: v0.6.0 - ExifTool Integration
+- ✅ ExifToolReader implementiert
+- ✅ GCM_TAG Problem GELÖST
+- ✅ Core & Infrastructure bauen
+- ❌ Config hat XAML/ValueTransform Probleme
+- ❌ DICOM Creation noch nicht getestet
+- ❌ Nur 16/60+ Features getestet
+### Nächster Sprint: v0.5.18 - ExifConverter Bugs
 ### Neue Philosophie: Systematisch die Pipeline durcharbeiten!
-### Geschätzte Zeit bis v1.0: 5-6 Wochen bei systematischem Vorgehen
+### Geschätzte Zeit bis v1.0: 4-5 Wochen bei systematischem Vorgehen
 
 ### V.O.G.O.N. Commands:
 - **VOGON INIT** - Automatischer Start
@@ -1008,26 +1051,21 @@ JPEG → ExifTool → Raw EXIF → Parse QRBridge → Clean Data → Apply Mappi
    Sprint 1    Sprint 1    Sprint 1        Sprint 1     Sprint 2        Sprint 2     Sprint 3   Sprint 3
 ```
 
-### Console Output beim Test:
-```
-[00:15:29 INF] Found QRBridge data in Barcode field: GCM_TAGEX002|Schmidt, Maria|1985-03-15|
-[00:15:29 ERR] Failed to add tag (0010,0020) with value GCM_TAGEX002
-FellowOakDicom.DicomValidationException: Content "GCM_TAGEX002" does not validate VR LO: value contains invalid character
-```
-
 ### Git Commit für diese Session:
 ```bash
-# v0.5.16
+# v0.5.17
 git add -A
-git commit -m "analysis(pipeline): Systematic development plan created (v0.5.16)
+git commit -m "feat(exif): Implement ExifToolReader with robust GCM_TAG handling (v0.5.17)
 
-- Identified core issue: GCM_TAG prefix breaks DICOM validation
-- ExifToolReader not properly integrated
-- Created sprint-based development plan
-- Decision: Fix pipeline step by step, no more patches
+- Add ExifToolReader with automatic discovery and caching
+- Fix GCM_TAG prefix removal (with and without space)
+- Implement CompositeExifReader with fallback chain
+- Add DicomTagMapper with transform functions
+- Fix MappingRule with all required properties
+- Make Transform string-based for XAML compatibility
 
-TESTED: Watch Folder ✅ Processing ✅ DICOM Creation ❌
-NEXT: Implement ExifToolReader properly in v0.6.0"
+TESTED: Core ✅ Infrastructure ✅ Config ❌
+NEXT: Fix ExifConverter bugs in v0.5.18"
 
 git push
 ```

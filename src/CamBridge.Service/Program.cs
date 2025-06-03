@@ -1,78 +1,141 @@
-// src/CamBridge.Service/Program.cs
-using CamBridge.Core;
-using CamBridge.Core.Interfaces;
+// In CamBridge.Service/Program.cs
+// Add these updates to properly load development configuration
+
+using System;
+using System.IO;
+using System.Threading.Tasks;
 using CamBridge.Infrastructure;
-using CamBridge.Infrastructure.Services;
 using CamBridge.Service;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Serilog;
-using Serilog.Events;
-using System;
-using System.IO;
-using System.Runtime.Versioning;
+using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Http;
 
-// Configure Serilog
-var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "cambridge-.txt");
-Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+// Determine if running as service or console
+var isService = !(Environment.UserInteractive && args.Length > 0 && args[0] == "--console");
 
+// Configure Serilog early for startup logging
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-    .WriteTo.File(
-        logPath,
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 30,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .WriteTo.Console(
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .CreateLogger();
+    .MinimumLevel.Debug()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
 try
 {
-    Log.Information("Starting CamBridge Service v0.4.0");
+    Log.Information("Starting CamBridge Service...");
+    Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
 
-    var builder = WebApplication.CreateBuilder(args);
+    var builder = Host.CreateDefaultBuilder(args);
 
-    // Configure as Windows Service with Web API support
-    builder.Host.UseWindowsService(options =>
+    // Configure for Windows Service or Console
+    if (isService)
     {
-        options.ServiceName = "CamBridge Service";
+        builder.UseWindowsService(options =>
+        {
+            options.ServiceName = "CamBridge Image Converter";
+        });
+    }
+    else
+    {
+        // Console mode - ensure we load Development settings
+        builder.UseEnvironment("Development");
+    }
+
+    builder.ConfigureAppConfiguration((context, config) =>
+    {
+        var env = context.HostingEnvironment;
+
+        config.SetBasePath(Directory.GetCurrentDirectory())
+              .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+              .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
+              .AddEnvironmentVariables("CAMBRIDGE_")
+              .AddCommandLine(args);
+
+        Log.Information("Configuration loaded for environment: {Environment}", env.EnvironmentName);
     });
 
-    builder.Host.UseSerilog();
+    // Configure Serilog from configuration
+    builder.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("ApplicationName", "CamBridge")
+        .WriteTo.Console(
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}")
+        .WriteTo.File(
+            path: context.Configuration["Logging:File:Path"] ?? "logs/cambridge-.log",
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 30,
+            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}"));
 
-    // Configure services
-    ConfigureServices(builder.Services, builder.Configuration);
-
-    // Configure Kestrel to listen on a specific port
-    builder.WebHost.ConfigureKestrel(options =>
+    builder.ConfigureServices((context, services) =>
     {
-        options.ListenLocalhost(5050); // API port
+        var configuration = context.Configuration;
+
+        // Add infrastructure services
+        services.AddInfrastructure(configuration);
+
+        // Add service layer services
+        services.AddServiceLayerServices();
+
+        // Add the worker service
+        services.AddHostedService<Worker>();
+
+        // Add ASP.NET Core for API (if not running as service)
+        if (!isService)
+        {
+            services.AddControllers();
+            services.AddHealthChecks();
+
+            // Add Swagger in development
+            if (context.HostingEnvironment.IsDevelopment())
+            {
+                services.AddEndpointsApiExplorer();
+                services.AddSwaggerGen(c =>
+                {
+                    c.SwaggerDoc("v1", new OpenApiInfo { Title = "CamBridge API", Version = "v1" });
+                });
+            }
+        }
     });
 
-    var app = builder.Build();
+    if (!isService)
+    {
+        builder.ConfigureWebHostDefaults(webBuilder =>
+        {
+            webBuilder.UseStartup<Startup>();
+            webBuilder.UseUrls("http://localhost:5050");
+        });
+    }
 
-    // Validate configuration
-    await ValidateConfigurationAsync(app.Services);
+    var host = builder.Build();
 
-    // Configure HTTP pipeline
-    ConfigureHttpPipeline(app);
+    // Validate infrastructure
+    using (var scope = host.Services.CreateScope())
+    {
+        try
+        {
+            scope.ServiceProvider.ValidateInfrastructure();
+            Log.Information("Infrastructure validation completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Infrastructure validation failed");
+            throw;
+        }
+    }
 
-    // Startup notification
-    await SendStartupNotificationAsync(app.Services);
-
-    await app.RunAsync();
+    // Run the host
+    await host.RunAsync();
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Host terminated unexpectedly");
+    Log.Fatal(ex, "Application terminated unexpectedly");
     return 1;
 }
 finally
@@ -82,194 +145,56 @@ finally
 
 return 0;
 
-[SupportedOSPlatform("windows")]
-static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+// Startup class for API configuration (console mode only)
+public class Startup
 {
-    // Configure settings
-    services.Configure<CamBridgeSettings>(configuration.GetSection("CamBridge"));
-    services.Configure<ProcessingOptions>(configuration.GetSection("CamBridge:Processing"));
-    services.Configure<NotificationSettings>(configuration.GetSection("CamBridge:Notifications"));
+    public IConfiguration Configuration { get; }
 
-    // Register infrastructure services
-    var mappingConfigPath = configuration["CamBridge:MappingConfigurationFile"] ?? "mappings.json";
-    var useRicohReader = configuration.GetValue<bool>("CamBridge:UseRicohExifReader", true);
-    services.AddCamBridgeInfrastructure(mappingConfigPath, useRicohReader);
-
-    // Register core services
-    services.AddSingleton<DeadLetterQueue>();
-    services.AddSingleton<INotificationService, NotificationService>();
-
-    // Register ProcessingQueue with dependencies
-    services.AddSingleton<ProcessingQueue>(provider =>
+    public Startup(IConfiguration configuration)
     {
-        var logger = provider.GetRequiredService<ILogger<ProcessingQueue>>();
-        var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
-        var options = provider.GetRequiredService<IOptions<ProcessingOptions>>();
-        var deadLetterQueue = provider.GetRequiredService<DeadLetterQueue>();
-        var notificationService = provider.GetService<INotificationService>();
+        Configuration = configuration;
+    }
 
-        return new ProcessingQueue(logger, scopeFactory, options, deadLetterQueue, notificationService);
-    });
-
-    // Register hosted services
-    services.AddSingleton<FolderWatcherService>();
-    services.AddHostedService(provider => provider.GetRequiredService<FolderWatcherService>());
-    services.AddHostedService<Worker>();
-
-    // Add daily summary service
-    services.AddHostedService<DailySummaryService>();
-
-    // Add health checks
-    services.AddHealthChecks()
-        .AddCheck<CamBridgeHealthCheck>("cambridge_health");
-
-    // Add controllers for Web API
-    services.AddControllers();
-    services.AddEndpointsApiExplorer();
-    services.AddSwaggerGen(c =>
+    public void ConfigureServices(IServiceCollection services)
     {
-        c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-        {
-            Title = "CamBridge API",
-            Version = "v1",
-            Description = "API for monitoring CamBridge JPEG to DICOM conversion service"
-        });
+        // Services are already configured in Program.cs
+    }
 
-        // Include XML documentation if available
-        var xmlFile = $"{typeof(Program).Assembly.GetName().Name}.xml";
-        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-        if (File.Exists(xmlPath))
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        if (env.IsDevelopment())
         {
-            c.IncludeXmlComments(xmlPath);
+            app.UseDeveloperExceptionPage();
+            app.UseSwagger();
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CamBridge API v1"));
         }
-    });
-}
 
-static void ConfigureHttpPipeline(WebApplication app)
-{
-    // Configure HTTP pipeline
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI(c =>
+        app.UseRouting();
+        app.UseEndpoints(endpoints =>
         {
-            c.SwaggerEndpoint("/swagger/v1/swagger.json", "CamBridge API v1");
-            c.RoutePrefix = string.Empty; // Swagger UI at root
-        });
-    }
+            endpoints.MapControllers();
+            endpoints.MapHealthChecks("/health");
 
-    app.UseRouting();
-    app.MapControllers();
-    app.MapHealthChecks("/health");
-
-    // Serve dashboard HTML if exists
-    var dashboardPath = Path.Combine(app.Environment.ContentRootPath, "dashboard.html");
-    if (File.Exists(dashboardPath))
-    {
-        app.MapGet("/dashboard", async context =>
-        {
-            context.Response.ContentType = "text/html";
-            await context.Response.SendFileAsync(dashboardPath);
-        });
-    }
-}
-
-[SupportedOSPlatform("windows")]
-static async Task ValidateConfigurationAsync(IServiceProvider services)
-{
-    var settings = services.GetRequiredService<IOptions<CamBridgeSettings>>().Value;
-
-    if (settings.WatchFolders == null || !settings.WatchFolders.Any(f => f.Enabled))
-    {
-        Log.Warning("No watch folders configured or enabled");
-    }
-
-    foreach (var folder in settings.WatchFolders?.Where(f => f.Enabled) ?? Enumerable.Empty<FolderConfiguration>())
-    {
-        if (!Directory.Exists(folder.Path))
-        {
-            Log.Warning("Watch folder does not exist: {Path}", folder.Path);
-            try
+            // Development diagnostic endpoints
+            if (env.IsDevelopment())
             {
-                Directory.CreateDirectory(folder.Path);
-                Log.Information("Created watch folder: {Path}", folder.Path);
+                endpoints.MapGet("/", async context =>
+                {
+                    context.Response.ContentType = "text/html";
+                    await context.Response.WriteAsync(@"
+                        <html>
+                        <head><title>CamBridge Service</title></head>
+                        <body>
+                            <h1>CamBridge Service - Development Mode</h1>
+                            <ul>
+                                <li><a href='/health'>Health Check</a></li>
+                                <li><a href='/api/status'>Service Status</a></li>
+                                <li><a href='/swagger'>API Documentation</a></li>
+                            </ul>
+                        </body>
+                        </html>");
+                });
             }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Failed to create watch folder: {Path}", folder.Path);
-            }
-        }
-    }
-
-    if (!Directory.Exists(settings.DefaultOutputFolder))
-    {
-        try
-        {
-            Directory.CreateDirectory(settings.DefaultOutputFolder);
-            Log.Information("Created default output folder: {Path}", settings.DefaultOutputFolder);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Failed to create default output folder: {Path}", settings.DefaultOutputFolder);
-        }
-    }
-
-    // Validate processing folders
-    var processingOptions = services.GetRequiredService<IOptions<ProcessingOptions>>().Value;
-    EnsureDirectoryExists(processingOptions.ArchiveFolder, "Archive");
-    EnsureDirectoryExists(processingOptions.ErrorFolder, "Error");
-    EnsureDirectoryExists(processingOptions.BackupFolder, "Backup");
-
-    // Validate notification settings
-    var notificationSettings = settings.Notifications;
-    if (notificationSettings?.EnableEmail == true)
-    {
-        if (string.IsNullOrEmpty(notificationSettings.SmtpServer))
-        {
-            Log.Warning("Email notifications enabled but SMTP server not configured");
-        }
-        if (string.IsNullOrEmpty(notificationSettings.SmtpFrom))
-        {
-            Log.Warning("Email notifications enabled but sender email not configured");
-        }
-    }
-
-    await Task.CompletedTask;
-}
-
-static void EnsureDirectoryExists(string path, string name)
-{
-    if (!Directory.Exists(path))
-    {
-        try
-        {
-            Directory.CreateDirectory(path);
-            Log.Information("Created {Name} folder: {Path}", name, path);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Failed to create {Name} folder: {Path}", name, path);
-        }
-    }
-}
-
-[SupportedOSPlatform("windows")]
-static async Task SendStartupNotificationAsync(IServiceProvider services)
-{
-    try
-    {
-        var notificationService = services.GetService<INotificationService>();
-        if (notificationService != null)
-        {
-            await notificationService.NotifyInfoAsync(
-                "CamBridge Service Started",
-                $"Service version 0.4.0 started successfully on {Environment.MachineName}\n" +
-                $"API endpoint: http://localhost:5050\n" +
-                $"Process ID: {Environment.ProcessId}");
-        }
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Failed to send startup notification");
+        });
     }
 }

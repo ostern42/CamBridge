@@ -209,14 +209,23 @@ namespace CamBridge.Infrastructure.Services
             // Prepare source data for mapping
             var sourceData = PrepareSourceData(metadata);
 
-            // Apply mappings
-            var mappingResult = _tagMapper!.MapToDataset(sourceData, dataset);
+            // Get mapping rules
+            var mappingRules = _mappingConfiguration.GetMappingRules();
 
-            if (!mappingResult.IsSuccess)
+            // Flatten the nested dictionary if needed
+            var flatSourceData = new Dictionary<string, string>();
+            if (sourceData.ContainsKey("QRBridge"))
             {
-                _logger.LogWarning("Mapping completed with {ErrorCount} errors: {Errors}",
-                    mappingResult.Errors.Count, string.Join("; ", mappingResult.Errors));
+                foreach (var kvp in sourceData["QRBridge"])
+                {
+                    flatSourceData[kvp.Key] = kvp.Value;
+                }
             }
+
+            // Apply mappings (void method, no return value)
+            _tagMapper.MapToDataset(dataset, flatSourceData, mappingRules);
+
+            _logger.LogInformation("Mapping completed successfully");
 
             // Add any essential tags that weren't mapped
             EnsureEssentialTags(dataset, metadata);

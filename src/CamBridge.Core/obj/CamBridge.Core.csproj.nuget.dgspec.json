@@ -5,7 +5,7 @@
   },
   "projects": {
     "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Core\\CamBridge.Core.csproj": {
-      "version": "0.5.16",
+      "version": "0.5.17",
       "restore": {
         "projectUniqueName": "C:\\Users\\aiadmin\\source\\repos\\CamBridge\\src\\CamBridge.Core\\CamBridge.Core.csproj",
         "projectName": "CamBridge.Core",
@@ -50,6 +50,12 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "fo-dicom": {
+              "target": "Package",
+              "version": "[5.1.2, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",

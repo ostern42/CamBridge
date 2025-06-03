@@ -1,251 +1,245 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using CamBridge.Core;
 using CamBridge.Core.Interfaces;
-using Microsoft.Extensions.Logging;
 using FellowOakDicom;
 
 namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
-    /// Service that applies mapping rules to convert source data to DICOM tags
+    /// Service responsible for mapping values to DICOM tags according to mapping rules
     /// </summary>
     public class DicomTagMapper : IDicomTagMapper
     {
         private readonly ILogger<DicomTagMapper> _logger;
-        private readonly IMappingConfiguration _mappingConfiguration;
 
-        public DicomTagMapper(
-            ILogger<DicomTagMapper> logger,
-            IMappingConfiguration mappingConfiguration)
+        public DicomTagMapper(ILogger<DicomTagMapper> logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _mappingConfiguration = mappingConfiguration ?? throw new ArgumentNullException(nameof(mappingConfiguration));
         }
 
         /// <summary>
-        /// Maps source data to DICOM dataset using configured mapping rules
+        /// Applies a mapping rule to transform a value
         /// </summary>
-        /// <param name="sourceData">Dictionary containing source data grouped by source type</param>
-        /// <param name="dataset">Target DICOM dataset</param>
-        /// <returns>Mapping result with statistics and errors</returns>
-        public MappingResult MapToDataset(Dictionary<string, Dictionary<string, string>> sourceData, DicomDataset dataset)
+        public string? ApplyTransform(string? value, string? transform)
         {
-            if (sourceData == null) throw new ArgumentNullException(nameof(sourceData));
-            if (dataset == null) throw new ArgumentNullException(nameof(dataset));
-
-            var result = new MappingResult();
-            var rules = _mappingConfiguration.GetMappingRules();
-
-            _logger.LogInformation("Starting mapping with {RuleCount} rules", rules.Count);
-
-            foreach (var rule in rules)
+            if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(transform) || transform == "None")
             {
-                try
-                {
-                    ApplyMappingRule(rule, sourceData, dataset, result);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error applying mapping rule {RuleName}", rule.Name);
-                    result.AddError($"Rule '{rule.Name}': {ex.Message}");
-                }
+                return value;
             }
 
-            // Check for required fields
-            ValidateRequiredFields(rules, result);
-
-            _logger.LogInformation("Mapping completed: {SuccessCount} successful, {SkippedCount} skipped, {ErrorCount} errors",
-                result.SuccessfulMappings, result.SkippedMappings, result.Errors.Count);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Maps specific source types to DICOM dataset
-        /// </summary>
-        public MappingResult MapQRBridgeData(Dictionary<string, string> qrBridgeData, DicomDataset dataset)
-        {
-            var sourceData = new Dictionary<string, Dictionary<string, string>>
+            // Parse transform string to enum
+            if (!Enum.TryParse<ValueTransform>(transform, out var transformEnum))
             {
-                ["QRBridge"] = qrBridgeData
-            };
-
-            return MapToDataset(sourceData, dataset);
-        }
-
-        /// <summary>
-        /// Maps EXIF data to DICOM dataset
-        /// </summary>
-        public MappingResult MapExifData(Dictionary<string, string> exifData, DicomDataset dataset)
-        {
-            var sourceData = new Dictionary<string, Dictionary<string, string>>
-            {
-                ["EXIF"] = exifData
-            };
-
-            return MapToDataset(sourceData, dataset);
-        }
-
-        private void ApplyMappingRule(
-            MappingRule rule,
-            Dictionary<string, Dictionary<string, string>> sourceData,
-            DicomDataset dataset,
-            MappingResult result)
-        {
-            // Find source data
-            if (!sourceData.TryGetValue(rule.SourceType, out var typeData))
-            {
-                _logger.LogDebug("Source type {SourceType} not found in input data", rule.SourceType);
-                result.SkippedMappings++;
-                return;
+                _logger.LogWarning("Unknown transform: {Transform}", transform);
+                return value;
             }
 
-            // Get source value
-            string? sourceValue = null;
-            if (typeData.TryGetValue(rule.SourceField, out var value))
-            {
-                sourceValue = value;
-            }
-
-            // Use default value if no source value and not required
-            if (string.IsNullOrWhiteSpace(sourceValue))
-            {
-                if (!string.IsNullOrWhiteSpace(rule.DefaultValue))
-                {
-                    sourceValue = rule.DefaultValue;
-                    _logger.LogDebug("Using default value for {RuleName}: {DefaultValue}",
-                        rule.Name, rule.DefaultValue);
-                }
-                else if (rule.IsRequired)
-                {
-                    result.AddError($"Required field '{rule.Name}' not found in source data");
-                    return;
-                }
-                else
-                {
-                    _logger.LogDebug("Skipping optional field {RuleName} - no value found", rule.Name);
-                    result.SkippedMappings++;
-                    return;
-                }
-            }
-
-            // Apply transformation
-            var transformedValue = rule.ApplyTransform(sourceValue);
-            if (transformedValue == null)
-            {
-                _logger.LogWarning("Transformation resulted in null value for {RuleName}", rule.Name);
-                result.SkippedMappings++;
-                return;
-            }
-
-            // Convert to fo-dicom tag
-            var dicomTag = ConvertToFoDicomTag(rule.TargetTag);
-
-            // Add to dataset
             try
             {
-                dataset.AddOrUpdate(dicomTag, transformedValue);
-                result.SuccessfulMappings++;
-                result.AddAppliedRule(rule.Name, sourceValue, transformedValue, rule.TargetTag.ToString());
-
-                _logger.LogDebug("Applied mapping {RuleName}: {SourceValue} -> {TransformedValue} to {Tag}",
-                    rule.Name, sourceValue, transformedValue, rule.TargetTag);
+                return transformEnum switch
+                {
+                    ValueTransform.DateToDicom => ConvertDateToDicom(value),
+                    ValueTransform.TimeToDicom => ConvertTimeToDicom(value),
+                    ValueTransform.DateTimeToDicom => ConvertDateTimeToDicom(value),
+                    ValueTransform.MapGender => MapGenderCode(value),
+                    ValueTransform.RemovePrefix => RemovePrefix(value),
+                    ValueTransform.ExtractDate => ExtractDate(value),
+                    ValueTransform.ExtractTime => ExtractTime(value),
+                    ValueTransform.ToUpperCase => value.ToUpperInvariant(),
+                    ValueTransform.ToLowerCase => value.ToLowerInvariant(),
+                    ValueTransform.Trim => value.Trim(),
+                    _ => value
+                };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to add tag {Tag} with value {Value}",
-                    rule.TargetTag, transformedValue);
-                result.AddError($"Failed to add tag {rule.TargetTag}: {ex.Message}");
+                _logger.LogWarning(ex, "Failed to apply transform {Transform} to value '{Value}'", transform, value);
+                return value;
             }
         }
 
-        private void ValidateRequiredFields(IReadOnlyList<MappingRule> rules, MappingResult result)
+        private string ConvertDateToDicom(string date)
         {
-            var requiredRules = rules.Where(r => r.IsRequired).ToList();
-            foreach (var rule in requiredRules)
+            // Convert various date formats to DICOM format (YYYYMMDD)
+            if (DateTime.TryParse(date, out var dt))
             {
-                if (!result.AppliedRules.Any(ar => ar.RuleName == rule.Name))
+                return dt.ToString("yyyyMMdd");
+            }
+
+            // Already in DICOM format?
+            if (date.Length == 8 && int.TryParse(date, out _))
+            {
+                return date;
+            }
+
+            _logger.LogWarning("Unable to convert date '{Date}' to DICOM format", date);
+            return date;
+        }
+
+        private string ConvertTimeToDicom(string time)
+        {
+            // Convert various time formats to DICOM format (HHMMSS)
+            if (DateTime.TryParse(time, out var dt))
+            {
+                return dt.ToString("HHmmss");
+            }
+
+            if (TimeSpan.TryParse(time, out var ts))
+            {
+                return $"{ts.Hours:D2}{ts.Minutes:D2}{ts.Seconds:D2}";
+            }
+
+            _logger.LogWarning("Unable to convert time '{Time}' to DICOM format", time);
+            return time;
+        }
+
+        private string ConvertDateTimeToDicom(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("yyyyMMddHHmmss");
+            }
+
+            _logger.LogWarning("Unable to convert datetime '{DateTime}' to DICOM format", dateTime);
+            return dateTime;
+        }
+
+        /// <summary>
+        /// Maps source data to a DICOM dataset using mapping rules
+        /// </summary>
+        public void MapToDataset(DicomDataset dataset, Dictionary<string, string> sourceData, IEnumerable<MappingRule> mappingRules)
+        {
+            if (dataset == null) throw new ArgumentNullException(nameof(dataset));
+            if (sourceData == null) throw new ArgumentNullException(nameof(sourceData));
+            if (mappingRules == null) throw new ArgumentNullException(nameof(mappingRules));
+
+            foreach (var rule in mappingRules)
+            {
+                try
                 {
-                    result.AddError($"Required mapping '{rule.Name}' was not applied");
+                    // Get source value
+                    if (!sourceData.TryGetValue(rule.SourceField, out var sourceValue))
+                    {
+                        if (rule.Required)
+                        {
+                            _logger.LogWarning("Required source field '{Field}' not found in data", rule.SourceField);
+                        }
+
+                        // Use default value if available
+                        sourceValue = rule.DefaultValue;
+
+                        if (string.IsNullOrEmpty(sourceValue))
+                        {
+                            continue;
+                        }
+                    }
+
+                    // Apply transform if specified
+                    var transformedValue = ApplyTransform(sourceValue, rule.Transform);
+
+                    if (string.IsNullOrEmpty(transformedValue) && rule.Required)
+                    {
+                        _logger.LogWarning("Required field '{Field}' resulted in empty value after transform", rule.SourceField);
+                    }
+
+                    // Parse DICOM tag
+                    if (!TryParseDicomTag(rule.DicomTag, out var group, out var element))
+                    {
+                        _logger.LogError("Invalid DICOM tag format: {Tag}", rule.DicomTag);
+                        continue;
+                    }
+
+                    // Add to dataset
+                    var tag = new DicomTag(group, element);
+
+                    if (!string.IsNullOrEmpty(transformedValue))
+                    {
+                        dataset.AddOrUpdate(tag, transformedValue);
+                        _logger.LogDebug("Mapped {Source} -> {Tag}: {Value}",
+                            rule.SourceField, rule.DicomTag, transformedValue);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error mapping rule {Source} -> {Tag}",
+                        rule.SourceField, rule.DicomTag);
                 }
             }
         }
 
-        private FellowOakDicom.DicomTag ConvertToFoDicomTag(Core.ValueObjects.DicomTag tag)
-        {
-            return new FellowOakDicom.DicomTag(tag.Group, tag.Element);
-        }
-    }
-
-    /// <summary>
-    /// Interface for DICOM tag mapping service
-    /// </summary>
-    public interface IDicomTagMapper
-    {
         /// <summary>
-        /// Maps source data to DICOM dataset using configured mapping rules
+        /// Parses a DICOM tag string like "(0010,0010)" into group and element
         /// </summary>
-        MappingResult MapToDataset(Dictionary<string, Dictionary<string, string>> sourceData, DicomDataset dataset);
-
-        /// <summary>
-        /// Maps QRBridge data to DICOM dataset
-        /// </summary>
-        MappingResult MapQRBridgeData(Dictionary<string, string> qrBridgeData, DicomDataset dataset);
-
-        /// <summary>
-        /// Maps EXIF data to DICOM dataset
-        /// </summary>
-        MappingResult MapExifData(Dictionary<string, string> exifData, DicomDataset dataset);
-    }
-
-    /// <summary>
-    /// Result of a mapping operation
-    /// </summary>
-    public class MappingResult
-    {
-        public int SuccessfulMappings { get; set; }
-        public int SkippedMappings { get; set; }
-        public List<string> Errors { get; } = new();
-        public List<AppliedRule> AppliedRules { get; } = new();
-
-        public bool IsSuccess => Errors.Count == 0;
-
-        public void AddError(string error)
+        private bool TryParseDicomTag(string tagString, out ushort group, out ushort element)
         {
-            Errors.Add(error);
-        }
+            group = 0;
+            element = 0;
 
-        public void AddAppliedRule(string ruleName, string sourceValue, string mappedValue, string targetTag)
-        {
-            AppliedRules.Add(new AppliedRule
+            if (string.IsNullOrEmpty(tagString))
+                return false;
+
+            // Remove parentheses and spaces
+            var cleaned = tagString.Trim('(', ')', ' ');
+            var parts = cleaned.Split(',');
+
+            if (parts.Length != 2)
+                return false;
+
+            try
             {
-                RuleName = ruleName,
-                SourceValue = sourceValue,
-                MappedValue = mappedValue,
-                TargetTag = targetTag
-            });
-        }
-
-        public class AppliedRule
-        {
-            public string RuleName { get; set; } = string.Empty;
-            public string SourceValue { get; set; } = string.Empty;
-            public string MappedValue { get; set; } = string.Empty;
-            public string TargetTag { get; set; } = string.Empty;
-        }
-
-        public override string ToString()
-        {
-            if (IsSuccess)
-            {
-                return $"Mapping successful: {SuccessfulMappings} mapped, {SkippedMappings} skipped";
+                group = Convert.ToUInt16(parts[0].Trim(), 16);
+                element = Convert.ToUInt16(parts[1].Trim(), 16);
+                return true;
             }
-            else
+            catch
             {
-                return $"Mapping completed with errors: {SuccessfulMappings} mapped, {SkippedMappings} skipped, {Errors.Count} errors";
+                return false;
             }
+        }
+
+        private string MapGenderCode(string gender)
+        {
+            return gender?.ToUpperInvariant() switch
+            {
+                "M" or "MALE" => "M",
+                "F" or "FEMALE" => "F",
+                "O" or "OTHER" => "O",
+                _ => ""
+            };
+        }
+
+        private string RemovePrefix(string value)
+        {
+            // Remove common prefixes like "GCM_TAG"
+            if (value.StartsWith("GCM_TAG", StringComparison.OrdinalIgnoreCase))
+            {
+                return value.Substring(7).Trim();
+            }
+
+            return value;
+        }
+
+        private string ExtractDate(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("yyyyMMdd");
+            }
+
+            return dateTime;
+        }
+
+        private string ExtractTime(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("HHmmss");
+            }
+
+            return dateTime;
         }
     }
 }
