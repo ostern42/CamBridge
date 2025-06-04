@@ -1,3 +1,9 @@
+// File: src/CamBridge.Service/Program.cs
+// Version: 0.5.23
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Modified: 2025-06-04
+// Status: Development
+
 using CamBridge.Infrastructure;
 using CamBridge.Infrastructure.Services; // Für FolderWatcherService
 using CamBridge.Service;

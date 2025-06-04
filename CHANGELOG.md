@@ -7,7 +7,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.5.23] - 2025-06-04 - Sprint 1 Complete! 🎉
-
 ### Added
 - End-to-end pipeline successfully processes Ricoh JPEG files
 - Folder watching service monitors input directories
@@ -15,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DICOM validation after creation
 - Structured logging with Serilog
 - Progressive feature activation in Program.cs
+- HTTP API for Config UI communication (SCHRITT 2+3 activated)
+- Health check endpoint at `/health`
+- Status API endpoint at `/api/status`
+- CORS support for Config UI connection
+- Comprehensive .gitignore for clean repository
+- Source code header standard (path, version, copyright)
 
 ### Fixed
 - ExifTool perl DLL dependencies resolved
@@ -22,22 +27,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - StudyID length validation (max 16 chars)
 - Entity constructor parameter names
 - Build cache issues
+- Program.cs step comments cleaned up (removed confusing "JETZT AKTIV!")
 
 ### Changed
 - Temporary encoding fix for German umlauts
 - Default mapping rules when mappings.json missing
 - Service runs in Development mode by default
+- Service now listens on port 5050 for API requests
+- All component versions synchronized to v0.5.23
+- Repository cleaned with .gitignore (no more obj/bin folders in Git)
 
 ### Technical
 - Successfully reads Ricoh Barcode EXIF field
 - Parses QRBridge data: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
 - Creates valid DICOM files viewable in standard viewers
 - Output structure: {PatientID}\{Date}\{PatientID}_{Date}_{Instance}.dcm
+- StatusController base implementation in Startup.cs
+- DailySummaryService activated
+- Config UI can now connect to running service
 
 ### Known Issues
 - Encoding not perfect (Windows-1252 to UTF-8)
 - Missing datetime field warnings in mapping
-- Health checks and API endpoints disabled
+- Dead letter management API endpoints TODO
+- Active processing count not yet implemented
 
 ## [0.5.22] - 2025-06-04
 
