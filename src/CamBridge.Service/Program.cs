@@ -1,44 +1,55 @@
-// In CamBridge.Service/Program.cs
-// Add these updates to properly load development configuration
-
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using CamBridge.Infrastructure;
 using CamBridge.Service;
+using CamBridge.Infrastructure.Services; // Für FolderWatcherService
+using Microsoft.Extensions.Hosting;
+using Serilog;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Serilog;
-using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Http;
+// Später aktivieren:
+// using Microsoft.OpenApi.Models;
+// using Microsoft.AspNetCore.Http;
+
+// ========================================
+// SCHRITT 1: Basis Pipeline (AKTIV)
+// SCHRITT 2: Health Checks (auskommentiert)
+// SCHRITT 3: Web API (auskommentiert)
+// SCHRITT 4: Swagger (auskommentiert)
+// SCHRITT 5: Windows Service (auskommentiert)
+// ========================================
 
 // Determine if running as service or console
-var isService = !(Environment.UserInteractive && args.Length > 0 && args[0] == "--console");
+var isService = false; // SCHRITT 5: Später auf true für Windows Service
+// var isService = !(Environment.UserInteractive && args.Length > 0 && args[0] == "--console");
 
 // Configure Serilog early for startup logging
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
-    .WriteTo.Console()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
     .CreateBootstrapLogger();
 
 try
 {
-    Log.Information("Starting CamBridge Service...");
+    Log.Information("Starting CamBridge Service v0.5.22...");
     Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
+
+    // ========== SCHRITT 1: BASIC PIPELINE (AKTIV) ==========
+    Log.Information("SCHRITT 1: Basic Pipeline - AKTIV ✓");
 
     var builder = Host.CreateDefaultBuilder(args);
 
     // Configure for Windows Service or Console
     if (isService)
     {
+        // SCHRITT 5: Windows Service aktivieren
+        /*
         builder.UseWindowsService(options =>
         {
             options.ServiceName = "CamBridge Image Converter";
         });
+        */
     }
     else
     {
@@ -60,7 +71,7 @@ try
     });
 
     // Configure Serilog from configuration
-    builder.UseSerilog((context, services, configuration) => configuration
+    builder.UseSerilog((context, services, loggerConfiguration) => loggerConfiguration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
@@ -77,33 +88,49 @@ try
     {
         var configuration = context.Configuration;
 
-        // Add infrastructure services
+        // ========== SCHRITT 1: Core Infrastructure (AKTIV) ==========
         services.AddInfrastructure(configuration);
 
-        // Add service layer services
-        services.AddServiceLayerServices();
+        // Zusätzliche Services die AddInfrastructure nicht abdeckt
+        services.AddSingleton<FolderWatcherService>();
+        services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<FolderWatcherService>());
 
-        // Add the worker service
+        // Basic Worker - immer aktiv
         services.AddHostedService<Worker>();
 
-        // Add ASP.NET Core for API (if not running as service)
+        // ========== SCHRITT 2: Health Checks (AUSKOMMENTIERT) ==========
+        // Log.Information("SCHRITT 2: Health Checks - INAKTIV ❌");
+        /*
+        services.AddHealthChecks()
+            .AddCheck<CamBridgeHealthCheck>("cambridge");
+            
+        // Daily Summary Service
+        services.AddHostedService<DailySummaryService>();
+        */
+
+        // ========== SCHRITT 3: Web API (AUSKOMMENTIERT) ==========
+        // Log.Information("SCHRITT 3: Web API - INAKTIV ❌");
+        /*
         if (!isService)
         {
             services.AddControllers();
-            services.AddHealthChecks();
 
-            // Add Swagger in development
-            if (context.HostingEnvironment.IsDevelopment())
-            {
-                services.AddEndpointsApiExplorer();
-                services.AddSwaggerGen(c =>
-                {
-                    c.SwaggerDoc("v1", new OpenApiInfo { Title = "CamBridge API", Version = "v1" });
-                });
-            }
+            // ========== SCHRITT 4: Swagger (AUSKOMMENTIERT) ==========
+            // Log.Information("SCHRITT 4: Swagger - INAKTIV ❌");
+            // if (context.HostingEnvironment.IsDevelopment())
+            // {
+            //     services.AddEndpointsApiExplorer();
+            //     services.AddSwaggerGen(c =>
+            //     {
+            //         c.SwaggerDoc("v1", new OpenApiInfo { Title = "CamBridge API", Version = "v1" });
+            //     });
+            // }
         }
+        */
     });
 
+    // ========== SCHRITT 3: Web Host konfigurieren (AUSKOMMENTIERT) ==========
+    /*
     if (!isService)
     {
         builder.ConfigureWebHostDefaults(webBuilder =>
@@ -112,6 +139,7 @@ try
             webBuilder.UseUrls("http://localhost:5050");
         });
     }
+    */
 
     var host = builder.Build();
 
@@ -122,6 +150,16 @@ try
         {
             scope.ServiceProvider.ValidateInfrastructure();
             Log.Information("Infrastructure validation completed successfully");
+
+            // Zeige aktive Features
+            Log.Information("=========================================");
+            Log.Information("AKTIVE FEATURES:");
+            Log.Information("✓ SCHRITT 1: Basic Pipeline (ExifTool → DICOM)");
+            Log.Information("✗ SCHRITT 2: Health Checks");
+            Log.Information("✗ SCHRITT 3: Web API");
+            Log.Information("✗ SCHRITT 4: Swagger");
+            Log.Information("✗ SCHRITT 5: Windows Service");
+            Log.Information("=========================================");
         }
         catch (Exception ex)
         {
@@ -145,7 +183,8 @@ finally
 
 return 0;
 
-// Startup class for API configuration (console mode only)
+// ========== SCHRITT 3/4: Startup Klasse für API (AUSKOMMENTIERT) ==========
+/*
 public class Startup
 {
     public IConfiguration Configuration { get; }
@@ -165,15 +204,19 @@ public class Startup
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
-            app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CamBridge API v1"));
+            
+            // SCHRITT 4: Swagger aktivieren
+            // app.UseSwagger();
+            // app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CamBridge API v1"));
         }
 
         app.UseRouting();
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();
-            endpoints.MapHealthChecks("/health");
+            
+            // SCHRITT 2: Health Checks aktivieren
+            // endpoints.MapHealthChecks("/health");
 
             // Development diagnostic endpoints
             if (env.IsDevelopment())
@@ -186,10 +229,12 @@ public class Startup
                         <head><title>CamBridge Service</title></head>
                         <body>
                             <h1>CamBridge Service - Development Mode</h1>
+                            <p>API Features sind noch deaktiviert!</p>
                             <ul>
-                                <li><a href='/health'>Health Check</a></li>
-                                <li><a href='/api/status'>Service Status</a></li>
-                                <li><a href='/swagger'>API Documentation</a></li>
+                                <li>✓ Pipeline läuft</li>
+                                <li>✗ Health Check</li>
+                                <li>✗ Service Status</li>
+                                <li>✗ API Documentation</li>
                             </ul>
                         </body>
                         </html>");
@@ -198,3 +243,4 @@ public class Startup
         });
     }
 }
+*/

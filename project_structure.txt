@@ -1,6 +1,15 @@
 ﻿CamBridge.sln
+CAMBRIDGE_TREE_STRUCTURE.md
 CHANGELOG.md
 COLLECTOR_README.md
+GUI-Readme.md
+PROJECT_CONTEXT_BALANCED_20250106_234808.md
+PROJECT_CONTEXT_BALANCED_20250206_001101.md
+PROJECT_CONTEXT_BALANCED_20250206_020655.md
+PROJECT_CONTEXT_BALANCED_20250206_092739.md
+PROJECT_CONTEXT_BALANCED_20250206_100106.md
+PROJECT_CONTEXT_GUI_CONFIG.md
+PROJECT_CONTEXT_MINIMAL_20250106_234608.md
 PROJECT_WISDOM.md
 README.md
 src\CamBridge.Config\App.xaml
@@ -50,7 +59,6 @@ src\CamBridge.Core\CamBridgeSettings.cs
 src\CamBridge.Core\CustomMappingConfiguration.cs
 src\CamBridge.Core\DeadLetterStatistics.cs
 src\CamBridge.Core\Entities\ImageMetadata.cs
-src\CamBridge.Core\Entities\ImageTechnicalData.cs
 src\CamBridge.Core\Entities\PatientInfo.cs
 src\CamBridge.Core\Entities\ProcessingResult.cs
 src\CamBridge.Core\Entities\StudyInfo.cs
@@ -102,8 +110,6 @@ tests\CamBridge.Infrastructure.Tests\Services\DicomConverterTests.cs
 tests\CamBridge.Infrastructure.Tests\Services\ExifReaderTests.cs
 tests\CamBridge.Infrastructure.Tests\TestHelpers\JpegTestFileGenerator.cs
 tests\CamBridge.Infrastructure.Tests\TestLogger.cs
-tests\CamBridge.PipelineTest\CamBridge.PipelineTest.csproj
-tests\CamBridge.PipelineTest\Program.cs
 tests\CamBridge.TestConsole\CamBridge.TestConsole.csproj
 tests\CamBridge.TestConsole\mappings.json
 tests\CamBridge.TestConsole\Program.cs

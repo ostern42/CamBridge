@@ -16,7 +16,10 @@ public class Worker : BackgroundService
     private readonly CamBridgeSettings _settings;
     private readonly IHostApplicationLifetime _lifetime;
     private Task? _processingTask;
+
+    // SCHRITT 2: Statistik-Timer aktivieren
     private Timer? _statisticsTimer;
+    private readonly bool _enableStatistics = false; // Auf true setzen für SCHRITT 2
 
     public Worker(
         ILogger<Worker> logger,
@@ -68,16 +71,30 @@ public class Worker : BackgroundService
                 }
             }, stoppingToken);
 
-            // Start statistics reporting
-            _statisticsTimer = new Timer(
-                ReportStatistics,
-                null,
-                TimeSpan.FromMinutes(1),
-                TimeSpan.FromMinutes(5));
+            // ========== SCHRITT 2: Statistik-Reporting (AUSKOMMENTIERT) ==========
+            if (_enableStatistics)
+            {
+                _logger.LogInformation("SCHRITT 2: Statistik-Reporting aktiviert");
+                _statisticsTimer = new Timer(
+                    ReportStatistics,
+                    null,
+                    TimeSpan.FromMinutes(1),
+                    TimeSpan.FromMinutes(5));
+            }
+            else
+            {
+                _logger.LogInformation("Statistik-Reporting deaktiviert (SCHRITT 2)");
+            }
 
             _logger.LogInformation("CamBridge Service started successfully");
             _logger.LogInformation("Monitoring {FolderCount} folders for JPEG files",
                 _settings.WatchFolders.Count(f => f.Enabled));
+
+            // Zeige konfigurierte Ordner
+            foreach (var folder in _settings.WatchFolders.Where(f => f.Enabled))
+            {
+                _logger.LogInformation("  → Watching: {Path}", folder.Path);
+            }
 
             // Keep service running
             while (!stoppingToken.IsCancellationRequested)
@@ -90,6 +107,14 @@ public class Worker : BackgroundService
                     _logger.LogError("Processing task terminated unexpectedly");
                     _lifetime.StopApplication();
                     break;
+                }
+
+                // SCHRITT 1: Einfache Status-Ausgabe (immer aktiv)
+                if (DateTime.Now.Second % 30 == 0) // Alle 30 Sekunden
+                {
+                    _logger.LogInformation("Service running - Queue: {QueueLength}, Active: {ActiveProcessing}",
+                        _processingQueue.QueueLength,
+                        _processingQueue.ActiveProcessing);
                 }
             }
         }
@@ -122,14 +147,28 @@ public class Worker : BackgroundService
             }
 
             // Final statistics
-            ReportStatistics(null);
+            if (_enableStatistics)
+            {
+                ReportStatistics(null);
+            }
+            else
+            {
+                // SCHRITT 1: Einfache finale Statistik
+                _logger.LogInformation("Final stats - Total processed: {Total}, Success: {Success}, Failed: {Failed}",
+                    _processingQueue.TotalProcessed,
+                    _processingQueue.TotalSuccessful,
+                    _processingQueue.TotalFailed);
+            }
 
             _logger.LogInformation("CamBridge Service stopped");
         }
     }
 
+    // ========== SCHRITT 2: Erweiterte Statistiken (AUSKOMMENTIERT) ==========
     private void ReportStatistics(object? state)
     {
+        if (!_enableStatistics) return;
+
         try
         {
             var stats = _processingQueue.GetStatistics();
@@ -160,6 +199,8 @@ public class Worker : BackgroundService
                 }
             }
 
+            // ========== SCHRITT 3: Erweiterte Health Checks (AUSKOMMENTIERT) ==========
+            /*
             // Check system health
             if (stats.TotalProcessed > 100 && stats.SuccessRate < 50)
             {
@@ -170,6 +211,7 @@ public class Worker : BackgroundService
             {
                 _logger.LogWarning("Large queue backlog: {QueueLength} files pending", stats.QueueLength);
             }
+            */
         }
         catch (Exception ex)
         {

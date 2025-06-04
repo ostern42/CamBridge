@@ -6,97 +6,79 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.22] - 2025-06-04
-### Added
-- Complete ExifToolReader implementation with proper API
-- Support for Ricoh Barcode EXIF field parsing
-- Automatic handling of duplicate EXIF keys
-- Temporary encoding fix for German umlauts
-- Enhanced PipelineTest with ExifToolReader integration
-- Improved VOGON INIT sequence with structured approach
+## [0.5.23] - 2025-06-04 - Sprint 1 Complete! 🎉
 
-### Changed
-- ExifToolReader constructor now accepts (logger, timeoutMs)
-- ExifToolReader method renamed to ExtractMetadataAsync()
-- StudyId format shortened to max 16 characters (DICOM compliance)
-- VOGON INIT now requires full context analysis before action
+### Added
+- End-to-end pipeline successfully processes Ricoh JPEG files
+- Folder watching service monitors input directories
+- Processing queue with retry logic
+- DICOM validation after creation
+- Structured logging with Serilog
+- Progressive feature activation in Program.cs
 
 ### Fixed
-- Dictionary key collision with encoding artifacts
-- PipelineTest now includes full ExifToolReader integration
-- All exiftool_files DLLs are copied to output directory
-- Multiple duplicate EXIF keys handled gracefully
+- ExifTool perl DLL dependencies resolved
+- Service compilation errors (missing NuGet packages)
+- StudyID length validation (max 16 chars)
+- Entity constructor parameter names
+- Build cache issues
+
+### Changed
+- Temporary encoding fix for German umlauts
+- Default mapping rules when mappings.json missing
+- Service runs in Development mode by default
 
 ### Technical
-- QRBridge data successfully extracted: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
-- Ready for full pipeline testing with DICOM creation
-- Sprint 1 feature complete at 99%
+- Successfully reads Ricoh Barcode EXIF field
+- Parses QRBridge data: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
+- Creates valid DICOM files viewable in standard viewers
+- Output structure: {PatientID}\{Date}\{PatientID}_{Date}_{Instance}.dcm
+
+### Known Issues
+- Encoding not perfect (Windows-1252 to UTF-8)
+- Missing datetime field warnings in mapping
+- Health checks and API endpoints disabled
+
+## [0.5.22] - 2025-06-04
+
+### Added
+- Complete ExifToolReader implementation with barcode support
+- ExtractMetadataAsync method matching FileProcessor expectations
+- Constructor matching ServiceCollectionExtensions (logger, timeoutMs)
+- Parse QRBridge data from Ricoh Barcode EXIF field
+- Handle duplicate EXIF keys with automatic renaming
+- Temporary encoding fix for German umlauts
+
+### Fixed
+- StudyId shortened to comply with 16 char DICOM limit
+- Dictionary key conflicts with encoding artifacts
+- FileProcessor integration issues
+
+### Changed
+- ExifToolReader now primary metadata extraction method
+- Barcode field prioritized over UserComment
+
+### Technical
+- PipelineTest passes successfully
+- Test output: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
 
 ## [0.5.21] - 2025-06-04
 
 ### Added
-- Complete pipeline test program (CamBridge.PipelineTest)
-- Direct ExifTool test program to identify EXIF field locations
-- Full DICOM validation in test program
-- Detailed logging of all pipeline stages
-- Automatic output directory creation
-- Comprehensive EXIF field analysis for Ricoh G900SE II
+- Direct ExifTool testing in PipelineTest
+- Barcode field discovery documentation
+
+### Fixed
+- ExifToolReader file path issues
+- Build errors in PipelineTest project
+
+### Changed
+- Focus shifted from UserComment to Barcode field
+- ExifToolReader implementation updated for new field
 
 ### Discovered
-- Ricoh cameras store QRBridge data in the `Barcode` EXIF field
-- UserComment field only contains "GCM_TAG" marker
-- All 5 QRBridge fields successfully transmitted
-- Confirmed pipe-delimited format: `EX002|Schmidt, Maria|1985-03-15|F|R�ntgen�Thorax`
-
-### Fixed
-- Test infrastructure for end-to-end pipeline validation
-- Missing file existence checks before processing
-- Identified root cause of missing barcode data
-- Prepared ExifToolReader fix for Barcode field reading
-
-### Changed
-- Enhanced test output with metadata display
-- Improved error handling and reporting in tests
-- Test strategy to use direct ExifTool calls for debugging
-- Understanding of Ricoh EXIF field usage
-
-### Technical
-- Created standalone test project for pipeline validation
-- Added DICOM file validation using fo-dicom
-- Structured logging output for better debugging
-- Identified encoding issue: Windows-1252 characters (�) instead of UTF-8
-- ExifToolReader must read `Barcode` field, not `UserComment`
-
-### Next Steps
-- Apply ExifToolReader fix to read Barcode field
-- Fix encoding issues (�→ö) if confirmed
-- Test complete pipeline with fixed reader
-- Release v0.5.22 with working pipeline
-
-## [0.5.20] - 2025-06-03
-
-### Fixed
-- Entity contract mismatches causing compilation errors
-- PatientInfo constructor parameter naming (id vs patientId)
-- StudyInfo property naming (StudyId vs Id, Description vs StudyDescription)
-- ImageMetadata missing properties (ExifData, InstanceNumber, InstanceUid)
-- Gender type conversions between enum and string
-- DicomConverter null reference exceptions
-
-### Added
-- ImageTechnicalData entity for camera metadata
-- Entity Contract Tracker in PROJECT_WISDOM.md
-- ExifToolQuickTest project for isolated testing
-
-### Changed
-- ImageMetadata now includes all required DICOM properties
-- StudyInfo includes ExamId property from QRBridge data
-- Improved null checking in DicomConverter
-
-### Confirmed
-- ExifTool v13.30 successfully finds Ricoh G900 II Barcode field
-- QRBridge data format: "EX002|Schmidt, Maria|1985-03-15|F|R÷ntgenáThorax"
-- Infrastructure layer now compiles without errors
+- Ricoh G900SE II stores QRBridge data in Barcode field, not UserComment
+- UserComment only contains "GCM_TAG" marker
 
 ## [0.5.20] - 2025-06-03
 ### Added

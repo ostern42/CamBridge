@@ -5,17 +5,15 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
 using CamBridge.Core;
-using CamBridge.Core.Entities; // Für ProcessingResult
+using CamBridge.Core.Entities;
 using CamBridge.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using DeadLetterStatistics = CamBridge.Infrastructure.Services.DeadLetterStatistics;
-
-
-// Explicit using alias to avoid ambiguity
 using ProcessingResult = CamBridge.Core.Entities.ProcessingResult;
 
 namespace CamBridge.Infrastructure.Services
@@ -40,7 +38,7 @@ namespace CamBridge.Infrastructure.Services
             _settings = settings.Value;
 
             // Initialize Windows Event Log source if enabled
-            if (_settings.EnableEventLog)
+            if (_settings.EnableEventLog && OperatingSystem.IsWindows())
             {
                 InitializeEventLog();
             }
@@ -53,7 +51,7 @@ namespace CamBridge.Infrastructure.Services
         {
             try
             {
-                if (_settings.EnableEventLog)
+                if (_settings.EnableEventLog && OperatingSystem.IsWindows())
                 {
                     WriteEventLog(message, EventLogEntryType.Information);
                 }
@@ -76,7 +74,7 @@ namespace CamBridge.Infrastructure.Services
         {
             try
             {
-                if (_settings.EnableEventLog)
+                if (_settings.EnableEventLog && OperatingSystem.IsWindows())
                 {
                     WriteEventLog(message, EventLogEntryType.Warning);
                 }
@@ -99,7 +97,7 @@ namespace CamBridge.Infrastructure.Services
         {
             try
             {
-                if (_settings.EnableEventLog)
+                if (_settings.EnableEventLog && OperatingSystem.IsWindows())
                 {
                     WriteEventLog(message, EventLogEntryType.Error, exception);
                 }
@@ -124,7 +122,7 @@ namespace CamBridge.Infrastructure.Services
             try
             {
                 // Critical errors always go to event log
-                if (_settings.EnableEventLog)
+                if (_settings.EnableEventLog && OperatingSystem.IsWindows())
                 {
                     WriteEventLog($"CRITICAL: {message}", EventLogEntryType.Error, exception);
                 }
@@ -226,7 +224,7 @@ namespace CamBridge.Infrastructure.Services
                 var logLevel = result.Success ? LogLevel.Information : LogLevel.Error;
 
                 // Send notifications based on settings
-                if (_settings.EnableEventLog)
+                if (_settings.EnableEventLog && OperatingSystem.IsWindows())
                 {
                     WriteEventLog(result, logLevel);
                 }
@@ -244,6 +242,7 @@ namespace CamBridge.Infrastructure.Services
 
         #region Private Methods
 
+        [SupportedOSPlatform("windows")]
         private void InitializeEventLog()
         {
             try
@@ -358,8 +357,15 @@ namespace CamBridge.Infrastructure.Services
             WriteEventLog(message, eventType);
         }
 
+        [SupportedOSPlatform("windows")]
         private void WriteEventLog(string message, EventLogEntryType type, Exception? exception = null)
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                _logger.LogDebug("EventLog not available on non-Windows platform");
+                return;
+            }
+
             try
             {
                 if (exception != null)
