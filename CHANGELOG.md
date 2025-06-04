@@ -6,6 +6,25 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.25] - 2025-06-04
+
+### Fixed
+- Critical UI freeze when opening Mapping Editor
+- Removed blocking sync call in MappingConfigurationLoader constructor
+- Fixed async initialization pattern in MappingEditorViewModel
+- Improved path resolution for mappings.json file
+
+### Changed
+- MappingConfigurationLoader now uses lazy initialization
+- MappingEditorViewModel initializes asynchronously via InitializeAsync()
+- Better error handling and status messages in Mapping Editor
+
+### Added
+- Drag & drop support in Mapping Editor
+- Template application (Ricoh G900, Minimal, Full)
+- Live preview for mapping transformations
+- Professional UI ready for demonstrations
+
 ## [0.5.24] - 2025-06-04
 ### Added
 - Extension methods for UI-specific MappingRule functionality

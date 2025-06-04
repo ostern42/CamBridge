@@ -1,8 +1,8 @@
 // File: src/CamBridge.Config/Views/MappingEditorPage.xaml.cs
-// Version: 0.5.24
+// Version: 0.5.25
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 // Modified: 2025-06-04
-// Status: Development/Local
+// Status: Development/Local - FREEZE BUG FIXED
 
 using System;
 using System.Runtime.Versioning;
@@ -32,7 +32,7 @@ namespace CamBridge.Config.Views
             Loaded += MappingEditorPage_Loaded;
         }
 
-        private void MappingEditorPage_Loaded(object sender, RoutedEventArgs e)
+        private async void MappingEditorPage_Loaded(object sender, RoutedEventArgs e)
         {
             if (_viewModel != null) return;
 
@@ -43,6 +43,10 @@ namespace CamBridge.Config.Views
                 {
                     _viewModel = app.Host.Services.GetRequiredService<MappingEditorViewModel>();
                     DataContext = _viewModel;
+
+                    // IMPORTANT: Initialize the ViewModel asynchronously
+                    // This prevents the UI freeze!
+                    await _viewModel.InitializeAsync();
                 }
             }
             catch (Exception ex)

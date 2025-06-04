@@ -1,8 +1,8 @@
 // File: src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
-// Version: 0.5.24
+// Version: 0.5.25
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 // Modified: 2025-06-04
-// Status: Development/Local
+// Status: Development/Local - FREEZE BUG FIXED
 
 using CamBridge.Config.Dialogs;
 using CamBridge.Config.Extensions;
@@ -35,7 +35,8 @@ namespace CamBridge.Config.ViewModels
     {
         private readonly ILogger<MappingEditorViewModel> _logger;
         private readonly IConfigurationService _configurationService;
-        private readonly IMappingConfiguration _mappingConfiguration;
+        private IMappingConfiguration? _mappingConfiguration;
+        private bool _isInitialized = false;
 
         #region Properties
 
@@ -60,13 +61,50 @@ namespace CamBridge.Config.ViewModels
             _logger = logger;
             _configurationService = configurationService;
 
-            // Create MappingConfigurationLoader with proper logger
-            var nullLoggerFactory = new NullLoggerFactory();
-            var mappingLoaderLogger = nullLoggerFactory.CreateLogger<MappingConfigurationLoader>();
-            _mappingConfiguration = new MappingConfigurationLoader(mappingLoaderLogger);
-
             InitializeSourceFields();
-            _ = LoadMappingsAsync();
+
+            // IMPORTANT: Do NOT load mappings in constructor!
+            // This will be done when the view is loaded
+            StatusMessage = "Ready";
+        }
+
+        /// <summary>
+        /// Initialize the ViewModel - call this from the View's Loaded event
+        /// </summary>
+        public async Task InitializeAsync()
+        {
+            if (_isInitialized) return;
+
+            try
+            {
+                IsLoading = true;
+                StatusMessage = "Initializing mapping editor...";
+
+                // Create MappingConfigurationLoader with proper logger
+                var nullLoggerFactory = new NullLoggerFactory();
+                var mappingLoaderLogger = nullLoggerFactory.CreateLogger<MappingConfigurationLoader>();
+                _mappingConfiguration = new MappingConfigurationLoader(mappingLoaderLogger);
+
+                // Load mappings asynchronously
+                await LoadMappingsAsync();
+
+                _isInitialized = true;
+                StatusMessage = "Mapping editor ready";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to initialize mapping editor");
+                StatusMessage = "Initialization failed";
+                MessageBox.Show(
+                    $"Failed to initialize mapping editor:\n{ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
 
         #region Initialization
@@ -91,6 +129,8 @@ namespace CamBridge.Config.ViewModels
 
         private async Task LoadMappingsAsync()
         {
+            if (_mappingConfiguration == null) return;
+
             try
             {
                 IsLoading = true;
@@ -99,34 +139,64 @@ namespace CamBridge.Config.ViewModels
                 var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
                 if (settings != null)
                 {
-                    await _mappingConfiguration.LoadConfigurationAsync(settings.MappingConfigurationFile);
+                    var mappingFile = settings.MappingConfigurationFile;
+
+                    // Try to load from configured file
+                    var loaded = await _mappingConfiguration.LoadConfigurationAsync(mappingFile);
 
                     MappingRules.Clear();
                     foreach (var rule in _mappingConfiguration.GetMappingRules())
                     {
-                        var vm = new MappingRuleViewModel(rule);
-                        vm.PropertyChanged += (s, e) =>
-                        {
-                            IsModified = true;
-                            if (s == SelectedRule)
-                                UpdatePreview();
-                        };
+                        var vm = CreateRuleViewModel(rule);
                         MappingRules.Add(vm);
                     }
 
                     IsModified = false;
-                    StatusMessage = $"Loaded {MappingRules.Count} mapping rules";
+                    StatusMessage = loaded
+                        ? $"Loaded {MappingRules.Count} mapping rules from {mappingFile}"
+                        : $"Using {MappingRules.Count} default mapping rules";
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to load mappings");
                 StatusMessage = "Failed to load mappings";
+
+                // Load default rules on error
+                if (_mappingConfiguration != null)
+                {
+                    foreach (var rule in _mappingConfiguration.GetMappingRules())
+                    {
+                        var vm = CreateRuleViewModel(rule);
+                        MappingRules.Add(vm);
+                    }
+                }
             }
             finally
             {
                 IsLoading = false;
             }
+        }
+
+        private MappingRuleViewModel CreateRuleViewModel(MappingRule rule)
+        {
+            var vm = new MappingRuleViewModel(rule);
+
+            // Attach property changed handler
+            vm.PropertyChanged += (s, e) =>
+            {
+                // Avoid recursive updates
+                if (!IsLoading)
+                {
+                    IsModified = true;
+                    if (s == SelectedRule && e.PropertyName != nameof(MappingRuleViewModel.DisplayName))
+                    {
+                        UpdatePreview();
+                    }
+                }
+            };
+
+            return vm;
         }
 
         #endregion
@@ -146,14 +216,7 @@ namespace CamBridge.Config.ViewModels
                 Required = false
             };
 
-            var vm = new MappingRuleViewModel(newRule);
-            vm.PropertyChanged += (s, e) =>
-            {
-                IsModified = true;
-                if (s == SelectedRule)
-                    UpdatePreview();
-            };
-
+            var vm = CreateRuleViewModel(newRule);
             MappingRules.Add(vm);
             SelectedRule = vm;
             IsModified = true;
@@ -199,6 +262,8 @@ namespace CamBridge.Config.ViewModels
         [RelayCommand]
         private async Task SaveMappingsAsync()
         {
+            if (_mappingConfiguration == null) return;
+
             try
             {
                 IsLoading = true;
@@ -230,6 +295,8 @@ namespace CamBridge.Config.ViewModels
         [RelayCommand]
         private async Task ImportMappingsAsync()
         {
+            if (_mappingConfiguration == null) return;
+
             try
             {
                 var dialog = new OpenFileDialog
@@ -249,13 +316,7 @@ namespace CamBridge.Config.ViewModels
                     MappingRules.Clear();
                     foreach (var rule in _mappingConfiguration.GetMappingRules())
                     {
-                        var vm = new MappingRuleViewModel(rule);
-                        vm.PropertyChanged += (s, e) =>
-                        {
-                            IsModified = true;
-                            if (s == SelectedRule)
-                                UpdatePreview();
-                        };
+                        var vm = CreateRuleViewModel(rule);
                         MappingRules.Add(vm);
                     }
 
@@ -278,6 +339,8 @@ namespace CamBridge.Config.ViewModels
         [RelayCommand]
         private async Task ExportMappingsAsync()
         {
+            if (_mappingConfiguration == null) return;
+
             try
             {
                 var dialog = new SaveFileDialog
@@ -441,13 +504,7 @@ namespace CamBridge.Config.ViewModels
                 Required = isRequired
             };
 
-            var vm = new MappingRuleViewModel(rule);
-            vm.PropertyChanged += (s, e) =>
-            {
-                IsModified = true;
-                if (s == SelectedRule)
-                    UpdatePreview();
-            };
+            var vm = CreateRuleViewModel(rule);
             MappingRules.Add(vm);
         }
 

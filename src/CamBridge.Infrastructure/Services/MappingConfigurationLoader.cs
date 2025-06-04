@@ -1,3 +1,9 @@
+// File: src/CamBridge.Infrastructure/Services/MappingConfigurationLoader.cs
+// Version: 0.5.25
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Modified: 2025-06-04
+// Status: Development/Local - FREEZE BUG FIXED
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,6 +24,7 @@ namespace CamBridge.Infrastructure.Services
         private readonly ILogger<MappingConfigurationLoader> _logger;
         private readonly string _configPath;
         private List<MappingRule> _mappingRules;
+        private bool _isInitialized = false;
 
         public MappingConfigurationLoader(ILogger<MappingConfigurationLoader> logger, string configPath = "mappings.json")
         {
@@ -25,13 +32,20 @@ namespace CamBridge.Infrastructure.Services
             _configPath = configPath;
             _mappingRules = new List<MappingRule>();
 
-            // Try to load default configuration
-            LoadConfigurationAsync().GetAwaiter().GetResult();
+            // REMOVED: LoadConfigurationAsync().GetAwaiter().GetResult();
+            // This was causing the UI freeze!
+            // Configuration will be loaded lazily or explicitly via LoadConfigurationAsync
         }
 
         /// <inheritdoc />
         public IReadOnlyList<MappingRule> GetMappingRules()
         {
+            // Return default rules if not initialized
+            if (!_isInitialized)
+            {
+                LoadDefaultMappings();
+                _isInitialized = true;
+            }
             return _mappingRules.AsReadOnly();
         }
 
@@ -42,10 +56,26 @@ namespace CamBridge.Infrastructure.Services
 
             try
             {
+                // Make path absolute if relative
+                if (!Path.IsPathRooted(path))
+                {
+                    // Try multiple locations for the config file
+                    var possiblePaths = new[]
+                    {
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path),
+                        Path.Combine(Environment.CurrentDirectory, path),
+                        Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, path),
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CamBridge", path)
+                    };
+
+                    path = possiblePaths.FirstOrDefault(File.Exists) ?? possiblePaths[0];
+                }
+
                 if (!File.Exists(path))
                 {
                     _logger.LogWarning("Mapping configuration file not found: {Path}. Using default mappings.", path);
                     LoadDefaultMappings();
+                    _isInitialized = true;
                     return false;
                 }
 
@@ -59,12 +89,14 @@ namespace CamBridge.Infrastructure.Services
                 {
                     _mappingRules = config.Rules;
                     _logger.LogInformation("Loaded {Count} mapping rules from {Path}", _mappingRules.Count, path);
+                    _isInitialized = true;
                     return true;
                 }
                 else
                 {
                     _logger.LogWarning("No mapping rules found in {Path}. Using default mappings.", path);
                     LoadDefaultMappings();
+                    _isInitialized = true;
                     return false;
                 }
             }
@@ -72,6 +104,7 @@ namespace CamBridge.Infrastructure.Services
             {
                 _logger.LogError(ex, "Error loading mapping configuration from {Path}", path);
                 LoadDefaultMappings();
+                _isInitialized = true;
                 return false;
             }
         }
@@ -83,6 +116,19 @@ namespace CamBridge.Infrastructure.Services
 
             try
             {
+                // Make path absolute if relative
+                if (!Path.IsPathRooted(path))
+                {
+                    path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
+                }
+
+                // Ensure directory exists
+                var directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
                 var config = new MappingConfiguration
                 {
                     Version = "1.0",
@@ -132,6 +178,13 @@ namespace CamBridge.Infrastructure.Services
         /// <inheritdoc />
         public MappingRule? GetRuleForSource(string sourceField)
         {
+            // Ensure we have rules loaded
+            if (!_isInitialized)
+            {
+                LoadDefaultMappings();
+                _isInitialized = true;
+            }
+
             return _mappingRules.FirstOrDefault(r =>
                 r.SourceField.Equals(sourceField, StringComparison.OrdinalIgnoreCase));
         }
@@ -139,6 +192,13 @@ namespace CamBridge.Infrastructure.Services
         /// <inheritdoc />
         public IEnumerable<MappingRule> GetRulesForTag(string dicomTag)
         {
+            // Ensure we have rules loaded
+            if (!_isInitialized)
+            {
+                LoadDefaultMappings();
+                _isInitialized = true;
+            }
+
             return _mappingRules.Where(r =>
                 r.DicomTag.Equals(dicomTag, StringComparison.OrdinalIgnoreCase));
         }
