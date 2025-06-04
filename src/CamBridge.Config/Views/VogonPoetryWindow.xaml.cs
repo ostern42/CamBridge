@@ -1,3 +1,7 @@
+// src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs
+// Version: 0.5.26
+// Fixed: Nullable warnings resolved
+
 using System;
 using System.Runtime.Versioning;
 using System.Windows;
@@ -17,13 +21,13 @@ namespace CamBridge.Config.Views
         private Storyboard? _rainbowAnimation;
 
         // Sprite animation members
-        private WriteableBitmap _ballBitmap = null!;
-        private readonly DispatcherTimer _spriteTimer;
+        private WriteableBitmap? _ballBitmap;
+        private DispatcherTimer? _spriteTimer;
         private int _currentFrame = 0;
         private const int TOTAL_FRAMES = 24;
         private bool _movingRight = true;
         private double _lastXPosition = 50;
-        private byte[] _pixelBuffer = null!;
+        private byte[]? _pixelBuffer;
         private readonly int _stride = 100 * 4; // Width * BytesPerPixel
 
         public VogonPoetryWindow()
@@ -174,6 +178,8 @@ namespace CamBridge.Config.Views
         {
             try
             {
+                if (BoingBall == null) return;
+
                 double currentX = Canvas.GetLeft(BoingBall);
 
                 if (double.IsNaN(currentX))

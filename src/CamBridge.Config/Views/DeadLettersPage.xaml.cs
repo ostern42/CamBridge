@@ -1,6 +1,6 @@
 // src\CamBridge.Config\Views\DeadLettersPage.xaml.cs
 // Version: 0.5.26
-// Complete dead letters implementation with proper loading
+// Fixed: Using correct command names from updated ViewModel
 
 using CamBridge.Config.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,7 +44,7 @@ namespace CamBridge.Config.Views
                         Timeout = TimeSpan.FromSeconds(30)
                     };
 
-                    var apiService = new Services.HttpApiService(httpClient, null);
+                    var apiService = new Services.HttpApiService(httpClient, null!);
                     _viewModel = new DeadLettersViewModel(apiService);
                     DataContext = _viewModel;
 
@@ -67,7 +67,8 @@ namespace CamBridge.Config.Views
 
             try
             {
-                // Try to load dead letters using command or method
+                // The commands are named WITHOUT "Async" suffix!
+                // Method: LoadDeadLettersAsync -> Command: LoadDeadLettersCommand
                 if (_viewModel.LoadDeadLettersCommand?.CanExecute(null) == true)
                 {
                     await _viewModel.LoadDeadLettersCommand.ExecuteAsync(null);
@@ -75,16 +76,12 @@ namespace CamBridge.Config.Views
                 else if (_viewModel.RefreshCommand?.CanExecute(null) == true)
                 {
                     // Alternative: Try RefreshCommand
-                    _viewModel.RefreshCommand.Execute(null);
+                    await _viewModel.RefreshCommand.ExecuteAsync(null);
                 }
                 else
                 {
-                    // Fallback: Try to trigger loading through property
-                    _viewModel.IsLoading = true;
-
-                    // If ViewModel has a Load method, it should be called here
-                    // For now, we assume the ViewModel loads data automatically
-                    System.Diagnostics.Debug.WriteLine("Dead letters loading triggered");
+                    // Fallback: Call the method directly
+                    await _viewModel.LoadDeadLettersAsync();
                 }
             }
             catch (Exception ex)
@@ -97,6 +94,9 @@ namespace CamBridge.Config.Views
         {
             // Clean up - remove event handler
             Loaded -= DeadLettersPage_Loaded;
+
+            // Cleanup ViewModel
+            _viewModel?.Cleanup();
 
             // Clear ViewModel reference
             _viewModel = null;

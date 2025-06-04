@@ -1,4 +1,7 @@
 // src/CamBridge.Config/Dialogs/DicomTagBrowserDialog.xaml.cs
+// Version: 0.5.26
+// Fixed: Nullable warnings resolved
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -40,10 +43,10 @@ namespace CamBridge.Config.Dialogs
 
         public CoreDicomTag? SelectedTag { get; private set; }
 
-        private CollectionViewSource _tagsViewSource;
+        private CollectionViewSource _tagsViewSource = null!;
         public ICollectionView TagsView => _tagsViewSource.View;
 
-        private List<DicomTagInfo> _allTags;
+        private List<DicomTagInfo> _allTags = null!;
 
         #endregion
 
@@ -51,6 +54,11 @@ namespace CamBridge.Config.Dialogs
         {
             InitializeComponent();
             DataContext = this;
+
+            // Initialize collections before use
+            _allTags = new List<DicomTagInfo>();
+            _tagsViewSource = new CollectionViewSource();
+
             LoadDicomTags();
             SearchBox.Focus();
         }
@@ -59,8 +67,8 @@ namespace CamBridge.Config.Dialogs
 
         private void LoadDicomTags()
         {
-            // Load all DICOM tags - grouped by module
-            _allTags = new List<DicomTagInfo>();
+            // Clear and reinitialize
+            _allTags.Clear();
 
             // Patient Module
             AddTag("Patient", CoreDicomTag.PatientModule.PatientName, "Patient's Name", "PN");

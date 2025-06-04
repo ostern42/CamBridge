@@ -34,8 +34,9 @@ namespace CamBridge.Config.Models
         public Guid Id { get; set; }
         public string FileName { get; set; } = string.Empty;
         public string FilePath { get; set; } = string.Empty;
-        public string Error { get; set; } = string.Empty;
-        public DateTime FailedAt { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;  // Changed from Error
+        public DateTime FirstAttempt { get; set; }  // Changed from FailedAt
+        public DateTime LastAttempt { get; set; }   // Added
         public int AttemptCount { get; set; }
         public long FileSize { get; set; }
     }

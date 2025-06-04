@@ -31,6 +31,7 @@ src\CamBridge.Config\ViewModels\DeadLettersViewModel.cs
 src\CamBridge.Config\ViewModels\MainViewModel.cs
 src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs
 src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs
+src\CamBridge.Config\ViewModels\ServiceControlViewModelExtension.cs
 src\CamBridge.Config\ViewModels\SettingsViewModel.cs
 src\CamBridge.Config\ViewModels\ViewModelBase.cs
 src\CamBridge.Config\Views\AboutPage.xaml
