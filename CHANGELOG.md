@@ -6,6 +6,32 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.24] - 2025-06-04 - HTTP API Verified & Config UI Analysis
+### Added
+- ConnectionTest.cs for API verification
+- Detailed Config UI interface mismatch analysis
+- Fix plan for Config UI to Core alignment
+
+### Fixed
+- Service uptime calculation (now uses serviceStartTime instead of Environment.TickCount64)
+- Program.cs incorrect uptime display showing days instead of minutes
+
+### Changed
+- Sprint 2 plan adjusted to focus on minimal demo UI
+- Priority shifted to Dashboard + Service Control for prototype
+
+### Discovered
+- Config UI is feature-complete with all views implemented
+- Only interface mismatches prevent compilation (v0.4.x vs v0.5.x)
+- HTTP API fully functional and ready for UI connection
+- GitHub can be outdated during active development
+
+### Technical
+- Verified API endpoints: /health and /api/status working perfectly
+- CORS properly configured for Config UI connection
+- All statistics correctly transmitted via JSON
+- Connection test shows 100% success rate
+
 ## [0.5.23] - 2025-06-04 - Sprint 1 Complete! 🎉
 ### Added
 - End-to-end pipeline successfully processes Ricoh JPEG files

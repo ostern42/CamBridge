@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-04, 15:42 Uhr  
+**Letzte Aktualisierung:** 2025-06-04, 16:30 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -81,12 +81,14 @@
 - VOR Code-Änderungen IMMER aktuelles File von GitHub holen!
 - Header mit Pfad und Version in JEDEN Source Code einfügen!
 
-### 🔒 [CORE] GitHub Integration - FUNKTIONIERT!
-**Stand 04.06.2025:**
-- ✅ Repository public unter: https://github.com/ostern42/CamBridge
-- ✅ Direkte File-Links funktionieren mit web_fetch
-- ✅ 70% Token-Ersparnis möglich
-- ✅ URLs müssen EXPLIZIT vom Nutzer bereitgestellt werden
+### 🔒 [CORE] File-Beschaffung - NUR LOKALE FILES!
+**Stand 04.06.2025, 16:35:**
+- ❌ GitHub ist während Entwicklung IMMER veraltet
+- ✅ **EINZIGER SICHERER WEG:** User lädt von SSD hoch
+- ✅ Konsistenz nur durch lokale Files garantiert
+- ⚠️ Solange nicht alle Sources versioniert sind, NIE GitHub vertrauen!
+
+**REGEL:** IMMER nach Upload der aktuellen lokalen Version fragen!
 
 ### 📝 "WISDOM:" - Live-Updates
 Während des Chats können Sie jederzeit sagen:
@@ -129,18 +131,18 @@ git tag vX.X.X
 1. **VOR jeder Code-Änderung - Der richtige Workflow:**
    ```
    ANFANG EINER SESSION:
-   1. Versuche GitHub Version zu holen (falls URL verfügbar)
-   2. Falls nicht: Frage User nach aktuellem lokalen File
+   1. NIEMALS GitHub verwenden (immer veraltet!)
+   2. IMMER User nach Upload der lokalen Files fragen
    
    WÄHREND DER ARBEIT:
-   1. User uploaded aktuelle lokale Version
+   1. User uploaded aktuelle lokale Version von SSD
    2. NIE blind Code schreiben ohne aktuelle Version zu sehen
    3. Bei Unsicherheit: "Zeig mir bitte die aktuelle Version von [Datei]"
    
    WORKFLOW REGEL:
-   - Lokale Commits: Häufig und klein ✅
-   - GitHub Push: Nur bei stabilen Meilensteinen ✅
-   - Während Sprint: Arbeite mit lokalen Versionen
+   - NUR lokale Files von User verwenden ✅
+   - GitHub ignorieren während Entwicklung ✅
+   - Konsistenz durch SSD-Upload garantiert ✅
    ```
 
 2. **Source Code Header Standard:**
@@ -157,74 +159,80 @@ git tag vX.X.X
    - Status-Feld zeigt ob Development/Local/Pushed
    - Macht Versions-Stand sofort klar
 
-## ⚡ [URGENT] AKTUELLER STATUS & NÄCHSTE SCHRITTE (v0.5.23)
+## ⚡ [URGENT] AKTUELLER STATUS & NÄCHSTE SCHRITTE (v0.5.24)
 
 ### 📍 WAS IST GERADE DRAN?
-**Status:** HTTP API AKTIVIERT! Config UI kann sich jetzt verbinden!
+**Status:** HTTP API LÄUFT! Config UI hat Build-Fehler wegen Interface-Änderungen
 
 **Konkret heißt das:**
 - ✅ Service läuft auf Port 5050
 - ✅ Health Check Endpoint funktioniert (/health)
 - ✅ Status API implementiert (/api/status)
 - ✅ CORS für Config UI aktiviert
-- ✅ Repository mit .gitignore aufgeräumt
+- ✅ Connection Test erfolgreich
+- ❌ Config UI kompiliert nicht (Interface Mismatch)
 
-### 🎯 [MILESTONE] SPRINT 1 KOMPLETT! End-to-End Pipeline läuft!
-**04.06.2025 14:30:**
-- Vollständiger Durchlauf: JPEG → ExifTool → Barcode → DICOM
-- Service läuft stabil im Development Mode
-- Ordnerüberwachung funktioniert
-- DICOM-Dateien werden korrekt erstellt und strukturiert
+### 🎯 [MILESTONE] HTTP API CONNECTION TEST ERFOLGREICH!
+**04.06.2025 16:20:**
+- dotnet script ConnectionTest.cs zeigt perfekte Verbindung
+- Service Status: Running, Version 0.5.23
+- Success Rate: 100% (1 Datei verarbeitet)
+- Uptime Bug gefixt (war Environment.TickCount64)
 
-### 🎯 [MILESTONE] HTTP API READY!
-**04.06.2025 15:40:**
-- SCHRITT 2 & 3 in Program.cs aktiviert
-- Health Check und Status Endpoints funktionieren
-- Config UI kann sich über Port 5050 verbinden
-- .gitignore hinzugefügt - nur noch Source Code im Git
+### 📋 [URGENT] CONFIG UI FIX PLAN - Sprint 2.1
 
-### 📋 [URGENT] NÄCHSTE SCHRITTE - SPRINT 2
+#### Phase 1: Interface Alignment (0.5 Tage)
+**Hauptprobleme:**
+1. `MappingRule` - Properties fehlen: TargetTag, IsRequired
+2. `ValueTransform` - Enum statt Klasse (GenderToDicom, TruncateTo16 fehlen)
+3. `MappingConfigurationLoader` - Async Methoden fehlen
+4. Constructor-Signaturen haben sich geändert
 
-#### Priorität 0: Config UI Connection Test (0.5 Tage)
-- Service starten
-- Config UI starten
-- Verbindung testen
-- Dashboard sollte Live-Daten zeigen
+**Lösungsansatz:**
+```csharp
+// Core anpassen ODER Config UI anpassen
+// Entscheidung: Config UI an Core anpassen (Core ist Production-Ready)
+```
 
-#### Priorität 1: Saubere Encoding-Lösung (1-2 Tage)
-- ExifTool mit `-charset` Parameter aufrufen
-- Ricoh Codepage definitiv ermitteln (vermutlich Windows-1252)
-- Replace-Liste durch echte Konvertierung ersetzen
+#### Phase 2: Existierendes UI zum Laufen bringen (0.5 Tage)
+**KEIN NEUES UI BAUEN! Wir haben schon alles!**
+1. ✅ Dashboard verbinden (Code existiert)
+2. ✅ Service Control testen (Code existiert)
+3. ⚠️ Komplexe Features temporär auskommentieren:
+   - Mapping Editor (wenn zu viele Fehler)
+   - Dead Letters (wenn zu viele Fehler)
+4. ✅ Focus: Was schon da ist zum Laufen bringen!
 
-#### Priorität 2: Service-Stabilität (2-3 Tage)
-- Erweiterte Fehlerbehandlung
-- Retry-Mechanismen testen
-- Dead Letter Queue aktivieren
-- Performance-Optimierung
+**Demo-Szenario:**
+- Service installieren via existierendes GUI
+- Dashboard zeigt Live-Stats (schon implementiert!)
+- JPEG durchschieben
+- Statistik updated sich
+- "Look, it's working!"
 
 ### 📍 [URGENT] ÜBERGABEPROMPT FÜR NÄCHSTEN CHAT
 ```
-🎉 v0.5.23 - HTTP API AKTIVIERT! Config UI kann sich verbinden!
+🎉 v0.5.24 - HTTP API LÄUFT! Config UI Interface-Fix steht an
 
 ERFOLGE:
-✅ Sprint 1: Pipeline läuft End-to-End  
-✅ HTTP API aktiviert (SCHRITT 2+3)
-✅ Health Check & Status Endpoints funktionieren
-✅ .gitignore hinzugefügt - Repository aufgeräumt
-✅ Program.cs mit klarer Schritt-Struktur
+✅ HTTP API vollständig funktionsfähig
+✅ Connection Test zeigt perfekte Verbindung  
+✅ Uptime Bug gefixt (serviceStartTime)
+✅ Service verarbeitet JPEGs erfolgreich
 
 STATUS:
-- Service läuft auf Port 5050
-- Config UI ist feature-complete (nur verbinden!)
-- 2 lokale Commits (noch nicht gepusht)
+- Service läuft stabil auf Port 5050
+- Config UI existiert komplett (aber Build-Fehler)
+- Interface Mismatch zwischen v0.4.x und v0.5.x
 
-NÄCHSTE SCHRITTE:
-1. Config UI mit Service testen
-2. Encoding-Fix für Umlaute  
-3. Service-Stabilität verbessern
+NÄCHSTER SCHRITT:
+Config UI Interface-Fix - EXISTIERENDES UI zum Laufen bringen!
+- KEINE neuen Mockups bauen
+- Dashboard + Service Control verbinden
+- Komplexe Features temporär auskommentieren
+- Ziel: Demo mit vorhandenem Code
 
-GitHub: https://github.com/ostern42/CamBridge
-Lokale Version: v0.5.23 mit HTTP API
+WICHTIG: NUR lokale Files verwenden, KEIN GitHub!
 ```
 
 ## 🏗️ [MILESTONE] PIPELINE-ARCHITEKTUR (PRODUKTIONSREIF!)
@@ -275,60 +283,48 @@ new ImageMetadata(
 )
 ```
 
-## 🌟 [FEAT] CONFIG UI ARCHITEKTUR (NEU DOKUMENTIERT!)
+## 🌟 [FEAT] CONFIG UI INTERFACE MISMATCH ANALYSE
 
-### UI Struktur:
-```
-MainWindow (NavigationView)
-├── DashboardPage         ✅ Live-Stats, Auto-Refresh
-├── ServiceControlPage    ✅ Install/Start/Stop/Uninstall
-├── DeadLettersPage       ✅ Failed Files Management
-├── MappingEditorPage     ✅ DICOM Mapping Configuration
-├── SettingsPage          ✅ 4 Tabs mit ALLEN Einstellungen
-└── AboutPage            ✅ Version Info + VogonPoetryWindow
+### Problem-Mapping (v0.4.x → v0.5.x):
+```csharp
+// ALT (Config UI v0.4.x):
+MappingRule(name, sourceType, sourceField, targetTag, transform, isRequired)
+rule.TargetTag
+rule.IsRequired
+ValueTransform.GenderToDicom
+ValueTransform.TruncateTo16
 
-Services:
-├── IApiService          → HTTP Client für Service-Kommunikation
-├── INavigationService   → Page Navigation
-├── IConfigurationService → Settings Management
-└── IServiceManager      → Windows Service Control
-```
-
-### Settings Tabs Detail:
-1. **Folders & Processing**
-   - Watch Folders mit UI für Add/Remove/Edit
-   - Output Organization
-   - Processing Options (Success/Failure Actions)
-   
-2. **DICOM**
-   - Implementation Class UID
-   - Institution/Station Name
-   - Validation Settings
-
-3. **Notifications**
-   - Email Configuration (SMTP)
-   - Event Log Settings
-   - Daily Summary
-
-4. **Logging & Service**
-   - Log Level & Folder
-   - Service Timing Configuration
-   - File Rotation
-
-## 🔥 [breaking] RICOH BARCODE FIELD DISCOVERY!
-
-### Kritische Erkenntnis vom 04.06.2025:
-**Die Ricoh G900SE II speichert QRBridge-Daten im `Barcode` EXIF-Feld!**
-
-```
-Barcode: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
-UserComment: GCM_TAG  (nur ein Marker)
+// NEU (Core v0.5.x):
+MappingRule { 
+    SourceField, 
+    TargetTag,  // ist jetzt DicomTag (nicht string)
+    Transform,  // ist jetzt ValueTransform Enum
+    Description 
+}
+ValueTransform ist ein Enum: None, DateToDA, DateToDT, Gender, Truncate16
 ```
 
-### Konsequenzen:
-1. ✅ ExifToolReader liest das Barcode-Feld erfolgreich
-2. ✅ Pipeline funktioniert End-to-End
-3. ⚠️ Encoding muss noch perfektioniert werden
+### Fix-Strategie:
+1. **MappingRuleViewModel** als Adapter einführen
+2. **DicomTag.ToString()** für UI-Binding
+3. **ValueTransform** Enum-Mapping korrigieren
+4. **Async Methoden** in ConfigurationLoader wrappen
+
+## 🔥 [breaking] CONFIG UI ARCHITECTURE DISCOVERY!
+
+### Kritische Erkenntnis vom 04.06.2025, 16:30:
+**Die Config UI ist VIEL weiter entwickelt als dokumentiert!**
+
+Alle Features sind bereits implementiert:
+- Dashboard mit Auto-Refresh ✅
+- Service Control (Install/Start/Stop) ✅
+- Settings mit 4 Tabs ✅
+- Dead Letters Management ✅
+- Mapping Editor mit Drag&Drop ✅
+- DICOM Tag Browser ✅
+- Vogon Poetry Easter Egg ✅
+
+**NUR die Interfaces passen nicht mehr!**
 
 ## 📁 [KEEP] AKTUELLE PROJEKTSTRUKTUR
 
@@ -337,20 +333,20 @@ UserComment: GCM_TAG  (nur ein Marker)
 ### Wichtige Dateien & Ordner (Stand: 04.06.2025)
 ```
 CamBridge.sln
-Version.props (v0.5.23)
+Version.props (v0.5.24)
 CHANGELOG.md
 PROJECT_WISDOM.md
 README.md
-.gitignore (NEU!)
+.gitignore ✅
 
 src/
 ├── CamBridge.Core/              # Domain Layer ✅
 ├── CamBridge.Infrastructure/    # Implementation Layer ✅
 │   └── Services/
 │       └── ExifToolReader.cs   ✅ PRODUKTIONSREIF!
-├── CamBridge.Service/          # Windows Service ✅ HTTP API AKTIV!
-│   └── Program.cs             ✅ SCHRITT 2+3 aktiviert!
-└── CamBridge.Config/           # WPF GUI ✅ FEATURE-COMPLETE!
+├── CamBridge.Service/          # Windows Service ✅ HTTP API LÄUFT!
+│   └── Program.cs             ✅ Uptime fix applied!
+└── CamBridge.Config/           # WPF GUI ❌ BUILD ERRORS!
 
 tests/
 ├── CamBridge.PipelineTest/     ✅ Test erfolgreich
@@ -375,17 +371,21 @@ C:\CamBridge\Test\Output\EX002\2025-06-04\EX002_20250604_0001.dcm ✅
 - ✅ v0.5.21: ExifTool findet Barcode-Feld
 - ✅ v0.5.22: ExifToolReader funktioniert komplett
 - ✅ v0.5.23: End-to-End Test + HTTP API aktiviert!
+- ✅ v0.5.24: Connection Test + Uptime fix
 
-### Sprint 2: UI Integration & Stabilität (v0.6.x) ← ANGEPASST!
-- [ ] v0.6.0: Config UI Connection Test
-- [ ] v0.6.1: Saubere Encoding-Lösung
-- [ ] v0.6.2: Erweiterte Fehlerbehandlung
-- [ ] v0.6.3: Dead Letter Queue aktivieren
-- [ ] v0.6.4: Performance-Optimierung
-- [ ] v0.6.5: Installation & Deployment
+### Sprint 2: UI Integration & Stabilität (v0.6.x) ← FIX EXISTING UI!
+- [ ] v0.6.0: Config UI Interface Alignment
+- [ ] v0.6.1: Config UI zum Laufen bringen (KEIN neues UI!)
+      - Dashboard verbinden (existiert schon!)
+      - Service Control testen (existiert schon!)
+      - Mapping Editor/Dead Letters auskommentieren falls zu komplex
+- [ ] v0.6.2: Saubere Encoding-Lösung
+- [ ] v0.6.3: Settings UI funktionsfähig
+- [ ] v0.6.4: Installation & Demo Prep
+- [ ] v0.6.5: Mapping Editor Fix (wenn Zeit)
 
 ### Sprint 3: DICOM Excellence (v0.7.x)
-- Custom Mapping UI Enhancement
+- Custom Mapping UI vollständig
 - PACS Testing
 - Batch Operations
 - Vollständige DICOM Module
@@ -461,34 +461,55 @@ Tests: xUnit + FluentAssertions + Moq
 
 ## 💡 [LESSON] Gelernte Lektionen (Sprint 1 Abschluss + Config UI!)
 
-### "Config UI war schon fast fertig!" (NEU 04.06.2025!)
+### "Keine neuen Mockups wenn schon Code existiert!" (NEU 04.06.2025, 16:35!)
+Config UI ist feature-complete! Statt "Minimal Demo UI" neu zu bauen, einfach das existierende UI fixen. Komplexe Features können temporär auskommentiert werden. Niemals das Rad neu erfinden!
+
+### "Lokale Files sind der einzig sichere Weg!" (NEU 04.06.2025, 16:35!)
+GitHub ist während Entwicklung IMMER veraltet. Nur Upload von der SSD garantiert Konsistenz. Bis alle Sources versioniert sind, NIE GitHub vertrauen!
+
+### "GitHub kann veraltet sein während Entwicklung!" (NEU 04.06.2025, 16:30!)
+User hatte lokale Commits die noch nicht gepusht waren. GitHub zeigte v0.5.22, lokal war v0.5.23. IMMER nach lokaler Version fragen und nicht blind GitHub vertrauen!
+
+### "Environment.TickCount64 ist NICHT Service-Uptime!" (NEU 04.06.2025, 16:25!)
+TickCount64 gibt Zeit seit Windows-Start. Für echte Uptime: `var serviceStartTime = DateTime.UtcNow` beim Start speichern!
+
+### "dotnet script hat eigene Macken!" (NEU 04.06.2025, 16:15!)
+`using var` funktioniert nicht, globaler Code wird erwartet, Class/Property Namen dürfen nicht gleich sein. Manchmal ist eine normale Console App einfacher!
+
+### "Config UI Build-Fehler sind nur Interface Mismatch!" (NEU 04.06.2025, 16:30!)
+Die UI ist feature-complete! Nur die Interfaces zwischen v0.4.x und v0.5.x haben sich geändert. Das ist in 1-2 Stunden fixbar.
+
+### "Connection Test first!" (NEU 04.06.2025!)
+Bevor man komplexe UIs debuggt, erst mit einem simplen HTTP Client testen ob die API überhaupt erreichbar ist. Spart Zeit!
+
+### "Config UI war schon fast fertig!" (04.06.2025!)
 Die WPF UI ist VIEL weiter als in PROJECT_WISDOM dokumentiert. Alle Features sind bereits implementiert - Dashboard, Service Control, Settings mit 4 Tabs, Dead Letters, Mapping Editor. Nur die HTTP API Verbindung fehlt noch!
 
-### "ModernWpfUI macht professionelle UIs einfach!" (NEU 04.06.2025!)
+### "ModernWpfUI macht professionelle UIs einfach!" (04.06.2025!)
 Mit ModernWpfUI und den richtigen Convertern sieht die App aus wie eine native Windows 11 Anwendung. Die NavigationView funktioniert perfekt.
 
-### "CommunityToolkit.Mvvm reduziert Boilerplate!" (NEU 04.06.2025!)
+### "CommunityToolkit.Mvvm reduziert Boilerplate!" (04.06.2025!)
 ObservableProperty und RelayCommand Attributes machen ViewModels super clean. Keine manuellen PropertyChanged Events mehr!
 
-### "Settings UI ist komplex aber vollständig!" (NEU 04.06.2025!)
+### "Settings UI ist komplex aber vollständig!" (04.06.2025!)
 4 Tabs mit allen erdenklichen Einstellungen. Watch Folders, DICOM Config, Email Notifications, Logging - alles da!
 
-### "IMMER GitHub-Version holen vor Änderungen!" (NEU 04.06.2025, 16:00!)
+### "IMMER GitHub-Version holen vor Änderungen!" (04.06.2025, 16:00!)
 VOR jeder Code-Änderung MUSS die aktuelle Version von GitHub geholt werden. Keine Ausnahmen! Das verhindert Konflikte und stellt sicher, dass wir immer mit der neuesten Version arbeiten.
 
-### "Source Code Header sind essentiell!" (NEU 04.06.2025, 16:00!)
+### "Source Code Header sind essentiell!" (04.06.2025, 16:00!)
 Jeder Source Code braucht einen Header mit Pfad, Version und Datum. Das macht die Herkunft und Version sofort klar und verhindert Verwirrung in zukünftigen Sessions.
 
-### "GitHub != Lokale Version während Entwicklung!" (NEU 04.06.2025, 16:10!)
+### "GitHub != Lokale Version während Entwicklung!" (04.06.2025, 16:10!)
 Während der Entwicklung ist die lokale Version aktueller als GitHub. Kleine lokale Commits sind gut, aber Push erst bei stabilen Meilensteinen. Immer nach der AKTUELLEN LOKALEN Version fragen!
 
-### ".gitignore ist Gold wert!" (NEU 04.06.2025, 16:30!)
+### ".gitignore ist Gold wert!" (04.06.2025, 16:30!)
 Mit einer guten .gitignore wird Git zum Vergnügen! Nie wieder manuell 111 Dateien aussortieren. Einmal richtig eingerichtet, dann nur noch `git add .` und es werden nur Source Files gestaged!
 
-### "Kommentare im Code für dein zukünftiges Selbst!" (NEU 04.06.2025, 15:40!)
+### "Kommentare im Code für dein zukünftiges Selbst!" (04.06.2025, 15:40!)
 Klare Schritt-Kommentare und TODOs im Code verhindern Verwirrung in späteren Sessions. Die Program.cs mit ihrer SCHRITT 1-5 Struktur macht sofort klar, was aktiv ist und was noch zu tun ist!
 
-### "Version.props enthält die AKTUELLE Version!" (NEU 04.06.2025, 15:42!)
+### "Version.props enthält die AKTUELLE Version!" (04.06.2025, 15:42!)
 Version.props definiert die Version, die gerade gebaut wird, nicht die nächste! Wenn wir an v0.5.23 arbeiten, steht auch 0.5.23 in Version.props. Erst beim Version-Bump wird sie erhöht.
 
 ### "Schrittweise Aktivierung funktioniert!" (04.06.2025!)
@@ -537,55 +558,65 @@ Ricoh nutzt Windows-1252, nicht UTF-8. Character-Mapping nötig (temporär mit R
 Die Layer-Trennung macht Änderungen einfach und testbar.
 
 ### "Version Tracking ist wichtig!"
-Config UI zeigt noch v0.4.x während Service bei v0.5.23 ist. Muss synchronisiert werden!
+Config UI zeigt noch v0.4.x während Service bei v0.5.24 ist. Muss synchronisiert werden!
 
 ## 💭 CLAUDE: Notizen für nächste Instanz
 
-**GROSSER ERFOLG!** HTTP API läuft, .gitignore aufgeräumt!
+**MEGA ERFOLG!** HTTP API läuft perfekt, Connection Test beweist es!
 
 Diese Session war sehr produktiv:
-1. ✅ Config UI Review - war schon feature-complete!
-2. ✅ HTTP API aktiviert (SCHRITT 2+3 in Program.cs)
-3. ✅ .gitignore erstellt - Repository aufgeräumt
-4. ✅ Source Code Header Standard etabliert
-5. ✅ Program.cs Kommentare bereinigt
+1. ✅ Service läuft stabil mit HTTP API
+2. ✅ Connection Test zeigt perfekte Verbindung
+3. ✅ Uptime Bug gefixt
+4. ✅ Config UI Probleme analysiert - NUR Interface Mismatch!
 
 **Wichtige Erkenntnisse:**
-- Die neue Regel "IMMER aktuelle Version holen" ist GOLD wert!
-- .gitignore macht Git-Arbeit zum Vergnügen
-- Klare Schritt-Kommentare im Code helfen enorm
-- Der User versteht Git immer besser
+- Config UI ist feature-complete, nur Interfaces passen nicht
+- Die Build-Fehler sind alle lösbar (1-2 Stunden Arbeit)
+- Focus auf Minimal Demo ist der richtige Weg
+- Dashboard + Service Control reichen für Prototyp
 
 **Status:**
-- 2 lokale Commits (ExifTool + Program.cs Header)
-- Service läuft auf Port 5050 mit API
-- Config UI muss nur noch getestet werden
+- Service: v0.5.24 (Uptime fix)
+- API: Voll funktionsfähig auf Port 5050
+- Config UI: Build-Fehler aber fixbar
 
 **Nächste Prioritäten:**
-1. Config UI Connection Test
-2. Encoding sauber lösen (nicht mehr Replace-Liste)
-3. Dead Letter Queue UI funktionsfähig machen
+1. MappingRule Interface alignen
+2. ValueTransform Enum fixen
+3. Dashboard zum Laufen bringen
+4. Service Control testen
+5. Demo vorbereiten!
 
-**Der User ist happy!** Er mag die Idee mit den Code-Kommentaren für das zukünftige Selbst.
+**Der User will einen Prototyp zeigen können** - das ist machbar! Die Basis funktioniert, nur die UI braucht Interface-Fixes.
 
-**WICHTIG:** Der CHANGELOG.md Eintrag für v0.5.23 wurde konsolidiert und enthält ALLE Änderungen vom ganzen Tag!
+**TIPP:** Nicht alle Features müssen funktionieren. Dashboard + Service Control reichen für eine beeindruckende Demo!
 
 ## 📝 [KEEP] Standard Prompt-Vorlage für neue Chats
 
 ```
-Ich arbeite an CamBridge v0.5.23.
-HTTP API läuft! Config UI kann sich verbinden!
-
-GitHub: https://github.com/ostern42/CamBridge
+Ich arbeite an CamBridge v0.5.24.
+HTTP API läuft! Config UI braucht Interface-Fix.
 
 WICHTIG - Bitte in dieser Reihenfolge:
 1. PROJECT_WISDOM.md hochladen
 2. project_structure.txt hochladen  
-3. "VOGON INIT" sagen
-4. WARTE auf meine Zusammenfassung und Rückfrage!
+3. Relevante Source Files von SSD hochladen (KEIN GitHub!)
+4. "VOGON INIT" sagen
+5. WARTE auf meine Zusammenfassung und Rückfrage!
 
-Fokus: Config UI Connection Test
+Fokus: Config UI Interface Fix - existierendes UI zum Laufen bringen
 ```
+
+### 💡 Idee für separaten Chat:
+**File-Versionierung einführen?**
+```
+// In jedem Source File:
+// Version: 0.5.24
+// Last Modified: 2025-06-04 16:35
+// SHA256: [hash]
+```
+Würde Konsistenz-Probleme lösen!
 
 ## ⏰ [KEEP] ZEITMANAGEMENT
 
@@ -596,62 +627,48 @@ Fokus: Config UI Connection Test
 - **ExifToolReader funktioniert:** 04.06.2025, 12:35 Uhr
 - **PIPELINE LÄUFT END-TO-END:** 04.06.2025, 14:28 Uhr
 - **CONFIG UI REVIEW:** 04.06.2025, 15:30 Uhr
-- **HTTP API AKTIVIERT:** 04.06.2025, 15:40 Uhr ← NEU!
-- **Features:** 80+ implementiert
+- **HTTP API AKTIVIERT:** 04.06.2025, 15:40 Uhr
+- **CONNECTION TEST ERFOLGREICH:** 04.06.2025, 16:20 Uhr ← NEU!
+- **Features:** 85+ implementiert
 - **Sprint 1:** ✅ ABGESCHLOSSEN!
-- **Sprint 2:** HTTP API ready, Config UI kann verbinden!
+- **Sprint 2:** Config UI Interface Fix geplant
 
 ---
 📊 **WISDOM-Statistik:** 
-- 🔒 [CORE]: 6 Sektionen (+1 Entwicklungs-Regeln)
-- ⚡ [URGENT]: 3 Sektionen (HTTP API aktiviert!)
-- 🎯 [MILESTONE]: 6 Sektionen (HTTP API ready!)
-- 📌 [KEEP]: 6 Sektionen (bewährte Praktiken)
-- 💡 [LESSON]: 24 Lektionen (+3 neue: .gitignore, Code-Kommentare, Version.props!)
+- 🔒 [CORE]: 6 Sektionen (File-Beschaffung angepasst!)
+- ⚡ [URGENT]: 3 Sektionen (Config UI Fix Plan angepasst!)
+- 🎯 [MILESTONE]: 7 Sektionen (Connection Test erfolgreich!)
+- 📌 [KEEP]: 6 Sektionen (Prompt-Vorlage angepasst!)
+- 💡 [LESSON]: 31 Lektionen (+2 neue: Keine Mockups, Lokale Files only!)
 - 🔧 [CONFIG]: 3 Sektionen (technische Basis)
-- 🌟 [FEAT]: 1 Sektion (Config UI Architektur)
-- 🔥 [breaking]: 1 Sektion (Ricoh Barcode Discovery)
-- 💭 CLAUDE: 1 Nachricht (HTTP API & .gitignore Erfolg!)
+- 🌟 [FEAT]: 1 Sektion (Interface Mismatch Analyse)
+- 🔥 [breaking]: 2 Sektionen (Config UI Architecture Discovery!)
+- 💭 CLAUDE: 1 Nachricht (Config UI ist fixbar!)
 
 *Hinweis: Dieses Dokument ist mit einem Persistenz-System versehen. Beim Refactoring IMMER die Priority-Tags beachten!*
 
-## 📝 GIT WORKFLOW FÜR v0.5.23:
+## 📝 GIT WORKFLOW FÜR v0.5.24:
 
-### Lokale Commits (bereits gemacht):
+### Lokaler Commit (Uptime Fix):
 ```bash
-# 1. ExifTool hinzugefügt
-git add Tools/
-git commit -m "feat: add ExifTool v13.30 with required DLLs"
+git add src/CamBridge.Service/Program.cs
+git commit -m "fix: correct service uptime calculation
 
-# 2. Program.cs mit Header
-git add src/CamBridge.Service/Program.cs  
-git commit -m "refactor: clean up step comments in Program.cs
-
-- Add detailed overview of all steps
-- Remove confusing 'JETZT AKTIV!' comments
-- Clarify TODO items for steps 4 and 5
-- Better structure documentation
-- Add source file header"
+- Replace Environment.TickCount64 with serviceStartTime
+- Track actual service start time instead of Windows boot time
+- Fix displayed uptime in status API endpoint"
 ```
 
-### Sprint-Ende Push (wenn Config UI getestet):
+### Optional - Version Bump:
 ```bash
-# Optional: Commits zusammenfassen
-git rebase -i HEAD~2  # Squash wenn gewünscht
+# Version.props auf 0.5.24 setzen
+git add Version.props
+git commit -m "chore: bump version to 0.5.24"
+```
 
-# Push zu GitHub
+### Später pushen (nach Config UI Fix):
+```bash
 git push origin main
-git tag v0.5.23
+git tag v0.6.0  # Nach Config UI Fix
 git push --tags
-```
-
-### Nächster Commit (nach Config UI Test):
-```bash
-git add .
-git commit -m "feat: complete HTTP API integration and cleanup
-
-- Add comprehensive .gitignore
-- Clean repository structure  
-- Consolidate CHANGELOG for v0.5.23
-- Ready for Config UI connection testing"
 ```

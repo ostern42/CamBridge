@@ -19,6 +19,9 @@ using Serilog;
 // Später aktivieren:
 // using Microsoft.OpenApi.Models;
 
+// Service start time for uptime calculation
+var serviceStartTime = DateTime.UtcNow;
+
 // ========================================
 // SCHRITT 1: Basis Pipeline (AKTIV) ✓
 // SCHRITT 2: Health Checks (AKTIV) ✓
@@ -241,27 +244,30 @@ public class Startup
                 var deadLetterQueue = context.RequestServices.GetService<DeadLetterQueue>();
                 var settings = context.RequestServices.GetService<IOptions<CamBridge.Core.CamBridgeSettings>>();
 
-                var stats = deadLetterQueue?.GetStatistics() ?? new CamBridge.Core.DeadLetterStatistics();
-                var totalProcessed = stats.TotalSuccessful + stats.TotalFailed;
+                // Get statistics safely
+                var queueStats = processingQueue?.GetStatistics();
+                var deadLetterStats = deadLetterQueue?.GetStatistics();
+
+                var totalProcessed = (queueStats?.TotalSuccessful ?? 0) + (queueStats?.TotalFailed ?? 0);
                 var successRate = totalProcessed > 0
-                    ? (double)stats.TotalSuccessful / totalProcessed * 100
+                    ? (double)(queueStats?.TotalSuccessful ?? 0) / totalProcessed * 100
                     : 0;
 
                 var status = new
                 {
                     ServiceStatus = "Running",
                     Version = "0.5.23",
-                    Uptime = TimeSpan.FromMilliseconds(Environment.TickCount64),
-                    QueueLength = processingQueue?.GetQueueLength() ?? 0,
-                    ActiveProcessing = 0, // TODO: Implement
-                    TotalSuccessful = stats.TotalSuccessful,
-                    TotalFailed = stats.TotalFailed,
+                    Uptime = DateTime.UtcNow - serviceStartTime,
+                    QueueLength = queueStats?.QueueLength ?? 0,
+                    ActiveProcessing = queueStats?.ActiveProcessing ?? 0,
+                    TotalSuccessful = queueStats?.TotalSuccessful ?? 0,
+                    TotalFailed = queueStats?.TotalFailed ?? 0,
                     SuccessRate = successRate,
-                    DeadLetterCount = deadLetterQueue?.GetQueueLength() ?? 0,
+                    DeadLetterCount = deadLetterStats?.TotalCount ?? 0,
                     Configuration = new
                     {
                         WatchFolders = settings?.Value?.WatchFolders?.Count ?? 0,
-                        OutputFolder = settings?.Value?.OutputFolder
+                        OutputFolder = settings?.Value?.DefaultOutputFolder
                     }
                 };
 
