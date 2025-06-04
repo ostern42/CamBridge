@@ -1,45 +1,37 @@
+// src\CamBridge.Config\Helpers\PasswordBoxHelper.cs
+// Version: 0.5.26
+// Helper for binding PasswordBox (which doesn't support direct binding)
+
 using System.Windows;
 using System.Windows.Controls;
 
 namespace CamBridge.Config.Helpers
 {
     /// <summary>
-    /// Helper class to enable secure password binding for PasswordBox
+    /// Helper class to enable binding on PasswordBox
     /// </summary>
     public static class PasswordBoxHelper
     {
-        // Attached property for binding support
         public static readonly DependencyProperty BoundPasswordProperty =
-            DependencyProperty.RegisterAttached(
-                "BoundPassword",
-                typeof(string),
-                typeof(PasswordBoxHelper),
-                new FrameworkPropertyMetadata(string.Empty, OnBoundPasswordChanged));
+            DependencyProperty.RegisterAttached("BoundPassword", typeof(string), typeof(PasswordBoxHelper),
+                new PropertyMetadata(string.Empty, OnBoundPasswordChanged));
 
-        // Enable/disable binding
         public static readonly DependencyProperty BindPasswordProperty =
-            DependencyProperty.RegisterAttached(
-                "BindPassword",
-                typeof(bool),
-                typeof(PasswordBoxHelper),
+            DependencyProperty.RegisterAttached("BindPassword", typeof(bool), typeof(PasswordBoxHelper),
                 new PropertyMetadata(false, OnBindPasswordChanged));
 
-        // Track if we're updating to avoid infinite loops
         private static readonly DependencyProperty UpdatingPasswordProperty =
-            DependencyProperty.RegisterAttached(
-                "UpdatingPassword",
-                typeof(bool),
-                typeof(PasswordBoxHelper),
+            DependencyProperty.RegisterAttached("UpdatingPassword", typeof(bool), typeof(PasswordBoxHelper),
                 new PropertyMetadata(false));
-
-        public static bool GetBindPassword(DependencyObject dp)
-        {
-            return (bool)dp.GetValue(BindPasswordProperty);
-        }
 
         public static void SetBindPassword(DependencyObject dp, bool value)
         {
             dp.SetValue(BindPasswordProperty, value);
+        }
+
+        public static bool GetBindPassword(DependencyObject dp)
+        {
+            return (bool)dp.GetValue(BindPasswordProperty);
         }
 
         public static string GetBoundPassword(DependencyObject dp)
@@ -66,11 +58,15 @@ namespace CamBridge.Config.Helpers
         {
             if (d is PasswordBox passwordBox)
             {
-                // Only update if we're not already updating (avoid loops)
+                // Disconnect the handler while we're updating
+                passwordBox.PasswordChanged -= HandlePasswordChanged;
+
                 if (!GetUpdatingPassword(passwordBox))
                 {
-                    passwordBox.Password = e.NewValue?.ToString() ?? string.Empty;
+                    passwordBox.Password = (string)e.NewValue;
                 }
+
+                passwordBox.PasswordChanged += HandlePasswordChanged;
             }
         }
 

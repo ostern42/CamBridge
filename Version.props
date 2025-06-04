@@ -1,16 +1,23 @@
 <Project>
 	<PropertyGroup>
-		<Version>0.5.25</Version>
-		<AssemblyVersion>0.5.25.0</AssemblyVersion>
-		<FileVersion>0.5.25.0</FileVersion>
-		<InformationalVersion>0.5.25+freeze-fix</InformationalVersion>
-		<TargetFramework>net8.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<Authors>Claude's Improbably Reliable Software Solutions</Authors>
-		<Company>Claude's Improbably Reliable Software Solutions</Company>
+		<Version>0.5.26</Version>
+		<FileVersion>0.5.26.0</FileVersion>
+		<AssemblyVersion>0.5.26.0</AssemblyVersion>
+		<InformationalVersion>0.5.26+$(SourceRevisionId)</InformationalVersion>
+		<PackageVersion>0.5.26</PackageVersion>
+
+		<!-- Build Metadata -->
+		<BuildDate>2025-06-04</BuildDate>
+		<BuildTime>23:13:00</BuildTime>
+
+		<!-- Product Information -->
 		<Product>CamBridge</Product>
+		<Company>Claude's Improbably Reliable Software Solutions</Company>
 		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
-		<Description>JPEG to DICOM converter for medical imaging from Ricoh cameras</Description>
+		<Description>JPEG to DICOM converter for Ricoh G900 II cameras</Description>
+
+		<!-- Git Information (will be filled by CI/CD) -->
+		<SourceRevisionId Condition="'$(SourceRevisionId)' == ''">local</SourceRevisionId>
+		<SourceBranch Condition="'$(SourceBranch)' == ''">main</SourceBranch>
 	</PropertyGroup>
 </Project>

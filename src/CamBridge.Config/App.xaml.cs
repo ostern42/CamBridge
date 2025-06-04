@@ -1,4 +1,6 @@
-// src/CamBridge.Config/App.xaml.cs
+// src\CamBridge.Config\App.xaml.cs
+// Version: 0.5.26 - Improved with Services property
+
 using System;
 using System.Runtime.Versioning;
 using System.Windows;
@@ -15,8 +17,9 @@ namespace CamBridge.Config
     {
         private IHost? _host;
 
-        // Property for DI access
+        // Properties for DI access
         public IHost Host => _host!;
+        public IServiceProvider Services => _host!.Services;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -28,9 +31,9 @@ namespace CamBridge.Config
                     services.AddSingleton<IApiService, HttpApiService>();
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IServiceManager, ServiceManager>();
-                    services.AddSingleton<IConfigurationService, ConfigurationService>(); // FIXED: Added missing registration!
+                    services.AddSingleton<IConfigurationService, ConfigurationService>();
 
-                    // ViewModels - WICHTIG: Alle müssen registriert sein!
+                    // ViewModels - All must be registered!
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ServiceControlViewModel>();
@@ -44,6 +47,7 @@ namespace CamBridge.Config
                 .ConfigureLogging(logging =>
                 {
                     logging.AddDebug();
+                    logging.SetMinimumLevel(LogLevel.Debug);
                 })
                 .Build();
 

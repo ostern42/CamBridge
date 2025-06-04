@@ -1,3 +1,7 @@
+// src\CamBridge.Infrastructure\Services\FileProcessor.cs
+// Version: 0.5.26
+// Complete file with fixed GenerateOutputFileName method
+
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -252,15 +256,15 @@ namespace CamBridge.Infrastructure.Services
         {
             var pattern = _processingOptions.OutputFilePattern;
 
-            // Replace tokens
-            var fileName = pattern
-                .Replace("{PatientID}", SanitizeFileName(metadata.Patient.Id.Value))
-                .Replace("{PatientName}", SanitizeFileName(metadata.Patient.Name))
-                .Replace("{StudyDate}", metadata.Study.StudyDate.ToString("yyyyMMdd"))
-                .Replace("{StudyID}", SanitizeFileName(metadata.Study.StudyId.Value))
-                .Replace("{ExamID}", SanitizeFileName(metadata.Study.ExamId ?? ""))
-                .Replace("{InstanceNumber}", metadata.InstanceNumber.ToString("D4"))
-                .Replace("{Timestamp}", DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
+            // Replace tokens - fixed version with proper string assignment
+            string fileName = pattern;
+            fileName = fileName.Replace("{PatientID}", SanitizeFileName(metadata.Patient.Id.Value));
+            fileName = fileName.Replace("{PatientName}", SanitizeFileName(metadata.Patient.Name));
+            fileName = fileName.Replace("{StudyDate}", metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            fileName = fileName.Replace("{StudyID}", SanitizeFileName(metadata.Study.StudyId.Value));
+            fileName = fileName.Replace("{ExamID}", SanitizeFileName(metadata.Study.ExamId ?? ""));
+            fileName = fileName.Replace("{InstanceNumber}", metadata.InstanceNumber.ToString("D4"));
+            fileName = fileName.Replace("{Timestamp}", DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
 
             // Ensure .dcm extension
             if (!fileName.EndsWith(".dcm", StringComparison.OrdinalIgnoreCase))

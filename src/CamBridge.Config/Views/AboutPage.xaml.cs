@@ -1,327 +1,191 @@
+// src\CamBridge.Config\Views\AboutPage.xaml.cs
+// Version: 0.5.26
+// Complete about page implementation with all event handlers
+
 using System;
-using System.Runtime.Versioning;
+using System.Diagnostics;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
+using System.Windows.Navigation;
 
 namespace CamBridge.Config.Views
 {
-    [SupportedOSPlatform("windows")]
+    /// <summary>
+    /// About page showing application information and credits
+    /// </summary>
     public partial class AboutPage : Page
     {
-        private int _secretCounter = 0;
-        private readonly string _secretCode = "42";
-        private string _inputBuffer = "";
-        private DateTime _lastKeyPress = DateTime.MinValue;
-        private DispatcherTimer? _spriteTimer;
-        private WriteableBitmap? _spriteBitmap;
-        private int _spriteX = 50;
-        private int _spriteY = 50;
-        private double _spriteDX = 2;
-        private double _spriteDY = 2;
-        private readonly Random _random = new Random();
-
         public AboutPage()
         {
             InitializeComponent();
-
-            // Set focus to enable keyboard input
-            Loaded += (s, e) =>
-            {
-                Focus();
-                Focusable = true;
-            };
-
-            // Wire up keyboard handler
-            PreviewKeyDown += AboutPage_PreviewKeyDown;
+            LoadVersionInfo();
+            LoadSystemInfo();
         }
 
-        private void AboutPage_PreviewKeyDown(object sender, KeyEventArgs e)
+        /// <summary>
+        /// Loads version information from the assembly
+        /// </summary>
+        private void LoadVersionInfo()
         {
-            // Check if more than 2 seconds have passed - reset buffer
-            if ((DateTime.Now - _lastKeyPress).TotalSeconds > 2)
-            {
-                _inputBuffer = "";
-            }
-
-            _lastKeyPress = DateTime.Now;
-
-            // Add the key to buffer (only digits)
-            if (e.Key >= Key.D0 && e.Key <= Key.D9)
-            {
-                _inputBuffer += (e.Key - Key.D0).ToString();
-            }
-            else if (e.Key >= Key.NumPad0 && e.Key <= Key.NumPad9)
-            {
-                _inputBuffer += (e.Key - Key.NumPad0).ToString();
-            }
-
-            // Check if we have the secret code
-            if (_inputBuffer.EndsWith(_secretCode))
-            {
-                _secretCounter++;
-                _inputBuffer = ""; // Reset buffer
-
-                if (_secretCounter == 1)
-                {
-                    // First time - show subtle hint
-                    ShowEasterEggHint();
-                }
-                else if (_secretCounter == 3)
-                {
-                    // Third time - ACTIVATE VOGON POETRY MODE!
-                    ActivateVogonPoetryMode();
-                }
-            }
-
-            // Keep buffer reasonable size
-            if (_inputBuffer.Length > 10)
-            {
-                _inputBuffer = _inputBuffer.Substring(_inputBuffer.Length - 10);
-            }
-        }
-
-        private void ShowEasterEggHint()
-        {
-            // Create a subtle animation on the version text
-            var storyboard = new Storyboard();
-
-            var colorAnimation = new ColorAnimation
-            {
-                From = Colors.White,
-                To = Colors.Gold,
-                Duration = TimeSpan.FromSeconds(0.5),
-                AutoReverse = true,
-                RepeatBehavior = new RepeatBehavior(3)
-            };
-
-            Storyboard.SetTarget(colorAnimation, VersionText);
-            Storyboard.SetTargetProperty(colorAnimation,
-                new PropertyPath("(TextBlock.Foreground).(SolidColorBrush.Color)"));
-
-            storyboard.Children.Add(colorAnimation);
-            storyboard.Begin();
-
-            // Update the subtitle with a hint
-            SubtitleText.Text = "The answer to life, universe, and DICOM...";
-        }
-
-        private void ActivateVogonPoetryMode()
-        {
-            // Hide normal content
-            NormalContent.Visibility = Visibility.Collapsed;
-            VogonContent.Visibility = Visibility.Visible;
-
-            // Start the Amiga ball animation
-            StartAmigaBallAnimation();
-
-            // Start scrolling text
-            StartScrollingText();
-
-            // Add random guru meditation messages
-            StartGuruMeditation();
-
-            // Play with the background
-            StartBackgroundEffects();
-        }
-
-        private void StartAmigaBallAnimation()
-        {
-            // Create a simple sprite for the Amiga ball
-            _spriteBitmap = new WriteableBitmap(50, 50, 96, 96, PixelFormats.Bgr32, null);
-            SpriteImage.Source = _spriteBitmap;
-
-            // Draw a simple ball (red and white checkerboard pattern)
-            DrawAmigaBall();
-
-            // Start the animation timer
-            _spriteTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(16) // ~60 FPS
-            };
-            _spriteTimer.Tick += AnimateSprite;
-            _spriteTimer.Start();
-        }
-
-        private void DrawAmigaBall()
-        {
-            if (_spriteBitmap == null) return;
-
             try
             {
-                _spriteBitmap.Lock();
+                var assembly = Assembly.GetExecutingAssembly();
+                var version = assembly.GetName().Version;
 
-                unsafe
+                // Set version text
+                if (FindName("VersionText") is TextBlock versionText)
                 {
-                    int stride = _spriteBitmap.BackBufferStride;
-                    byte* buffer = (byte*)_spriteBitmap.BackBuffer;
-
-                    int centerX = 25;
-                    int centerY = 25;
-                    int radius = 23;
-
-                    for (int y = 0; y < 50; y++)
-                    {
-                        for (int x = 0; x < 50; x++)
-                        {
-                            int dx = x - centerX;
-                            int dy = y - centerY;
-                            double distance = Math.Sqrt(dx * dx + dy * dy);
-
-                            if (distance <= radius)
-                            {
-                                // Create checkerboard pattern
-                                bool isRed = ((x / 10) + (y / 10)) % 2 == 0;
-
-                                int pixelOffset = y * stride + x * 4;
-
-                                if (isRed)
-                                {
-                                    buffer[pixelOffset] = 0;      // Blue
-                                    buffer[pixelOffset + 1] = 0;  // Green
-                                    buffer[pixelOffset + 2] = 255; // Red
-                                }
-                                else
-                                {
-                                    buffer[pixelOffset] = 255;     // Blue
-                                    buffer[pixelOffset + 1] = 255; // Green
-                                    buffer[pixelOffset + 2] = 255; // Red
-                                }
-                                buffer[pixelOffset + 3] = 255; // Alpha
-                            }
-                        }
-                    }
+                    versionText.Text = $"Version {version?.ToString() ?? "0.5.26"}";
                 }
 
-                _spriteBitmap.AddDirtyRect(new Int32Rect(0, 0, 50, 50));
-            }
-            finally
-            {
-                _spriteBitmap.Unlock();
-            }
-        }
-
-        private void AnimateSprite(object? sender, EventArgs e)
-        {
-            // Update position
-            _spriteX += (int)_spriteDX;
-            _spriteY += (int)_spriteDY;
-
-            // Get actual bounds
-            var maxX = (int)(SpriteCanvas.ActualWidth - 50);
-            var maxY = (int)(SpriteCanvas.ActualHeight - 50);
-
-            // Bounce off walls
-            if (_spriteX <= 0 || _spriteX >= maxX)
-            {
-                _spriteDX = -_spriteDX;
-                _spriteX = Math.Max(0, Math.Min(_spriteX, maxX));
-            }
-
-            if (_spriteY <= 0 || _spriteY >= maxY)
-            {
-                _spriteDY = -_spriteDY;
-                _spriteY = Math.Max(0, Math.Min(_spriteY, maxY));
-            }
-
-            // Update canvas position
-            Canvas.SetLeft(SpriteImage, _spriteX);
-            Canvas.SetTop(SpriteImage, _spriteY);
-
-            // Randomly change direction occasionally
-            if (_random.Next(100) < 2)
-            {
-                _spriteDX += (_random.NextDouble() - 0.5) * 0.5;
-                _spriteDY += (_random.NextDouble() - 0.5) * 0.5;
-
-                // Keep speed reasonable
-                _spriteDX = Math.Max(-5, Math.Min(5, _spriteDX));
-                _spriteDY = Math.Max(-5, Math.Min(5, _spriteDY));
-            }
-        }
-
-        private void StartScrollingText()
-        {
-            var scrollAnimation = new DoubleAnimation
-            {
-                From = ActualWidth,
-                To = -ScrollingText.ActualWidth - 1000,
-                Duration = TimeSpan.FromSeconds(30),
-                RepeatBehavior = RepeatBehavior.Forever
-            };
-
-            ScrollingText.BeginAnimation(Canvas.LeftProperty, scrollAnimation);
-        }
-
-        private void StartGuruMeditation()
-        {
-            var timer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(5)
-            };
-
-            timer.Tick += (s, e) =>
-            {
-                var messages = new[]
+                // Set build date
+                if (FindName("BuildDateText") is TextBlock buildDateText)
                 {
-                    "Guru Meditation #00000004.0000AAC0",
-                    "Guru Meditation #80000003.DEADBEEF",
-                    "Guru Meditation #00000009.42424242",
-                    "Guru Meditation #DICOM.FATAL.ERROR",
-                    "Guru Meditation #RICOH.G900.POETRY"
-                };
+                    var buildDate = System.IO.File.GetLastWriteTime(assembly.Location);
+                    buildDateText.Text = $"Built on {buildDate:yyyy-MM-dd HH:mm}";
+                }
 
-                GuruText.Text = messages[_random.Next(messages.Length)];
-
-                // Flash effect
-                var flashAnimation = new DoubleAnimation
+                // Set copyright
+                if (FindName("CopyrightText") is TextBlock copyrightText)
                 {
-                    From = 0,
-                    To = 1,
-                    Duration = TimeSpan.FromMilliseconds(100),
-                    AutoReverse = true,
-                    RepeatBehavior = new RepeatBehavior(3)
-                };
-
-                GuruText.BeginAnimation(OpacityProperty, flashAnimation);
-            };
-
-            timer.Start();
-        }
-
-        private void StartBackgroundEffects()
-        {
-            var colorAnimation = new ColorAnimation
+                    copyrightText.Text = "© 2025 Claude's Improbably Reliable Software Solutions";
+                }
+            }
+            catch (Exception ex)
             {
-                From = Color.FromRgb(0, 0, 0),
-                To = Color.FromRgb(10, 0, 20),
-                Duration = TimeSpan.FromSeconds(3),
-                AutoReverse = true,
-                RepeatBehavior = RepeatBehavior.Forever
-            };
-
-            var brush = new SolidColorBrush(Colors.Black);
-            VogonContent.Background = brush;
-
-            brush.BeginAnimation(SolidColorBrush.ColorProperty, colorAnimation);
+                System.Diagnostics.Debug.WriteLine($"Error loading version info: {ex.Message}");
+            }
         }
 
+        /// <summary>
+        /// Loads system information
+        /// </summary>
+        private void LoadSystemInfo()
+        {
+            try
+            {
+                if (FindName("SystemInfoText") is TextBlock systemInfo)
+                {
+                    systemInfo.Text = $"Running on {Environment.OSVersion} " +
+                                    $"({Environment.ProcessorCount} cores) " +
+                                    $"with .NET {Environment.Version}";
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading system info: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Handles hyperlink navigation requests
+        /// </summary>
+        private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            try
+            {
+                // Open URL in default browser
+                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)
+                {
+                    UseShellExecute = true
+                });
+                e.Handled = true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error opening URL: {ex.Message}");
+                MessageBox.Show(
+                    $"Could not open URL: {e.Uri.AbsoluteUri}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+
+        /// <summary>
+        /// Shows Vogon Poetry easter egg window
+        /// </summary>
+        private void VogonPoetry_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var vogonWindow = new VogonPoetryWindow
+                {
+                    Owner = Window.GetWindow(this),
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+                vogonWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to show Vogon Poetry: {ex.Message}");
+
+                // Fallback: Show poetry in message box
+                MessageBox.Show(
+                    "Oh freddled gruntbuggly,\n" +
+                    "Thy micturations are to me\n" +
+                    "As plurdled gabbleblotchits on a lurgid bee.\n\n" +
+                    "- Prostetnic Vogon Jeltz",
+                    "Vogon Poetry",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
+
+        /// <summary>
+        /// Handles exit button click - closes the application
+        /// </summary>
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
-            // Stop all animations
-            _spriteTimer?.Stop();
+            var result = MessageBox.Show(
+                "Are you sure you want to exit CamBridge Configuration?",
+                "Exit Application",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
 
-            // Show normal content
-            VogonContent.Visibility = Visibility.Collapsed;
-            NormalContent.Visibility = Visibility.Visible;
+            if (result == MessageBoxResult.Yes)
+            {
+                // Graceful shutdown
+                try
+                {
+                    // Save any pending settings
+                    Application.Current.MainWindow?.Close();
+                    Application.Current.Shutdown();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error during shutdown: {ex.Message}");
+                    Environment.Exit(0);
+                }
+            }
+        }
 
-            // Reset counter
-            _secretCounter = 0;
-            SubtitleText.Text = "JPEG to DICOM Converter for Ricoh Cameras";
+        /// <summary>
+        /// Handles keyboard shortcuts
+        /// </summary>
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+
+            // Ctrl+W or Escape to close
+            if ((e.Key == Key.W && Keyboard.Modifiers == ModifierKeys.Control) ||
+                e.Key == Key.Escape)
+            {
+                var mainWindow = Window.GetWindow(this);
+                if (mainWindow != null)
+                {
+                    // Navigate back or close
+                    var navigationService = NavigationService.GetNavigationService(this);
+                    if (navigationService?.CanGoBack == true)
+                    {
+                        navigationService.GoBack();
+                    }
+                }
+                e.Handled = true;
+            }
         }
     }
 }

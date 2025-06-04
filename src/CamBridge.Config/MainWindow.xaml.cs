@@ -1,9 +1,11 @@
-// src/CamBridge.Config/MainWindow.xaml.cs
+// src\CamBridge.Config\MainWindow.xaml.cs
+// Version: 0.5.26 - Improved navigation with ViewModels
+
 using System;
 using System.Runtime.Versioning;
 using System.Windows;
-using System.Windows.Controls;
 using CamBridge.Config.Views;
+using CamBridge.Config.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using ModernWpf.Controls;
 
@@ -19,10 +21,13 @@ namespace CamBridge.Config
             _serviceProvider = serviceProvider;
             InitializeComponent();
 
+            // Set MainViewModel
+            DataContext = _serviceProvider.GetRequiredService<MainViewModel>();
+
             // Navigate to Dashboard on startup
             if (ContentFrame != null)
             {
-                ContentFrame.Navigate(new DashboardPage());
+                NavigateToPage("Dashboard");
             }
         }
 
@@ -33,28 +38,57 @@ namespace CamBridge.Config
             if (args.SelectedItemContainer != null && ContentFrame != null)
             {
                 var tag = args.SelectedItemContainer.Tag?.ToString();
+                if (!string.IsNullOrEmpty(tag))
+                {
+                    NavigateToPage(tag);
+                }
+            }
+        }
+
+        private void NavigateToPage(string tag)
+        {
+            try
+            {
+                System.Windows.Controls.Page? page = null;
 
                 switch (tag)
                 {
                     case "Dashboard":
-                        ContentFrame.Navigate(new DashboardPage());
+                        page = new DashboardPage();
                         break;
+
                     case "ServiceControl":
-                        ContentFrame.Navigate(new ServiceControlPage());
+                        page = new ServiceControlPage();
                         break;
+
                     case "DeadLetters":
-                        ContentFrame.Navigate(new DeadLettersPage());
+                        page = new DeadLettersPage();
                         break;
+
                     case "MappingEditor":
-                        ContentFrame.Navigate(new MappingEditorPage());
+                        page = new MappingEditorPage();
                         break;
+
                     case "Settings":
-                        ContentFrame.Navigate(new SettingsPage());
+                        page = new SettingsPage();
                         break;
+
                     case "About":
-                        ContentFrame.Navigate(new AboutPage());
+                        page = new AboutPage();
                         break;
                 }
+
+                if (page != null && ContentFrame != null)
+                {
+                    ContentFrame.Navigate(page);
+                    System.Diagnostics.Debug.WriteLine($"Navigated to {tag}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Navigation error: {ex.Message}");
+                MessageBox.Show($"Error navigating to {tag}: {ex.Message}", "Navigation Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

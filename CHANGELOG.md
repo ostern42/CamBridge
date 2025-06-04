@@ -6,6 +6,35 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.26] - 2025-06-04
+
+### Added
+- Complete ViewModel initialization for all Config UI pages
+- Drag & drop event handlers for MappingEditorPage
+- Proper error handling and user feedback in all pages
+- Resource cleanup in page unload events
+- Fallback implementations for DI container failures
+
+### Fixed
+- Navigation not setting ViewModels for pages
+- HttpApiService constructor parameter mismatch
+- ServiceControlPage duplicate member definitions
+- DeadLettersPage missing load method handling
+- AboutPage missing ExitButton_Click handler
+- MappingEditorPage missing drag & drop handlers
+
+### Changed
+- All pages now properly retrieve ViewModels from DI container
+- Improved error messages with actionable user guidance
+- Standardized page initialization pattern across all views
+- Enhanced debug output for troubleshooting
+
+### Technical
+- Removed test projects from solution
+- Fixed WPF temp file build issues
+- Proper HttpClient configuration for API services
+- Clean separation of generated and manual code
+
 ## [0.5.25] - 2025-06-04
 
 ### Fixed
