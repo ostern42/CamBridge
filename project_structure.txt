@@ -50,6 +50,7 @@ src\CamBridge.Core\CamBridgeSettings.cs
 src\CamBridge.Core\CustomMappingConfiguration.cs
 src\CamBridge.Core\DeadLetterStatistics.cs
 src\CamBridge.Core\Entities\ImageMetadata.cs
+src\CamBridge.Core\Entities\ImageTechnicalData.cs
 src\CamBridge.Core\Entities\PatientInfo.cs
 src\CamBridge.Core\Entities\ProcessingResult.cs
 src\CamBridge.Core\Entities\StudyInfo.cs

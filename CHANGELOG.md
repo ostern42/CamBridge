@@ -6,6 +6,47 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.21] - 2025-06-04
+
+### Added
+- Complete pipeline test program (CamBridge.PipelineTest)
+- Direct ExifTool test program to identify EXIF field locations
+- Full DICOM validation in test program
+- Detailed logging of all pipeline stages
+- Automatic output directory creation
+- Comprehensive EXIF field analysis for Ricoh G900SE II
+
+### Discovered
+- Ricoh cameras store QRBridge data in the `Barcode` EXIF field
+- UserComment field only contains "GCM_TAG" marker
+- All 5 QRBridge fields successfully transmitted
+- Confirmed pipe-delimited format: `EX002|Schmidt, Maria|1985-03-15|F|R�ntgen�Thorax`
+
+### Fixed
+- Test infrastructure for end-to-end pipeline validation
+- Missing file existence checks before processing
+- Identified root cause of missing barcode data
+- Prepared ExifToolReader fix for Barcode field reading
+
+### Changed
+- Enhanced test output with metadata display
+- Improved error handling and reporting in tests
+- Test strategy to use direct ExifTool calls for debugging
+- Understanding of Ricoh EXIF field usage
+
+### Technical
+- Created standalone test project for pipeline validation
+- Added DICOM file validation using fo-dicom
+- Structured logging output for better debugging
+- Identified encoding issue: Windows-1252 characters (�) instead of UTF-8
+- ExifToolReader must read `Barcode` field, not `UserComment`
+
+### Next Steps
+- Apply ExifToolReader fix to read Barcode field
+- Fix encoding issues (�→ö) if confirmed
+- Test complete pipeline with fixed reader
+- Release v0.5.22 with working pipeline
+
 ## [0.5.20] - 2025-06-03
 
 ### Fixed
