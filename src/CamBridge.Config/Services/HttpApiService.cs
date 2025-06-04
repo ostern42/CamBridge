@@ -1,7 +1,14 @@
-// src/CamBridge.Config/Services/HttpApiService.cs
+// File: src/CamBridge.Config/Services/HttpApiService.cs
+// Version: 0.5.24
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Modified: 2025-06-04
+// Status: Development
+
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using CamBridge.Config.Models;
 using Microsoft.Extensions.Logging;
@@ -9,21 +16,28 @@ using Microsoft.Extensions.Logging;
 namespace CamBridge.Config.Services
 {
     /// <summary>
-    /// Service for communicating with CamBridge Service API
+    /// Implementation of IApiService for HTTP communication with CamBridge Service
     /// </summary>
     public class HttpApiService : IApiService
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<HttpApiService> _logger;
+        private readonly JsonSerializerOptions _jsonOptions;
 
         public HttpApiService(HttpClient httpClient, ILogger<HttpApiService> logger)
         {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _httpClient = httpClient;
+            _logger = logger;
 
-            // Setze BaseAddress korrekt mit trailing slash
-            _httpClient.BaseAddress = new Uri("http://localhost:5050/api/");
-            _httpClient.Timeout = TimeSpan.FromSeconds(10);
+            _jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+
+            // Set base address
+            _httpClient.BaseAddress = new Uri("http://localhost:5050/");
+            _httpClient.Timeout = TimeSpan.FromSeconds(5);
         }
 
         /// <summary>
@@ -33,30 +47,52 @@ namespace CamBridge.Config.Services
         {
             try
             {
-                // Verwende relativen Pfad ohne führenden Slash
-                var response = await _httpClient.GetAsync("status");
+                var response = await _httpClient.GetAsync("api/status");
+
                 if (response.IsSuccessStatusCode)
                 {
-                    return await response.Content.ReadFromJsonAsync<ServiceStatusModel>();
+                    var json = await response.Content.ReadAsStringAsync();
+
+                    // Parse the actual API response
+                    var apiResponse = JsonSerializer.Deserialize<ApiStatusResponse>(json, _jsonOptions);
+
+                    if (apiResponse != null)
+                    {
+                        // Map to our ServiceStatusModel
+                        return new ServiceStatusModel
+                        {
+                            ServiceStatus = apiResponse.ServiceStatus ?? "Unknown",
+                            Timestamp = DateTime.UtcNow,
+                            QueueLength = apiResponse.QueueLength,
+                            ActiveProcessing = apiResponse.ActiveProcessing,
+                            TotalProcessed = apiResponse.TotalSuccessful + apiResponse.TotalFailed,
+                            TotalSuccessful = apiResponse.TotalSuccessful,
+                            TotalFailed = apiResponse.TotalFailed,
+                            SuccessRate = apiResponse.SuccessRate,
+                            ProcessingRate = 0, // Not provided by API
+                            Uptime = apiResponse.Uptime ?? TimeSpan.Zero,
+                            DeadLetterCount = apiResponse.DeadLetterCount,
+                            ActiveItems = new List<ActiveItemModel>() // Not provided by API
+                        };
+                    }
                 }
 
-                _logger.LogWarning("Failed to get status: {StatusCode} - {Reason}",
-                    response.StatusCode, response.ReasonPhrase);
+                _logger.LogWarning("Failed to get service status: {StatusCode}", response.StatusCode);
                 return null;
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "Network error getting status");
+                _logger.LogDebug(ex, "Failed to get service status");
                 return null;
             }
-            catch (TaskCanceledException)
+            catch (TaskCanceledException ex)
             {
-                _logger.LogWarning("Request timeout getting status");
+                _logger.LogDebug(ex, "Service status request timed out");
                 return null;
             }
-            catch (Exception ex)
+            catch (JsonException ex)
             {
-                _logger.LogError(ex, "Unexpected error getting status");
+                _logger.LogError(ex, "Failed to deserialize service status");
                 return null;
             }
         }
@@ -66,22 +102,14 @@ namespace CamBridge.Config.Services
         /// </summary>
         public async Task<DetailedStatisticsModel?> GetStatisticsAsync()
         {
-            try
+            // This endpoint doesn't exist in the current API
+            // Return empty statistics for now
+            await Task.CompletedTask;
+            return new DetailedStatisticsModel
             {
-                var response = await _httpClient.GetAsync("status/statistics");
-                if (response.IsSuccessStatusCode)
-                {
-                    return await response.Content.ReadFromJsonAsync<DetailedStatisticsModel>();
-                }
-
-                _logger.LogWarning("Failed to get statistics: {StatusCode}", response.StatusCode);
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting statistics");
-                return null;
-            }
+                TopErrors = new Dictionary<string, int>(),
+                ErrorCategories = new Dictionary<string, int>()
+            };
         }
 
         /// <summary>
@@ -89,22 +117,10 @@ namespace CamBridge.Config.Services
         /// </summary>
         public async Task<List<DeadLetterItemModel>?> GetDeadLettersAsync()
         {
-            try
-            {
-                var response = await _httpClient.GetAsync("status/deadletters");
-                if (response.IsSuccessStatusCode)
-                {
-                    return await response.Content.ReadFromJsonAsync<List<DeadLetterItemModel>>();
-                }
-
-                _logger.LogWarning("Failed to get dead letters: {StatusCode}", response.StatusCode);
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting dead letters");
-                return null;
-            }
+            // This endpoint doesn't exist in the current API
+            // Return empty list for now
+            await Task.CompletedTask;
+            return new List<DeadLetterItemModel>();
         }
 
         /// <summary>
@@ -112,16 +128,9 @@ namespace CamBridge.Config.Services
         /// </summary>
         public async Task<bool> ReprocessDeadLetterAsync(Guid id)
         {
-            try
-            {
-                var response = await _httpClient.PostAsync($"status/deadletters/{id}/reprocess", null);
-                return response.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error reprocessing dead letter {Id}", id);
-                return false;
-            }
+            // This endpoint doesn't exist in the current API
+            await Task.CompletedTask;
+            return false;
         }
 
         /// <summary>
@@ -131,14 +140,43 @@ namespace CamBridge.Config.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync("status/health");
+                // Use the health endpoint
+                var response = await _httpClient.GetAsync("health");
                 return response.IsSuccessStatusCode;
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
             {
-                _logger.LogDebug(ex, "Service not available");
+                _logger.LogDebug(ex, "Service not reachable");
                 return false;
             }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogDebug(ex, "Service request timed out");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Internal model to match the actual API response
+        /// </summary>
+        private class ApiStatusResponse
+        {
+            public string? ServiceStatus { get; set; }
+            public string? Version { get; set; }
+            public TimeSpan? Uptime { get; set; }
+            public int QueueLength { get; set; }
+            public int ActiveProcessing { get; set; }
+            public int TotalSuccessful { get; set; }
+            public int TotalFailed { get; set; }
+            public double SuccessRate { get; set; }
+            public int DeadLetterCount { get; set; }
+            public ApiConfigurationInfo? Configuration { get; set; }
+        }
+
+        private class ApiConfigurationInfo
+        {
+            public int WatchFolders { get; set; }
+            public string? OutputFolder { get; set; }
         }
     }
 }

@@ -1,5 +1,5 @@
 // File: src/CamBridge.Service/Program.cs
-// Version: 0.5.23
+// Version: 0.5.24
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 // Modified: 2025-06-04
 // Status: Development
@@ -19,9 +19,6 @@ using Serilog;
 // Später aktivieren:
 // using Microsoft.OpenApi.Models;
 
-// Service start time for uptime calculation
-var serviceStartTime = DateTime.UtcNow;
-
 // ========================================
 // SCHRITT 1: Basis Pipeline (AKTIV) ✓
 // SCHRITT 2: Health Checks (AKTIV) ✓
@@ -29,6 +26,9 @@ var serviceStartTime = DateTime.UtcNow;
 // SCHRITT 4: Swagger (auskommentiert)
 // SCHRITT 5: Windows Service (auskommentiert)
 // ========================================
+
+// Set service start time
+Program.ServiceStartTime = DateTime.UtcNow;
 
 // Determine if running as service or console
 var isService = false; // SCHRITT 5: Später auf true für Windows Service
@@ -42,7 +42,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("Starting CamBridge Service v0.5.23...");
+    Log.Information("Starting CamBridge Service v0.5.24...");
     Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
 
     // ========== SCHRITT 1: BASIC PIPELINE (AKTIV) ==========
@@ -256,8 +256,8 @@ public class Startup
                 var status = new
                 {
                     ServiceStatus = "Running",
-                    Version = "0.5.23",
-                    Uptime = DateTime.UtcNow - serviceStartTime,
+                    Version = "0.5.24",
+                    Uptime = DateTime.UtcNow - Program.ServiceStartTime,  // Fixed: Use Program.ServiceStartTime
                     QueueLength = queueStats?.QueueLength ?? 0,
                     ActiveProcessing = queueStats?.ActiveProcessing ?? 0,
                     TotalSuccessful = queueStats?.TotalSuccessful ?? 0,
@@ -283,7 +283,7 @@ public class Startup
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync(@"
                         <html>
-                        <head><title>CamBridge Service v0.5.23</title></head>
+                        <head><title>CamBridge Service v0.5.24</title></head>
                         <body>
                             <h1>CamBridge Service - Development Mode</h1>
                             <p>API Features sind jetzt aktiviert!</p>
@@ -301,4 +301,10 @@ public class Startup
             }
         });
     }
+}
+
+// Service start time storage
+public partial class Program
+{
+    public static DateTime ServiceStartTime { get; private set; }
 }

@@ -68,7 +68,7 @@
                                      Width="20"
                                      Height="20"
                                      Margin="0,0,8,0"/>
-                    <Button Command="{Binding RefreshCommand}"
+                    <Button Command="{Binding RefreshDataCommand}"
                             IsEnabled="{Binding IsConnected}">
                         <StackPanel Orientation="Horizontal">
                             <ui:SymbolIcon Symbol="Refresh" Margin="0,0,4,0"/>
@@ -125,7 +125,7 @@
                         <StackPanel Grid.Column="1">
                             <TextBlock Text="{Binding ConnectionStatus}"
                                        FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding LastUpdateTime, StringFormat='Last update: {0:HH:mm:ss}'}"
+                            <TextBlock Text="{Binding LastUpdate, StringFormat='Last update: {0:HH:mm:ss}'}"
                                        FontSize="12"
                                        Opacity="0.7"
                                        Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisibility}}"/>
@@ -133,7 +133,7 @@
 
                         <Button Grid.Column="2"
                                 Content="Retry"
-                                Command="{Binding ConnectCommand}"
+                                Command="{Binding RefreshDataCommand}"
                                 Visibility="{Binding IsConnected, Converter={StaticResource InverseBoolToVisibility}}"/>
                     </Grid>
                 </Border>
@@ -149,7 +149,7 @@
                         <StackPanel>
                             <ui:SymbolIcon Symbol="Document" 
                                            HorizontalAlignment="Left"/>
-                            <TextBlock Text="{Binding Statistics.FilesProcessed}" 
+                            <TextBlock Text="{Binding SuccessCount}" 
                                        Style="{StaticResource StatValueStyle}"/>
                             <TextBlock Text="Files Processed" 
                                        Style="{StaticResource StatLabelStyle}"/>
@@ -161,7 +161,7 @@
                         <StackPanel>
                             <ui:SymbolIcon Symbol="Accept" 
                                            HorizontalAlignment="Left"/>
-                            <TextBlock Text="{Binding Statistics.SuccessRate, StringFormat='{}{0:F1}%'}" 
+                            <TextBlock Text="{Binding SuccessRate, StringFormat='{}{0:F1}%'}" 
                                        Style="{StaticResource StatValueStyle}"/>
                             <TextBlock Text="Success Rate" 
                                        Style="{StaticResource StatLabelStyle}"/>
@@ -173,21 +173,21 @@
                         <StackPanel>
                             <ui:SymbolIcon Symbol="Clock" 
                                            HorizontalAlignment="Left"/>
-                            <TextBlock Text="{Binding Statistics.QueueLength}" 
+                            <TextBlock Text="{Binding QueueLength}" 
                                        Style="{StaticResource StatValueStyle}"/>
                             <TextBlock Text="In Queue" 
                                        Style="{StaticResource StatLabelStyle}"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- Dead Letters -->
+                    <!-- Dead Letters / Errors -->
                     <Border>
                         <Border.Style>
                             <Style TargetType="Border" BasedOn="{StaticResource StatCardStyle}">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Statistics.DeadLetterCount, 
+                                    <DataTrigger Binding="{Binding ErrorCount, 
                                                           Converter={StaticResource GreaterThanZeroConverter}}" 
-                                                 Value="Visible">
+                                                 Value="True">
                                         <Setter Property="Background" Value="#10FF6B6B"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -196,9 +196,9 @@
                         <StackPanel>
                             <ui:SymbolIcon Symbol="Important" 
                                            HorizontalAlignment="Left"/>
-                            <TextBlock Text="{Binding Statistics.DeadLetterCount}" 
+                            <TextBlock Text="{Binding ErrorCount}" 
                                        Style="{StaticResource StatValueStyle}"/>
-                            <TextBlock Text="Dead Letters" 
+                            <TextBlock Text="Errors" 
                                        Style="{StaticResource StatLabelStyle}"/>
                         </StackPanel>
                     </Border>
@@ -220,69 +220,54 @@
                         Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisibility}}">
 
                     <Grid>
-                        <DataGrid ItemsSource="{Binding RecentFiles}"
-                                  AutoGenerateColumns="False"
-                                  CanUserAddRows="False"
-                                  GridLinesVisibility="None"
-                                  HeadersVisibility="Column"
-                                  Background="Transparent"
-                                  BorderThickness="0"
-                                  RowHeight="48"
-                                  Visibility="{Binding HasRecentFiles, Converter={StaticResource BoolToVisibility}}">
+                        <ListBox ItemsSource="{Binding RecentActivities}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 Visibility="{Binding HasItems, RelativeSource={RelativeSource Self}, Converter={StaticResource BoolToVisibility}}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="16,8" BorderThickness="0,0,0,1" 
+                                            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
 
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Time" 
-                                                    Binding="{Binding ProcessedAt, StringFormat='{}{0:HH:mm:ss}'}"
-                                                    Width="80"/>
-
-                                <DataGridTextColumn Header="File Name" 
-                                                    Binding="{Binding FileName}"
-                                                    Width="*"/>
-
-                                <DataGridTextColumn Header="Patient" 
-                                                    Binding="{Binding PatientName}"
-                                                    Width="200"/>
-
-                                <DataGridTemplateColumn Header="Status" Width="100">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border CornerRadius="4"
-                                                    Padding="8,4"
-                                                    HorizontalAlignment="Center">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
+                                            <ui:SymbolIcon Grid.Column="0" 
+                                                           Width="16" Height="16"
+                                                           Margin="0,0,12,0">
+                                                <ui:SymbolIcon.Style>
+                                                    <Style TargetType="ui:SymbolIcon">
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Status}" Value="Success">
-                                                                <Setter Property="Background" Value="#FF4CAF50"/>
+                                                            <DataTrigger Binding="{Binding IsSuccess}" Value="True">
+                                                                <Setter Property="Symbol" Value="Accept"/>
+                                                                <Setter Property="Foreground" Value="#FF4CAF50"/>
                                                             </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Status}" Value="Failed">
-                                                                <Setter Property="Background" Value="#FFFF5252"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Status}" Value="Processing">
-                                                                <Setter Property="Background" Value="#FFFFC107"/>
+                                                            <DataTrigger Binding="{Binding IsSuccess}" Value="False">
+                                                                <Setter Property="Symbol" Value="Cancel"/>
+                                                                <Setter Property="Foreground" Value="#FFFF5252"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </Border.Style>
-                                                <TextBlock Text="{Binding Status}"
-                                                           Foreground="White"
-                                                           FontSize="12"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
+                                                </ui:SymbolIcon.Style>
+                                            </ui:SymbolIcon>
 
-                                <DataGridTextColumn Header="Size" 
-                                                    Binding="{Binding FileSize}"
-                                                    Width="80"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                                            <TextBlock Grid.Column="1" 
+                                                       Text="{Binding Message}"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
 
                         <!-- Empty State -->
                         <StackPanel HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Margin="48"
-                                    Visibility="{Binding HasRecentFiles, Converter={StaticResource InverseBoolToVisibility}}">
+                                    Visibility="{Binding HasItems, ElementName=RecentActivityList, Converter={StaticResource InverseBoolToVisibility}}">
                             <ui:SymbolIcon Symbol="Document"
                                            Width="48"
                                            Height="48"
@@ -316,7 +301,7 @@
                                    TextAlignment="Center"
                                    Opacity="0.7"
                                    Margin="0,0,0,16"/>
-                        <Button Command="{Binding ConnectCommand}"
+                        <Button Command="{Binding RefreshDataCommand}"
                                 HorizontalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Symbol="Refresh" Margin="0,0,4,0"/>

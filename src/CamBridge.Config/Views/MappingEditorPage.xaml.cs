@@ -1,4 +1,9 @@
-// src/CamBridge.Config/Views/MappingEditorPage.xaml.cs
+// File: src/CamBridge.Config/Views/MappingEditorPage.xaml.cs
+// Version: 0.5.24
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Modified: 2025-06-04
+// Status: Development/Local
+
 using System;
 using System.Runtime.Versioning;
 using System.Windows;
@@ -116,14 +121,16 @@ namespace CamBridge.Config.Views
             var suggestedTag = SuggestDicomTag(fieldInfo.FieldName, sourceType);
             var suggestedTransform = SuggestTransform(fieldInfo.FieldName, fieldInfo.DataType);
 
-            // Create new mapping rule
-            var newRule = new MappingRule(
-                $"{fieldInfo.DisplayName}_Mapping",
-                sourceType,
-                fieldInfo.FieldName,
-                suggestedTag,
-                suggestedTransform
-            );
+            // Create new mapping rule using Core structure
+            var newRule = new MappingRule
+            {
+                SourceField = fieldInfo.FieldName,
+                DicomTag = suggestedTag,
+                Description = $"{fieldInfo.DisplayName} Mapping",
+                SourceType = sourceType,
+                Transform = suggestedTransform.ToString(),
+                Required = false
+            };
 
             var ruleVm = new MappingRuleViewModel(newRule);
             ruleVm.PropertyChanged += (s, e) =>
@@ -141,36 +148,41 @@ namespace CamBridge.Config.Views
             _viewModel.IsModified = true;
         }
 
-        private DicomTag SuggestDicomTag(string fieldName, string sourceType)
+        private string SuggestDicomTag(string fieldName, string sourceType)
         {
-            // Smart suggestions based on field name
+            // Return DICOM tag as string format "(XXXX,XXXX)"
             return fieldName.ToLower() switch
             {
-                "name" or "patientname" => DicomTag.PatientModule.PatientName,
-                "patientid" or "id" => DicomTag.PatientModule.PatientID,
-                "birthdate" or "dob" => DicomTag.PatientModule.PatientBirthDate,
-                "gender" or "sex" => DicomTag.PatientModule.PatientSex,
-                "examid" or "studyid" => DicomTag.StudyModule.StudyID,
-                "comment" or "description" => DicomTag.StudyModule.StudyDescription,
-                "make" or "manufacturer" => DicomTag.EquipmentModule.Manufacturer,
-                "model" => DicomTag.EquipmentModule.ManufacturerModelName,
-                "software" => DicomTag.EquipmentModule.SoftwareVersions,
-                "datetimeoriginal" => DicomTag.ImageModule.AcquisitionDateTime,
-                _ => DicomTag.StudyModule.StudyDescription // Default
+                "name" or "patientname" => "(0010,0010)",     // Patient Name
+                "patientid" or "id" => "(0010,0020)",         // Patient ID
+                "birthdate" or "dob" => "(0010,0030)",        // Patient Birth Date
+                "gender" or "sex" => "(0010,0040)",           // Patient Sex
+                "examid" or "studyid" => "(0020,0010)",       // Study ID
+                "comment" or "description" => "(0008,1030)",  // Study Description
+                "make" or "manufacturer" => "(0008,0070)",    // Manufacturer
+                "model" => "(0008,1090)",                     // Manufacturer Model Name
+                "software" => "(0018,1020)",                  // Software Versions
+                "datetimeoriginal" => "(0008,002A)",          // Acquisition DateTime
+                _ => "(0008,1030)"                            // Default: Study Description
             };
         }
 
         private ValueTransform SuggestTransform(string fieldName, string dataType)
         {
-            // Smart transform suggestions
+            // Smart transform suggestions using Core ValueTransform enum
             if (fieldName.ToLower().Contains("date") && dataType == "date")
                 return ValueTransform.DateToDicom;
 
-            if (fieldName.ToLower().Contains("gender") || fieldName.ToLower().Contains("sex"))
-                return ValueTransform.GenderToDicom;
+            if (fieldName.ToLower().Contains("datetime"))
+                return ValueTransform.DateTimeToDicom;
 
+            if (fieldName.ToLower().Contains("gender") || fieldName.ToLower().Contains("sex"))
+                return ValueTransform.MapGender;
+
+            // Note: TruncateTo16 doesn't exist in Core v0.5.x
+            // Could add it later or use None for now
             if (fieldName.ToLower() == "examid")
-                return ValueTransform.TruncateTo16;
+                return ValueTransform.None;
 
             return ValueTransform.None;
         }

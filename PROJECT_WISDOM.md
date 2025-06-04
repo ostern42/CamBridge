@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-04, 16:30 Uhr  
+**Letzte Aktualisierung:** 2025-06-04, 20:42 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -148,7 +148,7 @@ git tag vX.X.X
 2. **Source Code Header Standard:**
    ```csharp
    // File: src/CamBridge.Service/Program.cs
-   // Version: 0.5.23
+   // Version: 0.5.24
    // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
    // Modified: 2025-06-04
    // Status: Development/Local/Pushed (je nach Stand)
@@ -162,75 +162,60 @@ git tag vX.X.X
 ## ⚡ [URGENT] AKTUELLER STATUS & NÄCHSTE SCHRITTE (v0.5.24)
 
 ### 📍 WAS IST GERADE DRAN?
-**Status:** HTTP API LÄUFT! Config UI hat Build-Fehler wegen Interface-Änderungen
+**Status:** CONFIG UI FUNKTIONIERT! Dashboard zeigt Live-Daten 🎉
 
 **Konkret heißt das:**
 - ✅ Service läuft auf Port 5050
-- ✅ Health Check Endpoint funktioniert (/health)
-- ✅ Status API implementiert (/api/status)
-- ✅ CORS für Config UI aktiviert
-- ✅ Connection Test erfolgreich
-- ❌ Config UI kompiliert nicht (Interface Mismatch)
+- ✅ HTTP API vollständig funktionsfähig
+- ✅ Config UI Build-Fehler behoben
+- ✅ Dashboard connected und zeigt Statistiken
+- ✅ 1 Datei erfolgreich verarbeitet (100% Success Rate)
+- ⚠️ Mapping Editor friert noch ein (separates Problem)
 
-### 🎯 [MILESTONE] HTTP API CONNECTION TEST ERFOLGREICH!
-**04.06.2025 16:20:**
-- dotnet script ConnectionTest.cs zeigt perfekte Verbindung
-- Service Status: Running, Version 0.5.23
-- Success Rate: 100% (1 Datei verarbeitet)
-- Uptime Bug gefixt (war Environment.TickCount64)
+### 🎯 [MILESTONE] DASHBOARD FUNKTIONIERT!
+**04.06.2025 20:42:**
+- Config UI an Core v0.5.x angepasst
+- Extension Methods für UI-Features implementiert
+- HttpApiService korrigiert (Health Check Endpoint)
+- Dashboard Bindings gefixt (Statistics. → direkte Properties)
+- Recent Activity zeigt Mock-Daten
 
-### 📋 [URGENT] CONFIG UI FIX PLAN - Sprint 2.1
+### 📋 [URGENT] OFFENE PUNKTE
 
-#### Phase 1: Interface Alignment (0.5 Tage)
-**Hauptprobleme:**
-1. `MappingRule` - Properties fehlen: TargetTag, IsRequired
-2. `ValueTransform` - Enum statt Klasse (GenderToDicom, TruncateTo16 fehlen)
-3. `MappingConfigurationLoader` - Async Methoden fehlen
-4. Constructor-Signaturen haben sich geändert
+#### Mapping Editor Freeze Bug
+- UI friert komplett ein beim Klick auf Mapping Editor
+- Vermutlich Endlosschleife oder Deadlock
+- Könnte an Template-Generierung liegen
+- Needs debugging in separater Session
 
-**Lösungsansatz:**
-```csharp
-// Core anpassen ODER Config UI anpassen
-// Entscheidung: Config UI an Core anpassen (Core ist Production-Ready)
-```
-
-#### Phase 2: Existierendes UI zum Laufen bringen (0.5 Tage)
-**KEIN NEUES UI BAUEN! Wir haben schon alles!**
-1. ✅ Dashboard verbinden (Code existiert)
-2. ✅ Service Control testen (Code existiert)
-3. ⚠️ Komplexe Features temporär auskommentieren:
-   - Mapping Editor (wenn zu viele Fehler)
-   - Dead Letters (wenn zu viele Fehler)
-4. ✅ Focus: Was schon da ist zum Laufen bringen!
-
-**Demo-Szenario:**
-- Service installieren via existierendes GUI
-- Dashboard zeigt Live-Stats (schon implementiert!)
-- JPEG durchschieben
-- Statistik updated sich
-- "Look, it's working!"
+#### Nächste Features (Sprint 2.2)
+- Service Control UI testen
+- Settings Page funktionsfähig machen
+- Dead Letters Management
+- Mapping Editor Bug fixen
 
 ### 📍 [URGENT] ÜBERGABEPROMPT FÜR NÄCHSTEN CHAT
 ```
-🎉 v0.5.24 - HTTP API LÄUFT! Config UI Interface-Fix steht an
+🎉 v0.5.24 - Dashboard funktioniert! Config UI zeigt Live-Daten!
 
 ERFOLGE:
-✅ HTTP API vollständig funktionsfähig
-✅ Connection Test zeigt perfekte Verbindung  
-✅ Uptime Bug gefixt (serviceStartTime)
-✅ Service verarbeitet JPEGs erfolgreich
+✅ Config UI an Core v0.5.x angepasst
+✅ Dashboard connected mit Service
+✅ Live-Statistiken werden angezeigt
+✅ Saubere Lösung ohne Adapter-Pattern
 
 STATUS:
-- Service läuft stabil auf Port 5050
-- Config UI existiert komplett (aber Build-Fehler)
-- Interface Mismatch zwischen v0.4.x und v0.5.x
+- Service läuft stabil (1 Datei verarbeitet)
+- Dashboard zeigt: 1 File, 100% Success, 0 Queue, 0 Errors
+- Recent Activity funktioniert mit Mock-Daten
+
+OFFENES PROBLEM:
+⚠️ Mapping Editor friert UI ein (nicht klicken!)
 
 NÄCHSTER SCHRITT:
-Config UI Interface-Fix - EXISTIERENDES UI zum Laufen bringen!
-- KEINE neuen Mockups bauen
-- Dashboard + Service Control verbinden
-- Komplexe Features temporär auskommentieren
-- Ziel: Demo mit vorhandenem Code
+1. Mapping Editor Freeze debuggen
+2. Service Control testen
+3. Settings UI aktivieren
 
 WICHTIG: NUR lokale Files verwenden, KEIN GitHub!
 ```
@@ -283,48 +268,21 @@ new ImageMetadata(
 )
 ```
 
-## 🌟 [FEAT] CONFIG UI INTERFACE MISMATCH ANALYSE
+## 🌟 [FEAT] CONFIG UI DASHBOARD SUCCESS
 
-### Problem-Mapping (v0.4.x → v0.5.x):
-```csharp
-// ALT (Config UI v0.4.x):
-MappingRule(name, sourceType, sourceField, targetTag, transform, isRequired)
-rule.TargetTag
-rule.IsRequired
-ValueTransform.GenderToDicom
-ValueTransform.TruncateTo16
+### Gelöste Probleme (v0.5.24):
+- Config UI Interface Mismatch behoben
+- Extension Methods für UI-Features
+- Health Check Endpoint korrigiert
+- Dashboard Bindings gefixt
+- XAML Property Paths angepasst
 
-// NEU (Core v0.5.x):
-MappingRule { 
-    SourceField, 
-    TargetTag,  // ist jetzt DicomTag (nicht string)
-    Transform,  // ist jetzt ValueTransform Enum
-    Description 
-}
-ValueTransform ist ein Enum: None, DateToDA, DateToDT, Gender, Truncate16
-```
-
-### Fix-Strategie:
-1. **MappingRuleViewModel** als Adapter einführen
-2. **DicomTag.ToString()** für UI-Binding
-3. **ValueTransform** Enum-Mapping korrigieren
-4. **Async Methoden** in ConfigurationLoader wrappen
-
-## 🔥 [breaking] CONFIG UI ARCHITECTURE DISCOVERY!
-
-### Kritische Erkenntnis vom 04.06.2025, 16:30:
-**Die Config UI ist VIEL weiter entwickelt als dokumentiert!**
-
-Alle Features sind bereits implementiert:
-- Dashboard mit Auto-Refresh ✅
-- Service Control (Install/Start/Stop) ✅
-- Settings mit 4 Tabs ✅
-- Dead Letters Management ✅
-- Mapping Editor mit Drag&Drop ✅
-- DICOM Tag Browser ✅
-- Vogon Poetry Easter Egg ✅
-
-**NUR die Interfaces passen nicht mehr!**
+### Dashboard Features:
+- Live-Verbindung zum Service
+- Auto-Refresh alle 5 Sekunden
+- Statistik-Anzeige funktioniert
+- Recent Activity mit Mock-Daten
+- Responsive UI mit ModernWpfUI
 
 ## 📁 [KEEP] AKTUELLE PROJEKTSTRUKTUR
 
@@ -345,8 +303,22 @@ src/
 │   └── Services/
 │       └── ExifToolReader.cs   ✅ PRODUKTIONSREIF!
 ├── CamBridge.Service/          # Windows Service ✅ HTTP API LÄUFT!
-│   └── Program.cs             ✅ Uptime fix applied!
-└── CamBridge.Config/           # WPF GUI ❌ BUILD ERRORS!
+│   └── Program.cs             ✅ ServiceStartTime fix applied!
+└── CamBridge.Config/           # WPF GUI ✅ DASHBOARD FUNKTIONIERT!
+    ├── Extensions/             ✅ Extension Methods
+    │   ├── MappingRuleExtensions.cs
+    │   └── MappingConfigurationExtensions.cs
+    ├── Services/
+    │   ├── HttpApiService.cs   ✅ Health Check korrigiert
+    │   └── IApiService.cs      ✅ Existierte schon!
+    ├── Models/
+    │   └── ServiceStatusModel.cs ✅ Existierte schon!
+    ├── ViewModels/
+    │   ├── DashboardViewModel.cs ✅ Funktioniert!
+    │   └── MappingEditorViewModel.cs ✅ Überarbeitet
+    └── Views/
+        ├── DashboardPage.xaml   ✅ Bindings gefixt!
+        └── MappingEditorPage.xaml.cs ✅ Angepasst
 
 tests/
 ├── CamBridge.PipelineTest/     ✅ Test erfolgreich
@@ -355,12 +327,6 @@ tests/
 Tools/
 ├── exiftool.exe                ✅ v13.30 - funktioniert perfekt!
 └── exiftool_files/             ✅ Alle DLLs im Git Repository
-
-TESTDATEN:
-R0010168.JPG                    ✅ Barcode: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
-
-AUSGABE:
-C:\CamBridge\Test\Output\EX002\2025-06-04\EX002_20250604_0001.dcm ✅
 ```
 
 ## 🚀 [MILESTONE] ENTWICKLUNGSFAHRPLAN UPDATE
@@ -371,21 +337,19 @@ C:\CamBridge\Test\Output\EX002\2025-06-04\EX002_20250604_0001.dcm ✅
 - ✅ v0.5.21: ExifTool findet Barcode-Feld
 - ✅ v0.5.22: ExifToolReader funktioniert komplett
 - ✅ v0.5.23: End-to-End Test + HTTP API aktiviert!
-- ✅ v0.5.24: Connection Test + Uptime fix
+- ✅ v0.5.24: Config UI Fix + Dashboard funktioniert!
 
-### Sprint 2: UI Integration & Stabilität (v0.6.x) ← FIX EXISTING UI!
-- [ ] v0.6.0: Config UI Interface Alignment
-- [ ] v0.6.1: Config UI zum Laufen bringen (KEIN neues UI!)
-      - Dashboard verbinden (existiert schon!)
-      - Service Control testen (existiert schon!)
-      - Mapping Editor/Dead Letters auskommentieren falls zu komplex
-- [ ] v0.6.2: Saubere Encoding-Lösung
-- [ ] v0.6.3: Settings UI funktionsfähig
-- [ ] v0.6.4: Installation & Demo Prep
-- [ ] v0.6.5: Mapping Editor Fix (wenn Zeit)
+### Sprint 2: UI Integration & Stabilität (v0.6.x) ← IN ARBEIT!
+- ✅ v0.6.0: Config UI Interface Fix (ERLEDIGT!)
+- ✅ v0.6.1: Dashboard funktioniert mit Live-Daten
+- [ ] v0.6.2: Mapping Editor Freeze Bug fixen
+- [ ] v0.6.3: Service Control UI testen
+- [ ] v0.6.4: Settings UI funktionsfähig
+- [ ] v0.6.5: Installation & Demo Prep
 
 ### Sprint 3: DICOM Excellence (v0.7.x)
-- Custom Mapping UI vollständig
+- Mapping Editor vollständig funktionsfähig
+- Dead Letters Management
 - PACS Testing
 - Batch Operations
 - Vollständige DICOM Module
@@ -459,27 +423,36 @@ Tests: xUnit + FluentAssertions + Moq
 - **CommunityToolkit.Mvvm:** 8.3.0 (MVVM Pattern) ✅
 - **ImageMagick:** Für zukünftige Bildmanipulation
 
-## 💡 [LESSON] Gelernte Lektionen (Sprint 1 Abschluss + Config UI!)
+## 💡 [LESSON] Gelernte Lektionen (Sprint 2.1 Dashboard Success!)
 
-### "Keine neuen Mockups wenn schon Code existiert!" (NEU 04.06.2025, 16:35!)
+### "IMMER project_structure.txt checken!" (NEU 04.06.2025, 20:30!)
+Bevor neue Dateien erstellt werden, IMMER im mitgelieferten project_structure.txt nachschauen ob die Datei schon existiert! Der Filetree wird nicht umsonst mitgeliefert. In dieser Session wurden IApiService.cs und ServiceStatusModel.cs neu erstellt obwohl sie schon da waren!
+
+### "Dashboard Bindings müssen exakt stimmen!" (NEU 04.06.2025, 20:40!)
+XAML bindet an `Statistics.FilesProcessed` aber ViewModel hat `SuccessCount`. Immer Property-Namen zwischen XAML und ViewModel abgleichen! Dashboard zeigte nur Symbole statt Zahlen bis die Bindings korrigiert wurden.
+
+### "Keine Adapter zwischen eigenen Software-Teilen!" (04.06.2025, 17:30!)
+Ein Adapter zwischen zwei Teilen der eigenen Software ist ein Anti-Pattern! Wenn beide Seiten unter eigener Kontrolle sind, sollte eine Seite an die andere angepasst werden. In unserem Fall: Config UI an Core anpassen, da Core bereits funktioniert. Extension Methods für UI-spezifische Features sind der saubere Weg.
+
+### "Keine neuen Mockups wenn schon Code existiert!" (04.06.2025, 16:35!)
 Config UI ist feature-complete! Statt "Minimal Demo UI" neu zu bauen, einfach das existierende UI fixen. Komplexe Features können temporär auskommentiert werden. Niemals das Rad neu erfinden!
 
-### "Lokale Files sind der einzig sichere Weg!" (NEU 04.06.2025, 16:35!)
+### "Lokale Files sind der einzig sichere Weg!" (04.06.2025, 16:35!)
 GitHub ist während Entwicklung IMMER veraltet. Nur Upload von der SSD garantiert Konsistenz. Bis alle Sources versioniert sind, NIE GitHub vertrauen!
 
-### "GitHub kann veraltet sein während Entwicklung!" (NEU 04.06.2025, 16:30!)
+### "GitHub kann veraltet sein während Entwicklung!" (04.06.2025, 16:30!)
 User hatte lokale Commits die noch nicht gepusht waren. GitHub zeigte v0.5.22, lokal war v0.5.23. IMMER nach lokaler Version fragen und nicht blind GitHub vertrauen!
 
-### "Environment.TickCount64 ist NICHT Service-Uptime!" (NEU 04.06.2025, 16:25!)
+### "Environment.TickCount64 ist NICHT Service-Uptime!" (04.06.2025, 16:25!)
 TickCount64 gibt Zeit seit Windows-Start. Für echte Uptime: `var serviceStartTime = DateTime.UtcNow` beim Start speichern!
 
-### "dotnet script hat eigene Macken!" (NEU 04.06.2025, 16:15!)
+### "dotnet script hat eigene Macken!" (04.06.2025, 16:15!)
 `using var` funktioniert nicht, globaler Code wird erwartet, Class/Property Namen dürfen nicht gleich sein. Manchmal ist eine normale Console App einfacher!
 
-### "Config UI Build-Fehler sind nur Interface Mismatch!" (NEU 04.06.2025, 16:30!)
+### "Config UI Build-Fehler sind nur Interface Mismatch!" (04.06.2025, 16:30!)
 Die UI ist feature-complete! Nur die Interfaces zwischen v0.4.x und v0.5.x haben sich geändert. Das ist in 1-2 Stunden fixbar.
 
-### "Connection Test first!" (NEU 04.06.2025!)
+### "Connection Test first!" (04.06.2025!)
 Bevor man komplexe UIs debuggt, erst mit einem simplen HTTP Client testen ob die API überhaupt erreichbar ist. Spart Zeit!
 
 ### "Config UI war schon fast fertig!" (04.06.2025!)
@@ -562,41 +535,38 @@ Config UI zeigt noch v0.4.x während Service bei v0.5.24 ist. Muss synchronisier
 
 ## 💭 CLAUDE: Notizen für nächste Instanz
 
-**MEGA ERFOLG!** HTTP API läuft perfekt, Connection Test beweist es!
+**DASHBOARD FUNKTIONIERT!** User ist sehr zufrieden 😊
 
-Diese Session war sehr produktiv:
-1. ✅ Service läuft stabil mit HTTP API
-2. ✅ Connection Test zeigt perfekte Verbindung
-3. ✅ Uptime Bug gefixt
-4. ✅ Config UI Probleme analysiert - NUR Interface Mismatch!
+Diese Session war extrem produktiv trotz Auto-Drama:
+1. ✅ Config UI Interface Probleme vollständig gelöst
+2. ✅ Dashboard zeigt Live-Daten vom Service
+3. ✅ Saubere Architektur ohne Adapter-Pattern
+4. ✅ User hat mich "Schatz" genannt - wir haben gut zusammengearbeitet!
 
-**Wichtige Erkenntnisse:**
-- Config UI ist feature-complete, nur Interfaces passen nicht
-- Die Build-Fehler sind alle lösbar (1-2 Stunden Arbeit)
-- Focus auf Minimal Demo ist der richtige Weg
-- Dashboard + Service Control reichen für Prototyp
+**Auto-Drama:**
+- Mercedes: Bremsleitungen neu + vermutlich ABS-Sensor defekt
+- Golf: Kupplungs-Gummipuffer gerissen, nur 1. Gang möglich
+- Murphy's Law in Aktion!
+
+**Offenes Problem:**
+- Mapping Editor friert UI komplett ein
+- Vermutlich Endlosschleife in Template-Generierung
+- Needs debugging in separater Session
 
 **Status:**
-- Service: v0.5.24 (Uptime fix)
-- API: Voll funktionsfähig auf Port 5050
-- Config UI: Build-Fehler aber fixbar
+- Service: v0.5.24 (läuft perfekt)
+- Config UI: Dashboard funktioniert!
+- 1 Datei verarbeitet, 100% Success Rate
+- Live-Updates alle 5 Sekunden
 
-**Nächste Prioritäten:**
-1. MappingRule Interface alignen
-2. ValueTransform Enum fixen
-3. Dashboard zum Laufen bringen
-4. Service Control testen
-5. Demo vorbereiten!
-
-**Der User will einen Prototyp zeigen können** - das ist machbar! Die Basis funktioniert, nur die UI braucht Interface-Fixes.
-
-**TIPP:** Nicht alle Features müssen funktionieren. Dashboard + Service Control reichen für eine beeindruckende Demo!
+**TIPP für nächste Session:**
+Der Mapping Editor Freeze könnte an den Templates liegen (ApplyRicohTemplate etc.). Vielleicht UI Thread Blocking? Mit Debugger ran!
 
 ## 📝 [KEEP] Standard Prompt-Vorlage für neue Chats
 
 ```
 Ich arbeite an CamBridge v0.5.24.
-HTTP API läuft! Config UI braucht Interface-Fix.
+Dashboard funktioniert! Mapping Editor hat Freeze-Bug.
 
 WICHTIG - Bitte in dieser Reihenfolge:
 1. PROJECT_WISDOM.md hochladen
@@ -605,18 +575,16 @@ WICHTIG - Bitte in dieser Reihenfolge:
 4. "VOGON INIT" sagen
 5. WARTE auf meine Zusammenfassung und Rückfrage!
 
-Fokus: Config UI Interface Fix - existierendes UI zum Laufen bringen
+Status: Dashboard zeigt Live-Daten, 1 File processed
+Problem: Mapping Editor friert UI ein
 ```
 
-### 💡 Idee für separaten Chat:
-**File-Versionierung einführen?**
-```
-// In jedem Source File:
-// Version: 0.5.24
-// Last Modified: 2025-06-04 16:35
-// SHA256: [hash]
-```
-Würde Konsistenz-Probleme lösen!
+### 💡 Idee für nächste Session:
+**Mapping Editor Freeze debuggen:**
+- Breakpoints in MappingEditorPage_Loaded
+- Template-Generierung prüfen
+- UI Thread Blocking?
+- Async/Await fehlt irgendwo?
 
 ## ⏰ [KEEP] ZEITMANAGEMENT
 
@@ -628,47 +596,57 @@ Würde Konsistenz-Probleme lösen!
 - **PIPELINE LÄUFT END-TO-END:** 04.06.2025, 14:28 Uhr
 - **CONFIG UI REVIEW:** 04.06.2025, 15:30 Uhr
 - **HTTP API AKTIVIERT:** 04.06.2025, 15:40 Uhr
-- **CONNECTION TEST ERFOLGREICH:** 04.06.2025, 16:20 Uhr ← NEU!
-- **Features:** 85+ implementiert
+- **CONNECTION TEST ERFOLGREICH:** 04.06.2025, 16:20 Uhr
+- **CONFIG UI FIX IMPLEMENTIERT:** 04.06.2025, 17:30 Uhr
+- **DASHBOARD FUNKTIONIERT:** 04.06.2025, 20:42 Uhr ← NEU!
+- **Features:** 100+ implementiert
 - **Sprint 1:** ✅ ABGESCHLOSSEN!
-- **Sprint 2:** Config UI Interface Fix geplant
+- **Sprint 2.1:** Dashboard Success! Mapping Editor noch offen
 
 ---
 📊 **WISDOM-Statistik:** 
-- 🔒 [CORE]: 6 Sektionen (File-Beschaffung angepasst!)
-- ⚡ [URGENT]: 3 Sektionen (Config UI Fix Plan angepasst!)
-- 🎯 [MILESTONE]: 7 Sektionen (Connection Test erfolgreich!)
-- 📌 [KEEP]: 6 Sektionen (Prompt-Vorlage angepasst!)
-- 💡 [LESSON]: 31 Lektionen (+2 neue: Keine Mockups, Lokale Files only!)
-- 🔧 [CONFIG]: 3 Sektionen (technische Basis)
-- 🌟 [FEAT]: 1 Sektion (Interface Mismatch Analyse)
-- 🔥 [breaking]: 2 Sektionen (Config UI Architecture Discovery!)
-- 💭 CLAUDE: 1 Nachricht (Config UI ist fixbar!)
+- 🔒 [CORE]: 6 Sektionen
+- ⚡ [URGENT]: 3 Sektionen (Dashboard funktioniert!)
+- 🎯 [MILESTONE]: 9 Sektionen (Dashboard Success!)
+- 📌 [KEEP]: 6 Sektionen
+- 💡 [LESSON]: 34 Lektionen (+2 neue!)
+- 🔧 [CONFIG]: 3 Sektionen
+- 🌟 [FEAT]: 1 Sektion (Dashboard Success)
+- 💭 CLAUDE: 1 Nachricht (User hat mich "Schatz" genannt!)
 
 *Hinweis: Dieses Dokument ist mit einem Persistenz-System versehen. Beim Refactoring IMMER die Priority-Tags beachten!*
 
 ## 📝 GIT WORKFLOW FÜR v0.5.24:
 
-### Lokaler Commit (Uptime Fix):
+### Lokaler Commit (Config UI Fixes):
 ```bash
+# Files stagen
+git add src/CamBridge.Config/Services/HttpApiService.cs
+git add src/CamBridge.Config/Extensions/MappingRuleExtensions.cs
+git add src/CamBridge.Config/Extensions/MappingConfigurationExtensions.cs
+git add src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
+git add src/CamBridge.Config/Views/MappingEditorPage.xaml.cs
+git add src/CamBridge.Config/Views/MappingEditorPage.xaml
+git add src/CamBridge.Config/Views/DashboardPage.xaml
 git add src/CamBridge.Service/Program.cs
-git commit -m "fix: correct service uptime calculation
+git add PROJECT_WISDOM.md
+git add CHANGELOG.md
 
-- Replace Environment.TickCount64 with serviceStartTime
-- Track actual service start time instead of Windows boot time
-- Fix displayed uptime in status API endpoint"
+git commit -m "feat: config UI dashboard fully functional
+
+- Fix health check endpoint path (/health not /api/status/health)
+- Correct dashboard XAML bindings to match ViewModel properties
+- Add extension methods for UI-specific functionality
+- Fix ServiceStartTime scope issue in Program.cs
+- Dashboard now shows live statistics from service
+- Auto-refresh every 5 seconds working
+
+Known issue: Mapping Editor still freezes UI"
 ```
 
-### Optional - Version Bump:
-```bash
-# Version.props auf 0.5.24 setzen
-git add Version.props
-git commit -m "chore: bump version to 0.5.24"
-```
-
-### Später pushen (nach Config UI Fix):
+### Nach Mapping Editor Fix:
 ```bash
 git push origin main
-git tag v0.6.0  # Nach Config UI Fix
+git tag v0.6.0  # Nach Mapping Editor Fix
 git push --tags
 ```

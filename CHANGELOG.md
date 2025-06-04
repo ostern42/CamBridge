@@ -6,6 +6,35 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.24] - 2025-06-04
+### Added
+- Extension methods for UI-specific MappingRule functionality
+- MappingConfigurationExtensions for async method compatibility
+- Mock recent activity display in dashboard
+- Auto-refresh timer for dashboard (5 second interval)
+
+### Fixed
+- Service uptime calculation using actual start time instead of Windows boot time
+- Config UI interface mismatches with Core v0.5.x
+- Health check endpoint path in HttpApiService (/health instead of /api/status/health)
+- Dashboard XAML bindings to match ViewModel property names
+- Program.cs top-level statement scope issues
+
+### Changed
+- MappingEditorViewModel to work directly with Core structures
+- MappingEditorPage drag & drop to create Core-compatible rules
+- UI templates to generate proper v0.5.x mapping rules
+- Dashboard to show live statistics from service
+
+### Technical
+- HTTP API fully functional on port 5050
+- Dashboard successfully connects and displays real-time data
+- Config UI adapted to Core without adapter anti-pattern
+- Recent activity shows mock conversion data
+
+### Known Issues
+- Mapping Editor tab causes UI to freeze (debugging needed)
+
 ## [0.5.24] - 2025-06-04 - HTTP API Verified & Config UI Analysis
 ### Added
 - ConnectionTest.cs for API verification

@@ -87,9 +87,9 @@
 
                     <StackPanel Grid.Column="0">
                         <TextBlock FontWeight="SemiBold" FontSize="14">
-                            <Run Text="{Binding Name}"/>
+                            <Run Text="{Binding DisplayName}"/>
                             <Run Text=" - " Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                            <Run Text="{Binding TargetTagString}" FontFamily="Consolas"/>
+                            <Run Text="{Binding DicomTagString}" FontFamily="Consolas"/>
                         </TextBlock>
 
                         <TextBlock Margin="0,4,0,0" Opacity="0.8">
@@ -379,7 +379,7 @@
                         <TextBlock Text="Rule Name" 
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding SelectedRule.Name, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox Text="{Binding SelectedRule.DisplayName, UpdateSourceTrigger=PropertyChanged}"
                                  Margin="0,0,0,12"/>
 
                         <!-- Source -->
@@ -409,7 +409,7 @@
                             </Grid.ColumnDefinitions>
 
                             <TextBox Grid.Column="0" 
-                                     Text="{Binding SelectedRule.TargetTagString}"
+                                     Text="{Binding SelectedRule.DicomTagString}"
                                      IsReadOnly="True"
                                      Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
 
@@ -427,13 +427,16 @@
                         <ComboBox SelectedItem="{Binding SelectedRule.Transform}"
                                   Margin="0,0,0,12">
                             <core:ValueTransform>None</core:ValueTransform>
-                            <core:ValueTransform>ToUpper</core:ValueTransform>
-                            <core:ValueTransform>ToLower</core:ValueTransform>
                             <core:ValueTransform>DateToDicom</core:ValueTransform>
                             <core:ValueTransform>TimeToDicom</core:ValueTransform>
-                            <core:ValueTransform>GenderToDicom</core:ValueTransform>
-                            <core:ValueTransform>TruncateTo16</core:ValueTransform>
-                            <core:ValueTransform>TruncateTo64</core:ValueTransform>
+                            <core:ValueTransform>DateTimeToDicom</core:ValueTransform>
+                            <core:ValueTransform>MapGender</core:ValueTransform>
+                            <core:ValueTransform>RemovePrefix</core:ValueTransform>
+                            <core:ValueTransform>ExtractDate</core:ValueTransform>
+                            <core:ValueTransform>ExtractTime</core:ValueTransform>
+                            <core:ValueTransform>ToUpperCase</core:ValueTransform>
+                            <core:ValueTransform>ToLowerCase</core:ValueTransform>
+                            <core:ValueTransform>Trim</core:ValueTransform>
                         </ComboBox>
 
                         <!-- Options -->

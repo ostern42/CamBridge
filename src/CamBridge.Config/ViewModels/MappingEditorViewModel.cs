@@ -1,5 +1,11 @@
-// src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
+// File: src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
+// Version: 0.5.24
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Modified: 2025-06-04
+// Status: Development/Local
+
 using CamBridge.Config.Dialogs;
+using CamBridge.Config.Extensions;
 using CamBridge.Config.Services;
 using CamBridge.Core;
 using CamBridge.Core.Interfaces;
@@ -17,6 +23,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
+// Alias to avoid ambiguity with FellowOakDicom.DicomTag
+using DicomTag = CamBridge.Core.ValueObjects.DicomTag;
+
 namespace CamBridge.Config.ViewModels
 {
     /// <summary>
@@ -26,7 +35,7 @@ namespace CamBridge.Config.ViewModels
     {
         private readonly ILogger<MappingEditorViewModel> _logger;
         private readonly IConfigurationService _configurationService;
-        private readonly MappingConfigurationLoader _mappingLoader;
+        private readonly IMappingConfiguration _mappingConfiguration;
 
         #region Properties
 
@@ -50,10 +59,11 @@ namespace CamBridge.Config.ViewModels
         {
             _logger = logger;
             _configurationService = configurationService;
-            // Create a NullLogger for MappingConfigurationLoader since it expects ILogger<MappingConfigurationLoader>
+
+            // Create MappingConfigurationLoader with proper logger
             var nullLoggerFactory = new NullLoggerFactory();
             var mappingLoaderLogger = nullLoggerFactory.CreateLogger<MappingConfigurationLoader>();
-            _mappingLoader = new MappingConfigurationLoader(mappingLoaderLogger);
+            _mappingConfiguration = new MappingConfigurationLoader(mappingLoaderLogger);
 
             InitializeSourceFields();
             _ = LoadMappingsAsync();
@@ -89,10 +99,10 @@ namespace CamBridge.Config.ViewModels
                 var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
                 if (settings != null)
                 {
-                    var mappingConfig = await _mappingLoader.LoadFromFileAsync(settings.MappingConfigurationFile);
+                    await _mappingConfiguration.LoadConfigurationAsync(settings.MappingConfigurationFile);
 
                     MappingRules.Clear();
-                    foreach (var rule in mappingConfig.GetMappingRules())
+                    foreach (var rule in _mappingConfiguration.GetMappingRules())
                     {
                         var vm = new MappingRuleViewModel(rule);
                         vm.PropertyChanged += (s, e) =>
@@ -126,13 +136,15 @@ namespace CamBridge.Config.ViewModels
         [RelayCommand]
         private void AddRule()
         {
-            var newRule = new MappingRule(
-                $"NewRule_{DateTime.Now:HHmmss}",
-                "QRBridge",
-                "examid",
-                DicomTag.StudyModule.StudyID,
-                ValueTransform.None
-            );
+            var newRule = new MappingRule
+            {
+                SourceField = "newField",
+                DicomTag = "(0010,0010)",
+                Description = $"New Rule {DateTime.Now:HHmmss}",
+                SourceType = "QRBridge",
+                Transform = ValueTransform.None.ToString(),
+                Required = false
+            };
 
             var vm = new MappingRuleViewModel(newRule);
             vm.PropertyChanged += (s, e) =>
@@ -195,13 +207,8 @@ namespace CamBridge.Config.ViewModels
                 var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
                 if (settings != null)
                 {
-                    var config = new CustomMappingConfiguration();
-                    foreach (var ruleVm in MappingRules)
-                    {
-                        config.AddRule(ruleVm.ToMappingRule());
-                    }
-
-                    await _mappingLoader.SaveToFileAsync(config, settings.MappingConfigurationFile);
+                    var rules = MappingRules.Select(vm => vm.ToMappingRule());
+                    await _mappingConfiguration.SaveConfigurationAsync(rules, settings.MappingConfigurationFile);
 
                     IsModified = false;
                     StatusMessage = "Mappings saved successfully";
@@ -237,10 +244,10 @@ namespace CamBridge.Config.ViewModels
                     IsLoading = true;
                     StatusMessage = "Importing mappings...";
 
-                    var importedConfig = await _mappingLoader.LoadFromFileAsync(dialog.FileName);
+                    await _mappingConfiguration.LoadConfigurationAsync(dialog.FileName);
 
                     MappingRules.Clear();
-                    foreach (var rule in importedConfig.GetMappingRules())
+                    foreach (var rule in _mappingConfiguration.GetMappingRules())
                     {
                         var vm = new MappingRuleViewModel(rule);
                         vm.PropertyChanged += (s, e) =>
@@ -286,13 +293,8 @@ namespace CamBridge.Config.ViewModels
                     IsLoading = true;
                     StatusMessage = "Exporting mappings...";
 
-                    var config = new CustomMappingConfiguration();
-                    foreach (var ruleVm in MappingRules)
-                    {
-                        config.AddRule(ruleVm.ToMappingRule());
-                    }
-
-                    await _mappingLoader.SaveToFileAsync(config, dialog.FileName);
+                    var rules = MappingRules.Select(vm => vm.ToMappingRule());
+                    await _mappingConfiguration.SaveConfigurationAsync(rules, dialog.FileName);
 
                     StatusMessage = "Mappings exported successfully";
                 }
@@ -321,8 +323,8 @@ namespace CamBridge.Config.ViewModels
 
             if (dialog.ShowDialog() == true && dialog.SelectedTag != null)
             {
-                SelectedRule.TargetTag = dialog.SelectedTag;
-                SelectedRule.TargetTagString = dialog.SelectedTag.ToString();
+                // Convert DicomTag object to string format
+                SelectedRule.DicomTagString = dialog.SelectedTag.ToString();
                 UpdatePreview();
             }
         }
@@ -346,26 +348,18 @@ namespace CamBridge.Config.ViewModels
             MappingRules.Clear();
 
             // Patient identification
-            AddTemplateRule("PatientName", "QRBridge", "name",
-                DicomTag.PatientModule.PatientName, ValueTransform.None, true);
-            AddTemplateRule("PatientID", "QRBridge", "patientid",
-                DicomTag.PatientModule.PatientID, ValueTransform.None, true);
-            AddTemplateRule("PatientBirthDate", "QRBridge", "birthdate",
-                DicomTag.PatientModule.PatientBirthDate, ValueTransform.DateToDicom);
-            AddTemplateRule("PatientSex", "QRBridge", "gender",
-                DicomTag.PatientModule.PatientSex, ValueTransform.GenderToDicom);
+            AddTemplateRule("name", "Patient Name", "(0010,0010)", ValueTransform.None, "QRBridge", true);
+            AddTemplateRule("patientid", "Patient ID", "(0010,0020)", ValueTransform.None, "QRBridge", true);
+            AddTemplateRule("birthdate", "Patient Birth Date", "(0010,0030)", ValueTransform.DateToDicom, "QRBridge");
+            AddTemplateRule("gender", "Patient Sex", "(0010,0040)", ValueTransform.MapGender, "QRBridge");
 
             // Study information
-            AddTemplateRule("StudyID", "QRBridge", "examid",
-                DicomTag.StudyModule.StudyID, ValueTransform.TruncateTo16);
-            AddTemplateRule("StudyDescription", "QRBridge", "comment",
-                DicomTag.StudyModule.StudyDescription, ValueTransform.None);
+            AddTemplateRule("examid", "Study ID", "(0020,0010)", ValueTransform.None, "QRBridge");
+            AddTemplateRule("comment", "Study Description", "(0008,1030)", ValueTransform.None, "QRBridge");
 
             // Equipment from EXIF
-            AddTemplateRule("Manufacturer", "EXIF", "Make",
-                DicomTag.EquipmentModule.Manufacturer, ValueTransform.None);
-            AddTemplateRule("Model", "EXIF", "Model",
-                DicomTag.EquipmentModule.ManufacturerModelName, ValueTransform.None);
+            AddTemplateRule("Make", "Manufacturer", "(0008,0070)", ValueTransform.None, "EXIF");
+            AddTemplateRule("Model", "Manufacturer Model Name", "(0008,1090)", ValueTransform.None, "EXIF");
 
             IsModified = true;
             StatusMessage = "Ricoh template applied";
@@ -386,12 +380,9 @@ namespace CamBridge.Config.ViewModels
             MappingRules.Clear();
 
             // Only required DICOM fields
-            AddTemplateRule("PatientName", "QRBridge", "name",
-                DicomTag.PatientModule.PatientName, ValueTransform.None, true);
-            AddTemplateRule("PatientID", "QRBridge", "examid",
-                DicomTag.PatientModule.PatientID, ValueTransform.None, true);
-            AddTemplateRule("StudyID", "QRBridge", "examid",
-                DicomTag.StudyModule.StudyID, ValueTransform.None);
+            AddTemplateRule("name", "Patient Name", "(0010,0010)", ValueTransform.None, "QRBridge", true);
+            AddTemplateRule("examid", "Patient ID", "(0010,0020)", ValueTransform.None, "QRBridge", true);
+            AddTemplateRule("examid", "Study ID", "(0020,0010)", ValueTransform.None, "QRBridge");
 
             IsModified = true;
             StatusMessage = "Minimal template applied";
@@ -412,50 +403,44 @@ namespace CamBridge.Config.ViewModels
             MappingRules.Clear();
 
             // Patient Module
-            AddTemplateRule("PatientName", "QRBridge", "name",
-                DicomTag.PatientModule.PatientName, ValueTransform.None, true);
-            AddTemplateRule("PatientID", "QRBridge", "patientid",
-                DicomTag.PatientModule.PatientID, ValueTransform.None, true);
-            AddTemplateRule("PatientBirthDate", "QRBridge", "birthdate",
-                DicomTag.PatientModule.PatientBirthDate, ValueTransform.DateToDicom);
-            AddTemplateRule("PatientSex", "QRBridge", "gender",
-                DicomTag.PatientModule.PatientSex, ValueTransform.GenderToDicom);
-            AddTemplateRule("PatientComments", "QRBridge", "comment",
-                DicomTag.PatientModule.PatientComments, ValueTransform.None);
+            AddTemplateRule("name", "Patient Name", "(0010,0010)", ValueTransform.None, "QRBridge", true);
+            AddTemplateRule("patientid", "Patient ID", "(0010,0020)", ValueTransform.None, "QRBridge", true);
+            AddTemplateRule("birthdate", "Patient Birth Date", "(0010,0030)", ValueTransform.DateToDicom, "QRBridge");
+            AddTemplateRule("gender", "Patient Sex", "(0010,0040)", ValueTransform.MapGender, "QRBridge");
+            AddTemplateRule("comment", "Patient Comments", "(0010,4000)", ValueTransform.None, "QRBridge");
 
             // Study Module
-            AddTemplateRule("StudyID", "QRBridge", "examid",
-                DicomTag.StudyModule.StudyID, ValueTransform.TruncateTo16);
-            AddTemplateRule("AccessionNumber", "QRBridge", "examid",
-                DicomTag.StudyModule.AccessionNumber, ValueTransform.None);
-            AddTemplateRule("StudyDescription", "QRBridge", "comment",
-                DicomTag.StudyModule.StudyDescription, ValueTransform.None);
-            AddTemplateRule("StudyDate", "EXIF", "DateTimeOriginal",
-                DicomTag.StudyModule.StudyDate, ValueTransform.DateToDicom);
-            AddTemplateRule("StudyTime", "EXIF", "DateTimeOriginal",
-                DicomTag.StudyModule.StudyTime, ValueTransform.TimeToDicom);
+            AddTemplateRule("examid", "Study ID", "(0020,0010)", ValueTransform.None, "QRBridge");
+            AddTemplateRule("examid", "Accession Number", "(0008,0050)", ValueTransform.None, "QRBridge");
+            AddTemplateRule("comment", "Study Description", "(0008,1030)", ValueTransform.None, "QRBridge");
+            AddTemplateRule("DateTimeOriginal", "Study Date", "(0008,0020)", ValueTransform.ExtractDate, "EXIF");
+            AddTemplateRule("DateTimeOriginal", "Study Time", "(0008,0030)", ValueTransform.ExtractTime, "EXIF");
 
             // Equipment Module
-            AddTemplateRule("Manufacturer", "EXIF", "Make",
-                DicomTag.EquipmentModule.Manufacturer, ValueTransform.None);
-            AddTemplateRule("Model", "EXIF", "Model",
-                DicomTag.EquipmentModule.ManufacturerModelName, ValueTransform.None);
-            AddTemplateRule("Software", "EXIF", "Software",
-                DicomTag.EquipmentModule.SoftwareVersions, ValueTransform.None);
+            AddTemplateRule("Make", "Manufacturer", "(0008,0070)", ValueTransform.None, "EXIF");
+            AddTemplateRule("Model", "Manufacturer Model Name", "(0008,1090)", ValueTransform.None, "EXIF");
+            AddTemplateRule("Software", "Software Versions", "(0018,1020)", ValueTransform.None, "EXIF");
 
             // Image Module
-            AddTemplateRule("AcquisitionDateTime", "EXIF", "DateTimeOriginal",
-                DicomTag.ImageModule.AcquisitionDateTime, ValueTransform.DateToDicom);
+            AddTemplateRule("DateTimeOriginal", "Acquisition DateTime", "(0008,002A)", ValueTransform.DateTimeToDicom, "EXIF");
 
             IsModified = true;
             StatusMessage = "Full template applied";
         }
 
-        private void AddTemplateRule(string name, string sourceType, string sourceField,
-            DicomTag targetTag, ValueTransform transform, bool isRequired = false)
+        private void AddTemplateRule(string sourceField, string description, string dicomTag,
+            ValueTransform transform, string sourceType, bool isRequired = false)
         {
-            var rule = new MappingRule(name, sourceType, sourceField, targetTag,
-                transform, isRequired);
+            var rule = new MappingRule
+            {
+                SourceField = sourceField,
+                Description = description,
+                DicomTag = dicomTag,
+                Transform = transform.ToString(),
+                SourceType = sourceType,
+                Required = isRequired
+            };
+
             var vm = new MappingRuleViewModel(rule);
             vm.PropertyChanged += (s, e) =>
             {
@@ -470,7 +455,6 @@ namespace CamBridge.Config.ViewModels
 
         #region Preview
 
-        // Make UpdatePreview public so it can be called from MappingEditorPage
         public void UpdatePreview()
         {
             if (SelectedRule == null || string.IsNullOrWhiteSpace(PreviewInput))
@@ -522,17 +506,17 @@ namespace CamBridge.Config.ViewModels
     }
 
     /// <summary>
-    /// ViewModel wrapper for MappingRule
+    /// ViewModel wrapper for MappingRule - adapted to work with Core v0.5.x
     /// </summary>
     public partial class MappingRuleViewModel : ObservableObject
     {
         private readonly MappingRule _rule;
 
-        [ObservableProperty] private string _name;
+        // UI-friendly properties that map to Core properties
+        [ObservableProperty] private string _displayName;
         [ObservableProperty] private string _sourceType;
         [ObservableProperty] private string _sourceField;
-        [ObservableProperty] private DicomTag _targetTag;
-        [ObservableProperty] private string _targetTagString;
+        [ObservableProperty] private string _dicomTagString;
         [ObservableProperty] private ValueTransform _transform;
         [ObservableProperty] private bool _isRequired;
         [ObservableProperty] private string? _defaultValue;
@@ -540,32 +524,43 @@ namespace CamBridge.Config.ViewModels
         public MappingRuleViewModel(MappingRule rule)
         {
             _rule = rule;
-            _name = rule.Name;
-            _sourceType = rule.SourceType;
+
+            // Map Core properties to UI properties
+            _displayName = rule.Description ?? rule.SourceField;
+            _sourceType = rule.SourceType ?? "QRBridge";
             _sourceField = rule.SourceField;
-            _targetTag = rule.TargetTag;
-            _targetTagString = rule.TargetTag.ToString();
-            _transform = rule.Transform;
-            _isRequired = rule.IsRequired;
+            _dicomTagString = rule.DicomTag;
+            _transform = Enum.TryParse<ValueTransform>(rule.Transform, out var t) ? t : ValueTransform.None;
+            _isRequired = rule.Required;
             _defaultValue = rule.DefaultValue;
         }
 
         public MappingRule ToMappingRule()
         {
-            return new MappingRule(
-                Name,
-                SourceType,
-                SourceField,
-                TargetTag,
-                Transform,
-                IsRequired,
-                DefaultValue
-            );
+            // Update Core rule with UI values
+            _rule.Description = DisplayName;
+            _rule.SourceType = SourceType;
+            _rule.SourceField = SourceField;
+            _rule.DicomTag = DicomTagString;
+            _rule.Transform = Transform.ToString();
+            _rule.Required = IsRequired;
+            _rule.DefaultValue = DefaultValue;
+
+            return _rule;
         }
 
-        partial void OnTargetTagChanged(DicomTag value)
+        partial void OnDicomTagStringChanged(string value)
         {
-            TargetTagString = value?.ToString() ?? string.Empty;
+            // Validate DICOM tag format
+            try
+            {
+                var tag = DicomTag.Parse(value);
+                // Valid tag
+            }
+            catch
+            {
+                // Invalid tag format - could show error in UI
+            }
         }
     }
 }
