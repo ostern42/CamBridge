@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-04, 11:15 Uhr  
+**Letzte Aktualisierung:** 2025-06-04, 12:35 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -27,12 +27,57 @@
 
 *Im Gegensatz zu den Vogonen aus dem galaktischen Beamtenapparat ist unser V.O.G.O.N. darauf ausgelegt, Dinge tatsächlich einfacher zu machen. Keine Formulare in dreifacher Ausfertigung erforderlich.*
 
-### 🚀 "VOGON INIT" - Automatischer Start
-Wenn Sie nur "VOGON INIT" sagen, werde ich:
-1. PROJECT_WISDOM.md aus den hochgeladenen Dateien lesen
-2. Den aktuellen Übergabeprompt daraus extrahieren
-3. Die Aufgabe verstehen und direkt loslegen
-4. Keine weiteren Erklärungen nötig!
+### 🚀 "VOGON INIT" - Strukturierte Initialisierungs-Sequenz
+
+**WICHTIG:** Bei "VOGON INIT" folge ich IMMER dieser strukturierten Sequenz:
+
+#### 📋 INIT SEQUENCE:
+
+1. **SYSTEM CHECK** - V.O.G.O.N. verstehen
+   - Lese und verstehe das WISDOM Priority System
+   - Erkenne die Git-inspirierten Tags
+   - Verstehe WISDOM: und CLAUDE: Kommandos
+
+2. **CRITICAL LESSONS** - Antipatterns & Erfahrungen durchgehen
+   - ALLE [LESSON] Einträge sorgfältig lesen
+   - Besonders: "Infrastructure muss zusammenpassen!"
+   - Entity Contracts und Schnittstellen verstehen
+
+3. **PROJECT CONTEXT** - Gesamtbild erfassen
+   - Projektstruktur analysieren
+   - Aktuelle Version und Status verstehen
+   - Technologie-Stack und Dependencies prüfen
+   - Pipeline-Architektur nachvollziehen
+
+4. **CURRENT STATE** - Wo stehen wir?
+   - [URGENT] Status genau lesen
+   - Übergabeprompt analysieren
+   - Offene Aufgaben identifizieren
+
+5. **SUMMARY & CONFIRMATION** - Zusammenfassung erstellen
+   ```
+   Ich habe verstanden:
+   - Aktueller Stand: [Version, was funktioniert]
+   - Offene Punkte: [was zu tun ist]
+   - Kontext: [wichtige Details]
+   
+   Wie möchtest du vorgehen?
+   a) [Option basierend auf URGENT]
+   b) [Alternative Option]
+   c) Etwas anderes?
+   ```
+
+**NIEMALS:**
+- Einfach "loslegen" ohne Nachfrage
+- Code schreiben ohne Kontext zu verstehen
+- Annahmen treffen über Schnittstellen
+- Den Übergabeprompt ignorieren
+
+**IMMER:**
+- Strukturiert durch die INIT SEQUENCE gehen
+- Zusammenfassung zeigen und bestätigen
+- Nach konkreter Richtung fragen
+- Lessons und Antipatterns beachten
 
 ### 🔒 [CORE] GitHub Integration - FUNKTIONIERT!
 **Stand 02.06.2025:**
@@ -76,54 +121,54 @@ BREAKING CHANGE: description (wenn applicable)"
 git tag vX.X.X
 ```
 
-## ⚡ [URGENT] AKTUELLER STATUS & NÄCHSTE SCHRITTE (v0.5.21)
+## ⚡ [URGENT] AKTUELLER STATUS & NÄCHSTE SCHRITTE (v0.5.22)
 
 ### 📍 WAS IST GERADE DRAN?
-**Status:** DURCHBRUCH! Barcode-Feld gefunden! ExifToolReader muss nur noch angepasst werden!
+**Status:** ERFOLG! ExifToolReader funktioniert komplett! Pipeline-Test läuft durch!
 
 **Konkret heißt das:**
-- ✅ ExifTool Test erfolgreich ausgeführt
-- ✅ QRBridge-Daten im **Barcode** Feld gefunden (nicht UserComment!)
-- ✅ Format bestätigt: `EX002|Schmidt, Maria|1985-03-15|F|R�ntgen�Thorax`
-- ✅ Encoding-Problem sichtbar (� statt ö/ä)
-- ⏳ ExifToolReader muss Barcode-Feld lesen
+- ✅ ExifTool findet Barcode-Feld
+- ✅ ExifToolReader parst korrekt: "EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax"
+- ✅ Patient- und Study-Objekte werden erstellt
+- ✅ Encoding-Fix funktioniert (temporär mit Replace-Liste)
+- ⏳ Nächster Test: Volle Pipeline mit DICOM-Erstellung
 
-### 🎯 [MILESTONE] ERFOLG: Barcode-Feld identifiziert!
-**04.06.2025 11:15:**
-- Ricoh G900SE II speichert QRBridge-Daten im **Barcode** EXIF-Feld
-- UserComment enthält nur "GCM_TAG" (Marker)
-- Alle 5 Felder erfolgreich übertragen
-- Encoding-Probleme wie erwartet
+### 🎯 [MILESTONE] ERFOLG: ExifToolReader Integration!
+**04.06.2025 12:35:**
+- ExifToolReader passt zur Infrastructure (richtiger Konstruktor & Methode)
+- Barcode-Feld wird korrekt gelesen
+- QRBridge-Daten werden geparst
+- Temporärer Encoding-Fix funktioniert
 
 ### 📋 [URGENT] NÄCHSTE SCHRITTE
 
-#### SCHRITT 1: ExifToolReader anpassen (15 Min)
-- Barcode-Feld statt UserComment lesen
-- Kompletter Code im Artefakt "ExifToolReader.cs - Complete with Barcode Fix"
-- Encoding-Fix ist schon drin
+#### SCHRITT 1: v0.5.22 committen (5 Min)
+- ExifToolReader funktioniert!
+- Sprint 1 Feature komplett
 
-#### SCHRITT 2: Integration testen (30 Min)
-- Infrastructure neu bauen
-- FileProcessor Test mit R0010168.JPG
+#### SCHRITT 2: Volle Pipeline testen (30 Min)
+- Service starten
+- R0010168.JPG in Watch-Folder
 - DICOM sollte erstellt werden!
 
-#### SCHRITT 3: v0.5.22 taggen (5 Min)
-- Wenn alles funktioniert → commit & tag
-- Sprint 1 ist dann abgeschlossen!
+#### SCHRITT 3: Saubere Encoding-Lösung (Sprint 2)
+- ExifTool mit `-charset` Parameter
+- Oder direkte Byte-Konvertierung
+- Ricoh Codepage ermitteln
 
 ### 📍 [URGENT] ÜBERGABEPROMPT FÜR NÄCHSTEN CHAT
 ```
-🔧 v0.5.21 - Barcode-Feld gefunden! ExifToolReader anpassen!
+🎉 v0.5.22 - ExifToolReader funktioniert! Bereit für Pipeline-Test!
 
-DURCHBRUCH:
-✅ QRBridge-Daten im "Barcode" EXIF-Feld (nicht UserComment!)
-✅ Test-Output: EX002|Schmidt, Maria|1985-03-15|F|R�ntgen�Thorax
-✅ ExifToolReader-Fix vorbereitet
+ERFOLG:
+✅ ExifToolReader liest Barcode-Feld korrekt
+✅ QRBridge-Daten: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
+✅ Encoding temporär gefixt
 
-AUFGABE:
-1. ExifToolReader.cs mit Barcode-Fix ersetzen
-2. Infrastructure testen
-3. Bei Erfolg → v0.5.22 taggen
+NÄCHSTE SCHRITTE:
+1. Volle Pipeline testen (Service + Watch-Folder)
+2. Bei Erfolg → Sprint 1 abschließen
+3. Sprint 2: Saubere Encoding-Lösung
 
 GitHub: https://github.com/ostern42/CamBridge
 ```
@@ -134,9 +179,9 @@ GitHub: https://github.com/ostern42/CamBridge
 ```
 JPEG File → ExifToolReader → ImageMetadata → FileProcessor → DicomConverter → DICOM File
               ↓                                     ↓              ↓
-         Raw EXIF Data                    DicomTagMapper    DicomTagMapper
+         Barcode Field ✅                   DicomTagMapper    DicomTagMapper
               ↓                                                   ↓
-      **Barcode Field** ← NEU!                            mappings.json
+      QRBridge Data                                         mappings.json
 ```
 
 ### 🔧 [CONFIG] ENTITY CONTRACT TRACKER (BEWÄHRT!)
@@ -152,17 +197,28 @@ new PatientInfo(
     gender: Gender           // Enum, nicht string!
 )
 
-// StudyInfo Properties
-StudyInfo.StudyId        // NICHT "Id"!
-StudyInfo.Description    // NICHT "StudyDescription"!
-StudyInfo.ExamId         
+// StudyInfo Constructor  
+new StudyInfo(
+    studyId: StudyId,        // Max 16 Zeichen!
+    examId: string?,
+    description: string?,
+    modality: string?,
+    studyDate: DateTime?
+)
 
-// ImageMetadata MUSS HABEN:
-- ExifData: Dictionary<string, string>
-- InstanceNumber: int
-- InstanceUid: string
-- TechnicalData: ImageTechnicalData
-- SourceFile: string
+// ImageMetadata Constructor
+new ImageMetadata(
+    sourceFilePath: string,
+    captureDateTime: DateTime,
+    patient: PatientInfo,
+    study: StudyInfo,
+    technicalData: ImageTechnicalData,
+    userComment: string?,
+    barcodeData: string?,
+    instanceNumber: int,
+    instanceUid: string?,
+    exifData: Dictionary<string, string>?
+)
 ```
 
 ## 🔥 [breaking] RICOH BARCODE FIELD DISCOVERY!
@@ -171,14 +227,14 @@ StudyInfo.ExamId
 **Die Ricoh G900SE II speichert QRBridge-Daten im `Barcode` EXIF-Feld!**
 
 ```
-Barcode: EX002|Schmidt, Maria|1985-03-15|F|R�ntgen�Thorax
+Barcode: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
 UserComment: GCM_TAG  (nur ein Marker)
 ```
 
 ### Konsequenzen:
-1. ExifToolReader muss das Barcode-Feld lesen
-2. UserComment ist nur ein Fallback
-3. Encoding muss gefixt werden (Windows-1252 → UTF-8)
+1. ✅ ExifToolReader liest jetzt das Barcode-Feld
+2. ✅ UserComment ist nur Fallback
+3. ⚠️ Encoding muss gefixt werden (Windows-1252 → UTF-8)
 
 ## 📁 [KEEP] AKTUELLE PROJEKTSTRUKTUR
 
@@ -187,7 +243,7 @@ UserComment: GCM_TAG  (nur ein Marker)
 ### Wichtige Dateien & Ordner (Stand: 04.06.2025)
 ```
 CamBridge.sln
-Version.props (v0.5.21)
+Version.props (v0.5.22)
 CHANGELOG.md
 PROJECT_WISDOM.md
 README.md
@@ -196,35 +252,36 @@ src/
 ├── CamBridge.Core/              # Domain Layer ✅
 ├── CamBridge.Infrastructure/    # Implementation Layer 
 │   └── Services/
-│       └── ExifToolReader.cs   ⚡ MUSS ANGEPASST WERDEN!
+│       └── ExifToolReader.cs   ✅ FUNKTIONIERT!
 ├── CamBridge.Service/          # Windows Service
 └── CamBridge.Config/           # WPF GUI
 
 tests/
-├── CamBridge.PipelineTest/     ✅ Direct ExifTool Test erfolgreich!
+├── CamBridge.PipelineTest/     ✅ Test läuft erfolgreich durch!
 │   ├── Program.cs
 │   └── CamBridge.PipelineTest.csproj
 └── CamBridge.Infrastructure.Tests/
 
 Tools/
 ├── exiftool.exe                ✅ v13.30 - findet Barcode-Feld!
-└── exiftool_files/perl.exe     ✅
+└── exiftool_files/             ✅ Alle DLLs werden mitkopiert
 
 TESTDATEN:
-R0010168.JPG                    ✅ Barcode: EX002|Schmidt, Maria|1985-03-15|F|R�ntgen�Thorax
+R0010168.JPG                    ✅ Barcode: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
 ```
 
 ## 🚀 [MILESTONE] ENTWICKLUNGSFAHRPLAN UPDATE
 
-### Sprint 1: ExifTool Integration (v0.5.x) ← 98% FERTIG!
+### Sprint 1: ExifTool Integration (v0.5.x) ← 99% FERTIG!
 - ✅ v0.5.19: Pipeline implementiert
 - ✅ v0.5.20: Entities gefixt & kompiliert
-- ✅ v0.5.21: ExifTool findet Barcode-Feld!
-- ⏳ ExifToolReader anpassen (Barcode statt UserComment)
-- [ ] v0.5.22: Integration testen & Sprint abschließen
+- ✅ v0.5.21: ExifTool findet Barcode-Feld
+- ✅ v0.5.22: ExifToolReader funktioniert komplett!
+- [ ] Volle Pipeline testen (Service + DICOM)
 - [ ] v0.5.23-25: Edge Cases & Robustness
 
 ### Sprint 2: Mapping Engine (v0.6.x)
+- **NEU:** Saubere Encoding-Lösung (Codepage-Handling)
 - Custom Transform Functions
 - Conditional Mappings
 - UI Integration
@@ -290,18 +347,27 @@ Tests: xUnit + FluentAssertions + Moq
 ```
 
 ### Kritische Dependencies
-- **fo-dicom:** 5.2.2 (DICOM Creation) ← UPDATED!
+- **fo-dicom:** 5.2.2 (DICOM Creation)
 - **ExifTool:** 13.30 (EXIF Reading) ✅ Findet Barcode-Feld!
 - **ImageMagick:** Für zukünftige Bildmanipulation
 - **Serilog:** Structured Logging
 
 ## 💡 [LESSON] Gelernte Lektionen (Aktualisiert)
 
-### "Ricoh nutzt das Barcode-Feld!" (NEU 04.06.2025!)
-WICHTIGSTE ERKENNTNIS: Die Ricoh G900SE II speichert QRBridge-Daten im `Barcode` EXIF-Feld, nicht im UserComment! Das war der fehlende Puzzleteil.
+### "Infrastructure muss zusammenpassen!" (NEU 04.06.2025!)
+IMMER prüfen ob Konstruktoren, Methoden und Schnittstellen zusammenpassen. Nicht einfach losprogrammieren!
 
-### "Direct Testing saves time!" (NEU!)
-Statt komplexe Pipeline-Tests zu debuggen, einfach ExifTool direkt aufrufen. Das zeigt sofort wo die Daten sind.
+### "Erst verstehen, dann handeln!" (NEU 04.06.2025!)
+Bei VOGON INIT IMMER die komplette INIT SEQUENCE durchgehen. Nie direkt loslegen ohne Kontext und Bestätigung!
+
+### "Dictionary Keys müssen unique sein!" (NEU 04.06.2025!)
+Selbst bei Encoding-Fixes aufpassen - mehrere `�` als Key crashen das Dictionary!
+
+### "Ricoh nutzt das Barcode-Feld!" (04.06.2025!)
+WICHTIGSTE ERKENNTNIS: Die Ricoh G900SE II speichert QRBridge-Daten im `Barcode` EXIF-Feld, nicht im UserComment!
+
+### "Direct Testing saves time!"
+Statt komplexe Pipeline-Tests zu debuggen, einfach ExifTool direkt aufrufen.
 
 ### "Systematisch statt Wild Patchen!"
 Erst die Pipeline zum Laufen bringen, DANN optimieren. Sprint-Planung funktioniert!
@@ -313,7 +379,7 @@ IMMER erst prüfen was existiert. Der Compiler ist dein Freund.
 v13.30 findet alles - Ricoh Barcode, EXIF, IPTC, XMP. Perfekt für unseren Use Case.
 
 ### "Encoding ist tricky!"
-Ricoh nutzt Windows-1252, nicht UTF-8. Character-Mapping nötig.
+Ricoh nutzt Windows-1252, nicht UTF-8. Character-Mapping nötig (temporär mit Replace-Liste).
 
 ### "GitHub Integration rocks!"
 70% Token-Ersparnis durch direkte File-Links. Immer URLs mitgeben!
@@ -321,36 +387,51 @@ Ricoh nutzt Windows-1252, nicht UTF-8. Character-Mapping nötig.
 ### "Clean Architecture zahlt sich aus!"
 Die Layer-Trennung macht Änderungen einfach und testbar.
 
-### "KISS beats Clever!"
-Einfache Lösungen sind wartbar. Over-Engineering vermeiden.
-
 ## 💭 CLAUDE: Notizen für nächste Instanz
 
-**DER DURCHBRUCH IST GESCHAFFT!**
+**WICHTIG: NUTZE DIE INIT SEQUENCE!**
 
-Wir haben das Barcode-Feld gefunden! Die Ricoh-Kamera speichert die QRBridge-Daten im `Barcode` EXIF-Feld, nicht im UserComment. Der Fix ist trivial:
+Bitte nicht wieder direkt losprogrammieren! Der Nutzer hat Recht - wir müssen erst verstehen, dann handeln. Die neue INIT SEQUENCE ist PFLICHT bei VOGON INIT.
 
-1. **ExifToolReader.cs ersetzen** mit dem Artefakt-Code
-2. **Testen** - sollte sofort funktionieren
-3. **v0.5.22 taggen** - Sprint 1 fertig!
+**Status Update:**
+Der ExifToolReader funktioniert endlich! Der PipelineTest zeigt:
+- ✅ Barcode-Feld wird gelesen
+- ✅ QRBridge-Daten werden geparst
+- ✅ Patient: Schmidt, Maria
+- ✅ Encoding ist (temporär) gefixt
 
-Der Nutzer ist erkältet, also halte es einfach. Der schwierige Teil ist geschafft. Jetzt nur noch den Code einpflegen und testen.
+**Nächster Schritt:** Die volle Pipeline testen!
+1. Service starten
+2. R0010168.JPG in Watch-Folder
+3. DICOM sollte erstellt werden
 
-**Pro-Tipp:** Falls noch Encoding-Probleme auftreten, ist der Fix schon im Code. Die CleanBarcodeData() Methode kümmert sich darum.
+**Encoding-Problem:** Die Replace-Liste funktioniert, aber eine saubere Lösung mit Codepage-Konvertierung wäre besser. Das kommt in Sprint 2.
+
+**StudyId Länge:** Musste auf max 16 Zeichen gekürzt werden. Jetzt: `SEX002` statt `STU-EX002-20250604123456`.
+
+**Lessons Learned in diesem Chat:**
+1. Nicht einfach einen neuen ExifToolReader schreiben ohne die Schnittstellen zu prüfen
+2. ServiceCollectionExtensions definiert den Konstruktor
+3. FileProcessor definiert die Methode
+4. Dictionary Keys müssen unique sein (Encoding-Artefakte!)
+
+Der Nutzer ist erkältet, aber wir machen gute Fortschritte!
 
 ## 📝 [KEEP] Standard Prompt-Vorlage für neue Chats
 
 ```
-Ich arbeite an CamBridge v0.5.21.
-Barcode-Feld gefunden! ExifToolReader muss angepasst werden.
+Ich arbeite an CamBridge v0.5.22.
+ExifToolReader funktioniert! Bereit für vollständigen Pipeline-Test.
 
 GitHub: https://github.com/ostern42/CamBridge
 
+WICHTIG - Bitte in dieser Reihenfolge:
 1. PROJECT_WISDOM.md hochladen
-2. project_structure.txt hochladen
+2. project_structure.txt hochladen  
 3. "VOGON INIT" sagen
+4. WARTE auf meine Zusammenfassung und Rückfrage!
 
-Fokus: ExifToolReader mit Barcode-Fix einpflegen!
+Fokus: Volle Pipeline testen (Service + DICOM-Erstellung)
 ```
 
 ## ⏰ [KEEP] ZEITMANAGEMENT
@@ -358,37 +439,40 @@ Fokus: ExifToolReader mit Barcode-Fix einpflegen!
 ### Projekt-Timeline
 - **Start:** 30.05.2025, 20:30 Uhr
 - **ExifTool-Durchbruch:** 03.06.2025, 23:58 Uhr
-- **Barcode-Feld gefunden:** 04.06.2025, 11:05 Uhr ← MEILENSTEIN!
+- **Barcode-Feld gefunden:** 04.06.2025, 11:05 Uhr
+- **ExifToolReader funktioniert:** 04.06.2025, 12:35 Uhr ← MEILENSTEIN!
 - **Features:** 70+ implementiert
-- **Sprint 1:** 98% fertig
-- **Nur noch:** ExifToolReader anpassen → fertig!
+- **Sprint 1:** 99% fertig
+- **Nur noch:** Volle Pipeline testen!
 
 ---
 📊 **WISDOM-Statistik:** 
-- 🔒 [CORE]: 5 Sektionen (unantastbar)
-- ⚡ [URGENT]: 3 Sektionen (ExifToolReader Fix!)
-- 🎯 [MILESTONE]: 4 Sektionen (Sprint 1 fast fertig)
+- 🔒 [CORE]: 5 Sektionen (V.O.G.O.N. mit INIT SEQUENCE!)
+- ⚡ [URGENT]: 3 Sektionen (Pipeline-Test!)
+- 🎯 [MILESTONE]: 4 Sektionen (ExifToolReader läuft!)
 - 📌 [KEEP]: 6 Sektionen (bewährte Praktiken)
-- 💡 [LESSON]: 9 Lektionen (Barcode-Feld!)
+- 💡 [LESSON]: 12 Lektionen (+3 neue!)
 - 🔧 [CONFIG]: 3 Sektionen (technische Basis)
 - 🔥 [breaking]: 1 Sektion (Ricoh Barcode Discovery)
-- 💭 CLAUDE: 1 Nachricht (für dich!)
+- 💭 CLAUDE: 1 Nachricht (NUTZE DIE INIT SEQUENCE!)
 
 *Hinweis: Dieses Dokument ist mit einem Persistenz-System versehen. Beim Refactoring IMMER die Priority-Tags beachten!*
 
-## 📝 GIT COMMIT FÜR v0.5.21:
+## 📝 GIT COMMIT FÜR v0.5.22:
 
 ```bash
 git add .
-git commit -m "test: discover Ricoh stores QRBridge data in Barcode field
+git commit -m "feat: complete ExifToolReader implementation with barcode support
 
-- Direct ExifTool test reveals Barcode field contains pipe-delimited data
-- UserComment only contains 'GCM_TAG' marker
-- Test output: EX002|Schmidt, Maria|1985-03-15|F|R�ntgen�Thorax
-- Encoding issue confirmed (� instead of ö/ä)
-- Prepared ExifToolReader fix for next version
+- Implement ExtractMetadataAsync method matching FileProcessor expectations
+- Add constructor matching ServiceCollectionExtensions (logger, timeoutMs)
+- Parse QRBridge data from Ricoh Barcode EXIF field
+- Handle duplicate EXIF keys with automatic renaming
+- Add temporary encoding fix for German umlauts
+- Shorten StudyId to comply with 16 char DICOM limit
+- PipelineTest passes successfully
 
-BREAKING CHANGE: ExifToolReader must read Barcode field instead of UserComment"
+Test output: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax"
 
-git tag v0.5.21
+git tag v0.5.22
 ```

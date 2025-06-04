@@ -1,9 +1,10 @@
 <Project>
 	<PropertyGroup>
-		<Version>0.5.21</Version>
-		<FileVersion>0.5.21.0</FileVersion>
-		<AssemblyVersion>0.5.21.0</AssemblyVersion>
-		<InformationalVersion>0.5.21+pipeline-test</InformationalVersion>
+		<VersionPrefix>0.5.22</VersionPrefix>
+		<AssemblyVersion>0.5.22.0</AssemblyVersion>
+		<FileVersion>0.5.22.0</FileVersion>
+		<InformationalVersion>0.5.22</InformationalVersion>
+		<PackageVersion>0.5.22</PackageVersion>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>

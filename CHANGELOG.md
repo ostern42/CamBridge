@@ -6,6 +6,32 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.22] - 2025-06-04
+### Added
+- Complete ExifToolReader implementation with proper API
+- Support for Ricoh Barcode EXIF field parsing
+- Automatic handling of duplicate EXIF keys
+- Temporary encoding fix for German umlauts
+- Enhanced PipelineTest with ExifToolReader integration
+- Improved VOGON INIT sequence with structured approach
+
+### Changed
+- ExifToolReader constructor now accepts (logger, timeoutMs)
+- ExifToolReader method renamed to ExtractMetadataAsync()
+- StudyId format shortened to max 16 characters (DICOM compliance)
+- VOGON INIT now requires full context analysis before action
+
+### Fixed
+- Dictionary key collision with encoding artifacts
+- PipelineTest now includes full ExifToolReader integration
+- All exiftool_files DLLs are copied to output directory
+- Multiple duplicate EXIF keys handled gracefully
+
+### Technical
+- QRBridge data successfully extracted: EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax
+- Ready for full pipeline testing with DICOM creation
+- Sprint 1 feature complete at 99%
+
 ## [0.5.21] - 2025-06-04
 
 ### Added

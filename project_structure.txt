@@ -102,6 +102,8 @@ tests\CamBridge.Infrastructure.Tests\Services\DicomConverterTests.cs
 tests\CamBridge.Infrastructure.Tests\Services\ExifReaderTests.cs
 tests\CamBridge.Infrastructure.Tests\TestHelpers\JpegTestFileGenerator.cs
 tests\CamBridge.Infrastructure.Tests\TestLogger.cs
+tests\CamBridge.PipelineTest\CamBridge.PipelineTest.csproj
+tests\CamBridge.PipelineTest\Program.cs
 tests\CamBridge.TestConsole\CamBridge.TestConsole.csproj
 tests\CamBridge.TestConsole\mappings.json
 tests\CamBridge.TestConsole\Program.cs
