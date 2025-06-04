@@ -1,11 +1,10 @@
-# Visual Studio 2022
-.vs/
-*.user
-*.userosscache
-*.sln.docstates
-*.suo
+# File: .gitignore
+# Version: 0.5.23
+# Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+# Modified: 2025-06-04
+# Status: Development
 
-# Build results
+# .NET Build Results
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -21,67 +20,163 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
-# NuGet
+# Visual Studio 2022 cache/options
+.vs/
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+
+# NuGet Packages
 *.nupkg
 *.snupkg
-**/packages/*
-!**/packages/build/
+# The packages folder can be ignored because of Package Restore
+**/[Pp]ackages/*
+# except build/, which is used as an MSBuild target.
+!**/[Pp]ackages/build/
+# NuGet v3's project.json files produces more ignorable files
+*.nuget.props
+*.nuget.targets
+project.assets.json
+project.nuget.cache
+*.nuget.dgspec.json
+
+# MSBuild Binary and Structured Log
+*.binlog
+
+# .NET Core
 project.lock.json
 project.fragment.lock.json
 artifacts/
 
-# .NET
-*.dll
-*.exe
-*.pdb
-*.cache
-*.ilk
-*.log
-*.vspscc
-*.vssscc
-*.tlb
-*.tlh
-*.tmp
-*.tmp_proj
-*.rsp
-*.pgc
-*.pgd
-*.meta
-*.manifest
-*.intermediate.manifest
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
 
 # Windows
 Thumbs.db
+Thumbs.db:encryptable
 ehthumbs.db
-Desktop.ini
+ehthumbs_vista.db
+[Dd]esktop.ini
 
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
 
-# Rider
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# JetBrains Rider
 .idea/
 *.sln.iml
 
-# Visual Studio Code
-.vscode/
-
-# Local History for Visual Studio
-.localhistory/
-
-# BeatPulse healthcheck
-healthchecksdb
-
-# Backup folder for Package Manager
-MigrationBackup/
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
 
 # Test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
 
-# DICOM test files
-*.dcm
-*.dicom
+# Benchmark Results
+BenchmarkDotNet.Artifacts/
 
-# JPEG test files (optional, auskommentieren wenn Test-Bilder versioniert werden sollen)
-# *.jpg
-# *.jpeg
+# StyleCop
+StyleCopReport.xml
+
+# Files built by Visual Studio
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Publish Profiles
+PublishProfiles/
+*.pubxml
+*.publishproj
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# CamBridge Specific
+# Test output folders
+Test/Output/
+TestOutput/
+test-results/
+
+# ExifTool temp files
+exiftool_tmp*
+
+# DICOM test files (wenn gewünscht)
+# *.dcm
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary files
+*.temp
+*.tmp
+
+# Dead Letter Queue (aber Struktur behalten)
+DeadLetterQueue/*
+!DeadLetterQueue/.gitkeep
+
+# Service logs (aber Ordner behalten)
+logs/*
+!logs/.gitkeep
+
+# Config UI Settings (user-specific)
+appsettings.Development.local.json
+appsettings.Production.local.json
+
+# But keep these important files
+!.gitignore
+!.gitattributes
+!README.md
+!CHANGELOG.md
+!PROJECT_WISDOM.md
+!Version.props

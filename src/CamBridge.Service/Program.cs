@@ -1,21 +1,22 @@
 using CamBridge.Infrastructure;
-using CamBridge.Service;
 using CamBridge.Infrastructure.Services; // Für FolderWatcherService
-using Microsoft.Extensions.Hosting;
-using Serilog;
+using CamBridge.Service;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Serilog;
 // Später aktivieren:
 // using Microsoft.OpenApi.Models;
-// using Microsoft.AspNetCore.Http;
 
 // ========================================
-// SCHRITT 1: Basis Pipeline (AKTIV)
-// SCHRITT 2: Health Checks (auskommentiert)
-// SCHRITT 3: Web API (auskommentiert)
+// SCHRITT 1: Basis Pipeline (AKTIV) ✓
+// SCHRITT 2: Health Checks (AKTIV) ✓
+// SCHRITT 3: Web API (AKTIV) ✓
 // SCHRITT 4: Swagger (auskommentiert)
 // SCHRITT 5: Windows Service (auskommentiert)
 // ========================================
@@ -32,7 +33,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("Starting CamBridge Service v0.5.22...");
+    Log.Information("Starting CamBridge Service v0.5.23...");
     Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
 
     // ========== SCHRITT 1: BASIC PIPELINE (AKTIV) ==========
@@ -98,22 +99,31 @@ try
         // Basic Worker - immer aktiv
         services.AddHostedService<Worker>();
 
-        // ========== SCHRITT 2: Health Checks (AUSKOMMENTIERT) ==========
-        // Log.Information("SCHRITT 2: Health Checks - INAKTIV ❌");
-        /*
+        // ========== SCHRITT 2: Health Checks (JETZT AKTIV!) ==========
+        Log.Information("SCHRITT 2: Health Checks - AKTIV ✓");
         services.AddHealthChecks()
             .AddCheck<CamBridgeHealthCheck>("cambridge");
-            
+
         // Daily Summary Service
         services.AddHostedService<DailySummaryService>();
-        */
 
-        // ========== SCHRITT 3: Web API (AUSKOMMENTIERT) ==========
-        // Log.Information("SCHRITT 3: Web API - INAKTIV ❌");
-        /*
+        // ========== SCHRITT 3: Web API (JETZT AKTIV!) ==========
+        Log.Information("SCHRITT 3: Web API - AKTIV ✓");
         if (!isService)
         {
             services.AddControllers();
+
+            // Add CORS for Config UI
+            services.AddCors(options =>
+            {
+                options.AddPolicy("ConfigUI", policy =>
+                {
+                    policy.WithOrigins("http://localhost:*", "https://localhost:*")
+                          .AllowAnyMethod()
+                          .AllowAnyHeader()
+                          .AllowCredentials();
+                });
+            });
 
             // ========== SCHRITT 4: Swagger (AUSKOMMENTIERT) ==========
             // Log.Information("SCHRITT 4: Swagger - INAKTIV ❌");
@@ -126,11 +136,9 @@ try
             //     });
             // }
         }
-        */
     });
 
-    // ========== SCHRITT 3: Web Host konfigurieren (AUSKOMMENTIERT) ==========
-    /*
+    // ========== SCHRITT 3: Web Host konfigurieren (JETZT AKTIV!) ==========
     if (!isService)
     {
         builder.ConfigureWebHostDefaults(webBuilder =>
@@ -139,7 +147,6 @@ try
             webBuilder.UseUrls("http://localhost:5050");
         });
     }
-    */
 
     var host = builder.Build();
 
@@ -155,8 +162,8 @@ try
             Log.Information("=========================================");
             Log.Information("AKTIVE FEATURES:");
             Log.Information("✓ SCHRITT 1: Basic Pipeline (ExifTool → DICOM)");
-            Log.Information("✗ SCHRITT 2: Health Checks");
-            Log.Information("✗ SCHRITT 3: Web API");
+            Log.Information("✓ SCHRITT 2: Health Checks");
+            Log.Information("✓ SCHRITT 3: Web API");
             Log.Information("✗ SCHRITT 4: Swagger");
             Log.Information("✗ SCHRITT 5: Windows Service");
             Log.Information("=========================================");
@@ -183,8 +190,7 @@ finally
 
 return 0;
 
-// ========== SCHRITT 3/4: Startup Klasse für API (AUSKOMMENTIERT) ==========
-/*
+// ========== SCHRITT 3/4: Startup Klasse für API (JETZT AKTIV!) ==========
 public class Startup
 {
     public IConfiguration Configuration { get; }
@@ -204,19 +210,58 @@ public class Startup
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
-            
+
             // SCHRITT 4: Swagger aktivieren
             // app.UseSwagger();
             // app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CamBridge API v1"));
         }
 
         app.UseRouting();
+
+        // Enable CORS
+        app.UseCors("ConfigUI");
+
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();
-            
+
             // SCHRITT 2: Health Checks aktivieren
-            // endpoints.MapHealthChecks("/health");
+            endpoints.MapHealthChecks("/health");
+
+            // Simple status endpoint for Config UI
+            endpoints.MapGet("/api/status", async context =>
+            {
+                var processingQueue = context.RequestServices.GetService<ProcessingQueue>();
+                var deadLetterQueue = context.RequestServices.GetService<DeadLetterQueue>();
+                var settings = context.RequestServices.GetService<IOptions<CamBridge.Core.CamBridgeSettings>>();
+
+                var stats = deadLetterQueue?.GetStatistics() ?? new CamBridge.Core.DeadLetterStatistics();
+                var totalProcessed = stats.TotalSuccessful + stats.TotalFailed;
+                var successRate = totalProcessed > 0
+                    ? (double)stats.TotalSuccessful / totalProcessed * 100
+                    : 0;
+
+                var status = new
+                {
+                    ServiceStatus = "Running",
+                    Version = "0.5.23",
+                    Uptime = TimeSpan.FromMilliseconds(Environment.TickCount64),
+                    QueueLength = processingQueue?.GetQueueLength() ?? 0,
+                    ActiveProcessing = 0, // TODO: Implement
+                    TotalSuccessful = stats.TotalSuccessful,
+                    TotalFailed = stats.TotalFailed,
+                    SuccessRate = successRate,
+                    DeadLetterCount = deadLetterQueue?.GetQueueLength() ?? 0,
+                    Configuration = new
+                    {
+                        WatchFolders = settings?.Value?.WatchFolders?.Count ?? 0,
+                        OutputFolder = settings?.Value?.OutputFolder
+                    }
+                };
+
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(status);
+            });
 
             // Development diagnostic endpoints
             if (env.IsDevelopment())
@@ -226,16 +271,18 @@ public class Startup
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync(@"
                         <html>
-                        <head><title>CamBridge Service</title></head>
+                        <head><title>CamBridge Service v0.5.23</title></head>
                         <body>
                             <h1>CamBridge Service - Development Mode</h1>
-                            <p>API Features sind noch deaktiviert!</p>
+                            <p>API Features sind jetzt aktiviert!</p>
                             <ul>
                                 <li>✓ Pipeline läuft</li>
-                                <li>✗ Health Check</li>
-                                <li>✗ Service Status</li>
-                                <li>✗ API Documentation</li>
+                                <li>✓ Health Check: <a href='/health'>/health</a></li>
+                                <li>✓ Service Status: <a href='/api/status'>/api/status</a></li>
+                                <li>✗ API Documentation (Swagger noch deaktiviert)</li>
                             </ul>
+                            <hr>
+                            <p>Config UI kann sich jetzt über Port 5050 verbinden!</p>
                         </body>
                         </html>");
                 });
@@ -243,4 +290,3 @@ public class Startup
         });
     }
 }
-*/
