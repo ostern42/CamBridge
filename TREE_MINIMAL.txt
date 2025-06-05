@@ -1,0 +1,8 @@
+﻿[GUI  ] Config               (32 files)
+[CORE ] Core                 (22 files)
+[INFRA] Infrastructure       (12 files)
+[QR   ] QRBridge             ( 6 files)
+[SVC  ] Service              ( 5 files)
+[TEST ] Infrastructure.Tests (11 files)
+
+PROTECTED: FTP|C-STORE|MWL|C-FIND

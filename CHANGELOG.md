@@ -10,6 +10,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.5.35] - 2025-06-06
+
+### Added
+- Enhanced Marvin Easter Egg in About Page with multi-level click progression
+- 12 CamBridge-specific Marvin quotes about converting JPEGs to DICOM
+- Progressive Easter Egg reveals: 3 clicks→Marvin, 5 clicks→Vogon Poetry, 7 clicks→More Marvin, 10 clicks→VogonPoetryWindow
+- "DON'T PANIC" tooltip on About Page logo
+- Subtle "42" hint text in About Page footer
+- Animation state tracking to prevent click overlap issues
+- New planned feature: Marvin QR Code Commentary for QRBridge (CAMB-012)
+
+### Changed
+- About Page version updated from 0.5.27 to 0.5.35
+- Extended existing Vogon Poetry Easter Egg with Marvin integration
+- Improved click detection with 3-second reset timer
+- Optimized animation timings: Marvin displays for 7s (was 5s), Vogon Poetry for 13s (was 10s)
+- Faster fade animations: 0.3s for Marvin, 0.5s for restore (was 0.5s/1.0s)
+
+### Fixed
+- Copyright symbol encoding issue in About Page XAML (Â© → ©)
+- Updated outdated version references in About Page
+- Click overlap bug where Marvin animation would be interrupted by Vogon Poetry
+- PROJECT_WISDOM.md artifact was truncated - now complete
+
+### Developer Notes
+- Remember to check FileTree before creating new files!
+- User suggested brilliant QR Code Easter Egg idea for next sprint
+- Marvin quotes make the medical workflow more enjoyable
+- Always verify artifacts are complete before committing!
+
 ## [0.5.33] - 2025-06-05
 
 ### Added

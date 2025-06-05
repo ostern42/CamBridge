@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\AboutPage.xaml -->
-<!-- Version: 0.5.27 -->
-<!-- Fixed: Background colors improved, Vogon poetry easter egg added -->
+<!-- Version: 0.5.35 -->
+<!-- Description: About page with Marvin AND Vogon poetry easter eggs -->
 
 <Page x:Class="CamBridge.Config.Views.AboutPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -25,6 +25,11 @@
                         Margin="0,0,0,24"
                         Cursor="Hand"
                         MouseLeftButtonDown="Logo_MouseLeftButtonDown">
+                    <Border.ToolTip>
+                        <ToolTip Content="DON'T PANIC" 
+                                 FontFamily="Consolas"
+                                 FontSize="10"/>
+                    </Border.ToolTip>
                     <TextBlock Text="CB" 
                                FontSize="48" 
                                FontWeight="Bold"
@@ -42,7 +47,7 @@
 
                 <!-- Version -->
                 <TextBlock x:Name="VersionText"
-                           Text="Version 0.5.27" 
+                           Text="Version 0.5.35" 
                            FontSize="20" 
                            Opacity="0.8"
                            HorizontalAlignment="Center"
@@ -82,7 +87,14 @@
                            FontSize="12" 
                            Opacity="0.6"
                            HorizontalAlignment="Center"
-                           Margin="0,32,0,32"/>
+                           Margin="0,32,0,16"/>
+
+                <!-- Ultra subtle hint -->
+                <TextBlock Text="42" 
+                           FontSize="8" 
+                           Opacity="0.1"
+                           HorizontalAlignment="Center"
+                           ToolTip="The Answer to the Ultimate Question of Life, the Universe, and Everything"/>
             </StackPanel>
         </Grid>
     </Grid>

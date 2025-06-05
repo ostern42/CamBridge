@@ -57,6 +57,7 @@ src\CamBridge.Core\Entities\ImageMetadata.cs
 src\CamBridge.Core\Entities\ImageTechnicalData.cs
 src\CamBridge.Core\Entities\PatientInfo.cs
 src\CamBridge.Core\Entities\ProcessingResult.cs
+src\CamBridge.Core\Entities\QRCodeRequest.cs
 src\CamBridge.Core\Entities\StudyInfo.cs
 src\CamBridge.Core\Interfaces\IDicomConverter.cs
 src\CamBridge.Core\Interfaces\IDicomTagMapper.cs
@@ -84,6 +85,13 @@ src\CamBridge.Infrastructure\Services\INotificationService.cs
 src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs
 src\CamBridge.Infrastructure\Services\NotificationService.cs
 src\CamBridge.Infrastructure\Services\ProcessingQueue.cs
+src\CamBridge.QRBridge\CamBridge.QRBridge.csproj
+src\CamBridge.QRBridge\Constants\QRBridgeConstants.cs
+src\CamBridge.QRBridge\Forms\QRDisplayForm.cs
+src\CamBridge.QRBridge\GlobalUsings.cs
+src\CamBridge.QRBridge\Program.cs
+src\CamBridge.QRBridge\Services\ArgumentParser.cs
+src\CamBridge.QRBridge\Services\QRCodeService.cs
 src\CamBridge.Service\appsettings.Development.json
 src\CamBridge.Service\appsettings.json
 src\CamBridge.Service\CamBridge.Service.csproj

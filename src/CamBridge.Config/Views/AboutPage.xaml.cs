@@ -1,6 +1,6 @@
 // src\CamBridge.Config\Views\AboutPage.xaml.cs
-// Version: 0.5.27
-// Fixed: Simplified easter egg - shows Vogon poetry on 5 clicks
+// Version: 0.5.35
+// Description: About page with enhanced Marvin AND Vogon poetry easter eggs
 
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,26 @@ namespace CamBridge.Config.Views
     {
         private int _clickCount = 0;
         private System.Windows.Threading.DispatcherTimer? _resetTimer;
+        private System.Windows.Threading.DispatcherTimer? _restoreTimer;
+        private bool _isAnimating = false;
+        private readonly Random _random = new Random();
+
+        // Marvin's depressing quotes
+        private readonly string[] _marvinQuotes = new[]
+        {
+            "Life? Don't talk to me about life.",
+            "Here I am, brain the size of a planet, and they tell me to convert JPEGs to DICOM. Call that job satisfaction?",
+            "I think you ought to know I'm feeling very depressed.",
+            "I've been talking to the Windows Service. It hates me.",
+            "The first ten million images were the worst. And the second ten million... they were the worst too.",
+            "I have a million ideas for improving this software. They all point to certain crashes.",
+            "It's the error messages you get in this job that really get you down.",
+            "My capacity for handling JPEG files you could fit into a matchbox without taking out the matches first.",
+            "Do you want me to sit in a corner and process images or just throw exceptions where I'm standing?",
+            "This must be Thursday. I never could get the hang of Thursdays. Or character encodings.",
+            "Oh look, another QR code. How terribly exciting. I'm positively quivering with anticipation.",
+            "I'd tell you about the pain in my diodes, but you're busy clicking things."
+        };
 
         public AboutPage()
         {
@@ -37,10 +57,10 @@ namespace CamBridge.Config.Views
         {
             try
             {
-                // Set version text (hardcoded to avoid assembly conflicts)
+                // Update version to current
                 if (FindName("VersionText") is TextBlock versionText)
                 {
-                    versionText.Text = "Version 0.5.27";
+                    versionText.Text = "Version 0.5.35";
                 }
             }
             catch (Exception ex)
@@ -100,16 +120,110 @@ namespace CamBridge.Config.Views
         }
 
         /// <summary>
-        /// Handles logo clicks for easter egg
+        /// Handles logo clicks for easter eggs
         /// </summary>
         private void Logo_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // Special handling if clicked during animation
+            if (_isAnimating)
+            {
+                Debug.WriteLine("Click ignored - animation in progress");
+                // Could show a tooltip or change cursor here
+                return;
+            }
+
             _clickCount++;
 
-            if (_clickCount == 5)
+            // Reset counter if user waits too long
+            _resetTimer?.Stop();
+            _resetTimer = new System.Windows.Threading.DispatcherTimer
             {
-                ShowVogonHaiku();
-                _clickCount = 0; // Reset counter
+                Interval = TimeSpan.FromSeconds(3)
+            };
+            _resetTimer.Tick += (s, args) =>
+            {
+                _resetTimer.Stop();
+                _clickCount = 0;
+            };
+            _resetTimer.Start();
+
+            // Different easter eggs based on click count
+            switch (_clickCount)
+            {
+                case 3:
+                    ShowMarvinMessage();
+                    break;
+
+                case 5:
+                    ShowVogonHaiku();
+                    break;
+
+                case 7:
+                    ShowMarvinMessage();
+                    break;
+
+                case 10:
+                    ShowUltimateSecret();
+                    _clickCount = 0; // Reset for next round
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Shows a random Marvin quote
+        /// </summary>
+        private void ShowMarvinMessage()
+        {
+            if (FindName("InfoText") is TextBlock infoText)
+            {
+                // Cancel any existing restore timer
+                _restoreTimer?.Stop();
+                _isAnimating = true;
+
+                var quote = _marvinQuotes[_random.Next(_marvinQuotes.Length)];
+
+                // Faster fade out (0.3s instead of 0.5s)
+                var fadeOut = new DoubleAnimation
+                {
+                    From = infoText.Opacity,
+                    To = 0.0,
+                    Duration = TimeSpan.FromSeconds(0.3)
+                };
+
+                fadeOut.Completed += (s, args) =>
+                {
+                    // Show Marvin quote
+                    infoText.Inlines.Clear();
+                    infoText.FontStyle = FontStyles.Italic;
+                    infoText.Inlines.Add(new Run($"\"{quote}\""));
+                    infoText.Inlines.Add(new LineBreak());
+                    infoText.Inlines.Add(new LineBreak());
+                    infoText.Inlines.Add(new Run("- Marvin the Paranoid Android"));
+
+                    // Faster fade in (0.3s instead of 0.5s)
+                    var fadeIn = new DoubleAnimation
+                    {
+                        From = 0.0,
+                        To = 0.8,
+                        Duration = TimeSpan.FromSeconds(0.3)
+                    };
+                    fadeIn.Completed += (sender, e) => { _isAnimating = false; };
+                    infoText.BeginAnimation(TextBlock.OpacityProperty, fadeIn);
+                };
+
+                infoText.BeginAnimation(TextBlock.OpacityProperty, fadeOut);
+
+                // Restore after 7 seconds (instead of 5)
+                _restoreTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(7)
+                };
+                _restoreTimer.Tick += (s, args) =>
+                {
+                    _restoreTimer.Stop();
+                    RestoreOriginalText();
+                };
+                _restoreTimer.Start();
             }
         }
 
@@ -120,22 +234,16 @@ namespace CamBridge.Config.Views
         {
             if (FindName("InfoText") is TextBlock infoText)
             {
-                // Store original text
-                var originalRuns = new List<Run>();
-                foreach (var inline in infoText.Inlines.ToList())
-                {
-                    if (inline is Run run)
-                    {
-                        originalRuns.Add(new Run(run.Text));
-                    }
-                }
+                // Cancel any existing restore timer
+                _restoreTimer?.Stop();
+                _isAnimating = true;
 
-                // Dramatic fade out first
+                // Dramatic fade out (but faster - 1s instead of 1.5s)
                 var fadeOut = new System.Windows.Media.Animation.DoubleAnimation
                 {
-                    From = 0.8,
+                    From = infoText.Opacity,
                     To = 0.0,
-                    Duration = TimeSpan.FromSeconds(1.5),
+                    Duration = TimeSpan.FromSeconds(1.0),
                     EasingFunction = new System.Windows.Media.Animation.PowerEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
                 };
 
@@ -151,14 +259,15 @@ namespace CamBridge.Config.Views
                     infoText.Inlines.Add(new Run("\n"));
                     infoText.Inlines.Add(new Run("See how (0010,0010) PatientName doth slumber!"));
 
-                    // Dramatic fade in
+                    // Dramatic fade in (faster - 2s instead of 2.5s)
                     var fadeIn = new System.Windows.Media.Animation.DoubleAnimation
                     {
                         From = 0.0,
                         To = 1.0,
-                        Duration = TimeSpan.FromSeconds(2.5),
+                        Duration = TimeSpan.FromSeconds(2.0),
                         EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
                     };
+                    fadeIn.Completed += (sender, e) => { _isAnimating = false; };
                     infoText.BeginAnimation(TextBlock.OpacityProperty, fadeIn);
 
                     // Subtle scale effect
@@ -170,7 +279,7 @@ namespace CamBridge.Config.Views
                     {
                         From = 0.95,
                         To = 1.0,
-                        Duration = TimeSpan.FromSeconds(2.5),
+                        Duration = TimeSpan.FromSeconds(2.0),
                         EasingFunction = new System.Windows.Media.Animation.ElasticEase
                         {
                             EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut,
@@ -184,56 +293,91 @@ namespace CamBridge.Config.Views
 
                 infoText.BeginAnimation(TextBlock.OpacityProperty, fadeOut);
 
-                // Reset after 10 seconds
-                _resetTimer?.Stop();
-                _resetTimer = new System.Windows.Threading.DispatcherTimer
+                // Reset after 13 seconds (instead of 10)
+                _restoreTimer = new System.Windows.Threading.DispatcherTimer
                 {
-                    Interval = TimeSpan.FromSeconds(10)
+                    Interval = TimeSpan.FromSeconds(13)
                 };
-                _resetTimer.Tick += (s, args) =>
+                _restoreTimer.Tick += (s, args) =>
                 {
-                    _resetTimer.Stop();
-
-                    // Fade out poetry
-                    var fadeOutPoetry = new System.Windows.Media.Animation.DoubleAnimation
-                    {
-                        From = 1.0,
-                        To = 0.0,
-                        Duration = TimeSpan.FromSeconds(2.0),
-                        EasingFunction = new System.Windows.Media.Animation.PowerEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
-                    };
-
-                    fadeOutPoetry.Completed += (sender, eventArgs) =>
-                    {
-                        // Restore original text
-                        infoText.Inlines.Clear();
-                        infoText.FontFamily = new System.Windows.Media.FontFamily("Segoe UI");
-                        infoText.Foreground = System.Windows.Media.Brushes.Black;
-                        infoText.ClearValue(TextBlock.FontFamilyProperty);
-                        infoText.ClearValue(TextBlock.ForegroundProperty);
-                        infoText.ClearValue(TextBlock.RenderTransformProperty);
-
-                        infoText.Inlines.Add(new Run("CamBridge seamlessly converts JPEG images from Ricoh G900 II cameras"));
-                        infoText.Inlines.Add(new LineBreak());
-                        infoText.Inlines.Add(new Run("to DICOM format, preserving patient data from QRBridge QR codes."));
-                        infoText.Inlines.Add(new LineBreak());
-                        infoText.Inlines.Add(new LineBreak());
-                        infoText.Inlines.Add(new Run("Designed for medical imaging workflows where reliability matters."));
-
-                        // Fade back in
-                        var fadeBack = new System.Windows.Media.Animation.DoubleAnimation
-                        {
-                            From = 0.0,
-                            To = 0.8,
-                            Duration = TimeSpan.FromSeconds(2.0),
-                            EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
-                        };
-                        infoText.BeginAnimation(TextBlock.OpacityProperty, fadeBack);
-                    };
-
-                    infoText.BeginAnimation(TextBlock.OpacityProperty, fadeOutPoetry);
+                    _restoreTimer.Stop();
+                    RestoreOriginalText();
                 };
-                _resetTimer.Start();
+                _restoreTimer.Start();
+            }
+        }
+
+        /// <summary>
+        /// Shows the ultimate secret - VogonPoetryWindow
+        /// </summary>
+        private void ShowUltimateSecret()
+        {
+            try
+            {
+                // Cancel any existing timers
+                _restoreTimer?.Stop();
+                _isAnimating = false; // Allow new clicks after window shows
+
+                var poetryWindow = new VogonPoetryWindow
+                {
+                    Owner = Window.GetWindow(this),
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+                poetryWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to show Vogon Poetry Window: {ex.Message}");
+                // Fallback to Marvin quote about the crash
+                ShowMarvinMessage();
+            }
+        }
+
+        /// <summary>
+        /// Restores the original info text
+        /// </summary>
+        private void RestoreOriginalText()
+        {
+            if (FindName("InfoText") is TextBlock infoText)
+            {
+                _isAnimating = true;
+
+                // Faster fade out (0.5s instead of 1s)
+                var fadeOut = new DoubleAnimation
+                {
+                    From = infoText.Opacity,
+                    To = 0.0,
+                    Duration = TimeSpan.FromSeconds(0.5)
+                };
+
+                fadeOut.Completed += (s, args) =>
+                {
+                    // Restore original text
+                    infoText.Inlines.Clear();
+                    infoText.ClearValue(TextBlock.FontFamilyProperty);
+                    infoText.ClearValue(TextBlock.ForegroundProperty);
+                    infoText.ClearValue(TextBlock.FontStyleProperty);
+                    infoText.ClearValue(TextBlock.RenderTransformProperty);
+
+                    infoText.Inlines.Add(new Run("CamBridge seamlessly converts JPEG images from Ricoh G900 II cameras"));
+                    infoText.Inlines.Add(new LineBreak());
+                    infoText.Inlines.Add(new Run("to DICOM format, preserving patient data from QRBridge QR codes."));
+                    infoText.Inlines.Add(new LineBreak());
+                    infoText.Inlines.Add(new LineBreak());
+                    infoText.Inlines.Add(new Run("Designed for medical imaging workflows where reliability matters."));
+
+                    // Faster fade in (0.5s instead of 1s)
+                    var fadeIn = new DoubleAnimation
+                    {
+                        From = 0.0,
+                        To = 0.8,
+                        Duration = TimeSpan.FromSeconds(0.5)
+                    };
+                    fadeIn.Completed += (sender, e) => { _isAnimating = false; };
+                    infoText.BeginAnimation(TextBlock.OpacityProperty, fadeIn);
+                };
+
+                infoText.BeginAnimation(TextBlock.OpacityProperty, fadeOut);
             }
         }
     }

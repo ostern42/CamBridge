@@ -1,19 +1,28 @@
+<!-- Version.props -->
+<!-- Version: 0.5.35 -->
+<!-- Description: Central version management for CamBridge solution -->
 <Project>
 	<PropertyGroup>
 		<!-- Version info for PROJECT_WISDOM and documentation -->
-		<VersionPrefix>0.5.33</VersionPrefix>
+		<VersionPrefix>0.5.35</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- IMPORTANT: DO NOT set AssemblyVersion or FileVersion! -->
-		<!-- This would break the assembly loading -->
+		<!-- This would break the assembly loading due to Version.props conflicts -->
+		<!-- Individual projects handle their assembly versions -->
 
 		<!-- Only metadata that won't cause conflicts -->
-		<InformationalVersion>0.5.33</InformationalVersion>
-		<PackageVersion>0.5.33</PackageVersion>
+		<InformationalVersion>0.5.35</InformationalVersion>
+		<PackageVersion>0.5.35</PackageVersion>
 
 		<!-- Company information -->
 		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>
 		<Product>CamBridge</Product>
+
+		<!-- Build metadata -->
+		<RepositoryUrl>https://github.com/yourusername/CamBridge</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<NeutralLanguage>en-US</NeutralLanguage>
 	</PropertyGroup>
 </Project>
