@@ -1,15 +1,18 @@
 // src\CamBridge.Config\Views\AboutPage.xaml.cs
-// Version: 0.5.26
-// Complete about page implementation with all event handlers
+// Version: 0.5.27
+// Fixed: Simplified easter egg - shows Vogon poetry on 5 clicks
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Navigation;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 
 namespace CamBridge.Config.Views
 {
@@ -18,11 +21,13 @@ namespace CamBridge.Config.Views
     /// </summary>
     public partial class AboutPage : Page
     {
+        private int _clickCount = 0;
+        private System.Windows.Threading.DispatcherTimer? _resetTimer;
+
         public AboutPage()
         {
             InitializeComponent();
             LoadVersionInfo();
-            LoadSystemInfo();
         }
 
         /// <summary>
@@ -32,51 +37,15 @@ namespace CamBridge.Config.Views
         {
             try
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                var version = assembly.GetName().Version;
-
-                // Set version text
+                // Set version text (hardcoded to avoid assembly conflicts)
                 if (FindName("VersionText") is TextBlock versionText)
                 {
-                    versionText.Text = $"Version {version?.ToString() ?? "0.5.26"}";
-                }
-
-                // Set build date
-                if (FindName("BuildDateText") is TextBlock buildDateText)
-                {
-                    var buildDate = System.IO.File.GetLastWriteTime(assembly.Location);
-                    buildDateText.Text = $"Built on {buildDate:yyyy-MM-dd HH:mm}";
-                }
-
-                // Set copyright
-                if (FindName("CopyrightText") is TextBlock copyrightText)
-                {
-                    copyrightText.Text = "© 2025 Claude's Improbably Reliable Software Solutions";
+                    versionText.Text = "Version 0.5.27";
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading version info: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Loads system information
-        /// </summary>
-        private void LoadSystemInfo()
-        {
-            try
-            {
-                if (FindName("SystemInfoText") is TextBlock systemInfo)
-                {
-                    systemInfo.Text = $"Running on {Environment.OSVersion} " +
-                                    $"({Environment.ProcessorCount} cores) " +
-                                    $"with .NET {Environment.Version}";
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error loading system info: {ex.Message}");
             }
         }
 
@@ -106,64 +75,6 @@ namespace CamBridge.Config.Views
         }
 
         /// <summary>
-        /// Shows Vogon Poetry easter egg window
-        /// </summary>
-        private void VogonPoetry_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var vogonWindow = new VogonPoetryWindow
-                {
-                    Owner = Window.GetWindow(this),
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                };
-                vogonWindow.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to show Vogon Poetry: {ex.Message}");
-
-                // Fallback: Show poetry in message box
-                MessageBox.Show(
-                    "Oh freddled gruntbuggly,\n" +
-                    "Thy micturations are to me\n" +
-                    "As plurdled gabbleblotchits on a lurgid bee.\n\n" +
-                    "- Prostetnic Vogon Jeltz",
-                    "Vogon Poetry",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-            }
-        }
-
-        /// <summary>
-        /// Handles exit button click - closes the application
-        /// </summary>
-        private void ExitButton_Click(object sender, RoutedEventArgs e)
-        {
-            var result = MessageBox.Show(
-                "Are you sure you want to exit CamBridge Configuration?",
-                "Exit Application",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
-            {
-                // Graceful shutdown
-                try
-                {
-                    // Save any pending settings
-                    Application.Current.MainWindow?.Close();
-                    Application.Current.Shutdown();
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error during shutdown: {ex.Message}");
-                    Environment.Exit(0);
-                }
-            }
-        }
-
-        /// <summary>
         /// Handles keyboard shortcuts
         /// </summary>
         protected override void OnKeyDown(KeyEventArgs e)
@@ -185,6 +96,144 @@ namespace CamBridge.Config.Views
                     }
                 }
                 e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// Handles logo clicks for easter egg
+        /// </summary>
+        private void Logo_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _clickCount++;
+
+            if (_clickCount == 5)
+            {
+                ShowVogonHaiku();
+                _clickCount = 0; // Reset counter
+            }
+        }
+
+        /// <summary>
+        /// Shows the Vogon DICOM poetry easter egg
+        /// </summary>
+        private void ShowVogonHaiku()
+        {
+            if (FindName("InfoText") is TextBlock infoText)
+            {
+                // Store original text
+                var originalRuns = new List<Run>();
+                foreach (var inline in infoText.Inlines.ToList())
+                {
+                    if (inline is Run run)
+                    {
+                        originalRuns.Add(new Run(run.Text));
+                    }
+                }
+
+                // Dramatic fade out first
+                var fadeOut = new System.Windows.Media.Animation.DoubleAnimation
+                {
+                    From = 0.8,
+                    To = 0.0,
+                    Duration = TimeSpan.FromSeconds(1.5),
+                    EasingFunction = new System.Windows.Media.Animation.PowerEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
+                };
+
+                fadeOut.Completed += (s, args) =>
+                {
+                    // Clear and show poetry
+                    infoText.Inlines.Clear();
+                    infoText.FontFamily = new System.Windows.Media.FontFamily("Consolas");
+                    infoText.Foreground = System.Windows.Media.Brushes.Green;
+
+                    infoText.Inlines.Add(new Run("Oh freddled gruntbuggly, thy DICOM tags are to me\n"));
+                    infoText.Inlines.Add(new Run("As plurdled gabbleblotchits on a lurgid JPEG tree!\n"));
+                    infoText.Inlines.Add(new Run("\n"));
+                    infoText.Inlines.Add(new Run("See how (0010,0010) PatientName doth slumber!"));
+
+                    // Dramatic fade in
+                    var fadeIn = new System.Windows.Media.Animation.DoubleAnimation
+                    {
+                        From = 0.0,
+                        To = 1.0,
+                        Duration = TimeSpan.FromSeconds(2.5),
+                        EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+                    };
+                    infoText.BeginAnimation(TextBlock.OpacityProperty, fadeIn);
+
+                    // Subtle scale effect
+                    var scaleTransform = new System.Windows.Media.ScaleTransform(1.0, 1.0);
+                    infoText.RenderTransform = scaleTransform;
+                    infoText.RenderTransformOrigin = new Point(0.5, 0.5);
+
+                    var scaleAnimation = new System.Windows.Media.Animation.DoubleAnimation
+                    {
+                        From = 0.95,
+                        To = 1.0,
+                        Duration = TimeSpan.FromSeconds(2.5),
+                        EasingFunction = new System.Windows.Media.Animation.ElasticEase
+                        {
+                            EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut,
+                            Oscillations = 1,
+                            Springiness = 8
+                        }
+                    };
+                    scaleTransform.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, scaleAnimation);
+                    scaleTransform.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, scaleAnimation);
+                };
+
+                infoText.BeginAnimation(TextBlock.OpacityProperty, fadeOut);
+
+                // Reset after 10 seconds
+                _resetTimer?.Stop();
+                _resetTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(10)
+                };
+                _resetTimer.Tick += (s, args) =>
+                {
+                    _resetTimer.Stop();
+
+                    // Fade out poetry
+                    var fadeOutPoetry = new System.Windows.Media.Animation.DoubleAnimation
+                    {
+                        From = 1.0,
+                        To = 0.0,
+                        Duration = TimeSpan.FromSeconds(2.0),
+                        EasingFunction = new System.Windows.Media.Animation.PowerEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
+                    };
+
+                    fadeOutPoetry.Completed += (sender, eventArgs) =>
+                    {
+                        // Restore original text
+                        infoText.Inlines.Clear();
+                        infoText.FontFamily = new System.Windows.Media.FontFamily("Segoe UI");
+                        infoText.Foreground = System.Windows.Media.Brushes.Black;
+                        infoText.ClearValue(TextBlock.FontFamilyProperty);
+                        infoText.ClearValue(TextBlock.ForegroundProperty);
+                        infoText.ClearValue(TextBlock.RenderTransformProperty);
+
+                        infoText.Inlines.Add(new Run("CamBridge seamlessly converts JPEG images from Ricoh G900 II cameras"));
+                        infoText.Inlines.Add(new LineBreak());
+                        infoText.Inlines.Add(new Run("to DICOM format, preserving patient data from QRBridge QR codes."));
+                        infoText.Inlines.Add(new LineBreak());
+                        infoText.Inlines.Add(new LineBreak());
+                        infoText.Inlines.Add(new Run("Designed for medical imaging workflows where reliability matters."));
+
+                        // Fade back in
+                        var fadeBack = new System.Windows.Media.Animation.DoubleAnimation
+                        {
+                            From = 0.0,
+                            To = 0.8,
+                            Duration = TimeSpan.FromSeconds(2.0),
+                            EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+                        };
+                        infoText.BeginAnimation(TextBlock.OpacityProperty, fadeBack);
+                    };
+
+                    infoText.BeginAnimation(TextBlock.OpacityProperty, fadeOutPoetry);
+                };
+                _resetTimer.Start();
             }
         }
     }

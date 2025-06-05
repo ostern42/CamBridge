@@ -1,22 +1,35 @@
 <Project>
 	<PropertyGroup>
-		<Version>0.5.27</Version>
-		<FileVersion>0.5.27.0</FileVersion>
-		<AssemblyVersion>0.5.27.0</AssemblyVersion>
-		<InformationalVersion>0.5.27+build.2025.06.05</InformationalVersion>
+		<!-- Version info for PROJECT_WISDOM and documentation -->
+		<VersionPrefix>0.5.27</VersionPrefix>
+		<VersionSuffix></VersionSuffix>
 
-		<!-- Build Metadata -->
-		<BuildDate>2025-06-04</BuildDate>
-		<BuildTime>23:13:00</BuildTime>
+		<!-- IMPORTANT: DO NOT set AssemblyVersion or FileVersion! -->
+		<!-- This would break the assembly loading -->
 
-		<!-- Product Information -->
-		<Product>CamBridge</Product>
-		<Company>Claude's Improbably Reliable Software Solutions</Company>
+		<!-- Only metadata that won't cause conflicts -->
+		<InformationalVersion>0.5.27</InformationalVersion>
+		<PackageVersion>0.5.27</PackageVersion>
+
+		<!-- Company information -->
 		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
-		<Description>JPEG to DICOM converter for Ricoh G900 II cameras</Description>
+		<Company>Claude's Improbably Reliable Software Solutions</Company>
+		<Product>CamBridge</Product>
+		<Description>JPEG to DICOM Converter for Ricoh G900 II Cameras</Description>
+		<Authors>Claude's Improbably Reliable Software Solutions</Authors>
 
-		<!-- Git Information (will be filled by CI/CD) -->
-		<SourceRevisionId Condition="'$(SourceRevisionId)' == ''">local</SourceRevisionId>
-		<SourceBranch Condition="'$(SourceBranch)' == ''">main</SourceBranch>
+		<!-- Build metadata -->
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/claudesoftware/cambridge</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/claudesoftware/cambridge</PackageProjectUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+		<!-- Project properties -->
+		<NeutralLanguage>de-DE</NeutralLanguage>
+		<AssemblyTitle>CamBridge</AssemblyTitle>
+		<GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+		<!-- NOTE: AssemblyVersion stays at default (0.0.1.0) -->
+		<!-- This prevents the FileNotFoundException -->
 	</PropertyGroup>
 </Project>

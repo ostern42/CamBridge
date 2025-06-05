@@ -7,29 +7,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.5.27] - 2025-06-05
-
 ### Added
-- Complete DeadLettersViewModel implementation with all commands
-- DeadLetterItemModel synchronization with API models
-- Public event handlers for MappingEditorPage drag & drop
-- Proper command name resolution for CommunityToolkit.Mvvm
+- Vogon poetry easter egg in About dialog (5 clicks on logo)
+- Hyperlink to Ricoh G900 II product page
+- Dramatic fade animations for easter egg reveal
 
-### Changed
-- ServiceControlPage now uses Cleanup() instead of Dispose()
-- DeadLetterItemModel properties aligned with ViewModel expectations
-- Event handlers in MappingEditorPage changed from private to public
-- Fixed nullable reference warnings in dialog classes
+### Changed  
+- About dialog background to light theme (consistent with app)
+- About dialog to minimalist design (removed non-functional buttons)
+- Version display hardcoded to avoid assembly conflicts
+- Updated all references from "Ricoh Cameras" to "Ricoh G900 II"
 
 ### Fixed
-- Build errors related to missing RelayCommand implementations
-- Event handler accessibility issues in XAML bindings
-- Model-ViewModel property mismatches causing runtime errors
-- WPF temporary file cache issues causing phantom build errors
+- Dark/black background issue in About dialog
+- Assembly version conflicts preventing app startup
+- PowerShell syntax errors in build commands
 
-### Known Issues
-- Settings page Delete button remains disabled regardless of selection
-- Save/Reset commands not properly executing in Settings page
-- About dialog layout/display issues
+### Technical
+- Minimal Version.props without AssemblyVersion to prevent conflicts
+- Assembly remains at 0.0.1.0, display shows 0.5.27
+- Removed complex Vogon Poetry window (400+ lines)
 
 ## [0.5.26] - 2025-06-04
 
