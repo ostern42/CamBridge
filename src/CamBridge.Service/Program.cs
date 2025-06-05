@@ -1,8 +1,8 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.5.27
+// Version: 0.5.29
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 // Modified: 2025-06-05
-// Status: Production Ready with Windows Service
+// Status: Windows Service Debugging
 
 using CamBridge.Infrastructure;
 using CamBridge.Infrastructure.Services;
@@ -16,54 +16,136 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
-// using Microsoft.OpenApi.Models; // SCHRITT 4: Swagger später
-
-// ========================================
-// SCHRITT 1: Basis Pipeline (AKTIV) ✓
-// SCHRITT 2: Health Checks (AKTIV) ✓
-// SCHRITT 3: Web API (AKTIV) ✓
-// SCHRITT 4: Swagger (auskommentiert)
-// SCHRITT 5: Windows Service (AKTIV) ✓
-// ========================================
+using System.Diagnostics;
 
 // Set service start time
 Program.ServiceStartTime = DateTime.UtcNow;
 
-// Determine if running as service or console
-// Check if we're running as a Windows Service by looking for console input
-var isService = !Environment.UserInteractive ||
-                (!args.Contains("--console") && !args.Contains("-c"));
+// Windows Event Log für Debugging
+EventLog? serviceEventLog = null;
+try
+{
+    // Try to create event source if not exists
+    if (!EventLog.SourceExists("CamBridgeService"))
+    {
+        EventLog.CreateEventSource("CamBridgeService", "Application");
+    }
 
-// Configure Serilog early for startup logging
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
-    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .CreateBootstrapLogger();
+    serviceEventLog = new EventLog("Application");
+    serviceEventLog.Source = "CamBridgeService";
+    serviceEventLog.WriteEntry("CamBridge Service starting...", EventLogEntryType.Information, 1000);
+}
+catch (Exception ex)
+{
+    // Ignore if we can't write to event log (permissions)
+    Console.WriteLine($"Could not initialize Event Log: {ex.Message}");
+}
+
+// Better service detection
+var isService = false;
+try
+{
+    // More reliable check using command line args first
+    if (args.Contains("--console") || args.Contains("-c"))
+    {
+        isService = false;
+        serviceEventLog?.WriteEntry("Running in console mode (explicit parameter)", EventLogEntryType.Information, 1001);
+    }
+    else if (args.Contains("--service"))
+    {
+        isService = true;
+        serviceEventLog?.WriteEntry("Running as Windows Service (explicit parameter)", EventLogEntryType.Information, 1002);
+    }
+    else
+    {
+        // Fallback to environment check
+        isService = !Environment.UserInteractive;
+        serviceEventLog?.WriteEntry($"Running as: {(isService ? "Service" : "Console")} (auto-detected)", EventLogEntryType.Information, 1003);
+    }
+}
+catch (Exception ex)
+{
+    serviceEventLog?.WriteEntry($"Error detecting service mode: {ex.Message}", EventLogEntryType.Error, 1004);
+}
+
+// Configure Serilog with better Windows Service support
+try
+{
+    var logPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        "CamBridge",
+        "Logs",
+        "service-.log"
+    );
+
+    // Ensure log directory exists
+    Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+
+    Log.Logger = new LoggerConfiguration()
+        .MinimumLevel.Debug()
+        .WriteTo.File(
+            path: logPath,
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 30,
+            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}")
+        .WriteTo.EventLog("CamBridgeService", "Application", manageEventSource: false)
+        .WriteTo.Conditional(
+            _ => !isService,
+            wt => wt.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
+        .CreateBootstrapLogger();
+
+    serviceEventLog?.WriteEntry($"Serilog configured. Logging to: {logPath}", EventLogEntryType.Information, 1005);
+}
+catch (Exception ex)
+{
+    serviceEventLog?.WriteEntry($"Failed to configure Serilog: {ex.Message}", EventLogEntryType.Error, 1006);
+}
 
 try
 {
-    Log.Information("Starting CamBridge Service v0.5.27...");
+    Log.Information("Starting CamBridge Service v0.5.29...");
     Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
     Log.Information("Command line args: {Args}", string.Join(" ", args));
 
-    // ========== SCHRITT 1: BASIC PIPELINE (AKTIV) ==========
-    Log.Information("SCHRITT 1: Basic Pipeline - AKTIV ✓");
+    // CRITICAL FIX: Set working directory to service location
+    if (isService)
+    {
+        var serviceDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        if (!string.IsNullOrEmpty(serviceDirectory))
+        {
+            Directory.SetCurrentDirectory(serviceDirectory);
+            Log.Information("Working directory set to: {Directory}", serviceDirectory);
+            serviceEventLog?.WriteEntry($"Working directory: {serviceDirectory}", EventLogEntryType.Information, 1009);
+        }
+    }
+
+    serviceEventLog?.WriteEntry("Host builder starting...", EventLogEntryType.Information, 1010);
 
     var builder = Host.CreateDefaultBuilder(args);
 
     // Configure for Windows Service or Console
     if (isService)
     {
-        // SCHRITT 5: Windows Service aktivieren ✓
-        Log.Information("SCHRITT 5: Windows Service - AKTIV ✓");
+        Log.Information("Configuring for Windows Service mode");
+        serviceEventLog?.WriteEntry("Configuring Windows Service support", EventLogEntryType.Information, 1011);
+
         builder.UseWindowsService(options =>
         {
             options.ServiceName = "CamBridgeService";
         });
+
+        // Don't start web host immediately for service
+        builder.ConfigureServices((context, services) =>
+        {
+            services.Configure<HostOptions>(options =>
+            {
+                // Give service more time to start
+                options.ShutdownTimeout = TimeSpan.FromSeconds(30);
+            });
+        });
     }
     else
     {
-        // Console mode - ensure we load Development settings
         builder.UseEnvironment("Development");
     }
 
@@ -71,58 +153,77 @@ try
     {
         var env = context.HostingEnvironment;
 
-        config.SetBasePath(Directory.GetCurrentDirectory())
+        // Use service directory as base path
+        var basePath = Directory.GetCurrentDirectory();
+        if (isService)
+        {
+            var serviceDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            if (!string.IsNullOrEmpty(serviceDirectory))
+            {
+                basePath = serviceDirectory;
+            }
+        }
+
+        config.SetBasePath(basePath)
               .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
               .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
               .AddEnvironmentVariables("CAMBRIDGE_")
               .AddCommandLine(args);
 
-        Log.Information("Configuration loaded for environment: {Environment}", env.EnvironmentName);
+        Log.Information("Configuration loaded from: {BasePath} for environment: {Environment}", basePath, env.EnvironmentName);
+        serviceEventLog?.WriteEntry($"Configuration loaded from {basePath}: {env.EnvironmentName}", EventLogEntryType.Information, 1012);
     });
 
     // Configure Serilog from configuration
-    builder.UseSerilog((context, services, loggerConfiguration) => loggerConfiguration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext()
-        .Enrich.WithProperty("ApplicationName", "CamBridge")
-        .WriteTo.Console(
-            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}")
-        .WriteTo.File(
-            path: context.Configuration["Logging:File:Path"] ?? "logs/cambridge-.log",
-            rollingInterval: RollingInterval.Day,
-            retainedFileCountLimit: 30,
-            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}"));
+    builder.UseSerilog((context, services, loggerConfiguration) =>
+    {
+        var logPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "CamBridge",
+            "Logs",
+            "service-.log"
+        );
+
+        loggerConfiguration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .Enrich.WithProperty("ApplicationName", "CamBridge")
+            .WriteTo.File(
+                path: logPath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}")
+            .WriteTo.EventLog("CamBridgeService", "Application", manageEventSource: false);
+
+        if (!isService)
+        {
+            loggerConfiguration.WriteTo.Console(
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}");
+        }
+    });
 
     builder.ConfigureServices((context, services) =>
     {
+        serviceEventLog?.WriteEntry("Configuring services...", EventLogEntryType.Information, 1013);
+
         var configuration = context.Configuration;
 
-        // ========== SCHRITT 1: Core Infrastructure (AKTIV) ==========
+        // Core Infrastructure
         services.AddInfrastructure(configuration);
-
-        // Zusätzliche Services die AddInfrastructure nicht abdeckt
         services.AddSingleton<FolderWatcherService>();
         services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<FolderWatcherService>());
-
-        // Basic Worker - immer aktiv
         services.AddHostedService<Worker>();
 
-        // ========== SCHRITT 2: Health Checks (JETZT AKTIV!) ==========
-        Log.Information("SCHRITT 2: Health Checks - AKTIV ✓");
+        // Health Checks
         services.AddHealthChecks()
             .AddCheck<CamBridgeHealthCheck>("cambridge");
 
         // Daily Summary Service
         services.AddHostedService<DailySummaryService>();
 
-        // ========== SCHRITT 3: Web API (JETZT AKTIV!) ==========
-        Log.Information("SCHRITT 3: Web API - AKTIV ✓");
-
-        // Web API is needed for both Service and Console mode
+        // Web API
         services.AddControllers();
-
-        // Add CORS for Config UI
         services.AddCors(options =>
         {
             options.AddPolicy("ConfigUI", policy =>
@@ -134,82 +235,77 @@ try
             });
         });
 
-        // ========== SCHRITT 4: Swagger (AUSKOMMENTIERT) ==========
-        // Log.Information("SCHRITT 4: Swagger - INAKTIV ❌");
-        // if (context.HostingEnvironment.IsDevelopment())
-        // {
-        //     services.AddEndpointsApiExplorer();
-        //     services.AddSwaggerGen(c =>
-        //     {
-        //         c.SwaggerDoc("v1", new OpenApiInfo { Title = "CamBridge API", Version = "v1" });
-        //     });
-        // }
+        serviceEventLog?.WriteEntry("Services configured successfully", EventLogEntryType.Information, 1014);
     });
 
-    // ========== SCHRITT 3: Web Host konfigurieren (AKTIV für beide Modi) ==========
+    // Configure Web Host
+    serviceEventLog?.WriteEntry("Configuring web host...", EventLogEntryType.Information, 1015);
+
     builder.ConfigureWebHostDefaults(webBuilder =>
     {
         webBuilder.UseStartup<Startup>();
         webBuilder.UseUrls("http://localhost:5050");
+
+        // For Windows Service, configure Kestrel to not wait for requests
+        if (isService)
+        {
+            webBuilder.ConfigureKestrel(serverOptions =>
+            {
+                serverOptions.AllowSynchronousIO = true;
+            });
+        }
     });
 
+    serviceEventLog?.WriteEntry("Building host...", EventLogEntryType.Information, 1016);
     var host = builder.Build();
 
     // Validate infrastructure
+    serviceEventLog?.WriteEntry("Validating infrastructure...", EventLogEntryType.Information, 1017);
     using (var scope = host.Services.CreateScope())
     {
         try
         {
             scope.ServiceProvider.ValidateInfrastructure();
             Log.Information("Infrastructure validation completed successfully");
+            serviceEventLog?.WriteEntry("Infrastructure validation successful", EventLogEntryType.Information, 1018);
 
-            // Zeige aktive Features
+            // Show active features
             Log.Information("=========================================");
             Log.Information("AKTIVE FEATURES:");
-            Log.Information("✓ SCHRITT 1: Basic Pipeline (ExifTool → DICOM)");
-            Log.Information("✓ SCHRITT 2: Health Checks");
-            Log.Information("✓ SCHRITT 3: Web API");
-            Log.Information("✗ SCHRITT 4: Swagger");
-            Log.Information(isService ? "✓ SCHRITT 5: Windows Service" : "✗ SCHRITT 5: Windows Service (Console Mode)");
+            Log.Information("✓ Basic Pipeline (ExifTool → DICOM)");
+            Log.Information("✓ Health Checks");
+            Log.Information("✓ Web API");
+            Log.Information(isService ? "✓ Windows Service" : "✓ Console Mode");
             Log.Information("=========================================");
         }
         catch (Exception ex)
         {
             Log.Fatal(ex, "Infrastructure validation failed");
+            serviceEventLog?.WriteEntry($"Infrastructure validation failed: {ex.Message}", EventLogEntryType.Error, 1019);
             throw;
         }
     }
 
     // Run the host
+    serviceEventLog?.WriteEntry("Starting host...", EventLogEntryType.Information, 1020);
     await host.RunAsync();
 }
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
-
-    // Log to Windows Event Log if running as service
-    if (isService)
-    {
-        try
-        {
-            using var eventLog = new System.Diagnostics.EventLog("Application");
-            eventLog.Source = "CamBridgeService";
-            eventLog.WriteEntry($"Service failed to start: {ex.Message}",
-                System.Diagnostics.EventLogEntryType.Error, 1001);
-        }
-        catch { }
-    }
-
+    serviceEventLog?.WriteEntry($"Service failed: {ex}", EventLogEntryType.Error, 1999);
     return 1;
 }
 finally
 {
+    serviceEventLog?.WriteEntry("Service stopping", EventLogEntryType.Information, 1021);
     Log.CloseAndFlush();
+    serviceEventLog?.Dispose();
 }
 
 return 0;
 
-// ========== SCHRITT 3/4: Startup Klasse für API (JETZT AKTIV!) ==========
+// Startup class remains the same
 public class Startup
 {
     public IConfiguration Configuration { get; }
@@ -229,32 +325,23 @@ public class Startup
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
-
-            // SCHRITT 4: Swagger aktivieren
-            // app.UseSwagger();
-            // app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CamBridge API v1"));
         }
 
         app.UseRouting();
-
-        // Enable CORS
         app.UseCors("ConfigUI");
 
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();
-
-            // SCHRITT 2: Health Checks aktivieren
             endpoints.MapHealthChecks("/health");
 
-            // Simple status endpoint for Config UI
+            // Status endpoint
             endpoints.MapGet("/api/status", async context =>
             {
                 var processingQueue = context.RequestServices.GetService<ProcessingQueue>();
                 var deadLetterQueue = context.RequestServices.GetService<DeadLetterQueue>();
                 var settings = context.RequestServices.GetService<IOptions<CamBridge.Core.CamBridgeSettings>>();
 
-                // Get statistics safely
                 var queueStats = processingQueue?.GetStatistics();
                 var deadLetterStats = deadLetterQueue?.GetStatistics();
 
@@ -266,7 +353,7 @@ public class Startup
                 var status = new
                 {
                     ServiceStatus = "Running",
-                    Version = "0.5.27",
+                    Version = "0.5.29",
                     Mode = Environment.UserInteractive ? "Console" : "Service",
                     Uptime = DateTime.UtcNow - Program.ServiceStartTime,
                     QueueLength = queueStats?.QueueLength ?? 0,
@@ -286,7 +373,7 @@ public class Startup
                 await context.Response.WriteAsJsonAsync(status);
             });
 
-            // Development diagnostic endpoints
+            // Development endpoints
             if (env.IsDevelopment())
             {
                 endpoints.MapGet("/", async context =>
@@ -294,20 +381,14 @@ public class Startup
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync(@"
                         <html>
-                        <head><title>CamBridge Service v0.5.27</title></head>
+                        <head><title>CamBridge Service v0.5.29</title></head>
                         <body>
                             <h1>CamBridge Service - Development Mode</h1>
-                            <p>API Features sind jetzt aktiviert!</p>
+                            <p>Service läuft!</p>
                             <ul>
-                                <li>✓ Pipeline läuft</li>
-                                <li>✓ Health Check: <a href='/health'>/health</a></li>
-                                <li>✓ Service Status: <a href='/api/status'>/api/status</a></li>
-                                <li>✓ Windows Service Support</li>
-                                <li>✗ API Documentation (Swagger noch deaktiviert)</li>
+                                <li>Health: <a href='/health'>/health</a></li>
+                                <li>Status: <a href='/api/status'>/api/status</a></li>
                             </ul>
-                            <hr>
-                            <p>Config UI kann sich jetzt über Port 5050 verbinden!</p>
-                            <p>Console Mode: Start mit --console oder -c Parameter</p>
                         </body>
                         </html>");
                 });

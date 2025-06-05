@@ -21,6 +21,7 @@
 		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
 		<PackageReference Include="Serilog.AspNetCore" Version="8.0.1" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+		<PackageReference Include="Serilog.Sinks.EventLog" Version="4.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
 	</ItemGroup>
 
@@ -47,9 +48,7 @@
 			<ExifToolFiles Include="..\..\Tools\exiftool.exe" />
 			<ExifToolFiles Include="..\..\Tools\exiftool_files\**\*.*" />
 		</ItemGroup>
-		<Copy SourceFiles="@(ExifToolFiles)"
-          DestinationFiles="@(ExifToolFiles->'$(OutputPath)Tools\%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(ExifToolFiles)" DestinationFiles="@(ExifToolFiles->'$(OutputPath)Tools\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
 	</Target>
 
 </Project>

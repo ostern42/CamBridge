@@ -6,6 +6,36 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# Changelog
+
+## [0.5.29] - 2025-06-05
+
+### Added
+- Professional deployment package with Install/Uninstall scripts
+- Event Log debugging for Windows Service startup
+- Working directory management for service mode
+- Serilog.Sinks.EventLog integration
+- README-Deployment.md with comprehensive instructions
+- Create-DeploymentPackage.ps1 for automated packaging
+
+### Fixed
+- Windows Service now starts correctly (Error 1053 resolved)
+- Configuration file path resolution for Windows Service mode
+- Service working directory set to executable location
+- ExifTool and dependencies included in publish output
+
+### Changed
+- Enhanced service vs console mode detection
+- Service logs now written to %ProgramData%\CamBridge\Logs
+- Improved error reporting during service initialization
+- Service binary location moved to publish folder
+
+### Deployment
+- Professional Install-CamBridge.ps1 with shortcuts and service configuration
+- Uninstall-CamBridge.ps1 with data preservation option
+- Automated deployment package creation
+- Service recovery options configured
+
 ## [0.5.28] - 2025-06-05
 
 ### Added
