@@ -10,7 +10,6 @@ src\CamBridge.Config\CamBridge.Config.csproj
 src\CamBridge.Config\Converters\ValueConverters.cs
 src\CamBridge.Config\Dialogs\DicomTagBrowserDialog.xaml
 src\CamBridge.Config\Dialogs\DicomTagBrowserDialog.xaml.cs
-src\CamBridge.Config\Directory.Build.props
 src\CamBridge.Config\Extensions\MappingConfigurationExtensions.cs
 src\CamBridge.Config\Extensions\MappingRuleExtensions.cs
 src\CamBridge.Config\Helpers\PasswordBoxHelper.cs

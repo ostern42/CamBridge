@@ -1,11 +1,11 @@
-// File: src/CamBridge.Service/Program.cs
-// Version: 0.5.24
+// src/CamBridge.Service/Program.cs
+// Version: 0.5.27
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
-// Modified: 2025-06-04
-// Status: Development
+// Modified: 2025-06-05
+// Status: Production Ready with Windows Service
 
 using CamBridge.Infrastructure;
-using CamBridge.Infrastructure.Services; // Für FolderWatcherService
+using CamBridge.Infrastructure.Services;
 using CamBridge.Service;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -16,23 +16,23 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
-// Später aktivieren:
-// using Microsoft.OpenApi.Models;
+// using Microsoft.OpenApi.Models; // SCHRITT 4: Swagger später
 
 // ========================================
 // SCHRITT 1: Basis Pipeline (AKTIV) ✓
 // SCHRITT 2: Health Checks (AKTIV) ✓
 // SCHRITT 3: Web API (AKTIV) ✓
 // SCHRITT 4: Swagger (auskommentiert)
-// SCHRITT 5: Windows Service (auskommentiert)
+// SCHRITT 5: Windows Service (AKTIV) ✓
 // ========================================
 
 // Set service start time
 Program.ServiceStartTime = DateTime.UtcNow;
 
 // Determine if running as service or console
-var isService = false; // SCHRITT 5: Später auf true für Windows Service
-// var isService = !(Environment.UserInteractive && args.Length > 0 && args[0] == "--console");
+// Check if we're running as a Windows Service by looking for console input
+var isService = !Environment.UserInteractive ||
+                (!args.Contains("--console") && !args.Contains("-c"));
 
 // Configure Serilog early for startup logging
 Log.Logger = new LoggerConfiguration()
@@ -42,8 +42,9 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("Starting CamBridge Service v0.5.24...");
+    Log.Information("Starting CamBridge Service v0.5.27...");
     Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
+    Log.Information("Command line args: {Args}", string.Join(" ", args));
 
     // ========== SCHRITT 1: BASIC PIPELINE (AKTIV) ==========
     Log.Information("SCHRITT 1: Basic Pipeline - AKTIV ✓");
@@ -53,13 +54,12 @@ try
     // Configure for Windows Service or Console
     if (isService)
     {
-        // SCHRITT 5: Windows Service aktivieren
-        /*
+        // SCHRITT 5: Windows Service aktivieren ✓
+        Log.Information("SCHRITT 5: Windows Service - AKTIV ✓");
         builder.UseWindowsService(options =>
         {
-            options.ServiceName = "CamBridge Image Converter";
+            options.ServiceName = "CamBridgeService";
         });
-        */
     }
     else
     {
@@ -118,44 +118,40 @@ try
 
         // ========== SCHRITT 3: Web API (JETZT AKTIV!) ==========
         Log.Information("SCHRITT 3: Web API - AKTIV ✓");
-        if (!isService)
+
+        // Web API is needed for both Service and Console mode
+        services.AddControllers();
+
+        // Add CORS for Config UI
+        services.AddCors(options =>
         {
-            services.AddControllers();
-
-            // Add CORS for Config UI
-            services.AddCors(options =>
+            options.AddPolicy("ConfigUI", policy =>
             {
-                options.AddPolicy("ConfigUI", policy =>
-                {
-                    policy.WithOrigins("http://localhost:*", "https://localhost:*")
-                          .AllowAnyMethod()
-                          .AllowAnyHeader()
-                          .AllowCredentials();
-                });
+                policy.WithOrigins("http://localhost:*", "https://localhost:*")
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .AllowCredentials();
             });
+        });
 
-            // ========== SCHRITT 4: Swagger (AUSKOMMENTIERT) ==========
-            // Log.Information("SCHRITT 4: Swagger - INAKTIV ❌");
-            // if (context.HostingEnvironment.IsDevelopment())
-            // {
-            //     services.AddEndpointsApiExplorer();
-            //     services.AddSwaggerGen(c =>
-            //     {
-            //         c.SwaggerDoc("v1", new OpenApiInfo { Title = "CamBridge API", Version = "v1" });
-            //     });
-            // }
-        }
+        // ========== SCHRITT 4: Swagger (AUSKOMMENTIERT) ==========
+        // Log.Information("SCHRITT 4: Swagger - INAKTIV ❌");
+        // if (context.HostingEnvironment.IsDevelopment())
+        // {
+        //     services.AddEndpointsApiExplorer();
+        //     services.AddSwaggerGen(c =>
+        //     {
+        //         c.SwaggerDoc("v1", new OpenApiInfo { Title = "CamBridge API", Version = "v1" });
+        //     });
+        // }
     });
 
-    // ========== SCHRITT 3: Web Host konfigurieren (JETZT AKTIV!) ==========
-    if (!isService)
+    // ========== SCHRITT 3: Web Host konfigurieren (AKTIV für beide Modi) ==========
+    builder.ConfigureWebHostDefaults(webBuilder =>
     {
-        builder.ConfigureWebHostDefaults(webBuilder =>
-        {
-            webBuilder.UseStartup<Startup>();
-            webBuilder.UseUrls("http://localhost:5050");
-        });
-    }
+        webBuilder.UseStartup<Startup>();
+        webBuilder.UseUrls("http://localhost:5050");
+    });
 
     var host = builder.Build();
 
@@ -174,7 +170,7 @@ try
             Log.Information("✓ SCHRITT 2: Health Checks");
             Log.Information("✓ SCHRITT 3: Web API");
             Log.Information("✗ SCHRITT 4: Swagger");
-            Log.Information("✗ SCHRITT 5: Windows Service");
+            Log.Information(isService ? "✓ SCHRITT 5: Windows Service" : "✗ SCHRITT 5: Windows Service (Console Mode)");
             Log.Information("=========================================");
         }
         catch (Exception ex)
@@ -190,6 +186,20 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+
+    // Log to Windows Event Log if running as service
+    if (isService)
+    {
+        try
+        {
+            using var eventLog = new System.Diagnostics.EventLog("Application");
+            eventLog.Source = "CamBridgeService";
+            eventLog.WriteEntry($"Service failed to start: {ex.Message}",
+                System.Diagnostics.EventLogEntryType.Error, 1001);
+        }
+        catch { }
+    }
+
     return 1;
 }
 finally
@@ -256,8 +266,9 @@ public class Startup
                 var status = new
                 {
                     ServiceStatus = "Running",
-                    Version = "0.5.24",
-                    Uptime = DateTime.UtcNow - Program.ServiceStartTime,  // Fixed: Use Program.ServiceStartTime
+                    Version = "0.5.27",
+                    Mode = Environment.UserInteractive ? "Console" : "Service",
+                    Uptime = DateTime.UtcNow - Program.ServiceStartTime,
                     QueueLength = queueStats?.QueueLength ?? 0,
                     ActiveProcessing = queueStats?.ActiveProcessing ?? 0,
                     TotalSuccessful = queueStats?.TotalSuccessful ?? 0,
@@ -283,7 +294,7 @@ public class Startup
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync(@"
                         <html>
-                        <head><title>CamBridge Service v0.5.24</title></head>
+                        <head><title>CamBridge Service v0.5.27</title></head>
                         <body>
                             <h1>CamBridge Service - Development Mode</h1>
                             <p>API Features sind jetzt aktiviert!</p>
@@ -291,10 +302,12 @@ public class Startup
                                 <li>✓ Pipeline läuft</li>
                                 <li>✓ Health Check: <a href='/health'>/health</a></li>
                                 <li>✓ Service Status: <a href='/api/status'>/api/status</a></li>
+                                <li>✓ Windows Service Support</li>
                                 <li>✗ API Documentation (Swagger noch deaktiviert)</li>
                             </ul>
                             <hr>
                             <p>Config UI kann sich jetzt über Port 5050 verbinden!</p>
+                            <p>Console Mode: Start mit --console oder -c Parameter</p>
                         </body>
                         </html>");
                 });

@@ -1,15 +1,15 @@
 <Project>
 	<PropertyGroup>
 		<!-- Version info for PROJECT_WISDOM and documentation -->
-		<VersionPrefix>0.5.27</VersionPrefix>
+		<VersionPrefix>0.5.28</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- IMPORTANT: DO NOT set AssemblyVersion or FileVersion! -->
 		<!-- This would break the assembly loading -->
 
 		<!-- Only metadata that won't cause conflicts -->
-		<InformationalVersion>0.5.27</InformationalVersion>
-		<PackageVersion>0.5.27</PackageVersion>
+		<InformationalVersion>0.5.28</InformationalVersion>
+		<PackageVersion>0.5.28</PackageVersion>
 
 		<!-- Company information -->
 		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>

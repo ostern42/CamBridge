@@ -1,3 +1,8 @@
+// src/CamBridge.Service/Worker.cs
+// Version: 0.5.27
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Modified: 2025-06-05
+
 using System.Diagnostics;
 using CamBridge.Core;
 using CamBridge.Infrastructure.Services;

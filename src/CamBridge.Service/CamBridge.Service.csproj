@@ -1,26 +1,27 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<OutputType>exe</OutputType>
-		<PublishSingleFile>false</PublishSingleFile>
+		<OutputType>Exe</OutputType>
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
-		<PlatformTarget>AnyCPU</PlatformTarget>
-		<ServerGarbageCollection>false</ServerGarbageCollection>
+
+		<!-- Windows Service Support -->
+		<PublishSingleFile>false</PublishSingleFile>
+		<SelfContained>false</SelfContained>
+		<PublishReadyToRun>true</PublishReadyToRun>
+
+		<!-- Assembly Info -->
+		<AssemblyName>CamBridge.Service</AssemblyName>
+		<RootNamespace>CamBridge.Service</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
-		<PackageReference Include="Serilog" Version="4.0.2" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
 		<PackageReference Include="Serilog.AspNetCore" Version="8.0.1" />
-		<PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
-		<PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
 		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
-		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -32,18 +33,23 @@
 		<Content Update="appsettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+		<Content Update="appsettings.Development.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 		<Content Update="mappings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 	</ItemGroup>
 
-	<!-- ExifTool deployment -->
-	<ItemGroup>
-		<None Update="Tools\exiftool.exe">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-	</ItemGroup>
-
-	<Import Project="..\..\Version.props" />
+	<!-- Copy ExifTool to output -->
+	<Target Name="CopyExifTool" AfterTargets="Build">
+		<ItemGroup>
+			<ExifToolFiles Include="..\..\Tools\exiftool.exe" />
+			<ExifToolFiles Include="..\..\Tools\exiftool_files\**\*.*" />
+		</ItemGroup>
+		<Copy SourceFiles="@(ExifToolFiles)"
+          DestinationFiles="@(ExifToolFiles->'$(OutputPath)Tools\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+	</Target>
 
 </Project>

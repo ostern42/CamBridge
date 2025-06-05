@@ -6,6 +6,31 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.28] - 2025-06-05
+
+### Added
+- Windows Service support in Program.cs (STEP 5 activated)
+- Service deployment scripts (Build-Deployment.ps1, Test-Service.ps1)
+- Absolute paths documentation in PROJECT_WISDOM
+- Protected task CAMB-005 for Service Deployment
+
+### Changed
+- Service now detects Windows Service vs Console mode automatically
+- Updated ServiceManager.cs with comprehensive service exe search paths
+- Config UI builds to x64 platform target
+- Prioritized Windows Service fix over Dead Letters feature
+
+### Fixed
+- About Dialog background color (now matches app theme)
+- About Dialog Vogon Poetry Easter Egg animation
+- Program.cs version updated to 0.5.27
+
+### Known Issues
+- Windows Service fails to start with Error 1053 (timeout)
+- Service runs perfectly in console mode but not as Windows Service
+- Assembly version conflict (looking for 0.5.27.0, finding 0.0.1.0)
+- ExifTool perl5*.dll warning (non-critical)
+
 ## [0.5.27] - 2025-06-05
 ### Added
 - Vogon poetry easter egg in About dialog (5 clicks on logo)
