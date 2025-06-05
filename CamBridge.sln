@@ -16,6 +16,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		CAMBRIDGE_TREE_STRUCTURE.md = CAMBRIDGE_TREE_STRUCTURE.md
 		CHANGELOG.md = CHANGELOG.md
 		collect-sources.bat = collect-sources.bat
+		Create-DeploymentPackage.ps1 = Create-DeploymentPackage.ps1
 		GUI-Readme.md = GUI-Readme.md
 		LICENSE = LICENSE
 		PROJECT_WISDOM.md = PROJECT_WISDOM.md
@@ -28,6 +29,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Service", "src\CamBridge.Service\CamBridge.Service.csproj", "{BD06EA45-212C-409E-1365-BE7D576ED3D5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.Config", "src\CamBridge.Config\CamBridge.Config.csproj", "{0A650D8D-A3A3-86BD-C080-239D78DF7F94}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CamBridge.QRBridge", "src\CamBridge.QRBridge\CamBridge.QRBridge.csproj", "{2202BFBF-8746-4EB6-9817-B46B0069DE55}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -53,6 +56,10 @@ Global
 		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.ActiveCfg = Release|x64
 		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.Build.0 = Release|x64
 		{0A650D8D-A3A3-86BD-C080-239D78DF7F94}.Release|Any CPU.Deploy.0 = Release|x64
+		{2202BFBF-8746-4EB6-9817-B46B0069DE55}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2202BFBF-8746-4EB6-9817-B46B0069DE55}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2202BFBF-8746-4EB6-9817-B46B0069DE55}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2202BFBF-8746-4EB6-9817-B46B0069DE55}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

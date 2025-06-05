@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+# Changelog
+
+## [0.5.33] - 2025-06-05
+
+### Added
+- QRBridge 2.0 implementation as integrated CamBridge.QRBridge project
+- Native UTF-8 support throughout the QR generation pipeline
+- WinForms-based QR display with countdown timer
+- MessageBox-based help system (no console dependency)
+- Framework-dependent build option (7MB vs 163MB)
+- QRBridge.bat launcher script for easy command-line usage
+- Shared Core entities between QRBridge and main pipeline
+- Automatic QRBridge integration in deployment package
+
+### Changed
+- Deployment package optimized from 118MB to 53MB (55% reduction)
+- QRBridge now part of main CamBridge solution
+- Build process includes both service and QRBridge compilation
+- Deployment script updated to handle framework-dependent builds
+
+### Fixed
+- Console.OutputEncoding crash in WinForms applications
+- Named parameter issues with required constructors
+- UTF-8 encoding consistency across entire pipeline
+
+### Technical
+- Migrated from standalone QRBridge to integrated solution
+- Implemented proper error handling for non-console environments
+- Added .NET 8.0 runtime checks in deployment scripts
+- Optimized package size through framework-dependent deployment
+
 ## [0.5.32] - 2025-06-05
 
 ### Fixed

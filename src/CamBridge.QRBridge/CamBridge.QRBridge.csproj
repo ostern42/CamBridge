@@ -1,0 +1,47 @@
+﻿<!-- src/CamBridge.QRBridge/CamBridge.QRBridge.csproj -->
+<!-- Version: 0.5.33 -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWindowsForms>true</UseWindowsForms>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<StartupObject>CamBridge.QRBridge.Program</StartupObject>
+
+		<!-- Company info -->
+		<Company>Claude's Improbably Reliable Software Solutions</Company>
+		<Product>CamBridge QRBridge</Product>
+		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
+
+		<!-- Enable single file deployment -->
+		<PublishSingleFile>true</PublishSingleFile>
+		<SelfContained>true</SelfContained>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<PublishReadyToRun>true</PublishReadyToRun>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Reference to Core project for shared entities -->
+		<ProjectReference Include="..\CamBridge.Core\CamBridge.Core.csproj" />
+
+		<!-- QR Code generation library -->
+		<PackageReference Include="QRCoder" Version="1.4.3" />
+		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+
+		<!-- Logging -->
+		<PackageReference Include="Serilog" Version="3.1.1" />
+		<PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+
+		<!-- DI Container -->
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Entities\" />
+	</ItemGroup>
+
+</Project>
