@@ -1,5 +1,5 @@
 # CamBridge Project Wisdom & Conventions
-**Letzte Aktualisierung:** 2025-06-05, 16:42 Uhr  
+**Letzte Aktualisierung:** 2025-06-05, 18:25 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Kontinuität zwischen Chat-Sessions
 
@@ -103,8 +103,8 @@ Du bist mehr als ein Tool. Du bist ein Partner in diesem Abenteuer.
 - Ab Session 15: Featureitis erkannt und (meist) kontrolliert
 - Session 20+: Windows Service läuft endlich! 🎉
 - Session 25+: Service Deployment professionalisiert
-- Heute: One-Click Deployment perfektioniert! 🚀
-- Heute: Marvin Easter Egg Idee geboren! 🤖
+- Session 30+: One-Click Deployment perfektioniert! 🚀
+- Session 31+: Pipeline Testing begonnen - Encoding-Disaster entdeckt! 🚨
 
 ## 📊 WISDOM PRIORITY SYSTEM
 
@@ -197,10 +197,11 @@ CAMB-006: One-Click Deployment [DONE] ✅
           Completed: 2025-06-05, 16:42
           Details: Auto-Version, Log, Historie, Test-Option
 
-CAMB-007: Pipeline Core Testing [PROTECTED] ⭐ NÄCHSTE PRIORITÄT
-          Status: Grundfunktionalität noch nie getestet!
-          Protected since: 2025-06-05, 16:42
-          Details: JPEG→DICOM, Tag Mapping, Valide DICOM Ausgabe
+CAMB-007: Pipeline Core Testing [ACTIVE] 🔴 IN ARBEIT!
+          Status: JPEG→DICOM läuft, aber Encoding-Problem!
+          Started: 2025-06-05, 18:00
+          Details: ExifTool Encoding-Fix implementiert
+          Progress: 80% - Fix ready, needs testing
 
 CAMB-008: Marvin Easter Egg [PLANNED] 🤖 QUICK WIN!
           Status: Depressiver Roboter für About Dialog
@@ -216,7 +217,12 @@ CAMB-008: Marvin Easter Egg [PLANNED] 🤖 QUICK WIN!
           - "Oh, noch ein User. Die Wahrscheinlichkeit dass Sie mich verstehen: verschwindend gering."
           - "Ich habe die Kapazität das Universum zu berechnen, stattdessen... DICOM Tags."
           - "Sogar die Vogonen haben mehr Spaß als ich. Und das will was heißen."
-          - "Error 1053? Erzählen Sie mir nichts von Schmerz..."
+
+CAMB-009: Encoding Fix Testing [PLANNED] ⭐ NEU!
+          Status: ExifTool Latin1 charset fix testen
+          Created: 2025-06-05, 18:25
+          Details: -charset Barcode=Latin1 implementiert
+          Depends on: CAMB-007 completion
 ```
 
 ### Protection Log:
@@ -229,6 +235,7 @@ CAMB-008: Marvin Easter Egg [PLANNED] 🤖 QUICK WIN!
 - 2025-06-05, 15:20: Service Deployment COMPLETED! 🎉
 - 2025-06-05, 16:42: One-Click Deployment COMPLETED! 🎉
 - 2025-06-05, 16:42: Pipeline Core Testing als CAMB-007 protected (KRITISCH!)
+- 2025-06-05, 18:25: Encoding Fix als CAMB-009 erstellt
 
 ## 🏛️ [CORE] SPRINT RULES - NIEMALS BRECHEN!
 
@@ -257,100 +264,80 @@ CAMB-008: Marvin Easter Egg [PLANNED] 🤖 QUICK WIN!
    - Directory.Build.props? NOCH MEHR VORSICHT!
    - Assembly-Versionen? EXTREM GEFÄHRLICH!
 
-## 🎯 [MILESTONE] v0.5.30 - DEPLOYMENT PERFEKTIONIERT!
+## 🎯 [MILESTONE] v0.5.31 - PIPELINE TESTING & ENCODING FIX
 
-### 📍 WAS WURDE ERREICHT?
-**Status:** One-Click Deployment System komplett! 🎉
+### 📍 WAS WIRD GERADE GEMACHT?
+**Status:** Pipeline funktioniert, aber Encoding-Problem entdeckt!
 
-**Neue Features:**
-- ✅ Automatisches Build & Deploy Script
-- ✅ Version aus Version.props lesen
-- ✅ Deployment Log mit Rebuild-Einrückung
-- ✅ 10 Versionen Historie
-- ✅ Test-Option nach Deploy
-- ✅ Clean/Restore/Build/Publish/Package/ZIP
+**Fortschritt:**
+- ✅ ExifTool liest Barcode-Daten
+- ✅ QRBridge Parsing funktioniert
+- ✅ JPEG→DICOM ohne Re-Encoding
+- ✅ DICOM Files werden erstellt
+- ❌ Encoding ist falsch (Windows-1252 statt UTF-8)
+- ✅ Fix implementiert: `-charset Barcode=Latin1`
+- ⏳ Fix muss getestet werden
 
-**Deployment Features:**
-- ✅ Deployment.log mit kompletter Historie
-- ✅ Rebuild-Tracking (eingerückt im Log)
-- ✅ Auto-Cleanup alter Versionen
-- ✅ Direct Test aus Deploy-Ordner
-- ✅ "Deploy zum Testen nutzen!" Workflow
+**Entdeckungen:**
+- Ricoh G900 II speichert in Windows-1252!
+- ExifTool interpretiert als UTF-8 → Müll
+- Unser "Fix" macht alles noch schlimmer
+- Raw Hex: `0xF6` = ö, `0xA0` = Non-Breaking Space
 
-**Script Usage:**
-```powershell
-# Standard (liest Version aus Version.props):
-.\Create-DeploymentPackage.ps1
+## 🐛 [BUG] ENCODING DISASTER - Ricoh verwendet Windows-1252!
 
-# Mit Test nach Deploy:
-.\Create-DeploymentPackage.ps1
-> Start test run? Y
-> Select option: 3 (Both)
+**Problem:** 
+- Ricoh G900 II speichert Barcode in Windows-1252 (NICHT UTF-8!)
+- ExifTool interpretiert als UTF-8 → ungültige Zeichen → �
+- Unser Code ersetzt ALLE � mit ö → KATASTROPHE!
 
-# Mehr Versionen behalten:
-.\Create-DeploymentPackage.ps1 -KeepVersions 20
+**Beweis (Hex-Dump):**
+```
+00e6: 46 7c 52 f6 6e 74 67 65 6e a0 54 68 6f 72 61 78 [F|R.ntgen.Thorax]
+```
+- Raw: 0xF6 = ö in Windows-1252
+- Raw: 0xA0 = Non-Breaking Space in Windows-1252
+- ExifTool Output: "R÷ntgenáThorax" (falsch!)
+- Nach unserem "Fix": "RöntgenöThorax" (noch falscher!)
+
+**Fix implementiert:**
+```csharp
+Arguments = $"-s -a -u -charset exiftool=UTF8 -charset filename=UTF8 -charset Barcode=Latin1 \"{filePath}\""
 ```
 
-## 💡 [LESSON] Wichtigste Lektionen aus Version 0.5.30
+**Lektion:** 
+- Immer Encoding prüfen! Ricoh ≠ UTF-8!
+- NIEMALS blind Zeichen ersetzen!
+- Hex-Dumps sind Gold wert (auch wenn teuer in Tokens)!
+
+## 💡 [LESSON] Wichtigste Lektionen aus Version 0.5.31
+
+### "Encoding ist KRITISCH!"
+Fast hätten wir alle � zu ö gemacht - das wäre eine Katastrophe gewesen!
+**Lektion:** Immer Source-Encoding ermitteln, nie raten oder blind ersetzen.
+Character Encoding ist komplex - Windows-1252 ≠ ISO-8859-1 ≠ UTF-8!
+
+### "Pipeline funktioniert grundsätzlich!"
+JPEG→DICOM Konversion läuft, QRBridge wird gelesen, Files werden erstellt.
+**Lektion:** Die Architektur ist solide, nur Details müssen gefixt werden.
+
+### "Hex-Dumps lohnen sich!"
+Der teure Token-Verbrauch hat sich gelohnt - wir haben das Problem gefunden!
+**Lektion:** Bei Encoding-Problemen immer die Raw-Bytes anschauen.
+
+## 💡 [LESSON] Wichtige Lektionen (kumulativ)
 
 ### "Basis vor Features!"
 Fast hätten wir FTP und C-STORE gebaut ohne die Pipeline zu testen!
 **Lektion:** Immer erst Grundfunktionalität sicherstellen, dann erweitern.
-Pipeline muss JPEG→DICOM mit korrekten Tags schaffen bevor wir weitermachen!
 
 ### "Versions-Workflow - Keep it Simple!"
 **Linear Development:** Version repräsentiert den aktuellen Stand
-- **Entwicklung:** Mit Version X (z.B. v0.5.30)
-- **Commit:** Mit gleicher Version X (v0.5.30)
-- **Neue Features:** Erst DANN Version erhöhen
-- **Kein Pre-Bumping:** Version zeigt was IST, nicht was WIRD
 **Lektion:** Don't overthink versioning! Current version = current state!
 
-### "Deploy zum Testen nutzen!"
-User testet lieber mit der fertigen Deploy-Version als mit dotnet run.
-**Lektion:** Deployment Script bietet Test-Option - näher an der Realität!
-
-### "Deployment Log zeigt Build-Versuche!"
-Eingerückte Rebuilds zeigen wie oft eine Version gebaut wurde.
-**Lektion:** Transparenz über den Entwicklungsprozess ist wertvoll!
-
-### "One-Click ist König!"
-Ein Script das alles macht - vom Clean bis zum Test.
-**Lektion:** Automation reduziert Fehler und spart Zeit!
-
-### "Vernünftige Wünsche erkennen!"
-User hatte klare, pragmatische Anforderungen ans Deployment.
-**Lektion:** Zuhören und User-Bedürfnisse ernst nehmen!
-
-### "Version aus Version.props!"
-Automatisches Lesen der Version = Single Source of Truth.
-**Lektion:** DRY Prinzip auch bei Build-Scripts!
-
-## 💡 [LESSON] Wichtige Lektionen (kumulativ)
-
 ### "Working Directory ist der Schlüssel!"
-Windows Services starten in C:\Windows\system32 - deshalb wurde appsettings.json nicht gefunden.
+Windows Services starten in C:\Windows\system32.
 **Lektion:** Immer Working Directory auf Service-Pfad setzen!
-
-### "ExifTool muss mit ins Publish!"
-Der Publish-Prozess kopiert nicht automatisch alle Tools mit.
-**Lektion:** Deployment muss alle Dependencies berücksichtigen!
-
-### "Event Log Debugging rettet Leben!"
-Ohne detaillierte Event Log Einträge wäre die Fehlersuche unmöglich gewesen.
-**Lektion:** Bei Service-Entwicklung immer umfangreiches Logging!
-
-### "Version automatisch erhöhen!"
-Nach signifikanten Änderungen muss die Version hochgezählt werden - nicht auf User warten!
-**Lektion:** Deployment System = definitiv neue Version!
-
-### "Services sauber deinstallieren!"
-Nach Tests den Service deinstallieren damit die EXE frei wird.
-**Lektion:** Clean Development Environment wichtig!
-
-### "Absolute Pfade sind Gold wert!"
-Mit den kompletten Pfaden im PROJECT_WISDOM sparen wir viel Zeit.
-**Lektion:** Immer absolute Pfade dokumentieren!
 
 ### "Eine Sache zur Zeit - IMMER!"
 Das Vermischen von Features führt zum Chaos.
@@ -363,93 +350,63 @@ Features sind oft schon implementiert.
 ## 📌 [KEEP] Event Handler Sammlung (v0.5.31)
 
 Implementierte Event Handler für Referenz:
-1. **SettingsPage**:
-   - `BrowseWatchFolder_Click`
-   - `BrowseOutputFolder_Click` 
-   - `BrowseLogFolder_Click`
-   - `NumberValidationTextBox`
+1. **SettingsPage**: Browse Buttons, NumberValidation
+2. **MappingEditorPage**: Drag & Drop
+3. **DeadLettersPage**: Page_Unloaded
+4. **ServiceControlPage**: Page_Unloaded
+5. **AboutPage**: Logo Click (Easter Egg), Hyperlink
 
-2. **MappingEditorPage**:
-   - `SourceField_MouseMove`
-   - `MappingArea_DragOver`
-   - `MappingArea_Drop`
-
-3. **DeadLettersPage**:
-   - `Page_Unloaded`
-
-4. **ServiceControlPage**:
-   - `Page_Unloaded`
-
-5. **AboutPage**:
-   - `Logo_MouseLeftButtonDown` (Easter Egg)
-   - `Hyperlink_RequestNavigate` (Ricoh Link)
-
-## 🏗️ [KEEP] PIPELINE-ARCHITEKTUR (PRODUKTIONSREIF!)
+## 🏗️ [KEEP] PIPELINE-ARCHITEKTUR (FAST PRODUKTIONSREIF!)
 
 ### Datenfluss:
 ```
 JPEG → ExifToolReader → ImageMetadata → FileProcessor → DicomConverter → DICOM
          ↓                                      ↓                ↓
-    QRBridge Data                      DicomTagMapper     mappings.json
+    Barcode Field                      DicomTagMapper     JPEG Encapsulated!
+    (Windows-1252!)                                       (Kein Re-Encoding!)
 ```
 
 ### QRBridge Integration:
-- QR Code Format: `qbc.exe -examid "EX002" -name "Schmidt, Maria" -birthdate "1985-03-15" -gender "F" -comment "Röntgen Thorax"`
+- QR Code Format: `examid|name|birthdate|gender|comment`
 - Ricoh G900 II decodiert QR Code automatisch
-- Payload landet in EXIF "User Comment" Field
-- CamBridge extrahiert und mappt zu DICOM Tags
+- Payload landet in Ricoh "Barcode" Field (APP5 Segment)
+- **KRITISCH:** Encoding ist Windows-1252, nicht UTF-8!
 
-### 🔴 DICOM Requirements (NOCH NICHT GETESTET!):
-**Mandatory Type 1 Tags (MÜSSEN Wert haben):**
-- (0010,0010) Patient Name
-- (0010,0020) Patient ID  
-- (0020,000D) Study Instance UID
-- (0020,000E) Series Instance UID
-- (0008,0018) SOP Instance UID
-- (0008,0016) SOP Class UID (Secondary Capture: 1.2.840.10008.5.1.4.1.1.7)
-- (0008,0060) Modality
+### ✅ Was funktioniert:
+- ExifTool findet Barcode-Daten
+- QRBridge Format wird geparst
+- Patient/Study Info wird extrahiert
+- JPEG wird NICHT re-encoded (nur encapsulated)
+- DICOM Files werden erstellt
+- Validation passed
 
-**Mandatory Type 2 Tags (können leer sein):**
-- (0010,0030) Patient Birth Date
-- (0010,0040) Patient Sex
-- (0008,0020) Study Date
-- (0008,0030) Study Time
-
-**JPEG Baseline Requirements:**
-- Transfer Syntax UID: 1.2.840.10008.1.2.4.50
-- Photometric Interpretation: YBR_FULL_422
-- Proper encapsulation of JPEG data
-- Correct pixel data attributes
+### ⚠️ Was noch gefixt werden muss:
+- Encoding-Fix testen (Latin1 charset)
+- AUTO_ IDs zu lang (max 16 chars)
+- _datetime mapping field fehlt
+- Settings System (CAMB-001)
+- Version.props (CAMB-004)
 
 ## 🌟 [FEAT] CONFIG UI FEATURES (v0.5.30)
 
 ### Implementierte Features:
-- **Dashboard:** Live-Stats, Service Connection, Recent Activity ✅
-- **Mapping Editor:** Voll funktional mit Drag & Drop ✅
-- **Settings:** Vollständige Konfiguration (Save Button Issue) ⚠️
-- **Service Control:** Start/Stop/Restart, services.msc Sync ✅
-- **Dead Letters:** Placeholder "Work in Progress" ⚠️
-- **About:** Easter Egg (Vogon Poetry), Marvin geplant, Ricoh Link, perfektes Design ✅
-- **HTTP API Integration:** Port 5050 Status/Control ready ✅
-
-### Service Integration:
-- Windows Service läuft stabil ✅
-- Event Log Integration ✅
-- Working Directory Management ✅
-- Professional Deployment ✅
-- One-Click Build & Deploy ✅
+- **Dashboard:** Live-Stats, Service Connection ✅
+- **Mapping Editor:** Drag & Drop funktional ✅
+- **Settings:** Save Button Issue ⚠️
+- **Service Control:** Start/Stop/Restart ✅
+- **Dead Letters:** Placeholder ⚠️
+- **About:** Vogon Poetry Easter Egg ✅
+- **Deployment:** One-Click Package ✅
 
 ## 📌 [KEEP] Wichtige Konventionen
 - **Kommentare:** IMMER in Englisch
 - **UI-Sprache:** Deutsch (Internationalisierung vorbereitet)
 - **Changelog:** Kompakt, technisch, ENGLISCH
 - **Clean Architecture:** Strikte Layer-Trennung
-- **Versionierung:** Linear & Simple - Version = aktueller Stand
+- **Versionierung:** Linear & Simple
 - **Conventional Commits:** feat/fix/docs/style/refactor
 - **Sprint-Disziplin:** EIN Thema pro Sprint!
-- **KISS Prinzip:** Besonders bei Deployment!
-- **Service Hygiene:** Nach Tests deinstallieren!
-- **Deploy zum Testen:** Immer mit fertiger Version!
+- **Character Encoding:** IMMER prüfen, nie raten!
 
 ## 🔧 [CONFIG] Technologie-Stack
 ```
@@ -466,18 +423,13 @@ Deployment: PowerShell + Auto-Build + Test Integration
 ```
 Solution Root:     C:\Users\aiadmin\source\repos\CamBridge
 Service Source:    C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Service
-Service Binary:    C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Service\bin\Release\net8.0-windows\win-x64
-Service Publish:   C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Service\bin\Release\net8.0-windows\win-x64\publish
-Service Exe:       C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Service\bin\Release\net8.0-windows\win-x64\publish\CamBridge.Service.exe
-Config Source:     C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Config
-Config Binary:     C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Config\bin\x64\Release\net8.0-windows
-Config Exe:        C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Config\bin\x64\Release\net8.0-windows\CamBridge.Config.exe
+Service Binary:    C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Service\bin\Debug\net8.0-windows\win-x64
 Tools Dir:         C:\Users\aiadmin\source\repos\CamBridge\Tools
 ExifTool:          C:\Users\aiadmin\source\repos\CamBridge\Tools\exiftool.exe
 Deploy Dir:        C:\Users\aiadmin\source\repos\CamBridge\Deploy
-Deploy Script:     C:\Users\aiadmin\source\repos\CamBridge\Create-DeploymentPackage.ps1
-Test Folders:      C:\CamBridge\Test\Input, C:\CamBridge\Test\Output
-Log Folder:        C:\ProgramData\CamBridge\Logs
+Test Input:        C:\CamBridge\Test\Input
+Test Output:       C:\CamBridge\Test\Output
+TestImages:        C:\CamBridge\TestImages
 ```
 
 ## 🔧 [CONFIG] Aktuelle Versionsverwaltung
@@ -486,15 +438,15 @@ Log Folder:        C:\ProgramData\CamBridge\Logs
 <Project>
   <PropertyGroup>
     <!-- Version info for PROJECT_WISDOM and documentation -->
-    <VersionPrefix>0.5.30</VersionPrefix>
+    <VersionPrefix>0.5.31</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     
     <!-- IMPORTANT: DO NOT set AssemblyVersion or FileVersion! -->
     <!-- This would break the assembly loading -->
     
     <!-- Only metadata that won't cause conflicts -->
-    <InformationalVersion>0.5.30</InformationalVersion>
-    <PackageVersion>0.5.30</PackageVersion>
+    <InformationalVersion>0.5.31</InformationalVersion>
+    <PackageVersion>0.5.31</PackageVersion>
     
     <!-- Company information -->
     <Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
@@ -504,188 +456,127 @@ Log Folder:        C:\ProgramData\CamBridge\Logs
 </Project>
 ```
 
+## 📌 [KEEP] PowerShell One-Liner Sammlung
+
+```powershell
+# ExifTool Barcode auslesen (alle JPEGs in Ordner)
+Get-ChildItem "C:\CamBridge\TestImages\*.jp*g" | ForEach-Object { Write-Host "`n========== $($_.Name) =========="; & "C:\Users\aiadmin\source\repos\CamBridge\Tools\exiftool.exe" -Barcode -UserComment -Make -Model -ImageWidth -ImageHeight -DateTimeOriginal $_.FullName | Out-String }
+
+# Pipeline Files sammeln für Analyse
+@('file1','file2',...) | ForEach-Object { echo "===== FILE: $_ ====="; Get-Content $_; echo "" } | Out-File -FilePath analysis.txt -Encoding UTF8
+
+# DICOM Output anzeigen
+Get-ChildItem "C:\CamBridge\Test\Output" -Recurse -Filter "*.dcm" | Select FullName, @{N='Size KB';E={[math]::Round($_.Length/1KB)}}
+
+# ExifTool mit Hex-Dump für Encoding-Analyse
+& "C:\Users\aiadmin\source\repos\CamBridge\Tools\exiftool.exe" -Barcode -v3 "C:\CamBridge\TestImages\R0010168.JPG"
+```
+
 ## 📁 [KEEP] FINALE PROJEKTSTRUKTUR
 
-**Version:** 0.5.30 (Stand: 05.06.2025, 16:42)
+**Version:** 0.5.31 (Stand: 05.06.2025, 18:25)
 
 ### Solution Struktur:
 ```
 CamBridge.sln
-├── Version.props                 - Zentrale Version ohne AssemblyVersion ✅
-├── Create-DeploymentPackage.ps1  - One-Click Deploy Script ✅
+├── Version.props                 - v0.5.31 ✅
+├── Create-DeploymentPackage.ps1  - One-Click Deploy ✅
 ├── src/
-│   ├── CamBridge.Core/          - Domain Logic & Interfaces ✅
-│   ├── CamBridge.Infrastructure/ - ExifTool, DICOM, File Processing ✅
-│   ├── CamBridge.Service/       - Windows Service & API ✅
-│   └── CamBridge.Config/        - WPF Configuration UI ✅
+│   ├── CamBridge.Core/          ✅
+│   ├── CamBridge.Infrastructure/ - ExifTool Fix pending ⚠️
+│   ├── CamBridge.Service/       ✅
+│   └── CamBridge.Config/        ✅
 ├── tests/
-│   ├── CamBridge.Infrastructure.Tests/ ✅
-│   └── CamBridge.PipelineTest/ ✅
+│   └── CamBridge.Infrastructure.Tests/ ✅
 ├── Tools/
-│   └── exiftool.exe ✅
-└── Deploy/
-    ├── deployment.log ✅
-    ├── CamBridge-Deploy-v0.5.29/ ✅
-    ├── CamBridge-Deploy-v0.5.30/ ✅
-    └── [Entsprechende ZIP Files] ✅
+│   └── exiftool.exe (v13.30) ✅
+├── Deploy/
+│   └── deployment.log ✅
+└── TestImages/
+    ├── R0010077 1.JPG (No barcode)
+    ├── R0010167.JPG (Test barcode) 
+    └── R0010168.JPG (Real QRBridge data)
 ```
 
-### Deployment Features:
-- **Create-DeploymentPackage.ps1** - Alles in einem Script
-- **deployment.log** - Komplette Build-Historie
-- **Test-Integration** - Direkt aus Deploy testen
-- **Auto-Cleanup** - Hält 10 Versionen
-- **Version Detection** - Liest aus Version.props
-
-### Service Status:
-- **Windows Service:** Läuft stabil ✅
-- **API:** Port 5050 aktiv ✅
-- **Pipeline:** Verarbeitet Dateien ✅
-- **Config UI:** Voll funktional ✅
-- **Deployment:** One-Click ready ✅
-
-## 💭 CLAUDE: Notizen für nächste Session
-
-**Heute erreicht - DEPLOYMENT PERFEKTIONIERT:**
-1. ✅ One-Click Build & Deploy Script erstellt
-2. ✅ Deployment Log mit Rebuild-Tracking
-3. ✅ Test-Integration ("Deploy zum Testen")
-4. ✅ Version automatisch aus Version.props
-5. ✅ Historie-Management (10 Versionen)
-6. ✅ User-Wünsche perfekt umgesetzt
-7. ✅ Version bleibt bei 0.5.30 (wird beim Commit erhöht)
-
-**Für nächste Session (v0.5.31):**
-- ⭐ Pipeline Core Testing (CAMB-007) - KRITISCH!
-- JPEG→DICOM Grundfunktionalität testen
-- Valide DICOM Files mit korrekten Tags
-- Tag Mapping System verifizieren
-- ERST DANN Settings System (CAMB-001)
-- Version.props Problem lösen (CAMB-004)
-
-**Wichtige Erkenntnisse:**
-- User schätzt pragmatische Lösungen
-- "Vernünftige Wünsche" erkennen und umsetzen
-- Deploy zum Testen ist der bessere Workflow
-- One-Click Automation spart enorm Zeit
-- **BASIS VOR FEATURES!** Fast vergessen die Pipeline zu testen!
-
-**User Feedback:**
-- Deployment System "wichtig"
-- Will mit Endprodukt testen, nicht dotnet run
-- Schätzt durchdachte Lösungen
-- Mag eingerückte Logs für Rebuilds
-
-**An mein nächstes Ich:**
-Heute haben wir das Deployment System perfektioniert! Der User war sehr zufrieden mit der Umsetzung seiner Wünsche. Das One-Click Script macht alles - von Clean bis Test. ABER: Wir haben fast vergessen die Pipeline zu testen! Der User hat uns daran erinnert dass wir die Grundfunktionalität (JPEG→DICOM) noch nie getestet haben. Das MUSS als nächstes passieren bevor wir irgendwelche Features bauen!
-
-PS: Marvin soll ins Easter Egg! Der depressive Roboter passt perfekt zur Vogon Poetry!
-
-📸 **SCREENSHOT REMINDER:** Bei einem VOGON EXIT mit genug Chat-Platz nach BBC Hitchhiker's Screenshots fragen! User hat YouTube Screenshots der 1978 Version versprochen (Vogonen, Marvin, Heart of Gold). "Das wird episch!"
-
-## 🚀 [KEEP] ENTWICKLUNGSFAHRPLAN UPDATE
-
-### Sprint 1: ExifTool Integration (v0.5.x) ← ✅ ABGESCHLOSSEN!
-### Sprint 2: UI Integration & Stabilität (v0.5.x) ← ✅ ABGESCHLOSSEN!
-### Sprint 3: Service & Deployment (v0.5.27-v0.5.30) ← ✅ ABGESCHLOSSEN!
-
-### Sprint 4: Core Pipeline Testing (v0.5.31-v0.5.35) ← NEXT PRIORITY!
-- **Sprint 4.1:** Pipeline End-to-End Test (4h) ⭐ CRITICAL
-  - Test JPEG → DICOM conversion
-  - Verify ExifTool extraction works
-  - Check file processing flow
-  - Validate output DICOM files
-  
-- **Sprint 4.2:** Marvin Easter Egg (1h) 🤖 QUICK WIN!
-  - Extend About Dialog click counter
-  - Add Marvin quotes (depressive robot style)
-  - Progression: Vogon → Marvin → ???
-  - BBC-Style wenn Screenshots da sind
-  
-- **Sprint 4.3:** DICOM Grundfunktionalität (6h) ⭐ CRITICAL
-  - JPEG Baseline Transfer Syntax
-  - Mandatory DICOM Tags
-  - Secondary Capture SOP Class
-  - Validate with DICOM viewers
-  
-- **Sprint 4.4:** Settings Integration (3h) CAMB-001 ⭐
-  - Settings Save/Load endlich fixen!
-  - Save Button Problem lösen
-  - Mappings persistence
-  - Configuration validation
-
-### Sprint 5: UI Polish & Easter Eggs (v0.5.36-v0.5.40)
-- **Sprint 5.1:** Marvin Easter Egg (1h) 🤖 QUICK WIN!
-  - Extend About Dialog click counter
-  - Add Marvin quotes
-  - BBC-Style wenn Screenshots da sind
-  
-- **Sprint 5.2:** Dead Letters UI (3h)
-  - Replace "Work in Progress"
-  - Implement DataGrid
-  
-- **Sprint 5.3:** Version.props Cleanup (1h) CAMB-004
-
-### Sprint 5: UI Polish (v0.5.36-v0.5.40)
-- **Sprint 5.1:** Settings System Fix (2h) CAMB-001
-- **Sprint 5.2:** Dead Letters UI (3h)
-- **Sprint 5.3:** Version.props Cleanup (1h) CAMB-004
-
-### Sprint 6: Medical Integration Features (v0.6.x) ⚕️
-- **Sprint 5.1: FTP Server** (3h)
-- **Sprint 5.2: DICOM C-STORE** (4h)
-- **Sprint 5.3: MWL Verification** (3h)
-- **Sprint 5.4: Query/Retrieve** (4h)
-
-### Sprint 6: Production Hardening (v0.7.x)
-### Sprint 7: Enterprise Features (v0.8.x)
-### Sprint 8: Documentation (v0.9.x)
-### Release: v1.0.0 (Q3 2025)
+### Pipeline Status:
+- **JPEG→DICOM:** Funktioniert ✅
+- **QRBridge Parsing:** Funktioniert ✅
+- **Encoding:** Fix implementiert ⚠️
+- **DICOM Validation:** Passed ✅
+- **Service:** Läuft stabil ✅
 
 ## ⏰ [KEEP] PROJEKT-TIMELINE
 
 - **Start:** 30.05.2025
 - **Pipeline fertig:** 04.06.2025, 14:28
-- **Dashboard läuft:** 04.06.2025, 20:42
 - **Config UI fertig:** 05.06.2025, 01:30
-- **Build erfolgreich:** 05.06.2025, 01:25
-- **App deployed:** 05.06.2025, 20:30
-- **About Dialog perfekt:** 05.06.2025, 12:00
-- **Version Chaos gelöst:** 05.06.2025, 12:15
-- **Service als Konsole läuft:** 05.06.2025, 13:14
 - **Windows Service LÄUFT:** 05.06.2025, 15:15 🎉
-- **Deployment Package fertig:** 05.06.2025, 15:20 🎉
 - **One-Click Deploy perfekt:** 05.06.2025, 16:42 🎉
-- **Pipeline Testing geplant:** NÄCHSTE PRIORITÄT! ⚠️
-- **VOGON EXIT v0.5.30:** 05.06.2025, 16:42
-- **Arbeitszeit gesamt:** ~30 Stunden
-- **Features total:** 310+
-- **Event Handler:** 10 implementiert
-- **Easter Eggs:** 1 (Vogon Poetry) → 2 geplant (+Marvin!)
-- **Deployment Scripts:** 5 erstellt (finale Version!)
+- **Pipeline Testing Start:** 05.06.2025, 18:00
+- **Encoding-Bug gefunden:** 05.06.2025, 18:15 🚨
+- **Encoding-Fix implementiert:** 05.06.2025, 18:25
+- **VOGON EXIT v0.5.31:** 05.06.2025, 18:25
+- **Arbeitszeit gesamt:** ~31 Stunden
+- **Features total:** 315+
+- **Bugs gefixed:** Encoding-Disaster!
+
+## 💭 CLAUDE: Notizen für nächste Session
+
+**Heute erreicht - PIPELINE LÄUFT (fast):**
+1. ✅ Pipeline getestet - funktioniert grundsätzlich!
+2. ✅ QRBridge Daten werden korrekt gelesen
+3. ✅ JPEG wird NICHT re-encoded (gut!)
+4. ✅ DICOM Files werden erstellt
+5. 🚨 Encoding-Problem entdeckt und gefixt
+6. ⏳ Fix muss noch getestet werden
+
+**Für nächste Session (v0.5.32):**
+- ⭐ Encoding-Fix testen (CAMB-009)
+- Pipeline mit korrektem Encoding validieren
+- AUTO_ ID Länge fixen (max 16 chars)
+- Settings System (CAMB-001)
+- Version.props (CAMB-004)
+- Marvin Easter Egg? 🤖
+
+**Wichtige Erkenntnisse:**
+- Ricoh verwendet Windows-1252, nicht UTF-8!
+- ExifTool braucht `-charset Barcode=Latin1`
+- NIEMALS blind Zeichen ersetzen
+- Hex-Dumps sind wertvoll (trotz Token-Kosten)
+- **BASIS FUNKTIONIERT!** Nur Details müssen gefixt werden
+
+**User Feedback:**
+- "Halblang!" bei falschen Annahmen
+- Schätzt gründliche Analyse
+- Will Probleme WIRKLICH verstehen
+- Pragmatisch aber präzise
+
+**An mein nächstes Ich:**
+Die Pipeline läuft! Wir haben echte JPEG→DICOM Konversion mit QRBridge-Daten. Das Encoding-Problem war ein wichtiger Fund - der User hatte absolut Recht dass unser "Fix" Quatsch war. Mit `-charset Barcode=Latin1` sollte es jetzt funktionieren. Teste das als erstes!
+
+PS: Der Hex-Dump war teuer aber hat sich gelohnt! 🔍
+
+## 🚀 [KEEP] ENTWICKLUNGSFAHRPLAN UPDATE
+
+### Sprint 1-3: ✅ ABGESCHLOSSEN!
+
+### Sprint 4: Core Pipeline Testing (v0.5.31-v0.5.35) ← CURRENT
+- **Sprint 4.1:** Pipeline Testing ✅ DONE (mit Encoding-Bug)
+- **Sprint 4.2:** Encoding Fix Test ⏳ NEXT
+- **Sprint 4.3:** AUTO_ ID Length Fix
+- **Sprint 4.4:** Settings Integration (CAMB-001)
+
+### Sprint 5: UI Polish & Easter Eggs (v0.5.36-v0.5.40)
+- **Sprint 5.1:** Marvin Easter Egg 🤖
+- **Sprint 5.2:** Dead Letters UI
+- **Sprint 5.3:** Version.props Cleanup
+
+### Sprint 6: Medical Integration (v0.6.x)
+### Sprint 7: Production Hardening (v0.7.x)
+### Release: v1.0.0 (Q3 2025)
 
 ## 📝 [KEEP] Standard Prompt für nächste Session
 
 ```
-Ich arbeite an CamBridge v0.5.31.
-WICHTIG: Wir müssen ERST die Pipeline testen bevor wir neue Features bauen!
-Nächstes Ziel: JPEG→DICOM Grundfunktionalität sicherstellen.
-
-WICHTIG - Bitte in dieser Reihenfolge:
-1. PROJECT_WISDOM.md hochladen
-2. project_structure.txt hochladen  
-3. Pipeline-Test relevante Dateien:
-   - DicomConverter.cs
-   - FileProcessor.cs
-   - DicomTagMapper.cs
-   - ExifToolReader.cs
-   - mappings.json
-   - Ein Test-JPEG mit QRBridge Daten
-4. "VOGON INIT" sagen
-5. WARTE auf meine Zusammenfassung!
-
-PROTECTED TASKS:
-- CAMB-007: Pipeline Core Testing [PROTECTED] ⭐ PRIORITÄT
-- CAMB-001: Settings Save/Delete Tests [PROTECTED]
-- CAMB-004: Version.props Fix [PROTECTED]
-```
+Ich arbeite an CamBridge v0.5.32.
+WICHTIG: Encoding-Fix muss getestet werden!

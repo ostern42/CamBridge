@@ -8,6 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.5.31] - 2025-06-05
+
+### Added
+- Pipeline end-to-end testing with real Ricoh G900 II images
+- Character encoding analysis for Barcode field
+- PowerShell one-liner collection in PROJECT_WISDOM
+
+### Fixed
+- **CRITICAL:** ExifTool character encoding for Ricoh Barcode field
+  - Ricoh uses Windows-1252 encoding, not UTF-8
+  - Added `-charset Barcode=Latin1` parameter to ExifTool
+  - Removed broken character replacement logic
+- Study ID length validation (max 16 chars for DICOM SH)
+
+### Changed
+- ExifToolReader now properly handles Windows-1252 encoded data
+- Improved logging for QRBridge data extraction
+
+### Discovered
+- Ricoh G900 II stores QRBridge data in APP5 RMETA segment
+- Barcode field uses Windows-1252 encoding (0xF6=ö, 0xA0=NBSP)
+- Pipeline successfully converts JPEG to DICOM without re-encoding
+
+### Known Issues
+- AUTO-generated IDs exceed 16 character DICOM limit
+- Settings save button remains disabled (CAMB-001)
+- Version.props assembly version conflict (CAMB-004)
+
 ## [0.5.30] - 2025-06-05
 
 ### Added

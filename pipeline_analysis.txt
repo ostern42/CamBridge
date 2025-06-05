@@ -1,0 +1,2909 @@
+﻿===== FILE: src\CamBridge.Core\CamBridgeSettings.cs =====
+using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Main configuration settings for CamBridge
+    /// </summary>
+    public class CamBridgeSettings
+    {
+        /// <summary>
+        /// Folders to monitor for new JPEG files
+        /// </summary>
+        public List<FolderConfiguration> WatchFolders { get; set; } = new();
+
+        /// <summary>
+        /// Default output folder for DICOM files
+        /// </summary>
+        public string DefaultOutputFolder { get; set; } = @"C:\CamBridge\Output";
+
+        /// <summary>
+        /// Path to mapping configuration file
+        /// </summary>
+        public string MappingConfigurationFile { get; set; } = "mappings.json";
+
+        /// <summary>
+        /// Whether to use Ricoh-specific EXIF reader
+        /// </summary>
+        public bool UseRicohExifReader { get; set; } = true;
+
+        /// <summary>
+        /// Processing options
+        /// </summary>
+        public ProcessingOptions Processing { get; set; } = new();
+
+        /// <summary>
+        /// DICOM specific settings
+        /// </summary>
+        public DicomSettings Dicom { get; set; } = new();
+
+        /// <summary>
+        /// Logging configuration
+        /// </summary>
+        public LoggingSettings Logging { get; set; } = new();
+
+        /// <summary>
+        /// Service-specific settings
+        /// </summary>
+        public ServiceSettings Service { get; set; } = new();
+
+        /// <summary>
+        /// Notification settings
+        /// </summary>
+        public NotificationSettings Notifications { get; set; } = new();
+    }
+
+    public class FolderConfiguration
+    {
+        public string Path { get; set; } = string.Empty;
+        public string? OutputPath { get; set; }
+        public bool Enabled { get; set; } = true;
+        public bool IncludeSubdirectories { get; set; } = false;
+        public string FilePattern { get; set; } = "*.jpg;*.jpeg";
+
+        [JsonIgnore]
+        public bool IsValid => !string.IsNullOrWhiteSpace(Path) &&
+                              System.IO.Directory.Exists(Path);
+    }
+
+    public class DicomSettings
+    {
+        /// <summary>
+        /// Implementation class UID prefix for this institution
+        /// </summary>
+        public string ImplementationClassUid { get; set; } = "1.2.276.0.7230010.3.0.3.6.4";
+
+        /// <summary>
+        /// Implementation version name
+        /// </summary>
+        public string ImplementationVersionName { get; set; } = "CAMBRIDGE_001";
+
+        /// <summary>
+        /// Default institution name
+        /// </summary>
+        public string InstitutionName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Station name
+        /// </summary>
+        public string StationName { get; set; } = Environment.MachineName;
+
+        /// <summary>
+        /// Whether to validate DICOM files after creation
+        /// </summary>
+        public bool ValidateAfterCreation { get; set; } = true;
+    }
+
+    public class LoggingSettings
+    {
+        public string LogLevel { get; set; } = "Information";
+        public string LogFolder { get; set; } = @"C:\CamBridge\Logs";
+        public bool EnableFileLogging { get; set; } = true;
+        public bool EnableEventLog { get; set; } = true;
+        public int MaxLogFileSizeMB { get; set; } = 10;
+        public int MaxLogFiles { get; set; } = 10;
+
+        /// <summary>
+        /// Whether to include patient data in debug logs (CAUTION!)
+        /// </summary>
+        public bool IncludePatientDataInDebugLogs { get; set; } = false;
+    }
+
+    public class ServiceSettings
+    {
+        public string ServiceName { get; set; } = "CamBridgeService";
+        public string DisplayName { get; set; } = "CamBridge JPEG to DICOM Converter";
+        public string Description { get; set; } = "Monitors folders for JPEG files from Ricoh cameras and converts them to DICOM format";
+        public int StartupDelaySeconds { get; set; } = 5;
+        public int FileProcessingDelayMs { get; set; } = 500;
+    }
+}
+
+===== FILE: src\CamBridge.Core\ProcessingOptions.cs =====
+// src\CamBridge.Core\ProcessingOptions.cs
+// Version: 0.5.26
+// Extended with all required properties for Infrastructure
+
+using System;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Processing options for file handling
+    /// </summary>
+    public class ProcessingOptions
+    {
+        public PostProcessingAction SuccessAction { get; set; } = PostProcessingAction.Archive;
+        public PostProcessingAction FailureAction { get; set; } = PostProcessingAction.MoveToError;
+
+        public string ArchiveFolder { get; set; } = @"C:\CamBridge\Archive";
+        public string ErrorFolder { get; set; } = @"C:\CamBridge\Errors";
+        public string BackupFolder { get; set; } = @"C:\CamBridge\Backup";
+
+        public bool CreateBackup { get; set; } = true;
+        public int MaxConcurrentProcessing { get; set; } = 2;
+        public bool RetryOnFailure { get; set; } = true;
+        public int MaxRetryAttempts { get; set; } = 3;
+
+        public OutputOrganization OutputOrganization { get; set; } = OutputOrganization.ByPatientAndDate;
+        public bool ProcessExistingOnStartup { get; set; } = true;
+        public TimeSpan? MaxFileAge { get; set; } = TimeSpan.FromDays(30);
+
+        // Additional properties required by Infrastructure
+        public long MinimumFileSizeBytes { get; set; } = 1024; // 1 KB minimum
+        public long MaximumFileSizeBytes { get; set; } = 104857600; // 100 MB maximum
+        public string OutputFilePattern { get; set; } = "{PatientID}_{StudyDate}_{InstanceNumber}.dcm";
+        public int RetryDelaySeconds { get; set; } = 2;
+    }
+
+    /// <summary>
+    /// Actions to take after processing a file
+    /// </summary>
+    public enum PostProcessingAction
+    {
+        /// <summary>Leave the file in place</summary>
+        Leave,
+
+        /// <summary>Move to archive folder</summary>
+        Archive,
+
+        /// <summary>Delete the file</summary>
+        Delete,
+
+        /// <summary>Move to error folder</summary>
+        MoveToError
+    }
+
+    /// <summary>
+    /// How to organize output files
+    /// </summary>
+    public enum OutputOrganization
+    {
+        /// <summary>No organization, all files in root</summary>
+        None,
+
+        /// <summary>Organize by patient ID</summary>
+        ByPatient,
+
+        /// <summary>Organize by study date</summary>
+        ByDate,
+
+        /// <summary>Organize by patient ID and then date</summary>
+        ByPatientAndDate
+    }
+}
+
+===== FILE: src\CamBridge.Core\Entities\ImageMetadata.cs =====
+using System;
+using System.Collections.Generic;
+
+namespace CamBridge.Core.Entities
+{
+    /// <summary>
+    /// Complete metadata extracted from a medical image file
+    /// </summary>
+    public class ImageMetadata
+    {
+        public string SourceFilePath { get; }
+        public DateTime CaptureDateTime { get; }
+        public PatientInfo Patient { get; }
+        public StudyInfo Study { get; }
+        public ImageTechnicalData TechnicalData { get; }
+        public string? UserComment { get; }
+        public string? BarcodeData { get; }
+        public int InstanceNumber { get; }
+        public string InstanceUid { get; }
+        public Dictionary<string, string> ExifData { get; }
+
+        public ImageMetadata(
+            string sourceFilePath,
+            DateTime captureDateTime,
+            PatientInfo patient,
+            StudyInfo study,
+            ImageTechnicalData technicalData,
+            string? userComment = null,
+            string? barcodeData = null,
+            int instanceNumber = 1,
+            string? instanceUid = null,
+            Dictionary<string, string>? exifData = null)
+        {
+            SourceFilePath = sourceFilePath ?? throw new ArgumentNullException(nameof(sourceFilePath));
+            CaptureDateTime = captureDateTime;
+            Patient = patient ?? throw new ArgumentNullException(nameof(patient));
+            Study = study ?? throw new ArgumentNullException(nameof(study));
+            TechnicalData = technicalData ?? throw new ArgumentNullException(nameof(technicalData));
+            UserComment = userComment;
+            BarcodeData = barcodeData;
+            InstanceNumber = instanceNumber;
+            InstanceUid = instanceUid ?? GenerateUid();
+            ExifData = exifData ?? new Dictionary<string, string>();
+        }
+
+        private static string GenerateUid()
+        {
+            // Generate a DICOM compliant UID
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var random = new Random().Next(1000, 9999);
+            return $"1.2.276.0.7230010.3.1.4.{timestamp}.{random}";
+        }
+    }
+}
+
+===== FILE: src\CamBridge.Core\Entities\ImageTechnicalData.cs =====
+using System;
+using System.Collections.Generic;
+
+namespace CamBridge.Core.Entities
+{
+    /// <summary>
+    /// Technical metadata extracted from image EXIF data
+    /// </summary>
+    public class ImageTechnicalData
+    {
+        public string? Manufacturer { get; init; }
+        public string? Model { get; init; }
+        public string? Software { get; init; }
+        public int? ImageWidth { get; init; }
+        public int? ImageHeight { get; init; }
+        public string? ColorSpace { get; init; }
+        public int? BitsPerSample { get; init; }
+        public string? Compression { get; init; }
+        public int? Orientation { get; init; }
+
+        /// <summary>
+        /// Creates ImageTechnicalData from raw EXIF dictionary
+        /// </summary>
+        public static ImageTechnicalData FromExifDictionary(Dictionary<string, string> exifData)
+        {
+            return new ImageTechnicalData
+            {
+                Manufacturer = GetValue(exifData, "Make", "Manufacturer"),
+                Model = GetValue(exifData, "Model", "CameraModel"),
+                Software = GetValue(exifData, "Software"),
+                ImageWidth = GetIntValue(exifData, "ImageWidth", "PixelXDimension"),
+                ImageHeight = GetIntValue(exifData, "ImageHeight", "PixelYDimension"),
+                ColorSpace = GetValue(exifData, "ColorSpace"),
+                BitsPerSample = GetIntValue(exifData, "BitsPerSample"),
+                Compression = GetValue(exifData, "Compression"),
+                Orientation = GetIntValue(exifData, "Orientation")
+            };
+        }
+
+        private static string? GetValue(Dictionary<string, string> data, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (data.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+                    return value;
+            }
+            return null;
+        }
+
+        private static int? GetIntValue(Dictionary<string, string> data, params string[] keys)
+        {
+            var value = GetValue(data, keys);
+            if (value != null && int.TryParse(value, out var result))
+                return result;
+            return null;
+        }
+    }
+}
+
+===== FILE: src\CamBridge.Core\Entities\PatientInfo.cs =====
+using System;
+using System.Collections.Generic;
+using CamBridge.Core.ValueObjects;
+
+namespace CamBridge.Core.Entities
+{
+    /// <summary>
+    /// Patient information extracted from image metadata
+    /// </summary>
+    public class PatientInfo
+    {
+        public PatientId Id { get; }
+        public string Name { get; }
+        public string PatientName => Name; // Alias for compatibility
+        public string PatientId => Id.Value; // Alias for compatibility
+        public string? StudyId { get; set; }
+        public DateTime? BirthDate { get; }
+        public Gender Gender { get; }
+
+        public PatientInfo(PatientId id, string name, DateTime? birthDate, Gender gender)
+        {
+            Id = id ?? throw new ArgumentNullException(nameof(id));
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            BirthDate = birthDate;
+            Gender = gender;
+        }
+
+        /// <summary>
+        /// Creates PatientInfo from EXIF/QRBridge data
+        /// </summary>
+        public static PatientInfo FromExifData(Dictionary<string, string> exifData)
+        {
+            // Extract patient ID - try multiple possible field names
+            var patientIdValue = exifData.GetValueOrDefault("patientid") ??
+                                exifData.GetValueOrDefault("id") ??
+                                exifData.GetValueOrDefault("examid") ??
+                                $"AUTO_{DateTime.UtcNow:yyyyMMddHHmmss}";
+
+            var patientId = new PatientId(patientIdValue);
+
+            // Extract name
+            var name = exifData.GetValueOrDefault("name") ??
+                      exifData.GetValueOrDefault("patientname") ??
+                      "Unknown";
+
+            // Extract birth date
+            DateTime? birthDate = null;
+            var birthDateStr = exifData.GetValueOrDefault("birthdate") ??
+                              exifData.GetValueOrDefault("dateofbirth");
+
+            if (!string.IsNullOrWhiteSpace(birthDateStr))
+            {
+                // Try various date formats
+                var formats = new[] {
+                    "yyyy-MM-dd",
+                    "yyyyMMdd",
+                    "dd.MM.yyyy",
+                    "dd/MM/yyyy",
+                    "MM/dd/yyyy"
+                };
+
+                foreach (var format in formats)
+                {
+                    if (DateTime.TryParseExact(birthDateStr, format, null,
+                        System.Globalization.DateTimeStyles.None, out var date))
+                    {
+                        birthDate = date;
+                        break;
+                    }
+                }
+            }
+
+            // Extract gender
+            var genderStr = exifData.GetValueOrDefault("gender") ??
+                           exifData.GetValueOrDefault("sex") ??
+                           "O";
+
+            var gender = ParseGender(genderStr);
+
+            return new PatientInfo(patientId, name, birthDate, gender);
+        }
+
+        private static Gender ParseGender(string? genderStr)
+        {
+            if (string.IsNullOrWhiteSpace(genderStr))
+                return Gender.Other;
+
+            return genderStr.ToUpperInvariant() switch
+            {
+                "M" or "MALE" or "MANN" or "MÃ„NNLICH" => Gender.Male,
+                "F" or "FEMALE" or "FRAU" or "WEIBLICH" => Gender.Female,
+                _ => Gender.Other
+            };
+        }
+    }
+
+    public enum Gender
+    {
+        Male,
+        Female,
+        Other
+    }
+}
+
+===== FILE: src\CamBridge.Core\Entities\StudyInfo.cs =====
+using System;
+using CamBridge.Core.ValueObjects;
+
+namespace CamBridge.Core.Entities
+{
+    /// <summary>
+    /// Information about a medical imaging study
+    /// </summary>
+    public class StudyInfo
+    {
+        public StudyId StudyId { get; }
+        public string? ExamId { get; }
+        public string? Description { get; }
+        public string? Modality { get; }
+        public DateTime StudyDate { get; }
+        public string? AccessionNumber { get; }
+        public string? ReferringPhysician { get; }
+        public string? Comment { get; }
+
+        public StudyInfo(
+            StudyId studyId,
+            string? examId = null,
+            string? description = null,
+            string? modality = null,
+            DateTime? studyDate = null,
+            string? accessionNumber = null,
+            string? referringPhysician = null,
+            string? comment = null)
+        {
+            StudyId = studyId ?? throw new ArgumentNullException(nameof(studyId));
+            ExamId = examId;
+            Description = description;
+            Modality = modality ?? "OT"; // Other modality as default
+            StudyDate = studyDate ?? DateTime.Now;
+            AccessionNumber = accessionNumber;
+            ReferringPhysician = referringPhysician;
+            Comment = comment;
+        }
+    }
+}
+
+===== FILE: src\CamBridge.Core\Interfaces\IDicomConverter.cs =====
+using System.Threading.Tasks;
+using CamBridge.Core.Entities;
+
+namespace CamBridge.Core.Interfaces
+{
+    /// <summary>
+    /// Interface for converting JPEG images to DICOM format
+    /// </summary>
+    public interface IDicomConverter
+    {
+        /// <summary>
+        /// Converts a JPEG file to DICOM using the provided metadata
+        /// </summary>
+        Task<ConversionResult> ConvertToDicomAsync(
+            string sourceJpegPath,
+            string destinationDicomPath,
+            ImageMetadata metadata);
+
+        /// <summary>
+        /// Validates if the generated DICOM file is compliant
+        /// </summary>
+        Task<ValidationResult> ValidateDicomFileAsync(string dicomFilePath);
+
+        /// <summary>
+        /// Gets the SOP Class UID for photographic images
+        /// </summary>
+        string GetPhotographicSopClassUid();
+    }
+
+    public class ConversionResult
+    {
+        public bool Success { get; init; }
+        public string? DicomFilePath { get; init; }
+        public string? ErrorMessage { get; init; }
+        public string? SopInstanceUid { get; init; }
+        public long FileSizeBytes { get; init; }
+
+        public static ConversionResult CreateSuccess(string filePath, string sopInstanceUid, long fileSize)
+            => new()
+            {
+                Success = true,
+                DicomFilePath = filePath,
+                SopInstanceUid = sopInstanceUid,
+                FileSizeBytes = fileSize
+            };
+
+        public static ConversionResult CreateFailure(string error)
+            => new() { Success = false, ErrorMessage = error };
+    }
+
+    public class ValidationResult
+    {
+        public bool IsValid { get; init; }
+        public List<string> Errors { get; init; } = new();
+        public List<string> Warnings { get; init; } = new();
+
+        public static ValidationResult Valid()
+            => new() { IsValid = true };
+
+        public static ValidationResult Invalid(params string[] errors)
+            => new() { IsValid = false, Errors = errors.ToList() };
+    }
+}
+
+===== FILE: src\CamBridge.Core\Interfaces\IDicomTagMapper.cs =====
+using System.Collections.Generic;
+using FellowOakDicom;
+using CamBridge.Core;
+
+namespace CamBridge.Core.Interfaces
+{
+    /// <summary>
+    /// Interface for DICOM tag mapping services
+    /// </summary>
+    public interface IDicomTagMapper
+    {
+        /// <summary>
+        /// Applies a mapping rule to transform a value
+        /// </summary>
+        /// <param name="value">The value to transform</param>
+        /// <param name="transform">The transform to apply</param>
+        /// <returns>The transformed value</returns>
+        string? ApplyTransform(string? value, string? transform);
+
+        /// <summary>
+        /// Maps source data to a DICOM dataset using mapping rules
+        /// </summary>
+        /// <param name="dataset">The DICOM dataset to populate</param>
+        /// <param name="sourceData">The source data dictionary</param>
+        /// <param name="mappingRules">The mapping rules to apply</param>
+        void MapToDataset(DicomDataset dataset, Dictionary<string, string> sourceData, IEnumerable<MappingRule> mappingRules);
+    }
+}
+
+===== FILE: src\CamBridge.Core\Interfaces\IFileProcessor.cs =====
+using System;
+using System.Threading.Tasks;
+
+namespace CamBridge.Core.Interfaces
+{
+    /// <summary>
+    /// Interface for processing image files through the conversion pipeline
+    /// </summary>
+    public interface IFileProcessor
+    {
+        /// <summary>
+        /// Processes a single JPEG file
+        /// </summary>
+        Task<FileProcessingResult> ProcessFileAsync(string filePath);
+
+        /// <summary>
+        /// Checks if a file should be processed
+        /// </summary>
+        bool ShouldProcessFile(string filePath);
+
+        /// <summary>
+        /// Event raised when processing starts
+        /// </summary>
+        event EventHandler<FileProcessingEventArgs> ProcessingStarted;
+
+        /// <summary>
+        /// Event raised when processing completes
+        /// </summary>
+        event EventHandler<FileProcessingEventArgs> ProcessingCompleted;
+
+        /// <summary>
+        /// Event raised when an error occurs
+        /// </summary>
+        event EventHandler<FileProcessingErrorEventArgs> ProcessingError;
+    }
+
+    /// <summary>
+    /// Result of file processing operation
+    /// </summary>
+    /// <remarks>
+    /// Renamed from ProcessingResult to FileProcessingResult to avoid naming conflict
+    /// with CamBridge.Core.Entities.ProcessingResult
+    /// </remarks>
+    public class FileProcessingResult
+    {
+        public string SourceFile { get; init; } = string.Empty;
+        public string? OutputFile { get; init; }
+        public bool Success { get; init; }
+        public string? ErrorMessage { get; init; }
+        public DateTime ProcessedAt { get; init; } = DateTime.UtcNow;
+        public TimeSpan ProcessingTime { get; init; }
+
+        public static FileProcessingResult CreateSuccess(string source, string output, TimeSpan time)
+            => new()
+            {
+                SourceFile = source,
+                OutputFile = output,
+                Success = true,
+                ProcessingTime = time
+            };
+
+        public static FileProcessingResult CreateFailure(string source, string error, TimeSpan time)
+            => new()
+            {
+                SourceFile = source,
+                Success = false,
+                ErrorMessage = error,
+                ProcessingTime = time
+            };
+    }
+
+    public class FileProcessingEventArgs : EventArgs
+    {
+        public string FilePath { get; }
+        public DateTime Timestamp { get; }
+
+        public FileProcessingEventArgs(string filePath)
+        {
+            FilePath = filePath;
+            Timestamp = DateTime.UtcNow;
+        }
+    }
+
+    public class FileProcessingErrorEventArgs : FileProcessingEventArgs
+    {
+        public Exception Exception { get; }
+
+        public FileProcessingErrorEventArgs(string filePath, Exception exception)
+            : base(filePath)
+        {
+            Exception = exception;
+        }
+    }
+}
+
+===== FILE: src\CamBridge.Core\MappingRule.cs =====
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Represents a mapping rule from source field to DICOM tag
+    /// </summary>
+    public class MappingRule
+    {
+        /// <summary>
+        /// The source field name from EXIF/QRBridge data
+        /// </summary>
+        [Required]
+        public string SourceField { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The target DICOM tag (e.g., "(0010,0010)")
+        /// </summary>
+        [Required]
+        public string DicomTag { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Human-readable description of the DICOM tag
+        /// </summary>
+        public string? Description { get; set; }
+
+        /// <summary>
+        /// DICOM Value Representation (e.g., "PN", "LO", "DA")
+        /// </summary>
+        public string? ValueRepresentation { get; set; }
+
+        /// <summary>
+        /// Transform function to apply (as string for XAML compatibility)
+        /// </summary>
+        public string? Transform { get; set; }
+
+        /// <summary>
+        /// Transform as enum (for internal processing)
+        /// </summary>
+        public ValueTransform? TransformEnum
+        {
+            get => Enum.TryParse<ValueTransform>(Transform, out var result) ? result : null;
+            set => Transform = value?.ToString();
+        }
+
+        /// <summary>
+        /// Default value if source field is missing
+        /// </summary>
+        public string? DefaultValue { get; set; }
+
+        /// <summary>
+        /// Whether this mapping is required
+        /// </summary>
+        public bool Required { get; set; }
+
+        /// <summary>
+        /// Additional parameters for the transform function
+        /// </summary>
+        public Dictionary<string, string>? TransformParameters { get; set; }
+
+        // Additional properties that IMappingConfiguration might expect
+        /// <summary>
+        /// Type of the source field (for compatibility)
+        /// </summary>
+        public string? SourceType { get; set; }
+
+        /// <summary>
+        /// Alternative name property (for compatibility)
+        /// </summary>
+        public string? Name => Description;
+
+        /// <summary>
+        /// Constructor for object initializer syntax
+        /// </summary>
+        public MappingRule()
+        {
+        }
+
+        /// <summary>
+        /// Constructor with parameters (for compatibility with IMappingConfiguration)
+        /// </summary>
+        public MappingRule(string sourceField, string dicomTag, string description, string valueRepresentation, string? transform = null)
+        {
+            SourceField = sourceField;
+            DicomTag = dicomTag;
+            Description = description;
+            ValueRepresentation = valueRepresentation;
+            Transform = transform;
+        }
+    }
+}
+
+===== FILE: src\CamBridge.Infrastructure\Services\DicomConverter.cs =====
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Linq;
+using System.Runtime.Versioning;
+using System.Threading.Tasks;
+using CamBridge.Core.Entities;
+using CamBridge.Core.Interfaces;
+using FellowOakDicom;
+using FellowOakDicom.Imaging;
+using FellowOakDicom.IO.Buffer;
+using Microsoft.Extensions.Logging;
+using DicomTag = FellowOakDicom.DicomTag;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Implementation of IDicomConverter using fo-dicom library
+    /// Converts JPEG images to DICOM format while preserving JPEG compression
+    /// </summary>
+    [SupportedOSPlatform("windows")]
+    public class DicomConverter : IDicomConverter
+    {
+        private readonly ILogger<DicomConverter> _logger;
+        private readonly IDicomTagMapper? _tagMapper;
+        private readonly IMappingConfiguration? _mappingConfiguration;
+
+        private const string PHOTOGRAPHIC_SOP_CLASS_UID = "1.2.840.10008.5.1.4.1.1.77.1.4";
+        private const string JPEG_BASELINE_TRANSFER_SYNTAX_UID = "1.2.840.10008.1.2.4.50";
+
+        // Implementation Class UID prefix for CamBridge
+        private const string IMPLEMENTATION_CLASS_UID = "1.2.276.0.7230010.3.0.3.6.4";
+        private const string IMPLEMENTATION_VERSION_NAME = "CAMBRIDGE_001";
+
+        // Constructor for backward compatibility
+        public DicomConverter(ILogger<DicomConverter> logger)
+            : this(logger, null, null)
+        {
+        }
+
+        // New constructor with dependency injection
+        public DicomConverter(
+            ILogger<DicomConverter> logger,
+            IDicomTagMapper? tagMapper,
+            IMappingConfiguration? mappingConfiguration)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _tagMapper = tagMapper;
+            _mappingConfiguration = mappingConfiguration;
+        }
+
+        /// <inheritdoc />
+        public async Task<ConversionResult> ConvertToDicomAsync(
+            string sourceJpegPath,
+            string destinationDicomPath,
+            ImageMetadata metadata)
+        {
+            if (string.IsNullOrWhiteSpace(sourceJpegPath))
+                throw new ArgumentException("Source JPEG path cannot be null or empty", nameof(sourceJpegPath));
+
+            if (string.IsNullOrWhiteSpace(destinationDicomPath))
+                throw new ArgumentException("Destination DICOM path cannot be null or empty", nameof(destinationDicomPath));
+
+            if (metadata == null)
+                throw new ArgumentNullException(nameof(metadata));
+
+            try
+            {
+                _logger.LogInformation("Starting DICOM conversion for {SourceFile}", sourceJpegPath);
+
+                // Read JPEG file
+                var jpegBytes = await File.ReadAllBytesAsync(sourceJpegPath);
+
+                // Get image dimensions from metadata or read from file
+                var (width, height) = await GetImageDimensionsAsync(sourceJpegPath, metadata);
+
+                // Create DICOM dataset
+                DicomDataset dataset;
+
+                if (_tagMapper != null && _mappingConfiguration != null)
+                {
+                    // Use dynamic mapping
+                    dataset = CreateDicomDatasetWithMapping(metadata, width, height);
+                }
+                else
+                {
+                    // Use legacy hardcoded mapping
+                    dataset = CreateDicomDatasetLegacy(metadata, width, height);
+                }
+
+                // Create DICOM file with JPEG encapsulated pixel data
+                var dicomFile = CreateDicomFileWithJpegData(dataset, jpegBytes);
+
+                // Ensure output directory exists
+                var outputDir = Path.GetDirectoryName(destinationDicomPath);
+                if (!string.IsNullOrEmpty(outputDir))
+                    Directory.CreateDirectory(outputDir);
+
+                // Save DICOM file
+                await dicomFile.SaveAsync(destinationDicomPath);
+
+                var fileInfo = new FileInfo(destinationDicomPath);
+                var sopInstanceUid = dataset.GetString(DicomTag.SOPInstanceUID);
+
+                _logger.LogInformation("Successfully converted {SourceFile} to DICOM: {DicomFile} ({FileSize} bytes)",
+                    sourceJpegPath, destinationDicomPath, fileInfo.Length);
+
+                return ConversionResult.CreateSuccess(destinationDicomPath, sopInstanceUid, fileInfo.Length);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error converting {SourceFile} to DICOM", sourceJpegPath);
+                return ConversionResult.CreateFailure($"Conversion failed: {ex.Message}");
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<ValidationResult> ValidateDicomFileAsync(string dicomFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(dicomFilePath))
+                throw new ArgumentException("DICOM file path cannot be null or empty", nameof(dicomFilePath));
+
+            try
+            {
+                var errors = new List<string>();
+                var warnings = new List<string>();
+
+                // Try to open the file
+                var dicomFile = await DicomFile.OpenAsync(dicomFilePath);
+                var dataset = dicomFile.Dataset;
+
+                // Check mandatory Patient Module tags
+                ValidateTag(dataset, DicomTag.PatientName, "Patient Name", errors, warnings);
+                ValidateTag(dataset, DicomTag.PatientID, "Patient ID", errors, warnings);
+                ValidateTag(dataset, DicomTag.PatientBirthDate, "Patient Birth Date", errors, warnings);
+                ValidateTag(dataset, DicomTag.PatientSex, "Patient Sex", errors, warnings);
+
+                // Check mandatory Study Module tags
+                ValidateTag(dataset, DicomTag.StudyInstanceUID, "Study Instance UID", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.StudyDate, "Study Date", errors, warnings);
+                ValidateTag(dataset, DicomTag.StudyTime, "Study Time", errors, warnings);
+
+                // Check mandatory Series Module tags
+                ValidateTag(dataset, DicomTag.SeriesInstanceUID, "Series Instance UID", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.Modality, "Modality", errors, warnings, true);
+
+                // Check mandatory Image Module tags
+                ValidateTag(dataset, DicomTag.SOPClassUID, "SOP Class UID", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.SOPInstanceUID, "SOP Instance UID", errors, warnings, true);
+
+                // Check Image Pixel Module
+                ValidateTag(dataset, DicomTag.SamplesPerPixel, "Samples Per Pixel", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.PhotometricInterpretation, "Photometric Interpretation", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.Rows, "Rows", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.Columns, "Columns", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.BitsAllocated, "Bits Allocated", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.BitsStored, "Bits Stored", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.HighBit, "High Bit", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.PixelRepresentation, "Pixel Representation", errors, warnings, true);
+
+                // Check pixel data
+                if (!dataset.Contains(DicomTag.PixelData))
+                {
+                    errors.Add("Missing Pixel Data");
+                }
+
+                // Validate photometric interpretation for JPEG
+                var transferSyntax = dicomFile.FileMetaInfo.TransferSyntax;
+                if (transferSyntax.UID.UID == JPEG_BASELINE_TRANSFER_SYNTAX_UID)
+                {
+                    var photometric = dataset.GetString(DicomTag.PhotometricInterpretation);
+                    if (photometric != "YBR_FULL_422")
+                    {
+                        warnings.Add($"Photometric Interpretation '{photometric}' may not be optimal for JPEG compression (expected YBR_FULL_422)");
+                    }
+                }
+
+                if (errors.Count == 0)
+                {
+                    _logger.LogInformation("DICOM file validation passed for {FilePath}", dicomFilePath);
+                    return ValidationResult.Valid();
+                }
+                else
+                {
+                    _logger.LogWarning("DICOM file validation failed for {FilePath}: {Errors}",
+                        dicomFilePath, string.Join(", ", errors));
+                    return ValidationResult.Invalid(errors.ToArray());
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating DICOM file {FilePath}", dicomFilePath);
+                return ValidationResult.Invalid($"Validation error: {ex.Message}");
+            }
+        }
+
+        /// <inheritdoc />
+        public string GetPhotographicSopClassUid() => PHOTOGRAPHIC_SOP_CLASS_UID;
+
+        private DicomDataset CreateDicomDatasetWithMapping(ImageMetadata metadata, int width, int height)
+        {
+            var dataset = new DicomDataset();
+
+            // Add basic technical tags that aren't mapped
+            AddBasicTechnicalTags(dataset, metadata, width, height);
+
+            // Prepare source data for mapping
+            var sourceData = PrepareSourceData(metadata);
+
+            // Get mapping rules
+            var mappingRules = _mappingConfiguration!.GetMappingRules();
+
+            // Flatten the nested dictionary if needed
+            var flatSourceData = new Dictionary<string, string>();
+            if (sourceData.ContainsKey("QRBridge"))
+            {
+                foreach (var kvp in sourceData["QRBridge"])
+                {
+                    flatSourceData[kvp.Key] = kvp.Value;
+                }
+            }
+
+            // Apply mappings (void method, no return value)
+            _tagMapper!.MapToDataset(dataset, flatSourceData, mappingRules);
+
+            _logger.LogInformation("Mapping completed successfully");
+
+            // Add any essential tags that weren't mapped
+            EnsureEssentialTags(dataset, metadata);
+
+            return dataset;
+        }
+
+        private Dictionary<string, Dictionary<string, string>> PrepareSourceData(ImageMetadata metadata)
+        {
+            var sourceData = new Dictionary<string, Dictionary<string, string>>();
+
+            // Prepare QRBridge data
+            var qrBridgeData = new Dictionary<string, string>();
+
+            // Extract from parsed user comment if available
+            if (metadata.ExifData != null && metadata.ExifData.TryGetValue("QRBridgeData", out var qrData))
+            {
+                // Assume it's already parsed into key-value pairs
+                var parts = qrData.Split('|');
+                if (parts.Length >= 1) qrBridgeData["examid"] = parts[0];
+                if (parts.Length >= 2) qrBridgeData["name"] = parts[1];
+                if (parts.Length >= 3) qrBridgeData["birthdate"] = parts[2];
+                if (parts.Length >= 4) qrBridgeData["gender"] = parts[3];
+                if (parts.Length >= 5) qrBridgeData["comment"] = parts[4];
+            }
+
+            // Or use metadata directly
+            qrBridgeData["name"] = metadata.Patient.Name;
+            qrBridgeData["patientid"] = metadata.Patient.Id.Value;
+            if (metadata.Patient.BirthDate.HasValue)
+                qrBridgeData["birthdate"] = metadata.Patient.BirthDate.Value.ToString("yyyy-MM-dd");
+            qrBridgeData["gender"] = metadata.Patient.Gender.ToString()[0].ToString();
+            qrBridgeData["examid"] = metadata.Study.ExamId ?? metadata.Study.StudyId.Value;
+            if (!string.IsNullOrEmpty(metadata.Study.Comment))
+                qrBridgeData["comment"] = metadata.Study.Comment;
+
+            sourceData["QRBridge"] = qrBridgeData;
+
+            // Prepare EXIF data
+            if (metadata.ExifData != null)
+            {
+                sourceData["EXIF"] = new Dictionary<string, string>(metadata.ExifData);
+            }
+            else
+            {
+                sourceData["EXIF"] = new Dictionary<string, string>();
+            }
+
+            // Add technical data to EXIF if not already present
+            if (metadata.TechnicalData != null)
+            {
+                if (metadata.TechnicalData.Manufacturer != null)
+                    sourceData["EXIF"]["Make"] = metadata.TechnicalData.Manufacturer;
+                if (metadata.TechnicalData.Model != null)
+                    sourceData["EXIF"]["Model"] = metadata.TechnicalData.Model;
+                if (metadata.TechnicalData.Software != null)
+                    sourceData["EXIF"]["Software"] = metadata.TechnicalData.Software;
+            }
+
+            return sourceData;
+        }
+
+        private void AddBasicTechnicalTags(DicomDataset dataset, ImageMetadata metadata, int width, int height)
+        {
+            // File Meta Information
+            dataset.Add(DicomTag.SpecificCharacterSet, "ISO_IR 100"); // Latin-1 for Umlauts
+
+            // Essential Study/Series UIDs (generate if not mapped)
+            dataset.Add(DicomTag.StudyInstanceUID, DicomUID.Generate());
+            dataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate());
+
+            // Dates and times (will be overwritten if mapped)
+            dataset.Add(DicomTag.StudyDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.StudyTime, metadata.Study.StudyDate.ToString("HHmmss"));
+            dataset.Add(DicomTag.SeriesDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.SeriesTime, metadata.Study.StudyDate.ToString("HHmmss"));
+
+            // Series Module defaults
+            dataset.Add(DicomTag.Modality, metadata.Study.Modality);
+            dataset.Add(DicomTag.SeriesNumber, "1");
+            dataset.Add(DicomTag.SeriesDescription, "VL Photographic Image");
+
+            // General Equipment Module defaults
+            dataset.Add(DicomTag.StationName, Environment.MachineName);
+            dataset.Add(DicomTag.ConversionType, "DI"); // Digital Interface
+
+            // General Image Module
+            dataset.Add(DicomTag.InstanceNumber, metadata.InstanceNumber.ToString());
+            dataset.Add(DicomTag.ContentDate, metadata.CaptureDateTime.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.ContentTime, metadata.CaptureDateTime.ToString("HHmmss.ffffff"));
+            dataset.Add(DicomTag.ImageType, "DERIVED", "PRIMARY");
+
+            // Image Pixel Module (technical requirements)
+            dataset.Add(DicomTag.SamplesPerPixel, (ushort)3); // Color image
+            dataset.Add(DicomTag.PhotometricInterpretation, "YBR_FULL_422"); // Required for JPEG
+            dataset.Add(DicomTag.Rows, (ushort)height);
+            dataset.Add(DicomTag.Columns, (ushort)width);
+            dataset.Add(DicomTag.BitsAllocated, (ushort)8);
+            dataset.Add(DicomTag.BitsStored, (ushort)8);
+            dataset.Add(DicomTag.HighBit, (ushort)7);
+            dataset.Add(DicomTag.PixelRepresentation, (ushort)0); // Unsigned
+            dataset.Add(DicomTag.PlanarConfiguration, (ushort)0); // Color-by-pixel
+
+            // SOP Common Module
+            dataset.Add(DicomTag.SOPClassUID, PHOTOGRAPHIC_SOP_CLASS_UID);
+            dataset.Add(DicomTag.SOPInstanceUID, metadata.InstanceUid);
+        }
+
+        private void EnsureEssentialTags(DicomDataset dataset, ImageMetadata metadata)
+        {
+            // Ensure critical patient identifiers exist
+            if (!dataset.Contains(DicomTag.PatientName))
+            {
+                dataset.Add(DicomTag.PatientName, metadata.Patient.Name);
+                _logger.LogWarning("Patient Name was not mapped, using fallback");
+            }
+
+            if (!dataset.Contains(DicomTag.PatientID))
+            {
+                dataset.Add(DicomTag.PatientID, metadata.Patient.Id.Value);
+                _logger.LogWarning("Patient ID was not mapped, using fallback");
+            }
+
+            // Ensure Study ID exists
+            if (!dataset.Contains(DicomTag.StudyID))
+            {
+                dataset.Add(DicomTag.StudyID, metadata.Study.StudyId.Value);
+            }
+        }
+
+        // Legacy method for backward compatibility
+        private DicomDataset CreateDicomDatasetLegacy(ImageMetadata metadata, int width, int height)
+        {
+            var dataset = new DicomDataset();
+
+            // File Meta Information
+            dataset.Add(DicomTag.SpecificCharacterSet, "ISO_IR 100"); // Latin-1 for Umlauts
+
+            // Patient Module (Type 2 - must be present, may be empty)
+            dataset.Add(DicomTag.PatientName, metadata.Patient.Name);
+            dataset.Add(DicomTag.PatientID, metadata.Patient.Id.Value);
+            dataset.Add(DicomTag.PatientBirthDate, metadata.Patient.BirthDate?.ToString("yyyyMMdd") ?? "");
+            dataset.Add(DicomTag.PatientSex, GetDicomGender(metadata.Patient.Gender));
+
+            // General Study Module
+            dataset.Add(DicomTag.StudyInstanceUID, DicomUID.Generate());
+            dataset.Add(DicomTag.StudyDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.StudyTime, metadata.Study.StudyDate.ToString("HHmmss"));
+            dataset.Add(DicomTag.AccessionNumber, metadata.Study.AccessionNumber ?? "");
+            dataset.Add(DicomTag.ReferringPhysicianName, metadata.Study.ReferringPhysician ?? "");
+            dataset.Add(DicomTag.StudyID, metadata.Study.StudyId.Value);
+            dataset.Add(DicomTag.StudyDescription, metadata.Study.Description ?? "");
+
+            // General Series Module
+            dataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate());
+            dataset.Add(DicomTag.Modality, metadata.Study.Modality);
+            dataset.Add(DicomTag.SeriesNumber, "1");
+            dataset.Add(DicomTag.SeriesDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.SeriesTime, metadata.Study.StudyDate.ToString("HHmmss"));
+            dataset.Add(DicomTag.SeriesDescription, "VL Photographic Image");
+            // PerformingPhysicianName removed - not part of StudyInfo
+
+            // General Equipment Module
+            dataset.Add(DicomTag.Manufacturer, metadata.TechnicalData?.Manufacturer ?? "Unknown");
+            dataset.Add(DicomTag.ManufacturerModelName, metadata.TechnicalData?.Model ?? "");
+            dataset.Add(DicomTag.SoftwareVersions, metadata.TechnicalData?.Software ?? "");
+            dataset.Add(DicomTag.StationName, Environment.MachineName);
+
+            // SC Equipment Module
+            dataset.Add(DicomTag.ConversionType, "DI"); // Digital Interface
+
+            // General Image Module
+            dataset.Add(DicomTag.InstanceNumber, metadata.InstanceNumber.ToString());
+            dataset.Add(DicomTag.ContentDate, metadata.CaptureDateTime.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.ContentTime, metadata.CaptureDateTime.ToString("HHmmss.ffffff"));
+            dataset.Add(DicomTag.ImageType, "DERIVED", "PRIMARY");
+
+            // Image Pixel Module
+            dataset.Add(DicomTag.SamplesPerPixel, (ushort)3); // Color image
+            dataset.Add(DicomTag.PhotometricInterpretation, "YBR_FULL_422"); // Required for JPEG
+            dataset.Add(DicomTag.Rows, (ushort)height);
+            dataset.Add(DicomTag.Columns, (ushort)width);
+            dataset.Add(DicomTag.BitsAllocated, (ushort)8);
+            dataset.Add(DicomTag.BitsStored, (ushort)8);
+            dataset.Add(DicomTag.HighBit, (ushort)7);
+            dataset.Add(DicomTag.PixelRepresentation, (ushort)0); // Unsigned
+            dataset.Add(DicomTag.PlanarConfiguration, (ushort)0); // Color-by-pixel
+
+            // SOP Common Module
+            dataset.Add(DicomTag.SOPClassUID, PHOTOGRAPHIC_SOP_CLASS_UID);
+            dataset.Add(DicomTag.SOPInstanceUID, metadata.InstanceUid);
+
+            // VL Photographic Image Module specific
+            dataset.Add(DicomTag.ImageComments, metadata.Study.Comment ?? "");
+
+            return dataset;
+        }
+
+        private DicomFile CreateDicomFileWithJpegData(DicomDataset dataset, byte[] jpegBytes)
+        {
+            // Create DICOM file with proper meta information
+            var file = new DicomFile(dataset);
+
+            // Set transfer syntax to JPEG Baseline
+            file.FileMetaInfo.TransferSyntax = DicomTransferSyntax.JPEGProcess1;
+            file.FileMetaInfo.MediaStorageSOPClassUID = DicomUID.Parse(PHOTOGRAPHIC_SOP_CLASS_UID);
+            file.FileMetaInfo.MediaStorageSOPInstanceUID = DicomUID.Parse(dataset.GetString(DicomTag.SOPInstanceUID));
+            file.FileMetaInfo.ImplementationClassUID = DicomUID.Parse(IMPLEMENTATION_CLASS_UID);
+            file.FileMetaInfo.ImplementationVersionName = IMPLEMENTATION_VERSION_NAME;
+
+            // Create encapsulated pixel data
+            // CRITICAL: Do NOT decompress JPEG - keep it compressed!
+            var pixelData = new DicomOtherByteFragment(DicomTag.PixelData);
+
+            // Add basic offset table (empty for single frame)
+            pixelData.Fragments.Add(new MemoryByteBuffer(new byte[0]));
+
+            // Add JPEG data as fragment
+            pixelData.Fragments.Add(new MemoryByteBuffer(jpegBytes));
+
+            // Add to dataset
+            dataset.AddOrUpdate(pixelData);
+
+            return file;
+        }
+
+        [SupportedOSPlatform("windows")]
+        private async Task<(int width, int height)> GetImageDimensionsAsync(string jpegPath, ImageMetadata metadata)
+        {
+            // First try to get from metadata
+            if (metadata.TechnicalData != null &&
+                metadata.TechnicalData.ImageWidth.HasValue &&
+                metadata.TechnicalData.ImageHeight.HasValue)
+            {
+                return (metadata.TechnicalData.ImageWidth.Value, metadata.TechnicalData.ImageHeight.Value);
+            }
+
+            // Otherwise read from file
+            return await Task.Run(() =>
+            {
+                using (var image = Image.FromFile(jpegPath))
+                {
+                    return (image.Width, image.Height);
+                }
+            });
+        }
+
+        private string GetDicomGender(Gender gender)
+        {
+            return gender switch
+            {
+                Gender.Male => "M",
+                Gender.Female => "F",
+                Gender.Other => "O",
+                _ => "O"
+            };
+        }
+
+        private void ValidateTag(DicomDataset dataset, FellowOakDicom.DicomTag tag, string tagName,
+            List<string> errors, List<string> warnings, bool isType1 = false)
+        {
+            if (!dataset.Contains(tag))
+            {
+                if (isType1)
+                    errors.Add($"Missing mandatory Type 1 tag: {tagName} {tag}");
+                else
+                    warnings.Add($"Missing Type 2 tag: {tagName} {tag}");
+            }
+            else if (isType1)
+            {
+                var value = dataset.GetString(tag);
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    errors.Add($"Empty Type 1 tag: {tagName} {tag}");
+                }
+            }
+        }
+    }
+}
+
+===== FILE: src\CamBridge.Infrastructure\Services\DicomTagMapper.cs =====
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Extensions.Logging;
+using CamBridge.Core;
+using CamBridge.Core.Interfaces;
+using FellowOakDicom;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Service responsible for mapping values to DICOM tags according to mapping rules
+    /// </summary>
+    public class DicomTagMapper : IDicomTagMapper
+    {
+        private readonly ILogger<DicomTagMapper> _logger;
+
+        public DicomTagMapper(ILogger<DicomTagMapper> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        /// <summary>
+        /// Applies a mapping rule to transform a value
+        /// </summary>
+        public string? ApplyTransform(string? value, string? transform)
+        {
+            if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(transform) || transform == "None")
+            {
+                return value;
+            }
+
+            // Parse transform string to enum
+            if (!Enum.TryParse<ValueTransform>(transform, out var transformEnum))
+            {
+                _logger.LogWarning("Unknown transform: {Transform}", transform);
+                return value;
+            }
+
+            try
+            {
+                return transformEnum switch
+                {
+                    ValueTransform.DateToDicom => ConvertDateToDicom(value),
+                    ValueTransform.TimeToDicom => ConvertTimeToDicom(value),
+                    ValueTransform.DateTimeToDicom => ConvertDateTimeToDicom(value),
+                    ValueTransform.MapGender => MapGenderCode(value),
+                    ValueTransform.RemovePrefix => RemovePrefix(value),
+                    ValueTransform.ExtractDate => ExtractDate(value),
+                    ValueTransform.ExtractTime => ExtractTime(value),
+                    ValueTransform.ToUpperCase => value.ToUpperInvariant(),
+                    ValueTransform.ToLowerCase => value.ToLowerInvariant(),
+                    ValueTransform.Trim => value.Trim(),
+                    _ => value
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to apply transform {Transform} to value '{Value}'", transform, value);
+                return value;
+            }
+        }
+
+        private string ConvertDateToDicom(string date)
+        {
+            // Convert various date formats to DICOM format (YYYYMMDD)
+            if (DateTime.TryParse(date, out var dt))
+            {
+                return dt.ToString("yyyyMMdd");
+            }
+
+            // Already in DICOM format?
+            if (date.Length == 8 && int.TryParse(date, out _))
+            {
+                return date;
+            }
+
+            _logger.LogWarning("Unable to convert date '{Date}' to DICOM format", date);
+            return date;
+        }
+
+        private string ConvertTimeToDicom(string time)
+        {
+            // Convert various time formats to DICOM format (HHMMSS)
+            if (DateTime.TryParse(time, out var dt))
+            {
+                return dt.ToString("HHmmss");
+            }
+
+            if (TimeSpan.TryParse(time, out var ts))
+            {
+                return $"{ts.Hours:D2}{ts.Minutes:D2}{ts.Seconds:D2}";
+            }
+
+            _logger.LogWarning("Unable to convert time '{Time}' to DICOM format", time);
+            return time;
+        }
+
+        private string ConvertDateTimeToDicom(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("yyyyMMddHHmmss");
+            }
+
+            _logger.LogWarning("Unable to convert datetime '{DateTime}' to DICOM format", dateTime);
+            return dateTime;
+        }
+
+        /// <summary>
+        /// Maps source data to a DICOM dataset using mapping rules
+        /// </summary>
+        public void MapToDataset(DicomDataset dataset, Dictionary<string, string> sourceData, IEnumerable<MappingRule> mappingRules)
+        {
+            if (dataset == null) throw new ArgumentNullException(nameof(dataset));
+            if (sourceData == null) throw new ArgumentNullException(nameof(sourceData));
+            if (mappingRules == null) throw new ArgumentNullException(nameof(mappingRules));
+
+            foreach (var rule in mappingRules)
+            {
+                try
+                {
+                    // Get source value
+                    if (!sourceData.TryGetValue(rule.SourceField, out var sourceValue))
+                    {
+                        if (rule.Required)
+                        {
+                            _logger.LogWarning("Required source field '{Field}' not found in data", rule.SourceField);
+                        }
+
+                        // Use default value if available
+                        sourceValue = rule.DefaultValue;
+
+                        if (string.IsNullOrEmpty(sourceValue))
+                        {
+                            continue;
+                        }
+                    }
+
+                    // Apply transform if specified
+                    var transformedValue = ApplyTransform(sourceValue, rule.Transform);
+
+                    if (string.IsNullOrEmpty(transformedValue) && rule.Required)
+                    {
+                        _logger.LogWarning("Required field '{Field}' resulted in empty value after transform", rule.SourceField);
+                    }
+
+                    // Parse DICOM tag
+                    if (!TryParseDicomTag(rule.DicomTag, out var group, out var element))
+                    {
+                        _logger.LogError("Invalid DICOM tag format: {Tag}", rule.DicomTag);
+                        continue;
+                    }
+
+                    // Add to dataset
+                    var tag = new DicomTag(group, element);
+
+                    if (!string.IsNullOrEmpty(transformedValue))
+                    {
+                        dataset.AddOrUpdate(tag, transformedValue);
+                        _logger.LogDebug("Mapped {Source} -> {Tag}: {Value}",
+                            rule.SourceField, rule.DicomTag, transformedValue);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error mapping rule {Source} -> {Tag}",
+                        rule.SourceField, rule.DicomTag);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Parses a DICOM tag string like "(0010,0010)" into group and element
+        /// </summary>
+        private bool TryParseDicomTag(string tagString, out ushort group, out ushort element)
+        {
+            group = 0;
+            element = 0;
+
+            if (string.IsNullOrEmpty(tagString))
+                return false;
+
+            // Remove parentheses and spaces
+            var cleaned = tagString.Trim('(', ')', ' ');
+            var parts = cleaned.Split(',');
+
+            if (parts.Length != 2)
+                return false;
+
+            try
+            {
+                group = Convert.ToUInt16(parts[0].Trim(), 16);
+                element = Convert.ToUInt16(parts[1].Trim(), 16);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private string MapGenderCode(string gender)
+        {
+            return gender?.ToUpperInvariant() switch
+            {
+                "M" or "MALE" => "M",
+                "F" or "FEMALE" => "F",
+                "O" or "OTHER" => "O",
+                _ => ""
+            };
+        }
+
+        private string RemovePrefix(string value)
+        {
+            // Remove common prefixes like "GCM_TAG"
+            if (value.StartsWith("GCM_TAG", StringComparison.OrdinalIgnoreCase))
+            {
+                return value.Substring(7).Trim();
+            }
+
+            return value;
+        }
+
+        private string ExtractDate(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("yyyyMMdd");
+            }
+
+            return dateTime;
+        }
+
+        private string ExtractTime(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("HHmmss");
+            }
+
+            return dateTime;
+        }
+    }
+}
+
+===== FILE: src\CamBridge.Infrastructure\Services\ExifToolReader.cs =====
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using CamBridge.Core.Entities;
+using CamBridge.Core.ValueObjects;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Reads EXIF metadata from JPEG files using ExifTool
+    /// Specifically handles Ricoh G900SE II barcode field
+    /// </summary>
+    public class ExifToolReader
+    {
+        private readonly ILogger<ExifToolReader> _logger;
+        private readonly string _exifToolPath;
+        private readonly int _timeoutMs;
+
+        /// <summary>
+        /// Creates a new ExifToolReader instance
+        /// This constructor matches what ServiceCollectionExtensions expects
+        /// </summary>
+        /// <param name="logger">Logger for diagnostics</param>
+        /// <param name="timeoutMs">Timeout for ExifTool execution in milliseconds</param>
+        public ExifToolReader(ILogger<ExifToolReader> logger, int timeoutMs = 5000)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _timeoutMs = timeoutMs;
+
+            // Try to find ExifTool in various locations
+            var possiblePaths = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "exiftool.exe"),
+                Path.Combine(Directory.GetCurrentDirectory(), "Tools", "exiftool.exe"),
+                @"Tools\exiftool.exe",
+                @"C:\Tools\exiftool.exe"
+            };
+
+            foreach (var path in possiblePaths)
+            {
+                if (File.Exists(path))
+                {
+                    _exifToolPath = path;
+                    _logger.LogInformation("Found ExifTool at: {Path}", path);
+                    break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(_exifToolPath))
+            {
+                throw new FileNotFoundException("ExifTool not found in any expected location");
+            }
+        }
+
+        /// <summary>
+        /// Extracts complete metadata from a JPEG file
+        /// This method name matches what FileProcessor expects
+        /// </summary>
+        public async Task<ImageMetadata> ExtractMetadataAsync(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException($"File not found: {filePath}");
+            }
+
+            _logger.LogDebug("Extracting metadata from: {FilePath}", filePath);
+
+            try
+            {
+                // Run ExifTool and get all EXIF data
+                var output = await RunExifToolAsync(filePath);
+                var exifData = ParseExifToolOutput(output);
+
+                // Log what we found
+                if (exifData.TryGetValue("Barcode", out var barcode))
+                {
+                    _logger.LogInformation("Found Ricoh barcode data: '{Barcode}'", barcode);
+                }
+                if (exifData.TryGetValue("UserComment", out var userComment))
+                {
+                    _logger.LogDebug("UserComment field: '{UserComment}'", userComment);
+                }
+
+                // Look for QRBridge data in the Barcode field (Ricoh-specific)
+                string? barcodeData = null;
+                if (exifData.TryGetValue("Barcode", out var barcodeValue))
+                {
+                    barcodeData = barcodeValue;
+                    _logger.LogInformation("Found barcode data in Barcode field: '{BarcodeData}'", barcodeData);
+                }
+                else if (exifData.TryGetValue("UserComment", out var userCommentValue) &&
+                         userCommentValue != "GCM_TAG" &&
+                         userCommentValue.Contains("|"))
+                {
+                    // Fallback to UserComment if it contains pipe-delimited data
+                    barcodeData = userCommentValue;
+                    _logger.LogInformation("Found barcode data in UserComment field: '{BarcodeData}'", barcodeData);
+                }
+                else
+                {
+                    _logger.LogWarning("No barcode data found in EXIF");
+                }
+
+                // Parse patient and study info from barcode
+                PatientInfo patientInfo;
+                StudyInfo studyInfo;
+
+                if (!string.IsNullOrEmpty(barcodeData))
+                {
+                    (patientInfo, studyInfo) = ParseBarcodeData(barcodeData);
+                }
+                else
+                {
+                    (patientInfo, studyInfo) = CreateDefaultPatientAndStudy();
+                }
+
+                // Extract technical data
+                var technicalData = new ImageTechnicalData
+                {
+                    ImageWidth = GetIntValue(exifData, "ImageWidth", "ExifImageWidth"),
+                    ImageHeight = GetIntValue(exifData, "ImageHeight", "ExifImageHeight"),
+                    BitsPerSample = GetIntValue(exifData, "BitsPerSample") ?? 8,
+                    ColorSpace = exifData.GetValueOrDefault("ColorSpace", "RGB"),
+                    Manufacturer = exifData.GetValueOrDefault("Make", "Unknown"),
+                    Model = exifData.GetValueOrDefault("Model", "Unknown"),
+                    Software = exifData.GetValueOrDefault("Software", "Unknown"),
+                    Compression = exifData.GetValueOrDefault("Compression"),
+                    Orientation = GetIntValue(exifData, "Orientation")
+                };
+
+                // Get capture date/time
+                var captureDateTime = GetDateTime(exifData, "DateTimeOriginal", "CreateDate", "DateTime") ?? DateTime.Now;
+
+                // Generate instance UID
+                var instanceUid = GenerateUid();
+
+                // Create and return metadata using the proper constructor
+                return new ImageMetadata(
+                    sourceFilePath: filePath,
+                    captureDateTime: captureDateTime,
+                    patient: patientInfo,
+                    study: studyInfo,
+                    technicalData: technicalData,
+                    userComment: exifData.GetValueOrDefault("UserComment"),
+                    barcodeData: barcodeData,
+                    instanceNumber: 1,
+                    instanceUid: instanceUid,
+                    exifData: new Dictionary<string, string>(exifData) // Create a copy to ensure no issues
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to extract metadata from {FilePath}", filePath);
+                throw new InvalidOperationException($"Failed to extract metadata from {filePath}: {ex.Message}", ex);
+            }
+        }
+
+        private async Task<string> RunExifToolAsync(string filePath)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = _exifToolPath,
+                Arguments = $"-s -a -u -charset exiftool=UTF8 -charset filename=UTF8 \"{filePath}\"", // Force UTF-8
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8
+            };
+
+            using var process = new Process { StartInfo = startInfo };
+            using var cts = new CancellationTokenSource(_timeoutMs);
+
+            var outputBuilder = new StringBuilder();
+            var errorBuilder = new StringBuilder();
+
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                    outputBuilder.AppendLine(e.Data);
+            };
+
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                    errorBuilder.AppendLine(e.Data);
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            try
+            {
+                await process.WaitForExitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill();
+                throw new TimeoutException($"ExifTool timed out after {_timeoutMs}ms");
+            }
+
+            if (process.ExitCode != 0)
+            {
+                var error = errorBuilder.ToString();
+                _logger.LogWarning("ExifTool returned exit code {ExitCode}. Error: {Error}",
+                    process.ExitCode, error);
+            }
+
+            return outputBuilder.ToString();
+        }
+
+        private Dictionary<string, string> ParseExifToolOutput(string output)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            if (string.IsNullOrWhiteSpace(output))
+                return result;
+
+            var lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
+            {
+                var colonIndex = line.IndexOf(':');
+                if (colonIndex > 0 && colonIndex < line.Length - 1)
+                {
+                    var key = line.Substring(0, colonIndex).Trim();
+                    var value = line.Substring(colonIndex + 1).Trim();
+
+                    if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
+                    {
+                        // Skip keys that are just encoding artifacts
+                        if (key.Length == 1 && (key[0] == 'ï¿½' || key[0] < 32 || key[0] > 126))
+                        {
+                            _logger.LogDebug("Skipping invalid key: {Key} (char code: {Code})", key, (int)key[0]);
+                            continue;
+                        }
+
+                        // Handle duplicate keys by making them unique
+                        var finalKey = key;
+                        var counter = 1;
+                        while (result.ContainsKey(finalKey))
+                        {
+                            finalKey = $"{key}_{counter}";
+                            counter++;
+                            _logger.LogDebug("Duplicate key found: {Key}, renamed to: {FinalKey}", key, finalKey);
+                        }
+
+                        result[finalKey] = value;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private (PatientInfo, StudyInfo) ParseBarcodeData(string barcodeData)
+        {
+            if (string.IsNullOrWhiteSpace(barcodeData))
+            {
+                _logger.LogWarning("Barcode data is empty or null");
+                return CreateDefaultPatientAndStudy();
+            }
+
+            // Clean the barcode data first
+            var cleanedData = CleanBarcodeData(barcodeData);
+            _logger.LogDebug("Parsing cleaned barcode data: '{CleanedData}'", cleanedData);
+
+            var parts = cleanedData.Split('|');
+
+            // QRBridge format validation
+            if (parts.Length < 3)
+            {
+                _logger.LogWarning("Invalid barcode format. Expected at least 3 fields, got {Count}", parts.Length);
+                return CreateDefaultPatientAndStudy();
+            }
+
+            // Log each field for debugging
+            for (int i = 0; i < parts.Length; i++)
+            {
+                _logger.LogDebug("Barcode field [{Index}]: '{Value}'", i, parts[i]);
+            }
+
+            try
+            {
+                // Parse patient info
+                var examId = parts[0].Trim();
+                var patientName = parts[1].Trim();
+
+                // Parse birth date - handle various formats
+                DateTime? birthDate = null;
+                if (parts.Length > 2 && !string.IsNullOrWhiteSpace(parts[2]))
+                {
+                    var dateStr = parts[2].Trim();
+                    if (DateTime.TryParseExact(dateStr, "yyyy-MM-dd", null, DateTimeStyles.None, out var date1))
+                        birthDate = date1;
+                    else if (DateTime.TryParseExact(dateStr, "dd.MM.yyyy", null, DateTimeStyles.None, out var date2))
+                        birthDate = date2;
+                    else if (DateTime.TryParse(dateStr, out var date3))
+                        birthDate = date3;
+                    else
+                        _logger.LogWarning("Could not parse birth date: '{DateStr}'", dateStr);
+                }
+
+                // Parse gender
+                Gender gender = Gender.Other;
+                if (parts.Length > 3 && !string.IsNullOrWhiteSpace(parts[3]))
+                {
+                    var genderStr = parts[3].Trim().ToUpperInvariant();
+                    gender = genderStr switch
+                    {
+                        "M" => Gender.Male,
+                        "F" => Gender.Female,
+                        "W" => Gender.Female, // German: Weiblich
+                        _ => Gender.Other
+                    };
+                }
+
+                // Parse study description
+                string? studyDescription = null;
+                if (parts.Length > 4 && !string.IsNullOrWhiteSpace(parts[4]))
+                {
+                    studyDescription = parts[4].Trim();
+                }
+
+                // Create patient info
+                var patientInfo = new PatientInfo(
+                    id: new PatientId(examId),
+                    name: patientName,
+                    birthDate: birthDate,
+                    gender: gender
+                );
+
+                // Create study info
+                var studyInfo = new StudyInfo(
+                    studyId: new StudyId($"S{examId.Substring(0, Math.Min(examId.Length, 14))}"), // Max 16 chars
+                    examId: examId,
+                    description: studyDescription ?? "Clinical Photography",
+                    modality: "VL", // Visible Light photography
+                    studyDate: DateTime.Now
+                );
+
+                _logger.LogInformation("Successfully parsed barcode: ExamId={ExamId}, Patient={PatientName}, Study={StudyDescription}",
+                    examId, patientName, studyDescription);
+
+                return (patientInfo, studyInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing barcode data");
+                return CreateDefaultPatientAndStudy();
+            }
+        }
+
+        /// <summary>
+        /// Cleans barcode data by fixing common encoding issues from Ricoh cameras
+        /// </summary>
+        private string CleanBarcodeData(string barcodeData)
+        {
+            if (string.IsNullOrEmpty(barcodeData))
+                return barcodeData;
+
+            // Ricoh G900 II specific character replacements
+            // The camera seems to use Windows-1252 encoding
+            var cleaned = barcodeData;
+
+            // Apply replacements one by one to avoid dictionary key conflicts
+            // Common German umlauts
+            cleaned = cleaned.Replace("ï¿½", "Ã¶");    // Most common encoding issue
+            cleaned = cleaned.Replace("Ã·", "Ã¶");    // Alternative encoding
+            cleaned = cleaned.Replace("Ãµ", "Ã¤");
+            cleaned = cleaned.Replace("Â³", "Ã¼");
+            cleaned = cleaned.Replace("Ã", "Ã–");
+            cleaned = cleaned.Replace("â”€", "Ã„");
+            cleaned = cleaned.Replace("â–„", "Ãœ");
+            cleaned = cleaned.Replace("Ã¡", "ÃŸ");
+
+            // French characters
+            cleaned = cleaned.Replace("Ã“", "Ã ");
+            cleaned = cleaned.Replace("Ãž", "Ã¨");
+            cleaned = cleaned.Replace("Ãš", "Ã©");
+            cleaned = cleaned.Replace("Ã›", "Ãª");
+            cleaned = cleaned.Replace("Â¶", "Ã§");
+
+            // Spanish/Portuguese
+            cleaned = cleaned.Replace("Â±", "Ã±");
+            cleaned = cleaned.Replace("Ã£", "Ã£");
+            cleaned = cleaned.Replace("Å½", "Ãµ");
+
+            // Other common replacements
+            cleaned = cleaned.Replace("Ã†", "Â°");    // degree symbol
+            cleaned = cleaned.Replace("Âº", "â‚¬");    // Euro symbol
+
+            // Remove any control characters
+            cleaned = Regex.Replace(cleaned, @"[\x00-\x1F\x7F]", "");
+
+            // Trim whitespace
+            cleaned = cleaned.Trim();
+
+            if (cleaned != barcodeData)
+            {
+                _logger.LogDebug("Cleaned barcode data: '{Original}' -> '{Cleaned}'", barcodeData, cleaned);
+            }
+
+            return cleaned;
+        }
+
+        private (PatientInfo, StudyInfo) CreateDefaultPatientAndStudy()
+        {
+            var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+            var shortTimestamp = DateTime.Now.ToString("MMddHHmm"); // Shorter for StudyId
+
+            var patientInfo = new PatientInfo(
+                id: new PatientId($"AUTO_{timestamp}"),
+                name: "Unknown Patient",
+                birthDate: null,
+                gender: Gender.Other
+            );
+
+            var studyInfo = new StudyInfo(
+                studyId: new StudyId($"S{shortTimestamp}"), // Max 16 chars
+                examId: $"AUTO_{timestamp}",
+                description: "Unidentified Clinical Photography",
+                modality: "VL",
+                studyDate: DateTime.Now
+            );
+
+            _logger.LogWarning("Created default patient/study info with ID: AUTO_{Timestamp}", timestamp);
+
+            return (patientInfo, studyInfo);
+        }
+
+        private int? GetIntValue(Dictionary<string, string> exifData, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (exifData.TryGetValue(key, out var value))
+                {
+                    // Handle values like "8 8 8" for BitsPerSample
+                    var firstValue = value.Split(' ')[0];
+
+                    if (int.TryParse(firstValue, out var result))
+                        return result;
+                }
+            }
+            return null;
+        }
+
+        private DateTime? GetDateTime(Dictionary<string, string> exifData, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (exifData.TryGetValue(key, out var value))
+                {
+                    // EXIF datetime format: "yyyy:MM:dd HH:mm:ss"
+                    if (DateTime.TryParseExact(value, "yyyy:MM:dd HH:mm:ss",
+                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var result))
+                        return result;
+
+                    // Try standard parse as fallback
+                    if (DateTime.TryParse(value, out result))
+                        return result;
+                }
+            }
+            return null;
+        }
+
+        private string GenerateUid()
+        {
+            // Simple UID generation - in production use proper DICOM UID generation
+            return $"1.2.826.0.1.3680043.8.498.{DateTime.Now.Ticks}";
+        }
+    }
+}
+
+===== FILE: src\CamBridge.Infrastructure\Services\FileProcessor.cs =====
+// src\CamBridge.Infrastructure\Services\FileProcessor.cs
+// Version: 0.5.26
+// Complete file with fixed GenerateOutputFileName method
+
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using CamBridge.Core.Entities;
+using CamBridge.Core.Interfaces;
+using CamBridge.Core.ValueObjects;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Orchestrates the complete JPEG to DICOM conversion process
+    /// </summary>
+    public class FileProcessor : IFileProcessor
+    {
+        private readonly ILogger<FileProcessor> _logger;
+        private readonly ExifToolReader _exifToolReader; // Direct dependency - no interface!
+        private readonly IDicomConverter _dicomConverter;
+        private readonly ProcessingOptions _processingOptions;
+        private readonly CamBridgeSettings _settings;
+
+        public event EventHandler<FileProcessingEventArgs>? ProcessingStarted;
+        public event EventHandler<FileProcessingEventArgs>? ProcessingCompleted;
+        public event EventHandler<FileProcessingErrorEventArgs>? ProcessingError;
+
+        public FileProcessor(
+            ILogger<FileProcessor> logger,
+            ExifToolReader exifToolReader,  // No interface!
+            IDicomConverter dicomConverter,
+            IOptions<ProcessingOptions> processingOptions,
+            IOptions<CamBridgeSettings> settings)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _exifToolReader = exifToolReader ?? throw new ArgumentNullException(nameof(exifToolReader));
+            _dicomConverter = dicomConverter ?? throw new ArgumentNullException(nameof(dicomConverter));
+            _processingOptions = processingOptions?.Value ?? throw new ArgumentNullException(nameof(processingOptions));
+            _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
+        }
+
+        /// <inheritdoc />
+        public async Task<FileProcessingResult> ProcessFileAsync(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                _logger.LogInformation("Starting processing of {FilePath}", filePath);
+                ProcessingStarted?.Invoke(this, new FileProcessingEventArgs(filePath));
+
+                // Validate file
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException($"File not found: {filePath}");
+                }
+
+                var fileInfo = new FileInfo(filePath);
+                ValidateFile(fileInfo);
+
+                // Create backup if configured
+                if (_processingOptions.CreateBackup)
+                {
+                    await CreateBackupAsync(fileInfo);
+                }
+
+                // Extract metadata - simplified with new pipeline!
+                var metadata = await ExtractMetadataAsync(filePath);
+
+                // Determine output path
+                var outputPath = DetermineOutputPath(metadata, filePath);
+
+                // Convert to DICOM
+                var conversionResult = await _dicomConverter.ConvertToDicomAsync(
+                    filePath,
+                    outputPath,
+                    metadata);
+
+                if (!conversionResult.Success)
+                {
+                    throw new InvalidOperationException(
+                        $"DICOM conversion failed: {conversionResult.ErrorMessage}");
+                }
+
+                // Validate DICOM if configured
+                if (_settings.Dicom.ValidateAfterCreation)
+                {
+                    var validationResult = await _dicomConverter.ValidateDicomFileAsync(outputPath);
+                    if (!validationResult.IsValid)
+                    {
+                        _logger.LogWarning("DICOM validation warnings: {Warnings}",
+                            string.Join("; ", validationResult.Warnings));
+                    }
+                }
+
+                // Handle source file based on success
+                await HandleSourceFileAsync(filePath, _processingOptions.SuccessAction);
+
+                stopwatch.Stop();
+                var result = FileProcessingResult.CreateSuccess(filePath, outputPath, stopwatch.Elapsed);
+
+                _logger.LogInformation("Successfully processed {FilePath} to {OutputPath} in {ElapsedMs}ms",
+                    filePath, outputPath, stopwatch.ElapsedMilliseconds);
+
+                ProcessingCompleted?.Invoke(this, new FileProcessingEventArgs(filePath));
+                return result;
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogError(ex, "Error processing file {FilePath}", filePath);
+
+                ProcessingError?.Invoke(this, new FileProcessingErrorEventArgs(filePath, ex));
+
+                // Handle source file based on failure
+                try
+                {
+                    await HandleSourceFileAsync(filePath, _processingOptions.FailureAction);
+                }
+                catch (Exception moveEx)
+                {
+                    _logger.LogError(moveEx, "Error handling failed file {FilePath}", filePath);
+                }
+
+                return FileProcessingResult.CreateFailure(filePath, ex.Message, stopwatch.Elapsed);
+            }
+        }
+
+        /// <inheritdoc />
+        public bool ShouldProcessFile(string filePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                    return false;
+
+                var fileInfo = new FileInfo(filePath);
+
+                // Check file extension
+                var extension = fileInfo.Extension.ToLowerInvariant();
+                if (extension != ".jpg" && extension != ".jpeg")
+                    return false;
+
+                // Check file size
+                if (fileInfo.Length < _processingOptions.MinimumFileSizeBytes ||
+                    fileInfo.Length > _processingOptions.MaximumFileSizeBytes)
+                {
+                    _logger.LogDebug("File {FilePath} size {Size} outside configured range",
+                        filePath, fileInfo.Length);
+                    return false;
+                }
+
+                // Check file age
+                if (_processingOptions.MaxFileAge.HasValue)
+                {
+                    var fileAge = DateTime.UtcNow - fileInfo.CreationTimeUtc;
+                    if (fileAge > _processingOptions.MaxFileAge.Value)
+                    {
+                        _logger.LogDebug("File {FilePath} is too old ({Age} days)",
+                            filePath, fileAge.TotalDays);
+                        return false;
+                    }
+                }
+
+                // Check if file is still being written
+                if (!IsFileReady(filePath))
+                {
+                    _logger.LogDebug("File {FilePath} is not ready (still being written)",
+                        filePath);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking if file should be processed: {FilePath}", filePath);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Simplified metadata extraction using the new ExifToolReader
+        /// </summary>
+        private async Task<ImageMetadata> ExtractMetadataAsync(string filePath)
+        {
+            // ExifToolReader does all the heavy lifting now!
+            var metadata = await _exifToolReader.ExtractMetadataAsync(filePath);
+
+            _logger.LogInformation("Extracted metadata for {Patient} - {Study}",
+                metadata.Patient.Id.Value, metadata.Study.StudyId.Value);
+
+            return metadata;
+        }
+
+        private string DetermineOutputPath(ImageMetadata metadata, string sourcePath)
+        {
+            // Find the matching watch folder configuration
+            FolderConfiguration? folderConfig = null;
+            foreach (var watchFolder in _settings.WatchFolders)
+            {
+                if (sourcePath.StartsWith(watchFolder.Path, StringComparison.OrdinalIgnoreCase))
+                {
+                    folderConfig = watchFolder;
+                    break;
+                }
+            }
+
+            // Determine base output folder
+            var baseOutputFolder = folderConfig?.OutputPath ?? _settings.DefaultOutputFolder;
+
+            // Apply output organization
+            var organizedPath = ApplyOutputOrganization(baseOutputFolder, metadata);
+
+            // Generate filename
+            var fileName = GenerateOutputFileName(metadata);
+
+            return Path.Combine(organizedPath, fileName);
+        }
+
+        private string ApplyOutputOrganization(string baseFolder, ImageMetadata metadata)
+        {
+            var path = baseFolder;
+
+            switch (_processingOptions.OutputOrganization)
+            {
+                case OutputOrganization.ByPatient:
+                    path = Path.Combine(path, SanitizePathComponent(metadata.Patient.Id.Value));
+                    break;
+
+                case OutputOrganization.ByDate:
+                    path = Path.Combine(path, metadata.Study.StudyDate.ToString("yyyy-MM-dd"));
+                    break;
+
+                case OutputOrganization.ByPatientAndDate:
+                    path = Path.Combine(path,
+                        SanitizePathComponent(metadata.Patient.Id.Value),
+                        metadata.Study.StudyDate.ToString("yyyy-MM-dd"));
+                    break;
+            }
+
+            // Ensure directory exists
+            Directory.CreateDirectory(path);
+            return path;
+        }
+
+        private string GenerateOutputFileName(ImageMetadata metadata)
+        {
+            var pattern = _processingOptions.OutputFilePattern;
+
+            // Replace tokens - fixed version with proper string assignment
+            string fileName = pattern;
+            fileName = fileName.Replace("{PatientID}", SanitizeFileName(metadata.Patient.Id.Value));
+            fileName = fileName.Replace("{PatientName}", SanitizeFileName(metadata.Patient.Name));
+            fileName = fileName.Replace("{StudyDate}", metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            fileName = fileName.Replace("{StudyID}", SanitizeFileName(metadata.Study.StudyId.Value));
+            fileName = fileName.Replace("{ExamID}", SanitizeFileName(metadata.Study.ExamId ?? ""));
+            fileName = fileName.Replace("{InstanceNumber}", metadata.InstanceNumber.ToString("D4"));
+            fileName = fileName.Replace("{Timestamp}", DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
+
+            // Ensure .dcm extension
+            if (!fileName.EndsWith(".dcm", StringComparison.OrdinalIgnoreCase))
+            {
+                fileName += ".dcm";
+            }
+
+            return fileName;
+        }
+
+        private async Task CreateBackupAsync(FileInfo fileInfo)
+        {
+            var backupPath = Path.Combine(
+                _processingOptions.BackupFolder,
+                DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                fileInfo.Name);
+
+            var backupDir = Path.GetDirectoryName(backupPath)!;
+            Directory.CreateDirectory(backupDir);
+
+            await CopyFileAsync(fileInfo.FullName, backupPath);
+            _logger.LogDebug("Created backup of {SourceFile} at {BackupPath}",
+                fileInfo.FullName, backupPath);
+        }
+
+        private async Task HandleSourceFileAsync(string filePath, PostProcessingAction action)
+        {
+            switch (action)
+            {
+                case PostProcessingAction.Archive:
+                    var archivePath = Path.Combine(
+                        _processingOptions.ArchiveFolder,
+                        DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                        Path.GetFileName(filePath));
+
+                    var archiveDir = Path.GetDirectoryName(archivePath)!;
+                    Directory.CreateDirectory(archiveDir);
+
+                    await MoveFileAsync(filePath, archivePath);
+                    _logger.LogInformation("Archived {SourceFile} to {ArchivePath}",
+                        filePath, archivePath);
+                    break;
+
+                case PostProcessingAction.Delete:
+                    File.Delete(filePath);
+                    _logger.LogInformation("Deleted source file {FilePath}", filePath);
+                    break;
+
+                case PostProcessingAction.MoveToError:
+                    var errorPath = Path.Combine(
+                        _processingOptions.ErrorFolder,
+                        DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                        Path.GetFileName(filePath));
+
+                    var errorDir = Path.GetDirectoryName(errorPath)!;
+                    Directory.CreateDirectory(errorDir);
+
+                    await MoveFileAsync(filePath, errorPath);
+                    _logger.LogWarning("Moved failed file {SourceFile} to {ErrorPath}",
+                        filePath, errorPath);
+                    break;
+
+                case PostProcessingAction.Leave:
+                default:
+                    // Do nothing
+                    break;
+            }
+        }
+
+        private void ValidateFile(FileInfo fileInfo)
+        {
+            if (fileInfo.Length < _processingOptions.MinimumFileSizeBytes)
+            {
+                throw new InvalidOperationException(
+                    $"File too small: {fileInfo.Length} bytes (minimum: {_processingOptions.MinimumFileSizeBytes})");
+            }
+
+            if (fileInfo.Length > _processingOptions.MaximumFileSizeBytes)
+            {
+                throw new InvalidOperationException(
+                    $"File too large: {fileInfo.Length} bytes (maximum: {_processingOptions.MaximumFileSizeBytes})");
+            }
+        }
+
+        private bool IsFileReady(string filePath)
+        {
+            try
+            {
+                using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    return true;
+                }
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+        }
+
+        private async Task CopyFileAsync(string source, string destination)
+        {
+            using var sourceStream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var destStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None);
+            await sourceStream.CopyToAsync(destStream);
+        }
+
+        private async Task MoveFileAsync(string source, string destination)
+        {
+            // Try direct move first
+            try
+            {
+                File.Move(source, destination, true);
+            }
+            catch (IOException)
+            {
+                // Fall back to copy and delete
+                await CopyFileAsync(source, destination);
+                File.Delete(source);
+            }
+        }
+
+        private string SanitizeFileName(string fileName)
+        {
+            var invalid = Path.GetInvalidFileNameChars();
+            return string.Join("_", fileName.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private string SanitizePathComponent(string pathComponent)
+        {
+            var invalid = Path.GetInvalidPathChars();
+            return string.Join("_", pathComponent.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        }
+    }
+}
+
+===== FILE: src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs =====
+// File: src/CamBridge.Infrastructure/Services/MappingConfigurationLoader.cs
+// Version: 0.5.25
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// Modified: 2025-06-04
+// Status: Development/Local - FREEZE BUG FIXED
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using CamBridge.Core.Interfaces;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Loads and manages DICOM mapping configurations from JSON files
+    /// </summary>
+    public class MappingConfigurationLoader : IMappingConfiguration
+    {
+        private readonly ILogger<MappingConfigurationLoader> _logger;
+        private readonly string _configPath;
+        private List<MappingRule> _mappingRules;
+        private bool _isInitialized = false;
+
+        public MappingConfigurationLoader(ILogger<MappingConfigurationLoader> logger, string configPath = "mappings.json")
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _configPath = configPath;
+            _mappingRules = new List<MappingRule>();
+
+            // REMOVED: LoadConfigurationAsync().GetAwaiter().GetResult();
+            // This was causing the UI freeze!
+            // Configuration will be loaded lazily or explicitly via LoadConfigurationAsync
+        }
+
+        /// <inheritdoc />
+        public IReadOnlyList<MappingRule> GetMappingRules()
+        {
+            // Return default rules if not initialized
+            if (!_isInitialized)
+            {
+                LoadDefaultMappings();
+                _isInitialized = true;
+            }
+            return _mappingRules.AsReadOnly();
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> LoadConfigurationAsync(string? filePath = null)
+        {
+            var path = filePath ?? _configPath;
+
+            try
+            {
+                // Make path absolute if relative
+                if (!Path.IsPathRooted(path))
+                {
+                    // Try multiple locations for the config file
+                    var possiblePaths = new[]
+                    {
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path),
+                        Path.Combine(Environment.CurrentDirectory, path),
+                        Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, path),
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CamBridge", path)
+                    };
+
+                    path = possiblePaths.FirstOrDefault(File.Exists) ?? possiblePaths[0];
+                }
+
+                if (!File.Exists(path))
+                {
+                    _logger.LogWarning("Mapping configuration file not found: {Path}. Using default mappings.", path);
+                    LoadDefaultMappings();
+                    _isInitialized = true;
+                    return false;
+                }
+
+                var json = await File.ReadAllTextAsync(path);
+                var config = JsonSerializer.Deserialize<MappingConfiguration>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (config?.Rules != null && config.Rules.Count > 0)
+                {
+                    _mappingRules = config.Rules;
+                    _logger.LogInformation("Loaded {Count} mapping rules from {Path}", _mappingRules.Count, path);
+                    _isInitialized = true;
+                    return true;
+                }
+                else
+                {
+                    _logger.LogWarning("No mapping rules found in {Path}. Using default mappings.", path);
+                    LoadDefaultMappings();
+                    _isInitialized = true;
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading mapping configuration from {Path}", path);
+                LoadDefaultMappings();
+                _isInitialized = true;
+                return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> SaveConfigurationAsync(IEnumerable<MappingRule> rules, string? filePath = null)
+        {
+            var path = filePath ?? _configPath;
+
+            try
+            {
+                // Make path absolute if relative
+                if (!Path.IsPathRooted(path))
+                {
+                    path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
+                }
+
+                // Ensure directory exists
+                var directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                var config = new MappingConfiguration
+                {
+                    Version = "1.0",
+                    Rules = rules.ToList()
+                };
+
+                var json = JsonSerializer.Serialize(config, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNameCaseInsensitive = true
+                });
+
+                await File.WriteAllTextAsync(path, json);
+
+                _mappingRules = config.Rules;
+                _logger.LogInformation("Saved {Count} mapping rules to {Path}", _mappingRules.Count, path);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving mapping configuration to {Path}", path);
+                return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public void AddRule(MappingRule rule)
+        {
+            if (rule == null)
+                throw new ArgumentNullException(nameof(rule));
+
+            _mappingRules.Add(rule);
+            _logger.LogDebug("Added mapping rule: {Source} -> {Target}", rule.SourceField, rule.DicomTag);
+        }
+
+        /// <inheritdoc />
+        public void RemoveRule(string sourceField)
+        {
+            var removed = _mappingRules.RemoveAll(r => r.SourceField == sourceField);
+            if (removed > 0)
+            {
+                _logger.LogDebug("Removed {Count} mapping rule(s) for source field: {SourceField}", removed, sourceField);
+            }
+        }
+
+        /// <inheritdoc />
+        public MappingRule? GetRuleForSource(string sourceField)
+        {
+            // Ensure we have rules loaded
+            if (!_isInitialized)
+            {
+                LoadDefaultMappings();
+                _isInitialized = true;
+            }
+
+            return _mappingRules.FirstOrDefault(r =>
+                r.SourceField.Equals(sourceField, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<MappingRule> GetRulesForTag(string dicomTag)
+        {
+            // Ensure we have rules loaded
+            if (!_isInitialized)
+            {
+                LoadDefaultMappings();
+                _isInitialized = true;
+            }
+
+            return _mappingRules.Where(r =>
+                r.DicomTag.Equals(dicomTag, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <inheritdoc />
+        public void ValidateRules()
+        {
+            foreach (var rule in _mappingRules)
+            {
+                if (string.IsNullOrWhiteSpace(rule.SourceField))
+                    throw new InvalidOperationException($"Invalid rule: SourceField is empty");
+
+                if (string.IsNullOrWhiteSpace(rule.DicomTag))
+                    throw new InvalidOperationException($"Invalid rule: DicomTag is empty for source {rule.SourceField}");
+
+                // Additional validation can be added here
+            }
+        }
+
+        /// <summary>
+        /// Loads default mapping rules for Ricoh G900 II
+        /// </summary>
+        private void LoadDefaultMappings()
+        {
+            _mappingRules = new List<MappingRule>
+            {
+                // Patient Information
+                new MappingRule
+                {
+                    SourceField = "name",
+                    DicomTag = "(0010,0010)",
+                    Description = "Patient's Name",
+                    ValueRepresentation = "PN",
+                    Required = true
+                },
+                new MappingRule
+                {
+                    SourceField = "examid",
+                    DicomTag = "(0010,0020)",
+                    Description = "Patient ID",
+                    ValueRepresentation = "LO",
+                    Required = true
+                },
+                new MappingRule
+                {
+                    SourceField = "birthdate",
+                    DicomTag = "(0010,0030)",
+                    Description = "Patient's Birth Date",
+                    ValueRepresentation = "DA",
+                    Transform = "DateToDicom",
+                    Required = false
+                },
+                new MappingRule
+                {
+                    SourceField = "gender",
+                    DicomTag = "(0010,0040)",
+                    Description = "Patient's Sex",
+                    ValueRepresentation = "CS",
+                    Transform = "MapGender",
+                    Required = false
+                },
+                
+                // Study Information
+                new MappingRule
+                {
+                    SourceField = "examid",
+                    DicomTag = "(0020,0010)",
+                    Description = "Study ID",
+                    ValueRepresentation = "SH",
+                    Required = true
+                },
+                new MappingRule
+                {
+                    SourceField = "comment",
+                    DicomTag = "(0008,1030)",
+                    Description = "Study Description",
+                    ValueRepresentation = "LO",
+                    Required = false
+                },
+                
+                // Series Information
+                new MappingRule
+                {
+                    SourceField = "_datetime",
+                    DicomTag = "(0008,0021)",
+                    Description = "Series Date",
+                    ValueRepresentation = "DA",
+                    Transform = "ExtractDate",
+                    Required = true
+                },
+                new MappingRule
+                {
+                    SourceField = "_datetime",
+                    DicomTag = "(0008,0031)",
+                    Description = "Series Time",
+                    ValueRepresentation = "TM",
+                    Transform = "ExtractTime",
+                    Required = true
+                }
+            };
+
+            _logger.LogInformation("Loaded {Count} default mapping rules", _mappingRules.Count);
+        }
+
+        /// <summary>
+        /// Internal configuration class for JSON serialization
+        /// </summary>
+        private class MappingConfiguration
+        {
+            public string Version { get; set; } = "1.0";
+            public List<MappingRule> Rules { get; set; } = new();
+        }
+    }
+}
+
+===== FILE: src\CamBridge.Service\appsettings.json =====
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information",
+      "CamBridge": "Debug",
+      "CamBridge.Infrastructure.Services.ExifToolReader": "Debug",
+      "CamBridge.Infrastructure.Services.FileProcessor": "Debug"
+    }
+  },
+  "CamBridge": {
+    "Service": {
+      "StartupDelaySeconds": 0,
+      "ShutdownTimeoutSeconds": 30
+    },
+    "WatchFolders": [
+      {
+        "Path": "C:\\CamBridge\\Test\\Input",
+        "FilePattern": "*.jpg;*.jpeg",
+        "IncludeSubdirectories": false,
+        "Enabled": true,
+        "Priority": 1,
+        "OutputPath": "C:\\CamBridge\\Test\\Output"
+      }
+    ],
+    "DefaultOutputFolder": "C:\\CamBridge\\Test\\Output",
+    "ExifToolPath": "Tools\\exiftool.exe",
+    "ExifToolTimeoutMs": 10000,
+    "ProcessingOptions": {
+      "InputFolder": "C:\\CamBridge\\Test\\Input",
+      "OutputFolder": "C:\\CamBridge\\Test\\Output",
+      "ArchiveFolder": "C:\\CamBridge\\Test\\Archive",
+      "DeadLetterFolder": "C:\\CamBridge\\Test\\DeadLetter",
+      "DeleteAfterProcessing": false,
+      "FilePattern": "*.jpg",
+      "RecursiveWatch": false,
+      "MaxConcurrentFiles": 1,
+      "ProcessingTimeoutSeconds": 60,
+      "RetryCount": 1,
+      "RetryDelayMs": 500,
+      "EnableDetailedLogging": true,
+      "SaveIntermediateSteps": false,
+      "MinimumFileSizeBytes": 1024,
+      "MaximumFileSizeBytes": 104857600,
+      "SuccessAction": "Leave",
+      "FailureAction": "Leave",
+      "CreateBackup": false,
+      "BackupFolder": "C:\\CamBridge\\Test\\Backup",
+      "ErrorFolder": "C:\\CamBridge\\Test\\Error",
+      "OutputOrganization": "ByPatientAndDate",
+      "OutputFilePattern": "{PatientID}_{StudyDate}_{InstanceNumber}.dcm",
+      "MaxConcurrentProcessing": 2,
+      "RetryOnFailure": true,
+      "MaxRetryAttempts": 3,
+      "RetryDelaySeconds": 2,
+      "ProcessExistingOnStartup": true
+    },
+    "DicomSettings": {
+      "ImplementationClassUID": "1.2.276.0.7230010.3.1.4.0",
+      "ImplementationVersionName": "CAMBRIDGE_001",
+      "SourceApplicationEntityTitle": "CAMBRIDGE",
+      "DefaultCharacterSet": "ISO_IR 100",
+      "ValidateBeforeSave": true,
+      "StrictValidation": false,
+      "LogValidationWarnings": true,
+      "ValidateAfterCreation": true
+    },
+    "NotificationSettings": {
+      "EnableEmail": false,
+      "EnableEventLog": false,
+      "MinimumEmailLevel": "Error",
+      "DeadLetterThreshold": 50,
+      "SendDailySummary": false,
+      "DailySummaryHour": 8,
+      "Email": {
+        "Enabled": false,
+        "SmtpServer": "localhost",
+        "SmtpPort": 1025,
+        "SmtpHost": "localhost",
+        "UseSsl": false,
+        "Username": "",
+        "Password": "",
+        "FromAddress": "cambridge@localhost",
+        "From": "cambridge@localhost",
+        "ToAddresses": "admin@localhost",
+        "To": "admin@localhost",
+        "SubjectPrefix": "[CamBridge]",
+        "SendDailySummary": false,
+        "DailySummaryTime": "08:00:00",
+        "SendOnError": false,
+        "SendOnSuccess": false,
+        "TestMode": true
+      }
+    }
+  },
+  "AllowedHosts": "*",
+  "Kestrel": {
+    "Endpoints": {
+      "Http": {
+        "Url": "http://localhost:5050"
+      }
+    }
+  }
+}
+
+===== FILE: src\CamBridge.Service\mappings.json =====
+{
+  "version": "1.0",
+  "description": "CamBridge EXIF to DICOM mapping configuration for Ricoh G900 II with QRBridge",
+  "mappings": [
+    {
+      "name": "PatientName",
+      "sourceType": "QRBridge",
+      "sourceField": "name",
+      "targetTag": "(0010,0010)",
+      "transform": "None",
+      "required": true
+    },
+    {
+      "name": "PatientID",
+      "sourceType": "QRBridge",
+      "sourceField": "patientid",
+      "targetTag": "(0010,0020)",
+      "transform": "None",
+      "required": true
+    },
+    {
+      "name": "PatientBirthDate",
+      "sourceType": "QRBridge",
+      "sourceField": "birthdate",
+      "targetTag": "(0010,0030)",
+      "transform": "DateToDicom",
+      "required": false
+    },
+    {
+      "name": "PatientSex",
+      "sourceType": "QRBridge",
+      "sourceField": "gender",
+      "targetTag": "(0010,0040)",
+      "transform": "GenderToDicom",
+      "required": false,
+      "defaultValue": "O"
+    },
+    {
+      "name": "StudyDescription",
+      "sourceType": "QRBridge",
+      "sourceField": "comment",
+      "targetTag": "(0008,1030)",
+      "transform": "None",
+      "required": false
+    },
+    {
+      "name": "StudyID",
+      "sourceType": "QRBridge",
+      "sourceField": "examid",
+      "targetTag": "(0020,0010)",
+      "transform": "TruncateTo16",
+      "required": false
+    },
+    {
+      "name": "Manufacturer",
+      "sourceType": "EXIF",
+      "sourceField": "Make",
+      "targetTag": "(0008,0070)",
+      "transform": "None",
+      "required": false
+    },
+    {
+      "name": "ManufacturerModelName",
+      "sourceType": "EXIF",
+      "sourceField": "Model",
+      "targetTag": "(0008,1090)",
+      "transform": "None",
+      "required": false
+    },
+    {
+      "name": "SoftwareVersions",
+      "sourceType": "EXIF",
+      "sourceField": "Software",
+      "targetTag": "(0018,1020)",
+      "transform": "None",
+      "required": false
+    },
+    {
+      "name": "AcquisitionDateTime",
+      "sourceType": "EXIF",
+      "sourceField": "DateTimeOriginal",
+      "targetTag": "(0008,002A)",
+      "transform": "DateToDicom",
+      "required": false
+    },
+    {
+      "name": "PatientComments",
+      "sourceType": "QRBridge",
+      "sourceField": "comment",
+      "targetTag": "(0010,4000)",
+      "transform": "None",
+      "required": false
+    }
+  ]
+}
+
