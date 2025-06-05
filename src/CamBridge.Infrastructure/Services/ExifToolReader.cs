@@ -1,3 +1,6 @@
+// src\CamBridge.Infrastructure\Services\ExifToolReader.cs
+// Version: 0.5.32 - Windows-1252 Encoding Fix
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -167,24 +170,31 @@ namespace CamBridge.Infrastructure.Services
             var startInfo = new ProcessStartInfo
             {
                 FileName = _exifToolPath,
-                Arguments = $"-s -a -u -charset exiftool=UTF8 -charset filename=UTF8 \"{filePath}\"", // Force UTF-8
+                Arguments = $"-s -a -u \"{filePath}\"", // NO charset forcing - we handle it ourselves
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true,
-                StandardOutputEncoding = Encoding.UTF8
+                // Let ExifTool output in its default encoding
+                StandardOutputEncoding = null
             };
 
             using var process = new Process { StartInfo = startInfo };
             using var cts = new CancellationTokenSource(_timeoutMs);
 
-            var outputBuilder = new StringBuilder();
+            // Read raw bytes instead of string to handle encoding properly
+            var outputStream = new MemoryStream();
             var errorBuilder = new StringBuilder();
 
             process.OutputDataReceived += (sender, e) =>
             {
                 if (e.Data != null)
-                    outputBuilder.AppendLine(e.Data);
+                {
+                    // Get raw bytes in Windows-1252 encoding
+                    var bytes = Encoding.GetEncoding(1252).GetBytes(e.Data);
+                    outputStream.Write(bytes, 0, bytes.Length);
+                    outputStream.WriteByte((byte)'\n');
+                }
             };
 
             process.ErrorDataReceived += (sender, e) =>
@@ -214,7 +224,10 @@ namespace CamBridge.Infrastructure.Services
                     process.ExitCode, error);
             }
 
-            return outputBuilder.ToString();
+            // Convert from Windows-1252 to UTF-8
+            outputStream.Position = 0;
+            using var reader = new StreamReader(outputStream, Encoding.GetEncoding(1252));
+            return reader.ReadToEnd();
         }
 
         private Dictionary<string, string> ParseExifToolOutput(string output)
@@ -269,11 +282,10 @@ namespace CamBridge.Infrastructure.Services
                 return CreateDefaultPatientAndStudy();
             }
 
-            // Clean the barcode data first
-            var cleanedData = CleanBarcodeData(barcodeData);
-            _logger.LogDebug("Parsing cleaned barcode data: '{CleanedData}'", cleanedData);
+            // NO CLEANING! The data should now be properly encoded
+            _logger.LogDebug("Parsing barcode data: '{BarcodeData}'", barcodeData);
 
-            var parts = cleanedData.Split('|');
+            var parts = barcodeData.Split('|');
 
             // QRBridge format validation
             if (parts.Length < 3)
@@ -338,9 +350,10 @@ namespace CamBridge.Infrastructure.Services
                     gender: gender
                 );
 
-                // Create study info
+                // Create study info - FIX for 16 char limit!
+                var studyIdValue = examId.Length > 14 ? examId.Substring(0, 14) : examId;
                 var studyInfo = new StudyInfo(
-                    studyId: new StudyId($"S{examId.Substring(0, Math.Min(examId.Length, 14))}"), // Max 16 chars
+                    studyId: new StudyId($"S{studyIdValue}"), // Max 16 chars total
                     examId: examId,
                     description: studyDescription ?? "Clinical Photography",
                     modality: "VL", // Visible Light photography
@@ -357,59 +370,6 @@ namespace CamBridge.Infrastructure.Services
                 _logger.LogError(ex, "Error parsing barcode data");
                 return CreateDefaultPatientAndStudy();
             }
-        }
-
-        /// <summary>
-        /// Cleans barcode data by fixing common encoding issues from Ricoh cameras
-        /// </summary>
-        private string CleanBarcodeData(string barcodeData)
-        {
-            if (string.IsNullOrEmpty(barcodeData))
-                return barcodeData;
-
-            // Ricoh G900 II specific character replacements
-            // The camera seems to use Windows-1252 encoding
-            var cleaned = barcodeData;
-
-            // Apply replacements one by one to avoid dictionary key conflicts
-            // Common German umlauts
-            cleaned = cleaned.Replace("�", "ö");    // Most common encoding issue
-            cleaned = cleaned.Replace("÷", "ö");    // Alternative encoding
-            cleaned = cleaned.Replace("õ", "ä");
-            cleaned = cleaned.Replace("³", "ü");
-            cleaned = cleaned.Replace("Í", "Ö");
-            cleaned = cleaned.Replace("─", "Ä");
-            cleaned = cleaned.Replace("▄", "Ü");
-            cleaned = cleaned.Replace("á", "ß");
-
-            // French characters
-            cleaned = cleaned.Replace("Ó", "à");
-            cleaned = cleaned.Replace("Þ", "è");
-            cleaned = cleaned.Replace("Ú", "é");
-            cleaned = cleaned.Replace("Û", "ê");
-            cleaned = cleaned.Replace("¶", "ç");
-
-            // Spanish/Portuguese
-            cleaned = cleaned.Replace("±", "ñ");
-            cleaned = cleaned.Replace("ã", "ã");
-            cleaned = cleaned.Replace("Ž", "õ");
-
-            // Other common replacements
-            cleaned = cleaned.Replace("Æ", "°");    // degree symbol
-            cleaned = cleaned.Replace("º", "€");    // Euro symbol
-
-            // Remove any control characters
-            cleaned = Regex.Replace(cleaned, @"[\x00-\x1F\x7F]", "");
-
-            // Trim whitespace
-            cleaned = cleaned.Trim();
-
-            if (cleaned != barcodeData)
-            {
-                _logger.LogDebug("Cleaned barcode data: '{Original}' -> '{Cleaned}'", barcodeData, cleaned);
-            }
-
-            return cleaned;
         }
 
         private (PatientInfo, StudyInfo) CreateDefaultPatientAndStudy()

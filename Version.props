@@ -1,19 +1,37 @@
 <Project>
 	<PropertyGroup>
+		<!-- CamBridge Version Configuration -->
+		<!-- Version: 0.5.32 - Encoding Fix & QRBridge Planning -->
+
 		<!-- Version info for PROJECT_WISDOM and documentation -->
-		<VersionPrefix>0.5.31</VersionPrefix>
+		<VersionPrefix>0.5.32</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- IMPORTANT: DO NOT set AssemblyVersion or FileVersion! -->
-		<!-- This would break the assembly loading -->
+		<!-- This would break the assembly loading in CamBridge.Config -->
+		<!-- The assembly version conflict (looking for 0.5.27.0) must be -->
+		<!-- resolved through binding redirects or project references -->
 
 		<!-- Only metadata that won't cause conflicts -->
-		<InformationalVersion>0.5.31</InformationalVersion>
-		<PackageVersion>0.5.31</PackageVersion>
+		<InformationalVersion>0.5.32 - Encoding Fix</InformationalVersion>
+		<PackageVersion>0.5.32</PackageVersion>
 
 		<!-- Company information -->
 		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>
 		<Product>CamBridge</Product>
+
+		<!-- Build metadata -->
+		<RepositoryUrl>https://github.com/claudecorp/CamBridge</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<NeutralLanguage>en-US</NeutralLanguage>
+
+		<!-- Additional metadata for tracking -->
+		<Authors>Claude (AI Assistant) and Human Partner</Authors>
+		<Description>Medical JPEG to DICOM conversion service for Ricoh G900 II integration</Description>
+		<PackageTags>medical;dicom;ricoh;imaging;qrbridge</PackageTags>
+
+		<!-- Feature flags for this version -->
+		<DefineConstants>$(DefineConstants);ENCODING_FIX;QRBRIDGE_PLANNED</DefineConstants>
 	</PropertyGroup>
 </Project>

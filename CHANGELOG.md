@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.5.32] - 2025-06-05
+
+### Fixed
+- ExifToolReader now correctly handles Windows-1252 encoding from Ricoh G900 II
+- Removed charset forcing in ExifTool arguments - handle encoding in code
+- StudyID length limited to 16 characters (DICOM requirement)
+- Barcode data no longer corrupted by incorrect UTF-8 interpretation
+
+### Added
+- QRBridge 2.0 development plan as CamBridge.QRBridge subproject
+- Windows-1252 to UTF-8 conversion in ExifTool output processing
+- Comprehensive encoding analysis and solution documentation
+
+### Changed
+- ExifToolReader uses raw byte stream processing for proper encoding handling
+- ParseBarcodeData no longer performs character replacements (CleanBarcodeData removed)
+- Updated pipeline architecture documentation with encoding details
+
+### Technical Details
+- Discovered QRBridge v1.0.1 explicitly removed UTF-8 forcing for camera compatibility
+- Ricoh G900 II stores barcode data in Windows-1252 encoding
+- ExifTool outputs in system default encoding when no charset specified
+- Solution: Read ExifTool output as Windows-1252, not UTF-8
+
+### Next Sprint
+- Sprint 4.5: QRBridge 2.0 implementation as integrated CamBridge module
+- Estimated 4-6 hours for working prototype
+- Will solve encoding issues permanently with native UTF-8 support
+
 ## [0.5.31] - 2025-06-05
 
 ### Added

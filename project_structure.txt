@@ -2,6 +2,7 @@
 CHANGELOG.md
 COLLECTOR_README.md
 PROJECT_WISDOM.md
+protected-features-manifest.md
 README.md
 README-Deployment.md
 src\CamBridge.Config\App.xaml
