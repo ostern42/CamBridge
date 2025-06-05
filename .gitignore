@@ -1,7 +1,7 @@
 # File: .gitignore
-# Version: 0.5.23
+# Version: 0.5.30
 # Copyright: © 2025 Claude's Improbably Reliable Software Solutions
-# Modified: 2025-06-04
+# Modified: 2025-06-05
 # Status: Development
 
 # .NET Build Results
@@ -141,6 +141,10 @@ PublishProfiles/
 *.msp
 
 # CamBridge Specific
+# Deployment packages (generiert, nicht einchecken!)
+Deploy/
+!Deploy/.gitkeep
+
 # Test output folders
 Test/Output/
 TestOutput/

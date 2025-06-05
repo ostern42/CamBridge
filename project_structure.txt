@@ -3,6 +3,7 @@ CHANGELOG.md
 COLLECTOR_README.md
 PROJECT_WISDOM.md
 README.md
+README-Deployment.md
 src\CamBridge.Config\App.xaml
 src\CamBridge.Config\App.xaml.cs
 src\CamBridge.Config\AssemblyInfo.cs

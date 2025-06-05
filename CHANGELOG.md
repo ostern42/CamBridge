@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.5.30] - 2025-06-05
+
+### Added
+- Ultimate one-click deployment script with full build pipeline
+- Deployment log with rebuild tracking (indented format)
+- Automatic version detection from Version.props
+- Test integration - launch Service/Config directly after deploy
+- Deployment history management (keeps 10 versions)
+- Auto-cleanup for old deployment packages
+
+### Changed
+- Deployment script now handles complete workflow: Clean → Build → Package → Test
+- Enhanced deployment logging with user tracking and file sizes
+- Improved user experience with pragmatic test options
+
+### Fixed
+- Identified critical gap: Core pipeline never tested
+- Sprint priorities reorganized: Pipeline testing before new features
+
+### Technical
+- PowerShell deployment automation perfected
+- Deploy-to-test workflow established
+- Build artifacts properly organized
+
 ## [0.5.29] - 2025-06-05
 
 ### Added
