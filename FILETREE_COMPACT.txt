@@ -42,7 +42,7 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 380
+# Total files: 385
 
 ## [CamBridge.Config]
 src\CamBridge.Config\App.xaml
@@ -130,6 +130,7 @@ src\CamBridge.Infrastructure\Services\FolderWatcherService.cs
 src\CamBridge.Infrastructure\Services\INotificationService.cs
 src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs
 src\CamBridge.Infrastructure\Services\NotificationService.cs
+src\CamBridge.Infrastructure\Services\PipelineManager.cs
 src\CamBridge.Infrastructure\Services\ProcessingQueue.cs
 
 ## [CamBridge.Infrastructure.Tests [TEST]]
@@ -383,6 +384,7 @@ FILETREE_MINIMAL.txt
 Get-WisdomProjectTree.ps1
 old docs\cambridge-entwicklungsplan-v2.md
 pipeline_analysis.txt
+processingoptions.txt
 Program.cs
 project_structure.txt
 PROJECT_TREE.md
@@ -391,7 +393,10 @@ protected-features-manifest.md
 qrbridge-analysis.txt
 README.md
 README-Deployment.md
+servicecollection-current.txt
+service-layer-current.txt
 settings-current.txt
+settings-definitions.txt
 Temp.txt
 Test-CompletePipeline.ps1
 Test-QRBridge.ps1

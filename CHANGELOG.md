@@ -8,6 +8,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.2] - 2025-06-06 🎨 Mapping Sets UI Design
+
+### Added
+- **Mapping Sets UI Design** - Complete design for Phase 3 of Pipeline Architecture
+- **Expand/Collapse Pattern** - Elegant solution for mapping rule display
+- **WISDOM_SPRINT.md** - New artifact type for detailed sprint planning
+- **Design Documentation** - UI decisions captured before implementation
+
+### Changed
+- **MappingEditorViewModel** - Design for multiple mapping set support
+- **No Drag & Drop** - Pragmatic decision: "Glorifizierte Listen sind OK!"
+- **System Defaults** - Read-only mapping sets for clinical standards
+
+### Design Decisions
+- Expand/Collapse animation for better overview
+- Text labels instead of icons ("Icons sind hübsch aber nicht gut")
+- Focus on clarity over features (no particle effects! 😅)
+- Mapping Set selector as dropdown, not tabs
+
+### Technical Notes
+- `MappingSet.Rules` property (not `MappingRules`!)
+- System defaults loaded from embedded resources
+- Migration path: old mappings.json → "[Migrated] Default Set"
+- Smooth animations with CubicEase (200ms duration)
+
+### Developer Notes
+- Extensive design session documented in WISDOM_SPRINT_6_3.md
+- Architecture overview added to help understand code organization
+- "Glorifizierte Liste" adopted as official technical term 😄
+
+### Next Steps
+- Implement MappingEditorViewModel extensions
+- Update MappingEditorPage.xaml with new layout
+- Add expand/collapse animations
+- Test with system default sets
+
 ## [0.6.1] - 2025-06-06 - Pipeline Architecture Phase 2 🏗️
 
 ### Added
