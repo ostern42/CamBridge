@@ -1,5 +1,5 @@
 // src\CamBridge.Core\CamBridgeSettingsV2.cs
-// Version: 0.6.0
+// Version: 0.6.2
 // Description: Version 2 settings with pipeline architecture and migration support
 
 using System;
@@ -60,6 +60,28 @@ namespace CamBridge.Core
         public DateTime? MigratedFrom { get; set; }
 
         /// <summary>
+        /// ExifTool executable path (global setting)
+        /// </summary>
+        public string ExifToolPath { get; set; } = "Tools\\exiftool.exe";
+
+        /// <summary>
+        /// Convenience property for backward compatibility - returns first pipeline's output folder
+        /// </summary>
+        [JsonIgnore]
+        public string DefaultOutputFolder
+        {
+            get => Pipelines.FirstOrDefault()?.ProcessingOptions?.ArchiveFolder
+                   ?? DefaultProcessingOptions?.ArchiveFolder
+                   ?? @"C:\CamBridge\Output";
+            set
+            {
+                if (DefaultProcessingOptions == null)
+                    DefaultProcessingOptions = new ProcessingOptions();
+                DefaultProcessingOptions.ArchiveFolder = value;
+            }
+        }
+
+        /// <summary>
         /// Create V2 settings from V1 settings (migration)
         /// </summary>
         public static CamBridgeSettingsV2 MigrateFromV1(CamBridgeSettings v1Settings)
@@ -71,7 +93,8 @@ namespace CamBridge.Core
                 DefaultProcessingOptions = v1Settings.Processing,
                 Logging = v1Settings.Logging,
                 Service = v1Settings.Service,
-                Notifications = v1Settings.Notifications
+                Notifications = v1Settings.Notifications,
+                ExifToolPath = v1Settings.ExifToolPath ?? "Tools\\exiftool.exe"
             };
 
             // First, load existing mappings from file if available
@@ -80,7 +103,7 @@ namespace CamBridge.Core
                 Id = Guid.NewGuid(),
                 Name = "Default Mapping Set",
                 Description = "Migrated from v1 mappings.json",
-                IsSystemDefault = true
+                IsSystemDefault = false
             };
 
             // TODO: Load actual mapping rules from v1Settings.MappingConfigurationFile
@@ -151,9 +174,10 @@ namespace CamBridge.Core
                 Logging = Logging,
                 Service = Service,
                 Notifications = Notifications,
-                DefaultOutputFolder = DefaultProcessingOptions.ArchiveFolder,
+                DefaultOutputFolder = DefaultOutputFolder,
                 UseRicohExifReader = true,
-                MappingConfigurationFile = "mappings.json"
+                MappingConfigurationFile = "mappings.json",
+                ExifToolPath = ExifToolPath
             };
 
             // If we have pipelines, use the first enabled pipeline's processing options
@@ -204,7 +228,8 @@ namespace CamBridge.Core
                 MinimumFileSizeBytes = source.MinimumFileSizeBytes,
                 MaximumFileSizeBytes = source.MaximumFileSizeBytes,
                 OutputFilePattern = source.OutputFilePattern,
-                RetryDelaySeconds = source.RetryDelaySeconds
+                RetryDelaySeconds = source.RetryDelaySeconds,
+                DeadLetterFolder = source.DeadLetterFolder
             };
         }
 

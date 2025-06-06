@@ -1,7 +1,7 @@
 // File: src/CamBridge.Config/Extensions/MappingRuleExtensions.cs
-// Version: 0.5.24
+// Version: 0.6.2
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
-// Modified: 2025-06-04
+// Modified: 2025-06-07
 // Status: Development/Local
 
 using System;
@@ -14,111 +14,61 @@ namespace CamBridge.Config.Extensions
     /// </summary>
     public static class MappingRuleExtensions
     {
+        // HINWEIS: Die ApplyTransform Methode ist jetzt direkt in MappingRule.cs implementiert!
+        // Diese Klasse könnte gelöscht werden, oder wir behalten sie für andere UI-spezifische Extensions
+
         /// <summary>
-        /// Apply transform to a value (UI preview functionality)
+        /// Gets a display-friendly description of the transform
         /// </summary>
-        public static string ApplyTransform(this MappingRule rule, string input)
+        public static string GetTransformDescription(this MappingRule rule)
         {
-            if (string.IsNullOrWhiteSpace(input))
-                return rule.DefaultValue ?? string.Empty;
-
-            var transform = rule.TransformEnum ?? ValueTransform.None;
-
-            return transform switch
+            return rule.TransformEnum switch
             {
-                ValueTransform.DateToDicom => TransformDateToDicom(input),
-                ValueTransform.TimeToDicom => TransformTimeToDicom(input),
-                ValueTransform.DateTimeToDicom => TransformDateTimeToDicom(input),
-                ValueTransform.MapGender => TransformGender(input),
-                ValueTransform.RemovePrefix => RemovePrefix(input, rule.TransformParameters),
-                ValueTransform.ExtractDate => ExtractDate(input),
-                ValueTransform.ExtractTime => ExtractTime(input),
-                ValueTransform.ToUpperCase => input.ToUpperInvariant(),
-                ValueTransform.ToLowerCase => input.ToLowerInvariant(),
-                ValueTransform.Trim => input.Trim(),
-                _ => input
+                ValueTransform.None => "No transformation",
+                ValueTransform.DateToDicom => "Convert date to DICOM format (YYYYMMDD)",
+                ValueTransform.TimeToDicom => "Convert time to DICOM format (HHMMSS)",
+                ValueTransform.DateTimeToDicom => "Convert datetime to DICOM format",
+                ValueTransform.MapGender => "Map gender to DICOM values (M/F/O)",
+                ValueTransform.RemovePrefix => "Remove prefix from value",
+                ValueTransform.ExtractDate => "Extract date from datetime",
+                ValueTransform.ExtractTime => "Extract time from datetime",
+                ValueTransform.ToUpperCase => "Convert to uppercase",
+                ValueTransform.ToLowerCase => "Convert to lowercase",
+                ValueTransform.Trim => "Remove leading/trailing spaces",
+                _ => "Unknown transformation"
             };
         }
 
-        private static string TransformDateToDicom(string input)
-        {
-            if (DateTime.TryParse(input, out var date))
-            {
-                return date.ToString("yyyyMMdd");
-            }
-            return input;
-        }
-
-        private static string TransformTimeToDicom(string input)
-        {
-            if (DateTime.TryParse(input, out var time))
-            {
-                return time.ToString("HHmmss");
-            }
-            return input;
-        }
-
-        private static string TransformDateTimeToDicom(string input)
-        {
-            if (DateTime.TryParse(input, out var dateTime))
-            {
-                return dateTime.ToString("yyyyMMddHHmmss");
-            }
-            return input;
-        }
-
-        private static string TransformGender(string input)
-        {
-            return input.ToUpperInvariant() switch
-            {
-                "M" or "MALE" => "M",
-                "F" or "FEMALE" => "F",
-                "O" or "OTHER" => "O",
-                _ => input
-            };
-        }
-
-        private static string RemovePrefix(string input, Dictionary<string, string>? parameters)
-        {
-            if (parameters?.TryGetValue("prefix", out var prefix) == true && !string.IsNullOrEmpty(prefix))
-            {
-                return input.StartsWith(prefix) ? input.Substring(prefix.Length) : input;
-            }
-            return input;
-        }
-
-        private static string ExtractDate(string input)
-        {
-            if (DateTime.TryParse(input, out var dateTime))
-            {
-                return dateTime.ToString("yyyyMMdd");
-            }
-            return input;
-        }
-
-        private static string ExtractTime(string input)
-        {
-            if (DateTime.TryParse(input, out var dateTime))
-            {
-                return dateTime.ToString("HHmmss");
-            }
-            return input;
-        }
-    }
-
-    /// <summary>
-    /// Extension methods for CustomMappingConfiguration
-    /// </summary>
-    public static class CustomMappingConfigurationExtensions
-    {
         /// <summary>
-        /// Add a mapping rule to the configuration
+        /// Validates if the rule is properly configured
         /// </summary>
-        public static void AddRule(this CustomMappingConfiguration config, MappingRule rule)
+        public static bool IsValid(this MappingRule rule)
         {
-            // This is a stub implementation
-            // In a real implementation, this would add to an internal collection
-            // For now, it's just to satisfy the UI compilation
+            if (string.IsNullOrWhiteSpace(rule.SourceField))
+                return false;
+
+            if (string.IsNullOrWhiteSpace(rule.DicomTag))
+                return false;
+
+            // Validate DICOM tag format (XXXX,XXXX)
+            if (!System.Text.RegularExpressions.Regex.IsMatch(rule.DicomTag, @"^\([0-9A-Fa-f]{4},[0-9A-Fa-f]{4}\)$"))
+                return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Gets a UI-friendly display name for the rule
+        /// </summary>
+        public static string GetDisplayName(this MappingRule rule)
+        {
+            if (!string.IsNullOrWhiteSpace(rule.Description))
+                return rule.Description;
+
+            if (!string.IsNullOrWhiteSpace(rule.Name))
+                return rule.Name;
+
+            return $"{rule.SourceType}.{rule.SourceField} → {rule.DicomTag}";
         }
     }
 }

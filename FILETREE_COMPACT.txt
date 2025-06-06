@@ -42,7 +42,7 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 385
+# Total files: 387
 
 ## [CamBridge.Config]
 src\CamBridge.Config\App.xaml
@@ -382,6 +382,8 @@ FILETREE_COMPACT.txt
 FILETREE_DETAILED.txt
 FILETREE_MINIMAL.txt
 Get-WisdomProjectTree.ps1
+mapping-interfaces-check.txt
+mapping-sets-files.txt
 old docs\cambridge-entwicklungsplan-v2.md
 pipeline_analysis.txt
 processingoptions.txt

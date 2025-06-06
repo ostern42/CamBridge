@@ -1,4 +1,6 @@
 <!-- src/CamBridge.Config/Views/MappingEditorPage.xaml -->
+<!-- Version: 0.6.2 -->
+<!-- Description: Mapping Editor with Multiple Sets Support and Expand/Collapse UI -->
 <Page x:Class="CamBridge.Config.Views.MappingEditorPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,6 +10,11 @@
       xmlns:core="clr-namespace:CamBridge.Core;assembly=CamBridge.Core">
 
     <Page.Resources>
+        <!-- Converters -->
+        <conv:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+
         <!-- Data Templates -->
         <DataTemplate x:Key="SourceFieldTemplate">
             <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
@@ -61,89 +68,308 @@
             </Border>
         </DataTemplate>
 
+        <!-- NEW: Expand/Collapse MappingRuleTemplate -->
         <DataTemplate x:Key="MappingRuleTemplate">
-            <Border BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="12"
-                    Margin="0,4">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"/>
-                        <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
+            <Border Margin="0,2">
+                <Expander>
+                    <!-- Custom Expander Style for smooth animation -->
+                    <Expander.Style>
+                        <Style TargetType="Expander">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Expander">
+                                        <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="4">
+                                            <Border.Background>
+                                                <SolidColorBrush Color="{DynamicResource SystemChromeMediumLowColor}" 
+                                                                 Opacity="0.5"/>
+                                            </Border.Background>
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
 
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                                                <!-- Header (Always Visible) -->
+                                                <Border Grid.Row="0" 
+                                                        x:Name="HeaderBorder"
+                                                        Background="Transparent"
+                                                        Cursor="Hand"
+                                                        Padding="12,8"
+                                                        MouseLeftButtonDown="ExpanderHeader_MouseLeftButtonDown">
 
-                    <StackPanel Grid.Column="0">
-                        <TextBlock FontWeight="SemiBold" FontSize="14">
-                            <Run Text="{Binding DisplayName}"/>
-                            <Run Text=" - " Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                            <Run Text="{Binding DicomTagString}" FontFamily="Consolas"/>
-                        </TextBlock>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
 
-                        <TextBlock Margin="0,4,0,0" Opacity="0.8">
-                            <Run Text="{Binding SourceType}"/>
-                            <Run Text="."/>
-                            <Run Text="{Binding SourceField}"/>
-                            <Run Text=" → "/>
-                            <Run Text="{Binding Transform}"/>
-                        </TextBlock>
+                                                        <!-- Collapsed View Content -->
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock>
+                                                                <Run Text="{Binding SourceType}" 
+                                                                     FontWeight="SemiBold"
+                                                                     Foreground="{DynamicResource SystemControlForegroundAccentBrush}"/>
+                                                                <Run Text=": "/>
+                                                                <Run Text="{Binding SourceField}" 
+                                                                     FontFamily="Consolas"/>
+                                                                <Run Text=" → " 
+                                                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                                                <Run Text="{Binding Transform}"/>
+                                                                <Run Text=" → " 
+                                                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                                                <Run Text="{Binding DisplayName}" 
+                                                                     FontWeight="SemiBold"/>
+                                                                <Run Text=" "/>
+                                                                <Run Text="{Binding DicomTagString}" 
+                                                                     FontFamily="Consolas"
+                                                                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                                            </TextBlock>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <CheckBox IsChecked="{Binding IsRequired}" 
-                                      Content="Required" 
-                                      Margin="0,0,16,0"/>
-                            <TextBlock Text="Default: " 
+                                                            <!-- Required indicator als separates Element -->
+                                                            <TextBlock Text=" ⭐" 
+                                                                       FontSize="12"
+                                                                       Foreground="Gold"
+                                                                       Margin="2,0,0,0"
+                                                                       Visibility="{Binding IsRequired, Converter={StaticResource BoolToVisibility}}"/>
+                                                        </StackPanel>
+
+                                                        <!-- Expand/Collapse Arrow -->
+                                                        <Border Grid.Column="1" 
+                                                                Width="24" 
+                                                                Height="24"
+                                                                VerticalAlignment="Center">
+                                                            <TextBlock x:Name="Arrow"
+                                                                       Text="▼"
+                                                                       FontSize="10"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"
+                                                                       RenderTransformOrigin="0.5,0.5">
+                                                                <TextBlock.RenderTransform>
+                                                                    <RotateTransform Angle="0"/>
+                                                                </TextBlock.RenderTransform>
+                                                            </TextBlock>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                                <!-- Expanded Content -->
+                                                <Border Grid.Row="1" 
+                                                        x:Name="ExpandSite"
+                                                        Visibility="Collapsed"
+                                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                                        BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                                                        BorderThickness="0,1,0,0">
+                                                    <ContentPresenter Margin="0"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+
+                                        <ControlTemplate.Triggers>
+                                            <!-- Hover effect -->
+                                            <Trigger SourceName="HeaderBorder" Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="HeaderBorder" Property="Background" 
+                                                        Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                                            </Trigger>
+
+                                            <!-- Expanded state -->
+                                            <Trigger Property="IsExpanded" Value="True">
+                                                <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible"/>
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="Arrow"
+                                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                             To="-180"
+                                                                             Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut"/>
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.EnterActions>
+                                                <Trigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="Arrow"
+                                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                             To="0"
+                                                                             Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut"/>
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.ExitActions>
+                                            </Trigger>
+
+                                            <!-- Selected state -->
+                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
+                                                <Setter Property="BorderThickness" Value="2"/>
+                                            </DataTrigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Expander.Style>
+
+                    <!-- Expanded Content -->
+                    <Grid Margin="16,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Visual Flow Diagram -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Source Box -->
+                            <Border Grid.Column="0" 
+                                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="12,8"
+                                    MinHeight="60">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding SourceType}" 
+                                               FontSize="10"
+                                               Opacity="0.7"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding SourceField}" 
+                                               FontFamily="Consolas"
+                                               FontSize="14"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Arrow 1 -->
+                            <TextBlock Grid.Column="1" 
+                                       Text="→" 
+                                       FontSize="20"
                                        VerticalAlignment="Center"
-                                       Visibility="{Binding DefaultValue, Converter={StaticResource NullToVisibility}}"/>
-                            <TextBlock Text="{Binding DefaultValue}" 
-                                       FontStyle="Italic"
+                                       Margin="8,0"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+                            <!-- Transform Box -->
+                            <Border Grid.Column="2" 
+                                    Background="{DynamicResource SystemControlHighlightListLowBrush}"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="12,8"
+                                    MinHeight="60">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Transform" 
+                                               FontSize="10"
+                                               Opacity="0.7"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Transform}" 
+                                               FontSize="14"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Arrow 2 -->
+                            <TextBlock Grid.Column="3" 
+                                       Text="→" 
+                                       FontSize="20"
                                        VerticalAlignment="Center"
-                                       Visibility="{Binding DefaultValue, Converter={StaticResource NullToVisibility}}"/>
+                                       Margin="8,0"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+                            <!-- Target Box -->
+                            <Border Grid.Column="4" 
+                                    Background="{DynamicResource SystemControlBackgroundAccentBrush}"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="12,8"
+                                    MinHeight="60">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DisplayName}" 
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               Foreground="White"/>
+                                    <TextBlock Text="{Binding DicomTagString}" 
+                                               FontFamily="Consolas"
+                                               FontSize="11"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,4,0,0"
+                                               Foreground="White"
+                                               Opacity="0.9"/>
+                                    <StackPanel Orientation="Horizontal" 
+                                                HorizontalAlignment="Center"
+                                                Margin="0,4,0,0"
+                                                Visibility="{Binding IsRequired, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="⭐" 
+                                                   FontSize="12"
+                                                   Foreground="Gold"
+                                                   Margin="0,0,4,0"/>
+                                        <TextBlock Text="Required" 
+                                                   FontSize="10"
+                                                   Foreground="White"
+                                                   Opacity="0.8"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Actions (only for editable sets) -->
+                        <StackPanel Grid.Row="2" 
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Visibility="{Binding DataContext.CanEditCurrentSet, 
+                                               RelativeSource={RelativeSource AncestorType=Page},
+                                               Converter={StaticResource BoolToVisibility}}">
+                            <Button Content="Edit Details"
+                                    Click="EditRuleDetails_Click"
+                                    Margin="0,0,8,0"
+                                    Padding="8,4"/>
+
+                            <Button ToolTip="Move Up"
+                                    Command="{Binding DataContext.MoveRuleUpCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                    Width="32"
+                                    Height="32"
+                                    Margin="0,0,4,0">
+                                <TextBlock Text="▲" FontSize="12"/>
+                            </Button>
+
+                            <Button ToolTip="Move Down"
+                                    Command="{Binding DataContext.MoveRuleDownCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                    Width="32"
+                                    Height="32"
+                                    Margin="0,0,4,0">
+                                <TextBlock Text="▼" FontSize="12"/>
+                            </Button>
+
+                            <Button ToolTip="Remove"
+                                    Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                    Width="32"
+                                    Height="32">
+                                <ui:SymbolIcon Symbol="Delete" Width="16" Height="16"/>
+                            </Button>
                         </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" 
-                                Orientation="Horizontal"
-                                VerticalAlignment="Top">
-                        <Button ToolTip="Move Up"
-                                Command="{Binding DataContext.MoveRuleUpCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                CommandParameter="{Binding}"
-                                Margin="0,0,4,0"
-                                Width="32"
-                                Height="32">
-                            <TextBlock Text="▲" FontSize="12"/>
-                        </Button>
-
-                        <Button ToolTip="Move Down"
-                                Command="{Binding DataContext.MoveRuleDownCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                CommandParameter="{Binding}"
-                                Margin="0,0,4,0"
-                                Width="32"
-                                Height="32">
-                            <TextBlock Text="▼" FontSize="12"/>
-                        </Button>
-
-                        <Button ToolTip="Remove"
-                                Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                CommandParameter="{Binding}"
-                                Width="32"
-                                Height="32">
-                            <ui:SymbolIcon Symbol="Delete" Width="16" Height="16"/>
-                        </Button>
-                    </StackPanel>
-                </Grid>
+                    </Grid>
+                </Expander>
             </Border>
         </DataTemplate>
     </Page.Resources>
@@ -155,52 +381,125 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
+        <!-- Header with Mapping Set Selection -->
         <Border Grid.Row="0" Padding="24,24,24,16">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="Mapping Editor" 
-                               FontSize="32" 
-                               FontWeight="SemiBold"/>
-                    <TextBlock Text="Configure EXIF to DICOM field mappings" 
-                               FontSize="14" 
-                               Opacity="0.7"
-                               Margin="0,4,0,0"/>
-                </StackPanel>
+                <!-- Title Row -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="1" 
-                            Orientation="Horizontal"
-                            VerticalAlignment="Bottom">
-                    <Button Command="{Binding ImportMappingsCommand}"
-                            Margin="0,0,8,0">
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Mapping Editor" 
+                                   FontSize="32" 
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="Configure EXIF to DICOM field mappings" 
+                                   FontSize="14" 
+                                   Opacity="0.7"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" 
+                                Orientation="Horizontal"
+                                VerticalAlignment="Bottom">
+                        <Button Command="{Binding ImportMappingsCommand}"
+                                Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Download" Margin="0,0,4,0"/>
+                                <TextBlock Text="Import"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding ExportMappingsCommand}"
+                                Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Upload" Margin="0,0,4,0"/>
+                                <TextBlock Text="Export"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding SaveMappingsCommand}"
+                                IsEnabled="{Binding IsModified}"
+                                Style="{StaticResource AccentButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Save" Margin="0,0,4,0"/>
+                                <TextBlock Text="Save"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Mapping Set Selection Row -->
+                <Grid Grid.Row="1" Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" 
+                               Text="Mapping Set:" 
+                               VerticalAlignment="Center"
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               Margin="0,0,12,0"/>
+
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding MappingSets}"
+                              SelectedItem="{Binding SelectedMappingSet}"
+                              DisplayMemberPath="Name"
+                              Margin="0,0,12,0"
+                              MinHeight="32"/>
+
+                    <Button Grid.Column="2"
+                            Command="{Binding AddMappingSetCommand}"
+                            Content="New Set"
+                            Margin="0,0,8,0"
+                            MinWidth="80"/>
+
+                    <Button Grid.Column="3"
+                            Command="{Binding DuplicateMappingSetCommand}"
+                            Content="Duplicate"
+                            Margin="0,0,8,0"
+                            MinWidth="80"/>
+
+                    <Button Grid.Column="4"
+                            Command="{Binding DeleteMappingSetCommand}"
+                            Content="Delete"
+                            MinWidth="80"/>
+
+                    <!-- Read-only indicator -->
+                    <Border Grid.Column="5"
+                            Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                            CornerRadius="4"
+                            Padding="12,6"
+                            Margin="16,0,0,0"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding SelectedMappingSet.IsSystemDefault, 
+                                       Converter={StaticResource BoolToVisibility},
+                                       FallbackValue=Collapsed}">
                         <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Download" Margin="0,0,4,0"/>
-                            <TextBlock Text="Import"/>
+                            <ui:SymbolIcon Symbol="Library" 
+                                         Width="16" 
+                                         Height="16"
+                                         Margin="0,0,8,0"/>
+                            <TextBlock Text="System Default - Read Only"
+                                       FontStyle="Italic"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                         </StackPanel>
-                    </Button>
-
-                    <Button Command="{Binding ExportMappingsCommand}"
-                            Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Upload" Margin="0,0,4,0"/>
-                            <TextBlock Text="Export"/>
-                        </StackPanel>
-                    </Button>
-
-                    <Button Command="{Binding SaveMappingsCommand}"
-                            IsEnabled="{Binding IsModified}"
-                            Style="{StaticResource AccentButtonStyle}">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Save" Margin="0,0,4,0"/>
-                            <TextBlock Text="Save"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                    </Border>
+                </Grid>
             </Grid>
         </Border>
 
@@ -223,23 +522,28 @@
                                Margin="0,0,0,8"/>
 
                     <!-- Template Buttons -->
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal" 
+                                Margin="0,8,0,0"
+                                Visibility="{Binding CanEditCurrentSet, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock Text="Templates:" 
                                    VerticalAlignment="Center"
                                    Margin="0,0,8,0"/>
 
-                        <Button Content="Ricoh G900"
+                        <Button Content="Ricoh"
                                 Command="{Binding ApplyRicohTemplateCommand}"
                                 Margin="0,0,4,0"
+                                Padding="8,4"
                                 ToolTip="Apply standard Ricoh G900 II mapping template"/>
 
                         <Button Content="Minimal"
                                 Command="{Binding ApplyMinimalTemplateCommand}"
                                 Margin="0,0,4,0"
+                                Padding="8,4"
                                 ToolTip="Apply minimal required fields only"/>
 
                         <Button Content="Full"
                                 Command="{Binding ApplyFullTemplateCommand}"
+                                Padding="8,4"
                                 ToolTip="Apply comprehensive mapping template"/>
                     </StackPanel>
 
@@ -282,7 +586,8 @@
                                    VerticalAlignment="Center"/>
 
                         <Button HorizontalAlignment="Right"
-                                Command="{Binding AddRuleCommand}">
+                                Command="{Binding AddRuleCommand}"
+                                IsEnabled="{Binding CanEditCurrentSet}">
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Symbol="Add" Margin="0,0,4,0"/>
                                 <TextBlock Text="Add Rule"/>
@@ -291,37 +596,61 @@
                     </Grid>
                 </Border>
 
-                <!-- Mapping Rules List - CHANGED TO LISTBOX -->
+                <!-- Mapping Rules List -->
                 <Border Grid.Row="1"
                         Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
                         BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                         BorderThickness="1,0,1,1"
-                        AllowDrop="True"
+                        AllowDrop="{Binding CanEditCurrentSet}"
                         Drop="MappingArea_Drop"
                         DragOver="MappingArea_DragOver">
 
-                    <ListBox ItemsSource="{Binding MappingRules}"
-                             SelectedItem="{Binding SelectedRule}"
-                             ItemTemplate="{StaticResource MappingRuleTemplate}"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             BorderThickness="0"
-                             Background="Transparent"
-                             Margin="8">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <ContentPresenter/>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                    </ListBox>
+                    <Grid>
+                        <!-- Empty state message -->
+                        <TextBlock HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Opacity="0.5"
+                                   FontStyle="Italic"
+                                   Margin="32">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding MappingRules.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                            <Run Text="No mapping rules defined."/>
+                            <LineBreak/>
+                            <Run Text="Add rules or apply a template to get started."/>
+                        </TextBlock>
+
+                        <!-- Rules list -->
+                        <ListBox ItemsSource="{Binding MappingRules}"
+                                 SelectedItem="{Binding SelectedRule}"
+                                 ItemTemplate="{StaticResource MappingRuleTemplate}"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Margin="8">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <ContentPresenter/>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                    </Grid>
                 </Border>
 
                 <!-- Live Preview -->
@@ -345,7 +674,8 @@
 
                         <TextBox Grid.Column="1" 
                                  Text="{Binding PreviewInput, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,0,16,0"/>
+                                 Margin="0,0,16,0"
+                                 IsEnabled="{Binding CanEditCurrentSet}"/>
 
                         <TextBlock Grid.Column="2" 
                                    Text="Output:" 
@@ -362,6 +692,7 @@
 
             <!-- Right Panel: Properties -->
             <Border Grid.Column="2" 
+                    x:Name="PropertiesPanel"
                     Margin="12,0,0,0"
                     Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                     CornerRadius="4"
@@ -380,6 +711,7 @@
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,4"/>
                         <TextBox Text="{Binding SelectedRule.DisplayName, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding CanEditCurrentSet}"
                                  Margin="0,0,0,12"/>
 
                         <!-- Source -->
@@ -387,6 +719,7 @@
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,4"/>
                         <ComboBox SelectedItem="{Binding SelectedRule.SourceType}"
+                                  IsEnabled="{Binding CanEditCurrentSet}"
                                   Margin="0,0,0,8">
                             <ComboBoxItem>QRBridge</ComboBoxItem>
                             <ComboBoxItem>EXIF</ComboBoxItem>
@@ -396,6 +729,7 @@
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,4"/>
                         <TextBox Text="{Binding SelectedRule.SourceField, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding CanEditCurrentSet}"
                                  Margin="0,0,0,12"/>
 
                         <!-- Target -->
@@ -417,7 +751,8 @@
                                     Content="..."
                                     Width="32"
                                     Margin="4,0,0,0"
-                                    Command="{Binding SelectDicomTagCommand}"/>
+                                    Command="{Binding SelectDicomTagCommand}"
+                                    IsEnabled="{Binding CanEditCurrentSet}"/>
                         </Grid>
 
                         <!-- Transform -->
@@ -425,6 +760,7 @@
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,4"/>
                         <ComboBox SelectedItem="{Binding SelectedRule.Transform}"
+                                  IsEnabled="{Binding CanEditCurrentSet}"
                                   Margin="0,0,0,12">
                             <core:ValueTransform>None</core:ValueTransform>
                             <core:ValueTransform>DateToDicom</core:ValueTransform>
@@ -442,12 +778,14 @@
                         <!-- Options -->
                         <CheckBox IsChecked="{Binding SelectedRule.IsRequired}"
                                   Content="Required Field"
+                                  IsEnabled="{Binding CanEditCurrentSet}"
                                   Margin="0,0,0,8"/>
 
                         <TextBlock Text="Default Value (if empty)" 
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding SelectedRule.DefaultValue, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBox Text="{Binding SelectedRule.DefaultValue, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding CanEditCurrentSet}"/>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

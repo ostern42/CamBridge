@@ -1,8 +1,8 @@
-// File: src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
-// Version: 0.5.25
+// src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
+// Version: 0.6.2
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
-// Modified: 2025-06-04
-// Status: Development/Local - FREEZE BUG FIXED
+// Modified: 2025-06-07
+// Status: Development/Local - Multiple Mapping Sets Support
 
 using CamBridge.Config.Dialogs;
 using CamBridge.Config.Extensions;
@@ -29,7 +29,7 @@ using DicomTag = CamBridge.Core.ValueObjects.DicomTag;
 namespace CamBridge.Config.ViewModels
 {
     /// <summary>
-    /// ViewModel for the mapping editor with drag & drop support and templates
+    /// ViewModel for the mapping editor with multiple mapping sets support
     /// </summary>
     public partial class MappingEditorViewModel : ViewModelBase
     {
@@ -40,10 +40,20 @@ namespace CamBridge.Config.ViewModels
 
         #region Properties
 
+        // Mapping Sets
+        [ObservableProperty] private ObservableCollection<MappingSet> _mappingSets = new();
+        [ObservableProperty] private MappingSet? _selectedMappingSet;
+        [ObservableProperty] private bool _canEditCurrentSet = true;
+
+        // Mapping Rules
         [ObservableProperty] private ObservableCollection<MappingRuleViewModel> _mappingRules = new();
         [ObservableProperty] private MappingRuleViewModel? _selectedRule;
+
+        // Preview
         [ObservableProperty] private string? _previewInput;
         [ObservableProperty] private string? _previewOutput;
+
+        // State
         [ObservableProperty] private bool _isModified;
         [ObservableProperty] private string? _statusMessage;
         [ObservableProperty] private bool _isLoading;
@@ -62,9 +72,6 @@ namespace CamBridge.Config.ViewModels
             _configurationService = configurationService;
 
             InitializeSourceFields();
-
-            // IMPORTANT: Do NOT load mappings in constructor!
-            // This will be done when the view is loaded
             StatusMessage = "Ready";
         }
 
@@ -85,8 +92,8 @@ namespace CamBridge.Config.ViewModels
                 var mappingLoaderLogger = nullLoggerFactory.CreateLogger<MappingConfigurationLoader>();
                 _mappingConfiguration = new MappingConfigurationLoader(mappingLoaderLogger);
 
-                // Load mappings asynchronously
-                await LoadMappingsAsync();
+                // Load mapping sets
+                await LoadMappingSetsAsync();
 
                 _isInitialized = true;
                 StatusMessage = "Mapping editor ready";
@@ -127,55 +134,278 @@ namespace CamBridge.Config.ViewModels
             ExifFields.Add(new SourceFieldInfo("ImageDescription", "Image Description", "string"));
         }
 
-        private async Task LoadMappingsAsync()
+        private async Task LoadMappingSetsAsync()
         {
-            if (_mappingConfiguration == null) return;
-
             try
             {
                 IsLoading = true;
-                StatusMessage = "Loading mappings...";
+                StatusMessage = "Loading mapping sets...";
 
-                var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
-                if (settings != null)
+                // IMMER zuerst System Defaults laden - sie sind die Basis!
+                LoadSystemDefaults();
+                _logger.LogInformation("Loaded system default mapping sets");
+
+                // Try to load v2 settings
+                var settingsV2 = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>();
+
+                bool hasUserSets = false;
+                bool needsMigration = true;
+
+                if (settingsV2 != null && settingsV2.MappingSets.Count > 0)
                 {
-                    var mappingFile = settings.MappingConfigurationFile;
-
-                    // Try to load from configured file
-                    var loaded = await _mappingConfiguration.LoadConfigurationAsync(mappingFile);
-
-                    MappingRules.Clear();
-                    foreach (var rule in _mappingConfiguration.GetMappingRules())
+                    // Add user sets from v2 settings
+                    foreach (var set in settingsV2.MappingSets.Where(s => !s.IsSystemDefault))
                     {
-                        var vm = CreateRuleViewModel(rule);
-                        MappingRules.Add(vm);
+                        MappingSets.Add(set);
+                        hasUserSets = true;
                     }
-
-                    IsModified = false;
-                    StatusMessage = loaded
-                        ? $"Loaded {MappingRules.Count} mapping rules from {mappingFile}"
-                        : $"Using {MappingRules.Count} default mapping rules";
+                    needsMigration = false;
+                    _logger.LogInformation($"Loaded {settingsV2.MappingSets.Count(s => !s.IsSystemDefault)} user mapping sets from settings");
                 }
+
+                // If no user sets exist, try migration from v1
+                if (needsMigration && !hasUserSets)
+                {
+                    await MigrateFromV1Async();
+                }
+
+                // Debug: Log all loaded sets
+                _logger.LogInformation($"Total mapping sets loaded: {MappingSets.Count}");
+                foreach (var set in MappingSets)
+                {
+                    _logger.LogInformation($"  - {set.Name} (System: {set.IsSystemDefault}, Rules: {set.Rules?.Count ?? 0})");
+                }
+
+                // Select appropriate set - prefer Ricoh for initial experience
+                SelectedMappingSet = MappingSets.FirstOrDefault(m => m.Name.Contains("Ricoh") && m.IsSystemDefault) ??
+                                    MappingSets.FirstOrDefault(m => !m.IsSystemDefault) ??
+                                    MappingSets.FirstOrDefault();
+
+                IsModified = false;
+                StatusMessage = $"Loaded {MappingSets.Count} mapping sets";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to load mappings");
-                StatusMessage = "Failed to load mappings";
+                _logger.LogError(ex, "Failed to load mapping sets");
+                StatusMessage = "Failed to load mapping sets";
 
-                // Load default rules on error
-                if (_mappingConfiguration != null)
+                // Ensure we at least have system defaults
+                if (!MappingSets.Any(m => m.IsSystemDefault))
                 {
-                    foreach (var rule in _mappingConfiguration.GetMappingRules())
-                    {
-                        var vm = CreateRuleViewModel(rule);
-                        MappingRules.Add(vm);
-                    }
+                    LoadSystemDefaults();
                 }
+                SelectedMappingSet = MappingSets.FirstOrDefault();
             }
             finally
             {
                 IsLoading = false;
             }
+        }
+
+        private async Task MigrateFromV1Async()
+        {
+            try
+            {
+                _logger.LogInformation("Attempting to migrate from v1 mappings...");
+
+                // First try to load v1 settings
+                var v1Settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
+
+                string mappingFile = "mappings.json";
+
+                if (v1Settings != null && !string.IsNullOrEmpty(v1Settings.MappingConfigurationFile))
+                {
+                    mappingFile = v1Settings.MappingConfigurationFile;
+                }
+                else
+                {
+                    // No v1 settings - try common locations for mappings.json
+                    var assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                    var assemblyDir = Path.GetDirectoryName(assemblyLocation) ?? "";
+
+                    var possiblePaths = new[]
+                    {
+                        Path.Combine(assemblyDir, "mappings.json"),
+                        Path.Combine(assemblyDir, "..", "..", "..", "..", "..", "CamBridge.Service", "mappings.json"),
+                        Path.Combine(Environment.CurrentDirectory, "mappings.json"),
+                        Path.Combine(Environment.CurrentDirectory, "src", "CamBridge.Service", "mappings.json"),
+                        @"C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Service\mappings.json"
+                    };
+
+                    foreach (var path in possiblePaths)
+                    {
+                        var fullPath = Path.GetFullPath(path);
+                        _logger.LogDebug($"Checking for mappings at: {fullPath}");
+                        if (File.Exists(fullPath))
+                        {
+                            mappingFile = fullPath;
+                            _logger.LogInformation($"Found mappings.json at: {fullPath}");
+                            break;
+                        }
+                    }
+                }
+
+                if (_mappingConfiguration != null && File.Exists(mappingFile))
+                {
+                    // Try to load existing mapping rules
+                    await _mappingConfiguration.LoadConfigurationAsync(mappingFile);
+                    var rules = _mappingConfiguration.GetMappingRules().ToList();
+
+                    if (rules.Count > 0)
+                    {
+                        // Fix transform names from old format
+                        foreach (var rule in rules)
+                        {
+                            rule.Transform = rule.Transform switch
+                            {
+                                "GenderToDicom" => "MapGender",
+                                "TruncateTo16" => "None", // Not available in current version
+                                _ => rule.Transform
+                            };
+                        }
+
+                        // Create migrated set from v1 rules
+                        var migratedSet = new MappingSet
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = "[Migrated] Default Mapping Set",
+                            Description = $"Migrated from {Path.GetFileName(mappingFile)}",
+                            IsSystemDefault = false,
+                            Rules = rules,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+
+                        MappingSets.Add(migratedSet);
+                        _logger.LogInformation($"Migrated {rules.Count} rules from {mappingFile}");
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning($"Could not find mappings file at: {mappingFile}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not migrate v1 mappings");
+            }
+        }
+
+        private void LoadSystemDefaults()
+        {
+            // Ricoh G900 Standard Set
+            var ricohSet = new MappingSet
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                Name = "[System] Ricoh G900 Standard",
+                Description = "Standard mapping for Ricoh G900 II cameras",
+                IsSystemDefault = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                Rules = new List<MappingRule>
+                {
+                    // Patient identification
+                    new() { SourceField = "name", DicomTag = "(0010,0010)", Description = "Patient Name",
+                            SourceType = "QRBridge", Transform = "None", Required = true },
+                    new() { SourceField = "patientid", DicomTag = "(0010,0020)", Description = "Patient ID",
+                            SourceType = "QRBridge", Transform = "None", Required = true },
+                    new() { SourceField = "birthdate", DicomTag = "(0010,0030)", Description = "Patient Birth Date",
+                            SourceType = "QRBridge", Transform = "DateToDicom" },
+                    new() { SourceField = "gender", DicomTag = "(0010,0040)", Description = "Patient Sex",
+                            SourceType = "QRBridge", Transform = "MapGender" },
+                    
+                    // Study information
+                    new() { SourceField = "examid", DicomTag = "(0020,0010)", Description = "Study ID",
+                            SourceType = "QRBridge", Transform = "None" },
+                    new() { SourceField = "comment", DicomTag = "(0008,1030)", Description = "Study Description",
+                            SourceType = "QRBridge", Transform = "None" },
+                    
+                    // Image date/time from EXIF
+                    new() { SourceField = "DateTimeOriginal", DicomTag = "(0008,0020)", Description = "Study Date",
+                            SourceType = "EXIF", Transform = "ExtractDate" },
+                    new() { SourceField = "DateTimeOriginal", DicomTag = "(0008,0030)", Description = "Study Time",
+                            SourceType = "EXIF", Transform = "ExtractTime" },
+                    
+                    // Equipment info
+                    new() { SourceField = "Make", DicomTag = "(0008,0070)", Description = "Manufacturer",
+                            SourceType = "EXIF", Transform = "None" },
+                    new() { SourceField = "Model", DicomTag = "(0008,1090)", Description = "Manufacturer Model Name",
+                            SourceType = "EXIF", Transform = "None" }
+                }
+            };
+
+            // Minimal Required Set
+            var minimalSet = new MappingSet
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                Name = "[System] Minimal Required",
+                Description = "Only the required DICOM fields",
+                IsSystemDefault = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                Rules = new List<MappingRule>
+                {
+                    new() { SourceField = "name", DicomTag = "(0010,0010)", Description = "Patient Name",
+                            SourceType = "QRBridge", Transform = "None", Required = true },
+                    new() { SourceField = "patientid", DicomTag = "(0010,0020)", Description = "Patient ID",
+                            SourceType = "QRBridge", Transform = "None", Required = true },
+                    new() { SourceField = "examid", DicomTag = "(0020,0010)", Description = "Study ID",
+                            SourceType = "QRBridge", Transform = "None" }
+                }
+            };
+
+            // Full Comprehensive Set
+            var fullSet = new MappingSet
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                Name = "[System] Full Comprehensive",
+                Description = "Comprehensive mapping with all standard fields",
+                IsSystemDefault = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                Rules = new List<MappingRule>
+                {
+                    // Patient Module
+                    new() { SourceField = "name", DicomTag = "(0010,0010)", Description = "Patient Name",
+                            SourceType = "QRBridge", Transform = "None", Required = true },
+                    new() { SourceField = "patientid", DicomTag = "(0010,0020)", Description = "Patient ID",
+                            SourceType = "QRBridge", Transform = "None", Required = true },
+                    new() { SourceField = "birthdate", DicomTag = "(0010,0030)", Description = "Patient Birth Date",
+                            SourceType = "QRBridge", Transform = "DateToDicom" },
+                    new() { SourceField = "gender", DicomTag = "(0010,0040)", Description = "Patient Sex",
+                            SourceType = "QRBridge", Transform = "MapGender" },
+                    new() { SourceField = "comment", DicomTag = "(0010,4000)", Description = "Patient Comments",
+                            SourceType = "QRBridge", Transform = "None" },
+                    
+                    // Study Module
+                    new() { SourceField = "examid", DicomTag = "(0020,0010)", Description = "Study ID",
+                            SourceType = "QRBridge", Transform = "None" },
+                    new() { SourceField = "examid", DicomTag = "(0008,0050)", Description = "Accession Number",
+                            SourceType = "QRBridge", Transform = "None" },
+                    new() { SourceField = "comment", DicomTag = "(0008,1030)", Description = "Study Description",
+                            SourceType = "QRBridge", Transform = "None" },
+                    new() { SourceField = "DateTimeOriginal", DicomTag = "(0008,0020)", Description = "Study Date",
+                            SourceType = "EXIF", Transform = "ExtractDate" },
+                    new() { SourceField = "DateTimeOriginal", DicomTag = "(0008,0030)", Description = "Study Time",
+                            SourceType = "EXIF", Transform = "ExtractTime" },
+                    
+                    // Equipment Module
+                    new() { SourceField = "Make", DicomTag = "(0008,0070)", Description = "Manufacturer",
+                            SourceType = "EXIF", Transform = "None" },
+                    new() { SourceField = "Model", DicomTag = "(0008,1090)", Description = "Manufacturer Model Name",
+                            SourceType = "EXIF", Transform = "None" },
+                    new() { SourceField = "Software", DicomTag = "(0018,1020)", Description = "Software Versions",
+                            SourceType = "EXIF", Transform = "None" },
+                    
+                    // Image Module
+                    new() { SourceField = "DateTimeOriginal", DicomTag = "(0008,002A)", Description = "Acquisition DateTime",
+                            SourceType = "EXIF", Transform = "DateTimeToDicom" }
+                }
+            };
+
+            MappingSets.Add(ricohSet);
+            MappingSets.Add(minimalSet);
+            MappingSets.Add(fullSet);
         }
 
         private MappingRuleViewModel CreateRuleViewModel(MappingRule rule)
@@ -201,11 +431,91 @@ namespace CamBridge.Config.ViewModels
 
         #endregion
 
-        #region Commands
+        #region Mapping Set Commands
 
         [RelayCommand]
+        private async Task AddMappingSetAsync()
+        {
+            var newSet = new MappingSet
+            {
+                Name = $"New Mapping Set {DateTime.Now:HHmmss}",
+                Description = "Custom mapping configuration",
+                Rules = new List<MappingRule>(),
+                IsSystemDefault = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            MappingSets.Add(newSet);
+            SelectedMappingSet = newSet;
+            IsModified = true;
+            StatusMessage = $"Created new mapping set: {newSet.Name}";
+        }
+
+        [RelayCommand(CanExecute = nameof(CanDuplicateMappingSet))]
+        private async Task DuplicateMappingSetAsync()
+        {
+            if (SelectedMappingSet == null) return;
+
+            var duplicate = new MappingSet
+            {
+                Name = $"{SelectedMappingSet.Name} (Copy)",
+                Description = SelectedMappingSet.Description,
+                Rules = SelectedMappingSet.Rules.Select(r => new MappingRule
+                {
+                    SourceField = r.SourceField,
+                    DicomTag = r.DicomTag,
+                    Description = r.Description,
+                    SourceType = r.SourceType,
+                    Transform = r.Transform,
+                    Required = r.Required,
+                    DefaultValue = r.DefaultValue
+                }).ToList(),
+                IsSystemDefault = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            MappingSets.Add(duplicate);
+            SelectedMappingSet = duplicate;
+            IsModified = true;
+            StatusMessage = $"Duplicated mapping set: {duplicate.Name}";
+        }
+
+        private bool CanDuplicateMappingSet() => SelectedMappingSet != null;
+
+        [RelayCommand(CanExecute = nameof(CanDeleteMappingSet))]
+        private async Task DeleteMappingSetAsync()
+        {
+            if (SelectedMappingSet == null || SelectedMappingSet.IsSystemDefault) return;
+
+            var result = MessageBox.Show(
+                $"Delete mapping set '{SelectedMappingSet.Name}'?\n\nThis action cannot be undone.",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                var setName = SelectedMappingSet.Name;
+                MappingSets.Remove(SelectedMappingSet);
+                SelectedMappingSet = MappingSets.FirstOrDefault();
+                IsModified = true;
+                StatusMessage = $"Deleted mapping set: {setName}";
+            }
+        }
+
+        private bool CanDeleteMappingSet() => SelectedMappingSet != null && !SelectedMappingSet.IsSystemDefault;
+
+        #endregion
+
+        #region Rule Commands
+
+        [RelayCommand(CanExecute = nameof(CanEditCurrentSet))]
         private void AddRule()
         {
+            if (SelectedMappingSet == null || SelectedMappingSet.IsSystemDefault) return;
+
             var newRule = new MappingRule
             {
                 SourceField = "newField",
@@ -219,71 +529,107 @@ namespace CamBridge.Config.ViewModels
             var vm = CreateRuleViewModel(newRule);
             MappingRules.Add(vm);
             SelectedRule = vm;
+
+            // Update the set's rules
+            SelectedMappingSet.Rules = MappingRules.Select(r => r.ToMappingRule()).ToList();
+            SelectedMappingSet.UpdatedAt = DateTime.UtcNow;
+
             IsModified = true;
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanEditSelectedRule))]
         private void RemoveRule()
         {
-            if (SelectedRule != null)
+            if (SelectedRule != null && SelectedMappingSet != null && !SelectedMappingSet.IsSystemDefault)
             {
                 MappingRules.Remove(SelectedRule);
+
+                // Update the set's rules
+                SelectedMappingSet.Rules = MappingRules.Select(r => r.ToMappingRule()).ToList();
+                SelectedMappingSet.UpdatedAt = DateTime.UtcNow;
+
                 IsModified = true;
                 SelectedRule = MappingRules.FirstOrDefault();
             }
         }
 
-        [RelayCommand]
+        private bool CanEditSelectedRule() => SelectedRule != null && CanEditCurrentSet;
+
+        [RelayCommand(CanExecute = nameof(CanEditSelectedRule))]
         private void MoveRuleUp()
         {
-            if (SelectedRule == null) return;
+            if (SelectedRule == null || SelectedMappingSet?.IsSystemDefault == true) return;
 
             var index = MappingRules.IndexOf(SelectedRule);
             if (index > 0)
             {
                 MappingRules.Move(index, index - 1);
+
+                // Update the set's rules
+                SelectedMappingSet.Rules = MappingRules.Select(r => r.ToMappingRule()).ToList();
+                SelectedMappingSet.UpdatedAt = DateTime.UtcNow;
+
                 IsModified = true;
             }
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanEditSelectedRule))]
         private void MoveRuleDown()
         {
-            if (SelectedRule == null) return;
+            if (SelectedRule == null || SelectedMappingSet?.IsSystemDefault == true) return;
 
             var index = MappingRules.IndexOf(SelectedRule);
             if (index < MappingRules.Count - 1)
             {
                 MappingRules.Move(index, index + 1);
+
+                // Update the set's rules
+                SelectedMappingSet.Rules = MappingRules.Select(r => r.ToMappingRule()).ToList();
+                SelectedMappingSet.UpdatedAt = DateTime.UtcNow;
+
                 IsModified = true;
             }
         }
 
+        #endregion
+
+        #region Save/Load Commands
+
         [RelayCommand]
         private async Task SaveMappingsAsync()
         {
-            if (_mappingConfiguration == null) return;
-
             try
             {
                 IsLoading = true;
-                StatusMessage = "Saving mappings...";
+                StatusMessage = "Saving mapping sets...";
 
-                var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
-                if (settings != null)
+                // Update rules in selected set if it's not read-only
+                if (SelectedMappingSet != null && !SelectedMappingSet.IsSystemDefault)
                 {
-                    var rules = MappingRules.Select(vm => vm.ToMappingRule());
-                    await _mappingConfiguration.SaveConfigurationAsync(rules, settings.MappingConfigurationFile);
-
-                    IsModified = false;
-                    StatusMessage = "Mappings saved successfully";
+                    SelectedMappingSet.Rules = MappingRules.Select(vm => vm.ToMappingRule()).ToList();
+                    SelectedMappingSet.UpdatedAt = DateTime.UtcNow;
                 }
+
+                // Load current v2 settings or create new
+                var settingsV2 = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>()
+                                 ?? new CamBridgeSettingsV2();
+
+                // Update mapping sets - nur User Sets speichern!
+                settingsV2.MappingSets = MappingSets.Where(s => !s.IsSystemDefault).ToList();
+
+                // Save
+                await _configurationService.SaveConfigurationAsync(settingsV2);
+
+                IsModified = false;
+                StatusMessage = "Mapping sets saved successfully";
+
+                _logger.LogInformation($"Saved {settingsV2.MappingSets.Count} user mapping sets");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to save mappings");
-                StatusMessage = "Failed to save mappings";
-                MessageBox.Show($"Error saving mappings: {ex.Message}", "Error",
+                _logger.LogError(ex, "Failed to save mapping sets");
+                StatusMessage = "Failed to save mapping sets";
+                MessageBox.Show($"Error saving mapping sets: {ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -295,8 +641,6 @@ namespace CamBridge.Config.ViewModels
         [RelayCommand]
         private async Task ImportMappingsAsync()
         {
-            if (_mappingConfiguration == null) return;
-
             try
             {
                 var dialog = new OpenFileDialog
@@ -311,17 +655,35 @@ namespace CamBridge.Config.ViewModels
                     IsLoading = true;
                     StatusMessage = "Importing mappings...";
 
-                    await _mappingConfiguration.LoadConfigurationAsync(dialog.FileName);
-
-                    MappingRules.Clear();
-                    foreach (var rule in _mappingConfiguration.GetMappingRules())
+                    // Load mappings from file
+                    if (_mappingConfiguration != null)
                     {
-                        var vm = CreateRuleViewModel(rule);
-                        MappingRules.Add(vm);
-                    }
+                        await _mappingConfiguration.LoadConfigurationAsync(dialog.FileName);
+                        var rules = _mappingConfiguration.GetMappingRules().ToList();
 
-                    IsModified = true;
-                    StatusMessage = $"Imported {MappingRules.Count} mapping rules";
+                        if (rules.Count > 0)
+                        {
+                            // Create new set from imported rules
+                            var importedSet = new MappingSet
+                            {
+                                Name = $"Imported from {Path.GetFileName(dialog.FileName)}",
+                                Description = $"Imported on {DateTime.Now:yyyy-MM-dd HH:mm}",
+                                Rules = rules,
+                                IsSystemDefault = false,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            };
+
+                            MappingSets.Add(importedSet);
+                            SelectedMappingSet = importedSet;
+                            IsModified = true;
+                            StatusMessage = $"Imported {rules.Count} mapping rules";
+                        }
+                        else
+                        {
+                            StatusMessage = "No mapping rules found in file";
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -336,10 +698,10 @@ namespace CamBridge.Config.ViewModels
             }
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanExportMappings))]
         private async Task ExportMappingsAsync()
         {
-            if (_mappingConfiguration == null) return;
+            if (SelectedMappingSet == null) return;
 
             try
             {
@@ -348,7 +710,7 @@ namespace CamBridge.Config.ViewModels
                     Title = "Export Mapping Configuration",
                     Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
                     DefaultExt = ".json",
-                    FileName = $"mappings_export_{DateTime.Now:yyyyMMdd_HHmmss}.json"
+                    FileName = $"{SelectedMappingSet.Name.Replace("[System]", "").Trim()}_{DateTime.Now:yyyyMMdd_HHmmss}.json"
                 };
 
                 if (dialog.ShowDialog() == true)
@@ -356,10 +718,11 @@ namespace CamBridge.Config.ViewModels
                     IsLoading = true;
                     StatusMessage = "Exporting mappings...";
 
-                    var rules = MappingRules.Select(vm => vm.ToMappingRule());
-                    await _mappingConfiguration.SaveConfigurationAsync(rules, dialog.FileName);
-
-                    StatusMessage = "Mappings exported successfully";
+                    if (_mappingConfiguration != null)
+                    {
+                        await _mappingConfiguration.SaveConfigurationAsync(SelectedMappingSet.Rules, dialog.FileName);
+                        StatusMessage = $"Exported {SelectedMappingSet.Rules.Count} rules to {Path.GetFileName(dialog.FileName)}";
+                    }
                 }
             }
             catch (Exception ex)
@@ -374,10 +737,12 @@ namespace CamBridge.Config.ViewModels
             }
         }
 
-        [RelayCommand]
+        private bool CanExportMappings() => SelectedMappingSet != null;
+
+        [RelayCommand(CanExecute = nameof(CanEditSelectedRule))]
         private void SelectDicomTag()
         {
-            if (SelectedRule == null) return;
+            if (SelectedRule == null || SelectedMappingSet?.IsSystemDefault == true) return;
 
             var dialog = new DicomTagBrowserDialog
             {
@@ -389,6 +754,13 @@ namespace CamBridge.Config.ViewModels
                 // Convert DicomTag object to string format
                 SelectedRule.DicomTagString = dialog.SelectedTag.ToString();
                 UpdatePreview();
+
+                // Update the set
+                if (SelectedMappingSet != null)
+                {
+                    SelectedMappingSet.UpdatedAt = DateTime.UtcNow;
+                    IsModified = true;
+                }
             }
         }
 
@@ -396,9 +768,11 @@ namespace CamBridge.Config.ViewModels
 
         #region Template Commands
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanEditCurrentSet))]
         private void ApplyRicohTemplate()
         {
+            if (SelectedMappingSet == null || SelectedMappingSet.IsSystemDefault) return;
+
             if (MessageBox.Show(
                 "This will replace all current mappings with the Ricoh G900 II template. Continue?",
                 "Apply Template",
@@ -408,29 +782,42 @@ namespace CamBridge.Config.ViewModels
                 return;
             }
 
-            MappingRules.Clear();
+            // Find the Ricoh system template
+            var ricohTemplate = MappingSets.FirstOrDefault(s => s.Name.Contains("Ricoh") && s.IsSystemDefault);
+            if (ricohTemplate != null)
+            {
+                MappingRules.Clear();
+                foreach (var rule in ricohTemplate.Rules)
+                {
+                    // Create copies of the rules
+                    var newRule = new MappingRule
+                    {
+                        SourceField = rule.SourceField,
+                        DicomTag = rule.DicomTag,
+                        Description = rule.Description,
+                        SourceType = rule.SourceType,
+                        Transform = rule.Transform,
+                        Required = rule.Required,
+                        DefaultValue = rule.DefaultValue
+                    };
+                    var vm = CreateRuleViewModel(newRule);
+                    MappingRules.Add(vm);
+                }
 
-            // Patient identification
-            AddTemplateRule("name", "Patient Name", "(0010,0010)", ValueTransform.None, "QRBridge", true);
-            AddTemplateRule("patientid", "Patient ID", "(0010,0020)", ValueTransform.None, "QRBridge", true);
-            AddTemplateRule("birthdate", "Patient Birth Date", "(0010,0030)", ValueTransform.DateToDicom, "QRBridge");
-            AddTemplateRule("gender", "Patient Sex", "(0010,0040)", ValueTransform.MapGender, "QRBridge");
+                // Update the set
+                SelectedMappingSet.Rules = MappingRules.Select(r => r.ToMappingRule()).ToList();
+                SelectedMappingSet.UpdatedAt = DateTime.UtcNow;
 
-            // Study information
-            AddTemplateRule("examid", "Study ID", "(0020,0010)", ValueTransform.None, "QRBridge");
-            AddTemplateRule("comment", "Study Description", "(0008,1030)", ValueTransform.None, "QRBridge");
-
-            // Equipment from EXIF
-            AddTemplateRule("Make", "Manufacturer", "(0008,0070)", ValueTransform.None, "EXIF");
-            AddTemplateRule("Model", "Manufacturer Model Name", "(0008,1090)", ValueTransform.None, "EXIF");
-
-            IsModified = true;
-            StatusMessage = "Ricoh template applied";
+                IsModified = true;
+                StatusMessage = "Ricoh template applied";
+            }
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanEditCurrentSet))]
         private void ApplyMinimalTemplate()
         {
+            if (SelectedMappingSet == null || SelectedMappingSet.IsSystemDefault) return;
+
             if (MessageBox.Show(
                 "This will replace all current mappings with a minimal template. Continue?",
                 "Apply Template",
@@ -440,20 +827,42 @@ namespace CamBridge.Config.ViewModels
                 return;
             }
 
-            MappingRules.Clear();
+            // Find the minimal system template
+            var minimalTemplate = MappingSets.FirstOrDefault(s => s.Name.Contains("Minimal") && s.IsSystemDefault);
+            if (minimalTemplate != null)
+            {
+                MappingRules.Clear();
+                foreach (var rule in minimalTemplate.Rules)
+                {
+                    // Create copies of the rules
+                    var newRule = new MappingRule
+                    {
+                        SourceField = rule.SourceField,
+                        DicomTag = rule.DicomTag,
+                        Description = rule.Description,
+                        SourceType = rule.SourceType,
+                        Transform = rule.Transform,
+                        Required = rule.Required,
+                        DefaultValue = rule.DefaultValue
+                    };
+                    var vm = CreateRuleViewModel(newRule);
+                    MappingRules.Add(vm);
+                }
 
-            // Only required DICOM fields
-            AddTemplateRule("name", "Patient Name", "(0010,0010)", ValueTransform.None, "QRBridge", true);
-            AddTemplateRule("examid", "Patient ID", "(0010,0020)", ValueTransform.None, "QRBridge", true);
-            AddTemplateRule("examid", "Study ID", "(0020,0010)", ValueTransform.None, "QRBridge");
+                // Update the set
+                SelectedMappingSet.Rules = MappingRules.Select(r => r.ToMappingRule()).ToList();
+                SelectedMappingSet.UpdatedAt = DateTime.UtcNow;
 
-            IsModified = true;
-            StatusMessage = "Minimal template applied";
+                IsModified = true;
+                StatusMessage = "Minimal template applied";
+            }
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanEditCurrentSet))]
         private void ApplyFullTemplate()
         {
+            if (SelectedMappingSet == null || SelectedMappingSet.IsSystemDefault) return;
+
             if (MessageBox.Show(
                 "This will replace all current mappings with a comprehensive template. Continue?",
                 "Apply Template",
@@ -463,49 +872,35 @@ namespace CamBridge.Config.ViewModels
                 return;
             }
 
-            MappingRules.Clear();
-
-            // Patient Module
-            AddTemplateRule("name", "Patient Name", "(0010,0010)", ValueTransform.None, "QRBridge", true);
-            AddTemplateRule("patientid", "Patient ID", "(0010,0020)", ValueTransform.None, "QRBridge", true);
-            AddTemplateRule("birthdate", "Patient Birth Date", "(0010,0030)", ValueTransform.DateToDicom, "QRBridge");
-            AddTemplateRule("gender", "Patient Sex", "(0010,0040)", ValueTransform.MapGender, "QRBridge");
-            AddTemplateRule("comment", "Patient Comments", "(0010,4000)", ValueTransform.None, "QRBridge");
-
-            // Study Module
-            AddTemplateRule("examid", "Study ID", "(0020,0010)", ValueTransform.None, "QRBridge");
-            AddTemplateRule("examid", "Accession Number", "(0008,0050)", ValueTransform.None, "QRBridge");
-            AddTemplateRule("comment", "Study Description", "(0008,1030)", ValueTransform.None, "QRBridge");
-            AddTemplateRule("DateTimeOriginal", "Study Date", "(0008,0020)", ValueTransform.ExtractDate, "EXIF");
-            AddTemplateRule("DateTimeOriginal", "Study Time", "(0008,0030)", ValueTransform.ExtractTime, "EXIF");
-
-            // Equipment Module
-            AddTemplateRule("Make", "Manufacturer", "(0008,0070)", ValueTransform.None, "EXIF");
-            AddTemplateRule("Model", "Manufacturer Model Name", "(0008,1090)", ValueTransform.None, "EXIF");
-            AddTemplateRule("Software", "Software Versions", "(0018,1020)", ValueTransform.None, "EXIF");
-
-            // Image Module
-            AddTemplateRule("DateTimeOriginal", "Acquisition DateTime", "(0008,002A)", ValueTransform.DateTimeToDicom, "EXIF");
-
-            IsModified = true;
-            StatusMessage = "Full template applied";
-        }
-
-        private void AddTemplateRule(string sourceField, string description, string dicomTag,
-            ValueTransform transform, string sourceType, bool isRequired = false)
-        {
-            var rule = new MappingRule
+            // Find the full system template
+            var fullTemplate = MappingSets.FirstOrDefault(s => s.Name.Contains("Full") && s.IsSystemDefault);
+            if (fullTemplate != null)
             {
-                SourceField = sourceField,
-                Description = description,
-                DicomTag = dicomTag,
-                Transform = transform.ToString(),
-                SourceType = sourceType,
-                Required = isRequired
-            };
+                MappingRules.Clear();
+                foreach (var rule in fullTemplate.Rules)
+                {
+                    // Create copies of the rules
+                    var newRule = new MappingRule
+                    {
+                        SourceField = rule.SourceField,
+                        DicomTag = rule.DicomTag,
+                        Description = rule.Description,
+                        SourceType = rule.SourceType,
+                        Transform = rule.Transform,
+                        Required = rule.Required,
+                        DefaultValue = rule.DefaultValue
+                    };
+                    var vm = CreateRuleViewModel(newRule);
+                    MappingRules.Add(vm);
+                }
 
-            var vm = CreateRuleViewModel(rule);
-            MappingRules.Add(vm);
+                // Update the set
+                SelectedMappingSet.Rules = MappingRules.Select(r => r.ToMappingRule()).ToList();
+                SelectedMappingSet.UpdatedAt = DateTime.UtcNow;
+
+                IsModified = true;
+                StatusMessage = "Full template applied";
+            }
         }
 
         #endregion
@@ -541,6 +936,55 @@ namespace CamBridge.Config.ViewModels
             UpdatePreview();
         }
 
+        partial void OnSelectedMappingSetChanged(MappingSet? value)
+        {
+            if (value == null) return;
+
+            CanEditCurrentSet = !value.IsSystemDefault;
+            LoadRulesFromSet(value);
+
+            // Update command states
+            DuplicateMappingSetCommand.NotifyCanExecuteChanged();
+            DeleteMappingSetCommand.NotifyCanExecuteChanged();
+            AddRuleCommand.NotifyCanExecuteChanged();
+            RemoveRuleCommand.NotifyCanExecuteChanged();
+            MoveRuleUpCommand.NotifyCanExecuteChanged();
+            MoveRuleDownCommand.NotifyCanExecuteChanged();
+            SelectDicomTagCommand.NotifyCanExecuteChanged();
+            ExportMappingsCommand.NotifyCanExecuteChanged();
+            ApplyRicohTemplateCommand.NotifyCanExecuteChanged();
+            ApplyMinimalTemplateCommand.NotifyCanExecuteChanged();
+            ApplyFullTemplateCommand.NotifyCanExecuteChanged();
+        }
+
+        private void LoadRulesFromSet(MappingSet set)
+        {
+            IsLoading = true;
+            try
+            {
+                MappingRules.Clear();
+
+                if (set.Rules != null)
+                {
+                    foreach (var rule in set.Rules)
+                    {
+                        var vm = CreateRuleViewModel(rule);
+                        MappingRules.Add(vm);
+                    }
+
+                    StatusMessage = $"Loaded {set.Rules.Count} rules from '{set.Name}'";
+                }
+                else
+                {
+                    StatusMessage = $"Selected '{set.Name}' (no rules defined)";
+                }
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
         #endregion
 
         #region Inner Classes
@@ -563,7 +1007,7 @@ namespace CamBridge.Config.ViewModels
     }
 
     /// <summary>
-    /// ViewModel wrapper for MappingRule - adapted to work with Core v0.5.x
+    /// ViewModel wrapper for MappingRule
     /// </summary>
     public partial class MappingRuleViewModel : ObservableObject
     {
@@ -583,7 +1027,7 @@ namespace CamBridge.Config.ViewModels
             _rule = rule;
 
             // Map Core properties to UI properties
-            _displayName = rule.Description ?? rule.SourceField;
+            _displayName = rule.Description ?? $"{rule.SourceType}.{rule.SourceField}";
             _sourceType = rule.SourceType ?? "QRBridge";
             _sourceField = rule.SourceField;
             _dicomTagString = rule.DicomTag;

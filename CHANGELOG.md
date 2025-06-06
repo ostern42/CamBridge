@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.3] - 2025-06-07 - Mapping Sets UI Implementation
+
+### Added
+- Expand/Collapse UI for mapping rules with smooth animations
+- System Default mapping sets ([System] Ricoh, Minimal, Full Comprehensive)
+- Visual flow diagram in expanded view (Source → Transform → Target)
+- "Edit Details" button for quick property access
+- Debug logging for mapping set loading
+
+### Changed
+- System Defaults now ALWAYS load first (before migration)
+- Only user mapping sets are saved to settings (system defaults stay in code)
+- Ricoh template selected by default for better first-time experience
+- Improved UI with collapsed view showing complete rule info in one line
+
+### Fixed
+- System Default sets not showing up (loading order issue)
+- MappingEditorPage.xaml already had ComboBox UI (no duplicate work needed)
+- Save now correctly excludes system defaults from JSON
+
+### Technical
+- MappingEditorViewModel refactored for better system defaults handling
+- MappingEditorPage.xaml updated with Expander-based rule template
+- Added ExpanderHeader_MouseLeftButtonDown and EditRuleDetails_Click handlers
+- Sprint 6.3 (Pipeline Architecture Phase 3) completed
+
 ## [0.6.2] - 2025-06-06 🎨 Mapping Sets UI Design
 
 ### Added
