@@ -42,7 +42,7 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 368
+# Total files: 378
 
 ## [CamBridge.Config]
 src\CamBridge.Config\App.xaml
@@ -346,6 +346,7 @@ _archived_collectors\collect-sources-balanced.bat
 _archived_collectors\collect-sources-gui-config.bat
 _archived_collectors\collect-sources-mapping-editor.bat
 _archived_collectors\collect-sources-test.bat
+about-current.txt
 Build-QRBridgeUltraSlim.ps1
 CamBridge.ParserDebug\CamBridge.ParserDebug.csproj
 CamBridge.ParserDebug\Program.cs
@@ -362,6 +363,10 @@ ConnectionTest\ConnectionTest.cs
 ConnectionTest\ConnectionTest.csproj
 core-entities.txt
 Create-DeploymentPackage.ps1
+current-mapping-ui.txt
+current-processing.txt
+current-service.txt
+current-settings-model.txt
 encoding-fix-analysis.txt
 exiftool-encoding-test.txt
 ExifToolQuickTest\exif_output.json
@@ -370,6 +375,8 @@ ExifToolQuickTest\Program.cs
 ExifToolTest\ExifToolTest.csproj
 ExifToolTest\Program.cs
 filetree.txt
+FILETREE_COMPACT.txt
+FILETREE_DETAILED.txt
 FILETREE_MINIMAL.txt
 Get-WisdomProjectTree.ps1
 old docs\cambridge-entwicklungsplan-v2.md
@@ -382,6 +389,7 @@ protected-features-manifest.md
 qrbridge-analysis.txt
 README.md
 README-Deployment.md
+settings-current.txt
 Temp.txt
 Test-CompletePipeline.ps1
 Test-QRBridge.ps1
@@ -389,6 +397,8 @@ TREE_COMPACT.txt
 TREE_DETAILED.md
 TREE_MINIMAL.txt
 Version.props
+WISDOM_CLAUDE.md
+WISDOM_TECHNICAL.md
 
 ## [TOOLS]
 Tools\exiftool.exe

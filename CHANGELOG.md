@@ -8,9 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
-# Changelog
+feat: implement pipeline architecture core (v0.6.0)
 
-# Changelog
+- Add PipelineConfiguration model for multi-pipeline support
+- Add CamBridgeSettingsV2 with automatic v1->v2 migration
+- Enhance ConfigurationService to support both formats
+- Maintain full backward compatibility
+- Each watch folder can now become independent pipeline
+
+This is Phase 1 of the pipeline architecture implementation.
+No breaking changes - existing configurations automatically migrate.
 
 ## [0.5.36] - 2025-06-06
 

@@ -1,10 +1,11 @@
 // src\CamBridge.Config\Services\ConfigurationService.cs
-// Version: 0.5.26
-// Updated to work with both Config UI and Service
+// Version: 0.6.0
+// Updated to support both v1 and v2 settings with automatic migration
 
 using CamBridge.Core;
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -13,12 +14,15 @@ namespace CamBridge.Config.Services
 {
     /// <summary>
     /// Service for loading and saving configuration from JSON files
+    /// Now supports both v1 and v2 formats with automatic migration
     /// </summary>
     public class ConfigurationService : IConfigurationService
     {
         private readonly string _configDirectory;
         private readonly string _serviceConfigPath;
         private readonly JsonSerializerOptions _jsonOptions;
+        private readonly string _v2ConfigFileName = "appsettings.v2.json";
+        private CamBridgeSettingsV2? _v2SettingsCache;
 
         public ConfigurationService()
         {
@@ -49,11 +53,109 @@ namespace CamBridge.Config.Services
 
         public async Task<T?> LoadConfigurationAsync<T>() where T : class
         {
-            if (typeof(T) != typeof(CamBridgeSettings))
+            // Always load v2 internally
+            var v2Settings = await LoadOrMigrateToV2Async();
+
+            // Return in requested format
+            if (typeof(T) == typeof(CamBridgeSettingsV2))
+            {
+                return v2Settings as T;
+            }
+            else if (typeof(T) == typeof(CamBridgeSettings))
+            {
+                // Convert to v1 format for backward compatibility
+                return v2Settings?.ToV1Format() as T;
+            }
+
+            throw new NotSupportedException($"Configuration type {typeof(T).Name} is not supported");
+        }
+
+        public async Task SaveConfigurationAsync<T>(T configuration) where T : class
+        {
+            CamBridgeSettingsV2 v2Settings;
+
+            if (configuration is CamBridgeSettingsV2 v2)
+            {
+                v2Settings = v2;
+            }
+            else if (configuration is CamBridgeSettings v1)
+            {
+                // Check if we already have v2 settings cached
+                if (_v2SettingsCache != null)
+                {
+                    // Update existing v2 with changes from v1
+                    v2Settings = UpdateV2FromV1(_v2SettingsCache, v1);
+                }
+                else
+                {
+                    // Full migration
+                    v2Settings = CamBridgeSettingsV2.MigrateFromV1(v1);
+                }
+            }
+            else
             {
                 throw new NotSupportedException($"Configuration type {typeof(T).Name} is not supported");
             }
 
+            // Save v2 format
+            await SaveV2SettingsAsync(v2Settings);
+
+            // Also save v1 format for backward compatibility
+            await SaveV1CompatibilityAsync(v2Settings.ToV1Format());
+
+            // Update cache
+            _v2SettingsCache = v2Settings;
+        }
+
+        private async Task<CamBridgeSettingsV2?> LoadOrMigrateToV2Async()
+        {
+            // Check cache first
+            if (_v2SettingsCache != null)
+                return _v2SettingsCache;
+
+            // Try to load v2 settings
+            var v2ConfigPath = Path.Combine(_configDirectory, _v2ConfigFileName);
+            if (File.Exists(v2ConfigPath))
+            {
+                try
+                {
+                    var json = await File.ReadAllTextAsync(v2ConfigPath);
+                    var v2Settings = JsonSerializer.Deserialize<CamBridgeSettingsV2>(json, _jsonOptions);
+
+                    if (v2Settings != null)
+                    {
+                        _v2SettingsCache = v2Settings;
+                        return v2Settings;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error loading v2 config: {ex.Message}");
+                }
+            }
+
+            // Try to load and migrate v1 settings
+            var v1Settings = await LoadV1SettingsAsync();
+            if (v1Settings != null)
+            {
+                System.Diagnostics.Debug.WriteLine("Migrating v1 settings to v2...");
+                var v2Settings = CamBridgeSettingsV2.MigrateFromV1(v1Settings);
+
+                // Save the migrated settings
+                await SaveV2SettingsAsync(v2Settings);
+                _v2SettingsCache = v2Settings;
+
+                return v2Settings;
+            }
+
+            // Return default v2 settings
+            var defaultSettings = GetDefaultV2Settings();
+            _v2SettingsCache = defaultSettings;
+            return defaultSettings;
+        }
+
+        private async Task<CamBridgeSettings?> LoadV1SettingsAsync()
+        {
             // Try multiple locations in order of preference
             var configPaths = new[]
             {
@@ -83,7 +185,7 @@ namespace CamBridge.Config.Services
                             {
                                 // Map service config format to our settings
                                 MapFromServiceConfig(settings, jsonDoc.RootElement);
-                                return settings as T;
+                                return settings;
                             }
                         }
                         else
@@ -91,7 +193,7 @@ namespace CamBridge.Config.Services
                             // Try direct deserialization (for AppData format)
                             var settings = JsonSerializer.Deserialize<CamBridgeSettings>(json, _jsonOptions);
                             if (settings != null)
-                                return settings as T;
+                                return settings;
                         }
                     }
                 }
@@ -102,17 +204,28 @@ namespace CamBridge.Config.Services
                 }
             }
 
-            // Return default settings if no file found
-            return GetDefaultSettings() as T;
+            return null;
         }
 
-        public async Task SaveConfigurationAsync<T>(T configuration) where T : class
+        private async Task SaveV2SettingsAsync(CamBridgeSettingsV2 settings)
         {
-            if (configuration is not CamBridgeSettings settings)
-            {
-                throw new NotSupportedException($"Configuration type {typeof(T).Name} is not supported");
-            }
+            var v2ConfigPath = Path.Combine(_configDirectory, _v2ConfigFileName);
 
+            try
+            {
+                var json = JsonSerializer.Serialize(settings, _jsonOptions);
+                await File.WriteAllTextAsync(v2ConfigPath, json);
+                System.Diagnostics.Debug.WriteLine($"V2 config saved to: {v2ConfigPath}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving v2 configuration: {ex.Message}");
+                throw new InvalidOperationException("Failed to save v2 configuration", ex);
+            }
+        }
+
+        private async Task SaveV1CompatibilityAsync(CamBridgeSettings settings)
+        {
             // Save to AppData location
             var appDataConfig = Path.Combine(_configDirectory, "appsettings.json");
 
@@ -131,7 +244,7 @@ namespace CamBridge.Config.Services
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error saving configuration: {ex.Message}");
-                throw new InvalidOperationException("Failed to save configuration", ex);
+                // Don't throw - v1 compatibility is optional for v2
             }
         }
 
@@ -202,6 +315,92 @@ namespace CamBridge.Config.Services
             }
         }
 
+        private CamBridgeSettingsV2 UpdateV2FromV1(CamBridgeSettingsV2 existing, CamBridgeSettings v1Update)
+        {
+            // Update global settings
+            existing.GlobalDicomSettings = v1Update.Dicom;
+            existing.DefaultProcessingOptions = v1Update.Processing;
+            existing.Logging = v1Update.Logging;
+            existing.Service = v1Update.Service;
+            existing.Notifications = v1Update.Notifications;
+
+            // Update ALL pipelines with the global processing options from v1
+            // (Since v1 doesn't have per-pipeline processing options)
+            foreach (var pipeline in existing.Pipelines)
+            {
+                pipeline.ProcessingOptions = CloneProcessingOptions(v1Update.Processing);
+            }
+
+            // Update pipeline watch folders from v1 watch folders
+            // Match by index for now (simple approach)
+            for (int i = 0; i < v1Update.WatchFolders.Count && i < existing.Pipelines.Count; i++)
+            {
+                var v1Folder = v1Update.WatchFolders[i];
+                var pipeline = existing.Pipelines[i];
+
+                pipeline.WatchSettings.Path = v1Folder.Path;
+                pipeline.WatchSettings.FilePattern = v1Folder.FilePattern;
+                pipeline.WatchSettings.IncludeSubdirectories = v1Folder.IncludeSubdirectories;
+                pipeline.WatchSettings.OutputPath = v1Folder.OutputPath;
+                pipeline.Enabled = v1Folder.Enabled;
+
+                // If v1 folder has custom output path, update pipeline's archive folder
+                if (!string.IsNullOrEmpty(v1Folder.OutputPath))
+                {
+                    pipeline.ProcessingOptions.ArchiveFolder = v1Folder.OutputPath;
+                }
+            }
+
+            // Handle new watch folders (add as new pipelines)
+            if (v1Update.WatchFolders.Count > existing.Pipelines.Count)
+            {
+                for (int i = existing.Pipelines.Count; i < v1Update.WatchFolders.Count; i++)
+                {
+                    var v1Folder = v1Update.WatchFolders[i];
+                    var newPipeline = new PipelineConfiguration
+                    {
+                        Name = $"Pipeline {i + 1}",
+                        Description = $"Added from UI",
+                        Enabled = v1Folder.Enabled,
+                        WatchSettings = new PipelineWatchSettings
+                        {
+                            Path = v1Folder.Path,
+                            FilePattern = v1Folder.FilePattern,
+                            IncludeSubdirectories = v1Folder.IncludeSubdirectories,
+                            OutputPath = v1Folder.OutputPath
+                        },
+                        ProcessingOptions = CloneProcessingOptions(v1Update.Processing),
+                        MappingSetId = existing.MappingSets.FirstOrDefault()?.Id
+                    };
+
+                    // If v1 folder has custom output path, update pipeline's archive folder
+                    if (!string.IsNullOrEmpty(v1Folder.OutputPath))
+                    {
+                        newPipeline.ProcessingOptions.ArchiveFolder = v1Folder.OutputPath;
+                    }
+
+                    existing.Pipelines.Add(newPipeline);
+                }
+            }
+
+            // Handle removed watch folders (remove pipelines)
+            while (existing.Pipelines.Count > v1Update.WatchFolders.Count)
+            {
+                existing.Pipelines.RemoveAt(existing.Pipelines.Count - 1);
+            }
+
+            return existing;
+        }
+
+        private CamBridgeSettingsV2 GetDefaultV2Settings()
+        {
+            // First create default v1 settings
+            var v1Settings = GetDefaultSettings();
+
+            // Migrate to v2
+            return CamBridgeSettingsV2.MigrateFromV1(v1Settings);
+        }
+
         private CamBridgeSettings GetDefaultSettings()
         {
             return new CamBridgeSettings
@@ -268,6 +467,32 @@ namespace CamBridge.Config.Services
                     SendDailySummary = false,
                     DailySummaryHour = 8
                 }
+            };
+        }
+
+        /// <summary>
+        /// Helper to clone processing options
+        /// </summary>
+        private static ProcessingOptions CloneProcessingOptions(ProcessingOptions source)
+        {
+            return new ProcessingOptions
+            {
+                SuccessAction = source.SuccessAction,
+                FailureAction = source.FailureAction,
+                ArchiveFolder = source.ArchiveFolder,
+                ErrorFolder = source.ErrorFolder,
+                BackupFolder = source.BackupFolder,
+                CreateBackup = source.CreateBackup,
+                MaxConcurrentProcessing = source.MaxConcurrentProcessing,
+                RetryOnFailure = source.RetryOnFailure,
+                MaxRetryAttempts = source.MaxRetryAttempts,
+                OutputOrganization = source.OutputOrganization,
+                ProcessExistingOnStartup = source.ProcessExistingOnStartup,
+                MaxFileAge = source.MaxFileAge,
+                MinimumFileSizeBytes = source.MinimumFileSizeBytes,
+                MaximumFileSizeBytes = source.MaximumFileSizeBytes,
+                OutputFilePattern = source.OutputFilePattern,
+                RetryDelaySeconds = source.RetryDelaySeconds
             };
         }
     }
