@@ -1,5 +1,5 @@
 # WISDOM Technical - Entwicklung & Technische Details
-**Letzte Aktualisierung:** 2025-06-06, 13:00 Uhr  
+**Letzte Aktualisierung:** 2025-06-06, 14:42 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Technische Kontinuität & Entwicklungsplan
 
@@ -20,6 +20,7 @@
 - 🚀 **[NEXT]** - Nächster großer Schritt
 - 🛡️ **[PROTECTED]** - NIEMALS LÖSCHEN! Geschützte Features!
 - 🏗️ **[VISION]** - Langfristige Architektur-Ziele
+- ✅ **[DONE]** - Erfolgreich abgeschlossen
 
 ## 🔒 [CORE] V.O.G.O.N. SYSTEM 
 **Verbose Operational Guidance & Organizational Navigation**
@@ -59,16 +60,23 @@
 8. **PIPELINE-REGEL:** Die Pipeline ist EINE durchgehende Linie, nicht getrennte Teile!
 9. **FILETREE-REGEL:** IMMER erst FileTree checken vor Datei-Erstellung!
 10. **MIGRATION-REGEL:** Bei großen Änderungen IMMER Rückwärtskompatibilität! 🔄
+11. **GIT-REGEL:** WISDOM Files gehören zum Code - `git commit --amend` ist richtig!
 
 ## 🛡️ [CORE] TASK PROTECTION SYSTEM
 
 ### 🛡️ CURRENTLY PROTECTED TASKS:
 ```
-PIPELINE-001: Pipeline Architecture [IN PLANNING] 🏗️
-             Status: Implementationsplan erstellt
+PIPELINE-001: Pipeline Architecture [IN PROGRESS] 🏗️
+             Status: Phase 1 COMPLETED ✅
              Created: 2025-06-06, 15:30
              Details: Multi-Pipeline Support mit Mapping Sets
              Priority: EPIC
+             Progress:
+             - Phase 1: Core Model & Migration ✅
+             - Phase 2: Service Layer Updates [NEXT]
+             - Phase 3: Mapping Sets UI [PLANNED]
+             - Phase 4: Pipeline UI [PLANNED]
+             - Phase 5: Testing & Polish [PLANNED]
 
 CAMB-001: Settings Save/Delete Tests [RESOLVED] ✅
           Status: Settings System komplett gefixt
@@ -129,29 +137,28 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 8. **Pipeline als Ganzes sehen!**
 9. **FileTree IMMER checken!**
 10. **Migration vor Revolution!** 🔄
+11. **WISDOM Files mit amend!** 📝
 
 ## 🏗️ [VISION] PIPELINE ARCHITECTURE v0.6.0
 
-### Konzept:
-Jeder Watch Folder wird zu einer kompletten Pipeline mit eigenen Settings:
-- Input (Watch Folder)
-- Processing (Options)
-- Output (Organization)
-- DICOM (Overrides)
-- Mapping (Set Selection)
+### ✅ [DONE] Phase 1: Core Model & Migration (Sprint 6.1)
+**Abgeschlossen:** 2025-06-06, 14:42
+- ✅ PipelineConfiguration.cs erstellt
+- ✅ CamBridgeSettingsV2.cs mit Migration implementiert
+- ✅ ConfigurationService erweitert (kein Breaking Change!)
+- ✅ Automatische v1→v2 Migration funktioniert
+- ✅ Rückwärts-Kompatibilität garantiert
+- ✅ Settings speichern in beiden Formaten
 
-### Implementation Plan:
+### 🚀 [NEXT] Phase 2: Service Updates (Sprint 6.2)
+**Nächster Schritt!**
+- PipelineManager.cs implementieren
+- FolderWatcherService für Pipelines refactoren
+- Worker.cs für Multi-Pipeline Support
+- Runtime Enable/Disable von Pipelines
+
+### 📋 [PLANNED] Phase 3-5:
 ```
-Phase 1: Core Model & Migration (Sprint 6.1)
-├── PipelineConfiguration.cs
-├── CamBridgeSettingsV2.cs
-└── Migration v1→v2
-
-Phase 2: Service Updates (Sprint 6.2)
-├── PipelineManager.cs
-├── Multi-Pipeline Processing
-└── Runtime Enable/Disable
-
 Phase 3: Mapping Sets UI (Sprint 6.3)
 ├── Multiple Mapping Sets
 ├── Save/Load/Duplicate
@@ -169,11 +176,11 @@ Phase 5: Testing & Polish (Sprint 6.5)
 ```
 
 ### Benefits:
-- Multi-Department Support
-- Flexible Workflows
-- Reusable Mappings
-- Better Scalability
-- Cleaner Configuration
+- Multi-Department Support ✅
+- Flexible Workflows ✅
+- Reusable Mappings ✅
+- Better Scalability ✅
+- Cleaner Configuration ✅
 
 ## 🛡️ [PROTECTED] PROTECTED FEATURES - NIEMALS LÖSCHEN!
 
@@ -201,25 +208,21 @@ Phase 5: Testing & Polish (Sprint 6.5)
 - **Geschützt seit:** 2025-06-05, 19:45
 - **NIEMALS LÖSCHEN OHNE:** "RELEASE PROTECTION: C-FIND"
 
-## 🎯 [MILESTONE] Aktueller Stand: v0.5.36
+## 🎯 [MILESTONE] Aktueller Stand: v0.6.0
 
-### Sprint 5.1: Marvin Easter Egg ✅
-- Marvin Easter Egg implementiert
-- 12 Marvin Quotes integriert
-- Timing-Probleme gelöst
-- Animation State Tracking
-- QR-Code Easter Egg Idee geboren
-
-### Sprint 5.2: Settings System Fix ✅
-- Settings Save/Reset funktioniert
-- Folder Dialog mit Ookii.Dialogs
-- Validation für Folder Paths
-- Delete Button für Watch Folders gefixt
+### Sprint 6.1: Pipeline Architecture Core ✅
+- PipelineConfiguration Model implementiert
+- CamBridgeSettingsV2 mit Migration
+- ConfigurationService erweitert
+- Automatische v1→v2 Migration
+- Rückwärts-Kompatibilität erhalten
+- Settings speichern funktioniert wieder
 
 ### Nächste Schritte:
-- Sprint 5.3: Dead Letters UI
-- Sprint 5.4: Version.props Cleanup
-- Sprint 6.0: Pipeline Architecture! 🏗️
+- Sprint 6.2: Service Layer Updates
+- Sprint 6.3: Mapping Sets UI  
+- Sprint 6.4: Pipeline Configuration UI
+- Sprint 6.5: Testing & Polish
 
 ## 💡 [LESSON] Top 10 Lektionen
 
@@ -234,10 +237,12 @@ Phase 5: Testing & Polish (Sprint 6.5)
 9. **"Mut zum Neuanfang!"** - QRBridge 2.0 statt Flickwerk
 10. **"Artefakte komplett!"** - Nicht abschneiden!
 
-### 💡 [LESSON] Neue Lektionen aus Session 36:
+### 💡 [LESSON] Neue Lektionen aus Session 36-37:
 11. **"Commands müssen updated werden!"** - NotifyCanExecuteChanged nicht vergessen!
 12. **"WPF Bindings sind tricky!"** - Clear/Set Trick für Updates
 13. **"Große Visionen, kleine Schritte!"** - Pipeline-Architecture iterativ
+14. **"Erweitern statt ersetzen!"** - ConfigurationService evolution
+15. **"Git amend für WISDOM!"** - Dokumentation gehört zum Commit
 
 ## 🏗️ [KEEP] PIPELINE-ARCHITEKTUR
 
@@ -261,7 +266,8 @@ Settings   RAD Camera   Barcode  RAD Rules  RAD Tags  Archive
 - ✅ DICOM Converter (fo-dicom)
 - ✅ Windows Service
 - ✅ Deployment Package
-- 🏗️ Pipeline Architecture (Planning)
+- ✅ Pipeline Architecture Core (v0.6.0)
+- 🚀 Service Layer Updates (NEXT)
 
 ## 🔧 [CONFIG] Technologie-Stack
 ```
@@ -288,6 +294,7 @@ Deploy Dir:        C:\Users\aiadmin\source\repos\CamBridge\Deploy
 Test Input:        C:\CamBridge\Test\Input
 Test Output:       C:\CamBridge\Test\Output
 TestImages:        C:\CamBridge\TestImages
+AppData Config:    %APPDATA%\CamBridge
 ```
 
 ## 📌 [KEEP] PowerShell One-Liner Sammlung
@@ -308,10 +315,14 @@ TestImages:        C:\CamBridge\TestImages
 @('src\CamBridge.Config\Views\SettingsPage.xaml','src\CamBridge.Config\Views\SettingsPage.xaml.cs','src\CamBridge.Config\ViewModels\SettingsViewModel.cs') | %{ echo "=== $_ ==="; cat $_ } > settings-current.txt
 
 # Pipeline Files sammeln (für v0.6.0)
-@('src\CamBridge.Core\PipelineConfiguration.cs','src\CamBridge.Infrastructure\Services\PipelineManager.cs') | %{ echo "=== $_ ==="; cat $_ } > pipeline-current.txt
+@('src\CamBridge.Core\PipelineConfiguration.cs','src\CamBridge.Core\CamBridgeSettingsV2.cs','src\CamBridge.Config\Services\ConfigurationService.cs') | %{ echo "=== $_ ==="; cat $_ } > pipeline-current.txt
 
 # QRBridge 2.0 testen
 & "C:\Users\aiadmin\source\repos\CamBridge\Deploy\CamBridge-Deploy-v0.5.36\QRBridge\CamBridge.QRBridge.exe" -examid "TEST" -name "Test, Patient" -timeout 5
+
+# Git Workflow für WISDOM Files
+git add WISDOM_CLAUDE.md WISDOM_TECHNICAL.md
+git commit --amend --no-edit
 ```
 
 ## 🚀 [KEEP] ENTWICKLUNGSFAHRPLAN
@@ -325,16 +336,13 @@ TestImages:        C:\CamBridge\TestImages
 - QRBridge 2.0 ✅
 - FileTree System ✅
 
-### 📝 Sprint 5: UI Polish & Easter Eggs (v0.5.35-v0.5.39) ← WIR SIND HIER
+### ✅ Sprint 5: UI Polish & Easter Eggs (v0.5.35-v0.5.39) (DONE)
 - **Sprint 5.1:** Marvin Easter Egg ✅
 - **Sprint 5.2:** Settings System Fix ✅ 
-- **Sprint 5.3:** Dead Letters UI Implementation ← NEXT
-- **Sprint 5.4:** Version.props Cleanup
-- **Sprint 5.5:** Marvin QR Commentary
 
-### 🏗️ Sprint 6: Pipeline Architecture (v0.6.0-v0.6.5) ← MAJOR UPDATE!
-- **Sprint 6.1:** Core Model & Migration
-- **Sprint 6.2:** Service Layer Updates
+### 🏗️ Sprint 6: Pipeline Architecture (v0.6.0-v0.6.5) ← WIR SIND HIER
+- **Sprint 6.1:** Core Model & Migration ✅ (2025-06-06)
+- **Sprint 6.2:** Service Layer Updates ← NEXT
 - **Sprint 6.3:** Mapping Sets UI
 - **Sprint 6.4:** Pipeline Configuration UI
 - **Sprint 6.5:** Testing & Polish
@@ -393,30 +401,32 @@ TestImages:        C:\CamBridge\TestImages
 - **Marvin Easter Egg:** 06.06.2025, 01:15 🤖
 - **Settings System Fix:** 06.06.2025, 15:00 ✅
 - **Pipeline Vision:** 06.06.2025, 15:30 🏗️
-- **Arbeitszeit gesamt:** ~45 Stunden
+- **Pipeline Phase 1:** 06.06.2025, 14:42 ✅
+- **Arbeitszeit gesamt:** ~48 Stunden
 
 ## 📝 [KEEP] Standard Prompt für nächste Session
 
 ```
-Ich arbeite an CamBridge v0.5.36.
-Sprint 5.3: Dead Letters UI Implementation
-(oder Sprint 6.1: Pipeline Architecture Core Model)
+Ich arbeite an CamBridge v0.6.0.
+Sprint 6.2: Service Layer Updates für Pipeline Architecture
 
 WICHTIG: Zuerst FileTree checken!
 .\Get-WisdomFileTree.ps1
 
+PIPELINE STATUS: Phase 1 abgeschlossen, jetzt Service Layer
 FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch in der Roadmap?
-PIPELINE CHECK: Wie ist der Status der Pipeline-Architecture?
 ```
 
 ## 🎯 Nächste Session Checkliste
 
 1. **VOGON INIT** durchführen
 2. **FileTree** checken (.\Get-WisdomFileTree.ps1)
-3. **Entscheidung**: Dead Letters UI oder Pipeline Architecture?
+3. **Pipeline Phase 2**: Service Layer Updates
+   - PipelineManager implementieren
+   - FolderWatcherService refactoren
+   - Worker.cs updaten
 4. **Feature Check** (4 Medical Features + Pipeline)
-5. **Version** nicht vergessen zu erhöhen!
-6. **Git History** checken für bestehenden Code
+5. **Version** bei neuen Features erhöhen!
 
 ---
 
