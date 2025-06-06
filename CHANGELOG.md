@@ -8,6 +8,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.1] - 2025-06-06 - Pipeline Architecture Phase 2 🏗️
+
+### Added
+- **PipelineManager** - Orchestriert mehrere unabhängige Pipelines
+- **Multi-Pipeline Support** - Jede Pipeline mit eigener Queue und Watcher
+- **Pipeline API Endpoints** - `/api/pipelines` und `/api/pipelines/{id}`
+- **ProcessingOptions.DeadLetterFolder** - Neues Property für Pipeline-spezifische Dead Letters
+- **Automatische V1→V2 Migration** - Nutzt eingebaute `MigrateFromV1()` Methode
+- **Pipeline Status Reporting** - Detaillierte Statistiken pro Pipeline
+
+### Changed
+- **Worker.cs** - Komplett vereinfacht, nutzt nur noch PipelineManager
+- **ServiceCollectionExtensions** - Updated für Pipeline Support
+- **Program.cs** - Erweitert mit Pipeline-spezifischen Endpoints
+- **FolderWatcherService** - Ersetzt durch per-Pipeline Watcher
+
+### Fixed
+- **Settings Migration** - Nutzt jetzt korrekte Property-Namen
+- **Code Update Issues** - Dokumentiert: Ganze Blöcke ersetzen bei ähnlichem Code
+
+### Technical Details
+- ProcessingQueue und DeadLetterQueue werden pro Pipeline erstellt
+- Jede Pipeline hat unabhängige Konfiguration und Status
+- Rückwärtskompatibilität durch automatische V1→V2 Migration
+- Service Layer komplett refactored für Multi-Pipeline Support
+
+### Developer Notes
+- Bei Code-Updates mit ähnlichen Blöcken: Ganzen Block ersetzen!
+- Migration läuft über `CamBridgeSettingsV2.MigrateFromV1()`
+- Claude fragt jetzt proaktiv nach Dateien! 🎯
+
+## [0.6.0] - 2025-06-06
+
 feat: implement pipeline architecture core (v0.6.0)
 
 - Add PipelineConfiguration model for multi-pipeline support

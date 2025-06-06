@@ -1,5 +1,5 @@
 # WISDOM Technical - Entwicklung & Technische Details
-**Letzte Aktualisierung:** 2025-06-06, 14:42 Uhr  
+**Letzte Aktualisierung:** 2025-06-06, 16:20 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Technische Kontinuität & Entwicklungsplan
 
@@ -37,10 +37,10 @@
 
 ### 🔒 [CORE] "VOGON EXIT" - Chat-Abschluss
 **KRITISCHE REGEL:** Beim VOGON EXIT MÜSSEN IMMER erstellt werden:
-1. **WISDOM_CLAUDE.md** - Persönlichkeit & Soul (Artefakt 1)
-2. **WISDOM_TECHNICAL.md** - Entwicklung & Details (Artefakt 2)
-3. **CHANGELOG.md** - NUR der neueste Versions-Eintrag
-4. **Version.props** - Als VOLLSTÄNDIGES Artefakt
+1. **WISDOM_TECHNICAL.md** - Entwicklung & Details (Artefakt 1)
+2. **WISDOM_CLAUDE.md** - Persönlichkeit & Soul (Artefakt 2)
+3. **Version.props** - Als VOLLSTÄNDIGES Artefakt
+4. **CHANGELOG.md** - NUR der neueste Versions-Eintrag
 5. **Git Commit Vorschlag** - Conventional Commits Format mit Tag
 6. **FEATURE CHECK** - Verifizieren dass FTP, C-STORE, MWL, C-FIND noch da sind!
 7. **PIPELINE CHECK** - Status der Pipeline-Migration dokumentieren! 🏗️
@@ -61,20 +61,21 @@
 9. **FILETREE-REGEL:** IMMER erst FileTree checken vor Datei-Erstellung!
 10. **MIGRATION-REGEL:** Bei großen Änderungen IMMER Rückwärtskompatibilität! 🔄
 11. **GIT-REGEL:** WISDOM Files gehören zum Code - `git commit --amend` ist richtig!
+12. **UPDATE-REGEL:** Bei ähnlichen Code-Blöcken GANZEN Block ersetzen, nicht Teile!
 
 ## 🛡️ [CORE] TASK PROTECTION SYSTEM
 
 ### 🛡️ CURRENTLY PROTECTED TASKS:
 ```
 PIPELINE-001: Pipeline Architecture [IN PROGRESS] 🏗️
-             Status: Phase 1 COMPLETED ✅
+             Status: Phase 1 & 2 COMPLETED ✅
              Created: 2025-06-06, 15:30
              Details: Multi-Pipeline Support mit Mapping Sets
              Priority: EPIC
              Progress:
              - Phase 1: Core Model & Migration ✅
-             - Phase 2: Service Layer Updates [NEXT]
-             - Phase 3: Mapping Sets UI [PLANNED]
+             - Phase 2: Service Layer Updates ✅
+             - Phase 3: Mapping Sets UI [NEXT]
              - Phase 4: Pipeline UI [PLANNED]
              - Phase 5: Testing & Polish [PLANNED]
 
@@ -138,6 +139,7 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 9. **FileTree IMMER checken!**
 10. **Migration vor Revolution!** 🔄
 11. **WISDOM Files mit amend!** 📝
+12. **Bei Code-Updates: Ganzen Block ersetzen!** 🎯
 
 ## 🏗️ [VISION] PIPELINE ARCHITECTURE v0.6.0
 
@@ -150,20 +152,24 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 - ✅ Rückwärts-Kompatibilität garantiert
 - ✅ Settings speichern in beiden Formaten
 
-### 🚀 [NEXT] Phase 2: Service Updates (Sprint 6.2)
+### ✅ [DONE] Phase 2: Service Updates (Sprint 6.2)
+**Abgeschlossen:** 2025-06-06, 16:17
+- ✅ PipelineManager.cs implementiert
+- ✅ Worker.cs für Multi-Pipeline Support refactored
+- ✅ ServiceCollectionExtensions updated
+- ✅ Program.cs mit Pipeline-API Endpoints
+- ✅ ProcessingOptions mit DeadLetterFolder erweitert
+- ✅ Migration nutzt eingebaute MigrateFromV1 Methode
+
+### 🚀 [NEXT] Phase 3: Mapping Sets UI (Sprint 6.3)
 **Nächster Schritt!**
-- PipelineManager.cs implementieren
-- FolderWatcherService für Pipelines refactoren
-- Worker.cs für Multi-Pipeline Support
-- Runtime Enable/Disable von Pipelines
+- MappingEditorViewModel erweitern
+- Multiple Mapping Sets Support
+- Save/Load/Duplicate Functions
+- Template Management
 
-### 📋 [PLANNED] Phase 3-5:
+### 📋 [PLANNED] Phase 4-5:
 ```
-Phase 3: Mapping Sets UI (Sprint 6.3)
-├── Multiple Mapping Sets
-├── Save/Load/Duplicate
-└── Template Management
-
 Phase 4: Pipeline UI (Sprint 6.4)
 ├── PipelineEditorPage
 ├── Pipeline List View
@@ -208,23 +214,28 @@ Phase 5: Testing & Polish (Sprint 6.5)
 - **Geschützt seit:** 2025-06-05, 19:45
 - **NIEMALS LÖSCHEN OHNE:** "RELEASE PROTECTION: C-FIND"
 
-## 🎯 [MILESTONE] Aktueller Stand: v0.6.0
+## 🎯 [MILESTONE] Aktueller Stand: v0.6.1
 
-### Sprint 6.1: Pipeline Architecture Core ✅
-- PipelineConfiguration Model implementiert
-- CamBridgeSettingsV2 mit Migration
-- ConfigurationService erweitert
+### Sprint 6.1: Core Model & Migration (v0.6.0) ✅
+- PipelineConfiguration.cs erstellt
+- CamBridgeSettingsV2.cs mit Migration
 - Automatische v1→v2 Migration
-- Rückwärts-Kompatibilität erhalten
-- Settings speichern funktioniert wieder
+
+### Sprint 6.2: Service Layer Updates (v0.6.1) ✅
+- PipelineManager orchestriert alle Pipelines
+- Jede Pipeline hat eigene Queue und Watcher
+- Worker.cs komplett vereinfacht
+- ServiceCollectionExtensions mit V1→V2 Migration
+- Program.cs mit Pipeline-API Endpoints
+- BUILD ERFOLGREICH! 🎉
 
 ### Nächste Schritte:
-- Sprint 6.2: Service Layer Updates
-- Sprint 6.3: Mapping Sets UI  
-- Sprint 6.4: Pipeline Configuration UI
-- Sprint 6.5: Testing & Polish
+- Sprint 6.3: Mapping Sets UI (v0.6.2)
+- Sprint 6.4: Pipeline Configuration UI (v0.6.3)
+- Sprint 6.5: Testing & Polish (v0.6.4)
+- Sprint 7: Medical Integration Phase 1 (v0.7.0)
 
-## 💡 [LESSON] Top 10 Lektionen
+## 💡 [LESSON] Top 15 Lektionen
 
 1. **"IMMER FileTree checken!"** - Program.cs existiert 5+ mal!
 2. **"Eine durchgehende Linie!"** - Pipeline ganzheitlich sehen
@@ -236,13 +247,18 @@ Phase 5: Testing & Polish (Sprint 6.5)
 8. **"Features schützen!"** - Sonst verschwinden sie
 9. **"Mut zum Neuanfang!"** - QRBridge 2.0 statt Flickwerk
 10. **"Artefakte komplett!"** - Nicht abschneiden!
-
-### 💡 [LESSON] Neue Lektionen aus Session 36-37:
 11. **"Commands müssen updated werden!"** - NotifyCanExecuteChanged nicht vergessen!
 12. **"WPF Bindings sind tricky!"** - Clear/Set Trick für Updates
 13. **"Große Visionen, kleine Schritte!"** - Pipeline-Architecture iterativ
 14. **"Erweitern statt ersetzen!"** - ConfigurationService evolution
 15. **"Git amend für WISDOM!"** - Dokumentation gehört zum Commit
+
+### 💡 [LESSON] Neue Lektionen aus Session 37:
+16. **"Bei ähnlichem Code: Ganzen Block ersetzen!"** - Partial Updates können fehlschlagen
+17. **"Migration über eingebaute Methoden!"** - Nicht manuell Properties mappen
+18. **"ProcessingOptions erweitern wenn nötig!"** - DeadLetterFolder hinzugefügt
+19. **"Claude fragt nach Dateien!"** - FileTree-Lektion zeigt Wirkung! 😄
+20. **"Jede Phase mit Features = neue Version!"** - Nicht monatelang bei x.x.0 bleiben!
 
 ## 🏗️ [KEEP] PIPELINE-ARCHITEKTUR
 
@@ -267,7 +283,8 @@ Settings   RAD Camera   Barcode  RAD Rules  RAD Tags  Archive
 - ✅ Windows Service
 - ✅ Deployment Package
 - ✅ Pipeline Architecture Core (v0.6.0)
-- 🚀 Service Layer Updates (NEXT)
+- ✅ Service Layer Updates (Phase 2)
+- 🚀 Mapping Sets UI (NEXT)
 
 ## 🔧 [CONFIG] Technologie-Stack
 ```
@@ -317,6 +334,9 @@ AppData Config:    %APPDATA%\CamBridge
 # Pipeline Files sammeln (für v0.6.0)
 @('src\CamBridge.Core\PipelineConfiguration.cs','src\CamBridge.Core\CamBridgeSettingsV2.cs','src\CamBridge.Config\Services\ConfigurationService.cs') | %{ echo "=== $_ ==="; cat $_ } > pipeline-current.txt
 
+# Service Layer Files sammeln
+@('src\CamBridge.Service\Worker.cs','src\CamBridge.Infrastructure\Services\FolderWatcherService.cs','src\CamBridge.Infrastructure\Services\ProcessingQueue.cs') | %{ echo "=== $_ ==="; cat $_ } > service-layer-current.txt
+
 # QRBridge 2.0 testen
 & "C:\Users\aiadmin\source\repos\CamBridge\Deploy\CamBridge-Deploy-v0.5.36\QRBridge\CamBridge.QRBridge.exe" -examid "TEST" -name "Test, Patient" -timeout 5
 
@@ -341,9 +361,9 @@ git commit --amend --no-edit
 - **Sprint 5.2:** Settings System Fix ✅ 
 
 ### 🏗️ Sprint 6: Pipeline Architecture (v0.6.0-v0.6.5) ← WIR SIND HIER
-- **Sprint 6.1:** Core Model & Migration ✅ (2025-06-06)
-- **Sprint 6.2:** Service Layer Updates ← NEXT
-- **Sprint 6.3:** Mapping Sets UI
+- **Sprint 6.1:** Core Model & Migration ✅ (2025-06-06, 14:42)
+- **Sprint 6.2:** Service Layer Updates ✅ (2025-06-06, 16:17)
+- **Sprint 6.3:** Mapping Sets UI ← NEXT
 - **Sprint 6.4:** Pipeline Configuration UI
 - **Sprint 6.5:** Testing & Polish
 
@@ -402,18 +422,19 @@ git commit --amend --no-edit
 - **Settings System Fix:** 06.06.2025, 15:00 ✅
 - **Pipeline Vision:** 06.06.2025, 15:30 🏗️
 - **Pipeline Phase 1:** 06.06.2025, 14:42 ✅
-- **Arbeitszeit gesamt:** ~48 Stunden
+- **Pipeline Phase 2:** 06.06.2025, 16:17 ✅
+- **Arbeitszeit gesamt:** ~50 Stunden
 
 ## 📝 [KEEP] Standard Prompt für nächste Session
 
 ```
-Ich arbeite an CamBridge v0.6.0.
-Sprint 6.2: Service Layer Updates für Pipeline Architecture
+Ich arbeite an CamBridge v0.6.1.
+Sprint 6.3: Mapping Sets UI für Pipeline Architecture
 
 WICHTIG: Zuerst FileTree checken!
 .\Get-WisdomFileTree.ps1
 
-PIPELINE STATUS: Phase 1 abgeschlossen, jetzt Service Layer
+PIPELINE STATUS: Phase 1 & 2 abgeschlossen, jetzt Mapping UI
 FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch in der Roadmap?
 ```
 
@@ -421,10 +442,10 @@ FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch in der Roadmap?
 
 1. **VOGON INIT** durchführen
 2. **FileTree** checken (.\Get-WisdomFileTree.ps1)
-3. **Pipeline Phase 2**: Service Layer Updates
-   - PipelineManager implementieren
-   - FolderWatcherService refactoren
-   - Worker.cs updaten
+3. **Pipeline Phase 3**: Mapping Sets UI
+   - MappingEditorViewModel erweitern
+   - Multiple Sets Support
+   - Template System
 4. **Feature Check** (4 Medical Features + Pipeline)
 5. **Version** bei neuen Features erhöhen!
 

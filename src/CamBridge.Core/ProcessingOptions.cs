@@ -1,6 +1,7 @@
-// src\CamBridge.Core\ProcessingOptions.cs
-// Version: 0.5.26
-// Extended with all required properties for Infrastructure
+// src/CamBridge.Core/ProcessingOptions.cs
+// Version: 0.6.0
+// Description: Processing options with DeadLetterFolder for pipeline architecture
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 
@@ -17,6 +18,11 @@ namespace CamBridge.Core
         public string ArchiveFolder { get; set; } = @"C:\CamBridge\Archive";
         public string ErrorFolder { get; set; } = @"C:\CamBridge\Errors";
         public string BackupFolder { get; set; } = @"C:\CamBridge\Backup";
+
+        /// <summary>
+        /// Folder for dead letter items (files that failed processing after all retries)
+        /// </summary>
+        public string DeadLetterFolder { get; set; } = @"C:\CamBridge\DeadLetter";
 
         public bool CreateBackup { get; set; } = true;
         public int MaxConcurrentProcessing { get; set; } = 2;

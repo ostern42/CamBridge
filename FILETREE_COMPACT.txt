@@ -42,7 +42,7 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 378
+# Total files: 380
 
 ## [CamBridge.Config]
 src\CamBridge.Config\App.xaml
@@ -93,6 +93,7 @@ src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs
 ## [CamBridge.Core]
 src\CamBridge.Core\CamBridge.Core.csproj
 src\CamBridge.Core\CamBridgeSettings.cs
+src\CamBridge.Core\CamBridgeSettingsV2.cs
 src\CamBridge.Core\CustomMappingConfiguration.cs
 src\CamBridge.Core\DeadLetterStatistics.cs
 src\CamBridge.Core\Entities\ImageMetadata.cs
@@ -107,6 +108,7 @@ src\CamBridge.Core\Interfaces\IFileProcessor.cs
 src\CamBridge.Core\Interfaces\IMappingConfiguration.cs
 src\CamBridge.Core\MappingRule.cs
 src\CamBridge.Core\NotificationSettings.cs
+src\CamBridge.Core\PipelineConfiguration.cs
 src\CamBridge.Core\ProcessingOptions.cs
 src\CamBridge.Core\ProcessingSummary.cs
 src\CamBridge.Core\ValueObjects\DicomTag.cs

@@ -1,4 +1,10 @@
+// src/CamBridge.Infrastructure/ServiceCollectionExtensions.cs
+// Version: 0.6.0
+// Description: Extension methods for configuring infrastructure services with pipeline support
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CamBridge.Core;
@@ -21,7 +27,7 @@ namespace CamBridge.Infrastructure
         /// </summary>
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
-            // Core Processing Services
+            // Core Processing Services (shared across all pipelines)
             services.AddSingleton<IFileProcessor, FileProcessor>();
             services.AddSingleton<IDicomConverter, DicomConverter>();
             services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
@@ -36,36 +42,26 @@ namespace CamBridge.Infrastructure
                 return new ExifToolReader(logger, timeoutMs);
             });
 
-            // Queue and Processing Services
-            services.AddSingleton<ProcessingQueue>();
-            services.AddSingleton<DeadLetterQueue>(provider =>
-            {
-                var logger = provider.GetRequiredService<ILogger<DeadLetterQueue>>();
-                var deadLetterPath = configuration["CamBridge:ProcessingOptions:DeadLetterFolder"]
-                    ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DeadLetter");
-
-                return new DeadLetterQueue(logger, deadLetterPath);
-            });
+            // Pipeline Manager - The new orchestrator!
+            services.AddSingleton<PipelineManager>();
 
             // Mapping Services
             services.AddSingleton<IDicomTagMapper, DicomTagMapper>();
 
-            // Notification Services
+            // Notification Services (shared across pipelines)
             services.AddSingleton<INotificationService, NotificationService>();
 
-            // Folder Watcher Service
-            services.AddSingleton<FolderWatcherService>();
-
-            // Note: Health checks should be added in the Service project
-            // where Microsoft.Extensions.Diagnostics.HealthChecks is referenced
+            // Note: ProcessingQueue and DeadLetterQueue are now created per-pipeline by PipelineManager
+            // Note: FolderWatcherService is replaced by per-pipeline watchers in PipelineManager
 
             // Configure Options
-            services.Configure<CamBridgeSettings>(configuration.GetSection("CamBridge"));
+            services.Configure<CamBridgeSettings>(configuration.GetSection("CamBridge")); // For backwards compatibility
+            services.Configure<CamBridgeSettingsV2>(configuration.GetSection("CamBridge")); // New V2 settings
             services.Configure<ProcessingOptions>(configuration.GetSection("CamBridge:ProcessingOptions"));
             services.Configure<NotificationSettings>(configuration.GetSection("CamBridge:NotificationSettings"));
 
-            // Logging is configured in the host builder
-            // No need to configure it here
+            // Settings migration helper
+            services.AddSingleton<IPostConfigureOptions<CamBridgeSettingsV2>, CamBridgeSettingsV2PostConfigure>();
 
             return services;
         }
@@ -106,8 +102,7 @@ namespace CamBridge.Infrastructure
                     typeof(ExifToolReader),  // Direct type, no interface!
                     typeof(IFileProcessor),
                     typeof(IDicomConverter),
-                    typeof(ProcessingQueue),
-                    typeof(FolderWatcherService)
+                    typeof(PipelineManager)  // New orchestrator
                 };
 
                 foreach (var serviceType in criticalServices)
@@ -124,6 +119,21 @@ namespace CamBridge.Infrastructure
                 var exifToolReader = provider.GetRequiredService<ExifToolReader>();
                 logger.LogInformation("ExifTool reader validated - the ONLY EXIF solution");
 
+                // Validate Pipeline Manager
+                var pipelineManager = provider.GetRequiredService<PipelineManager>();
+                logger.LogInformation("Pipeline Manager validated - ready for multi-pipeline processing");
+
+                // Validate settings
+                var settingsV2 = provider.GetRequiredService<IOptions<CamBridgeSettingsV2>>();
+                if (settingsV2.Value.Pipelines.Count == 0)
+                {
+                    logger.LogWarning("No pipelines configured - using default pipeline from V1 settings");
+                }
+                else
+                {
+                    logger.LogInformation("Found {Count} configured pipelines", settingsV2.Value.Pipelines.Count);
+                }
+
                 logger.LogInformation("Infrastructure validation completed successfully");
             }
             catch (Exception ex)
@@ -133,6 +143,46 @@ namespace CamBridge.Infrastructure
             }
 
             return provider;
+        }
+
+        /// <summary>
+        /// Post-configure options to handle V1 to V2 migration
+        /// </summary>
+        private class CamBridgeSettingsV2PostConfigure : IPostConfigureOptions<CamBridgeSettingsV2>
+        {
+            private readonly IOptions<CamBridgeSettings> _v1Settings;
+            private readonly ILogger<CamBridgeSettingsV2PostConfigure> _logger;
+
+            public CamBridgeSettingsV2PostConfigure(
+                IOptions<CamBridgeSettings> v1Settings,
+                ILogger<CamBridgeSettingsV2PostConfigure> logger)
+            {
+                _v1Settings = v1Settings;
+                _logger = logger;
+            }
+
+            public void PostConfigure(string? name, CamBridgeSettingsV2 options)
+            {
+                // If no pipelines configured, migrate from V1
+                if (options.Pipelines.Count == 0 && _v1Settings.Value != null)
+                {
+                    _logger.LogInformation("No pipelines configured, migrating from V1 settings");
+
+                    // Use the built-in migration method
+                    var migrated = CamBridgeSettingsV2.MigrateFromV1(_v1Settings.Value);
+
+                    // Copy all migrated values to options
+                    options.Version = migrated.Version;
+                    options.Pipelines = migrated.Pipelines;
+                    options.MappingSets = migrated.MappingSets;
+                    options.GlobalDicomSettings = migrated.GlobalDicomSettings;
+                    options.DefaultProcessingOptions = migrated.DefaultProcessingOptions;
+                    options.Logging = migrated.Logging;
+                    options.Service = migrated.Service;
+                    options.Notifications = migrated.Notifications;
+                    options.MigratedFrom = migrated.MigratedFrom;
+                }
+            }
         }
     }
 }

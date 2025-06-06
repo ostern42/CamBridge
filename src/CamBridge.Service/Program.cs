@@ -1,9 +1,9 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.5.29
+// Version: 0.6.0
+// Description: Windows service entry point with pipeline architecture support
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
-// Modified: 2025-06-05
-// Status: Windows Service Debugging
 
+using CamBridge.Core;
 using CamBridge.Infrastructure;
 using CamBridge.Infrastructure.Services;
 using CamBridge.Service;
@@ -16,12 +16,17 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 // Set service start time
 Program.ServiceStartTime = DateTime.UtcNow;
 
-// Windows Event Log für Debugging
+// Windows Event Log for Debugging
 EventLog? serviceEventLog = null;
 try
 {
@@ -33,7 +38,7 @@ try
 
     serviceEventLog = new EventLog("Application");
     serviceEventLog.Source = "CamBridgeService";
-    serviceEventLog.WriteEntry("CamBridge Service starting...", EventLogEntryType.Information, 1000);
+    serviceEventLog.WriteEntry("CamBridge Service v0.6.0 starting...", EventLogEntryType.Information, 1000);
 }
 catch (Exception ex)
 {
@@ -103,7 +108,7 @@ catch (Exception ex)
 
 try
 {
-    Log.Information("Starting CamBridge Service v0.5.29...");
+    Log.Information("Starting CamBridge Service v0.6.0 with Pipeline Architecture...");
     Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
     Log.Information("Command line args: {Args}", string.Join(" ", args));
 
@@ -209,10 +214,10 @@ try
 
         var configuration = context.Configuration;
 
-        // Core Infrastructure
+        // Core Infrastructure with Pipeline support
         services.AddInfrastructure(configuration);
-        services.AddSingleton<FolderWatcherService>();
-        services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<FolderWatcherService>());
+
+        // Main Worker service
         services.AddHostedService<Worker>();
 
         // Health Checks
@@ -271,11 +276,13 @@ try
 
             // Show active features
             Log.Information("=========================================");
-            Log.Information("AKTIVE FEATURES:");
-            Log.Information("✓ Basic Pipeline (ExifTool → DICOM)");
-            Log.Information("✓ Health Checks");
-            Log.Information("✓ Web API");
-            Log.Information(isService ? "✓ Windows Service" : "✓ Console Mode");
+            Log.Information("AKTIVE FEATURES v0.6.0:");
+            Log.Information("✔ Pipeline Architecture");
+            Log.Information("✔ Multi-Pipeline Support");
+            Log.Information("✔ Basic Pipeline (ExifTool → DICOM)");
+            Log.Information("✔ Health Checks");
+            Log.Information("✔ Web API");
+            Log.Information(isService ? "✔ Windows Service" : "✔ Console Mode");
             Log.Information("=========================================");
         }
         catch (Exception ex)
@@ -305,7 +312,7 @@ finally
 
 return 0;
 
-// Startup class remains the same
+// Startup class with pipeline support
 public class Startup
 {
     public IConfiguration Configuration { get; }
@@ -335,42 +342,91 @@ public class Startup
             endpoints.MapControllers();
             endpoints.MapHealthChecks("/health");
 
-            // Status endpoint
+            // Status endpoint with pipeline support
             endpoints.MapGet("/api/status", async context =>
             {
-                var processingQueue = context.RequestServices.GetService<ProcessingQueue>();
-                var deadLetterQueue = context.RequestServices.GetService<DeadLetterQueue>();
-                var settings = context.RequestServices.GetService<IOptions<CamBridge.Core.CamBridgeSettings>>();
+                var pipelineManager = context.RequestServices.GetService<PipelineManager>();
+                var settingsV2 = context.RequestServices.GetService<IOptions<CamBridgeSettingsV2>>();
 
-                var queueStats = processingQueue?.GetStatistics();
-                var deadLetterStats = deadLetterQueue?.GetStatistics();
+                var pipelineStatuses = pipelineManager?.GetPipelineStatuses() ?? new Dictionary<string, PipelineStatus>();
 
-                var totalProcessed = (queueStats?.TotalSuccessful ?? 0) + (queueStats?.TotalFailed ?? 0);
+                // Calculate totals
+                var totalQueued = pipelineStatuses.Sum(p => p.Value.QueueLength);
+                var totalActive = pipelineStatuses.Sum(p => p.Value.ActiveProcessing);
+                var totalProcessed = pipelineStatuses.Sum(p => p.Value.TotalProcessed);
+                var totalSuccessful = pipelineStatuses.Sum(p => p.Value.TotalSuccessful);
+                var totalFailed = pipelineStatuses.Sum(p => p.Value.TotalFailed);
                 var successRate = totalProcessed > 0
-                    ? (double)(queueStats?.TotalSuccessful ?? 0) / totalProcessed * 100
+                    ? (double)totalSuccessful / totalProcessed * 100
                     : 0;
 
                 var status = new
                 {
                     ServiceStatus = "Running",
-                    Version = "0.5.29",
+                    Version = "0.6.0",
                     Mode = Environment.UserInteractive ? "Console" : "Service",
                     Uptime = DateTime.UtcNow - Program.ServiceStartTime,
-                    QueueLength = queueStats?.QueueLength ?? 0,
-                    ActiveProcessing = queueStats?.ActiveProcessing ?? 0,
-                    TotalSuccessful = queueStats?.TotalSuccessful ?? 0,
-                    TotalFailed = queueStats?.TotalFailed ?? 0,
+                    PipelineCount = pipelineStatuses.Count,
+                    ActivePipelines = pipelineStatuses.Count(p => p.Value.IsActive),
+                    QueueLength = totalQueued,
+                    ActiveProcessing = totalActive,
+                    TotalSuccessful = totalSuccessful,
+                    TotalFailed = totalFailed,
                     SuccessRate = successRate,
-                    DeadLetterCount = deadLetterStats?.TotalCount ?? 0,
+                    Pipelines = pipelineStatuses.Select(p => new
+                    {
+                        Id = p.Key, // Key is already the string ID
+                        Name = p.Value.Name,
+                        IsActive = p.Value.IsActive,
+                        QueueLength = p.Value.QueueLength,
+                        ActiveProcessing = p.Value.ActiveProcessing,
+                        TotalProcessed = p.Value.TotalProcessed,
+                        TotalSuccessful = p.Value.TotalSuccessful,
+                        TotalFailed = p.Value.TotalFailed,
+                        WatchedFolders = p.Value.WatchedFolders
+                    }),
                     Configuration = new
                     {
-                        WatchFolders = settings?.Value?.WatchFolders?.Count ?? 0,
-                        OutputFolder = settings?.Value?.DefaultOutputFolder
+                        DefaultOutputFolder = settingsV2?.Value?.DefaultOutputFolder,
+                        ExifToolPath = settingsV2?.Value?.ExifToolPath,
+                        Version = settingsV2?.Value?.Version
                     }
                 };
 
                 context.Response.ContentType = "application/json";
                 await context.Response.WriteAsJsonAsync(status);
+            });
+
+            // Pipeline-specific endpoints
+            endpoints.MapGet("/api/pipelines", async context =>
+            {
+                var pipelineManager = context.RequestServices.GetService<PipelineManager>();
+                var statuses = pipelineManager?.GetPipelineStatuses() ?? new Dictionary<string, PipelineStatus>();
+
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(statuses);
+            });
+
+            endpoints.MapGet("/api/pipelines/{id}", async context =>
+            {
+                var pipelineId = context.Request.RouteValues["id"]?.ToString();
+                if (string.IsNullOrEmpty(pipelineId))
+                {
+                    context.Response.StatusCode = 400;
+                    return;
+                }
+
+                var pipelineManager = context.RequestServices.GetService<PipelineManager>();
+                var details = pipelineManager?.GetPipelineDetails(pipelineId);
+
+                if (details == null)
+                {
+                    context.Response.StatusCode = 404;
+                    return;
+                }
+
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(details);
             });
 
             // Development endpoints
@@ -381,13 +437,14 @@ public class Startup
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync(@"
                         <html>
-                        <head><title>CamBridge Service v0.5.29</title></head>
+                        <head><title>CamBridge Service v0.6.0</title></head>
                         <body>
-                            <h1>CamBridge Service - Development Mode</h1>
-                            <p>Service läuft!</p>
+                            <h1>CamBridge Service - Pipeline Architecture</h1>
+                            <p>Service läuft mit Multi-Pipeline Support!</p>
                             <ul>
                                 <li>Health: <a href='/health'>/health</a></li>
                                 <li>Status: <a href='/api/status'>/api/status</a></li>
+                                <li>Pipelines: <a href='/api/pipelines'>/api/pipelines</a></li>
                             </ul>
                         </body>
                         </html>");
