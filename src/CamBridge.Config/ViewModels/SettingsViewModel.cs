@@ -1,10 +1,16 @@
+// src\CamBridge.Config\ViewModels\SettingsViewModel.cs
+// Version: 0.5.36
+// Description: Fixed Reset button and added folder validation
+
 using CamBridge.Config.Services;
 using CamBridge.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,6 +20,7 @@ namespace CamBridge.Config.ViewModels
     {
         private readonly IConfigurationService _configurationService;
         private CamBridgeSettings _originalSettings = new();
+        private bool _isInitializing = false;
 
         // Collections for ComboBox bindings
         public ObservableCollection<string> LogLevels { get; } = new()
@@ -47,12 +54,26 @@ namespace CamBridge.Config.ViewModels
 
         // Watch Folders
         [ObservableProperty] private ObservableCollection<FolderConfigurationViewModel> _watchFolders = new();
-        [ObservableProperty] private FolderConfigurationViewModel? _selectedWatchFolder;
+
+        private FolderConfigurationViewModel? _selectedWatchFolder;
+        public FolderConfigurationViewModel? SelectedWatchFolder
+        {
+            get => _selectedWatchFolder;
+            set
+            {
+                if (SetProperty(ref _selectedWatchFolder, value))
+                {
+                    // Notify RemoveWatchFolderCommand when selection changes
+                    RemoveWatchFolderCommand.NotifyCanExecuteChanged();
+                }
+            }
+        }
 
         // Processing Options
         [ObservableProperty]
         [NotifyDataErrorInfo]
         [Required(ErrorMessage = "Default output folder is required")]
+        [CustomValidation(typeof(SettingsViewModel), nameof(ValidateFolderPath))]
         private string _defaultOutputFolder = @"C:\CamBridge\Output";
 
         [ObservableProperty] private PostProcessingAction _successAction = PostProcessingAction.Archive;
@@ -60,16 +81,19 @@ namespace CamBridge.Config.ViewModels
 
         [ObservableProperty]
         [Required(ErrorMessage = "Archive folder is required")]
+        [CustomValidation(typeof(SettingsViewModel), nameof(ValidateFolderPath))]
         private string _archiveFolder = @"C:\CamBridge\Archive";
 
         [ObservableProperty]
         [Required(ErrorMessage = "Error folder is required")]
+        [CustomValidation(typeof(SettingsViewModel), nameof(ValidateFolderPath))]
         private string _errorFolder = @"C:\CamBridge\Errors";
 
         [ObservableProperty] private bool _createBackup = true;
 
         [ObservableProperty]
         [Required(ErrorMessage = "Backup folder is required")]
+        [CustomValidation(typeof(SettingsViewModel), nameof(ValidateFolderPath))]
         private string _backupFolder = @"C:\CamBridge\Backup";
 
         [ObservableProperty]
@@ -129,6 +153,7 @@ namespace CamBridge.Config.ViewModels
 
         [ObservableProperty]
         [Required(ErrorMessage = "Log folder is required")]
+        [CustomValidation(typeof(SettingsViewModel), nameof(ValidateFolderPath))]
         private string _logFolder = @"C:\CamBridge\Logs";
 
         [ObservableProperty] private bool _enableFileLogging = true;
@@ -158,27 +183,75 @@ namespace CamBridge.Config.ViewModels
         [ObservableProperty] private string? _statusMessage;
         [ObservableProperty] private bool _isError;
 
+        // Debug helper property
+        public string DebugInfo => $"HasChanges: {HasChanges}, IsLoading: {IsLoading}, IsSaving: {IsSaving}, CanSave: {CanSave()}";
+
         public SettingsViewModel(IConfigurationService configurationService)
         {
             _configurationService = configurationService;
+        }
 
-            PropertyChanged += (s, e) =>
+        // Custom validation for folder paths
+        public static ValidationResult? ValidateFolderPath(string folderPath, ValidationContext context)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath))
+                return new ValidationResult("Folder path cannot be empty");
+
+            try
             {
-                if (e.PropertyName != nameof(HasChanges) &&
-                    e.PropertyName != nameof(StatusMessage) &&
-                    e.PropertyName != nameof(IsError) &&
-                    e.PropertyName != nameof(IsLoading) &&
-                    e.PropertyName != nameof(IsSaving))
+                // Check if path is valid
+                var fullPath = Path.GetFullPath(folderPath);
+
+                // Check for invalid characters
+                if (folderPath.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+                    return new ValidationResult("Folder path contains invalid characters");
+
+                // Don't check if folder exists - it will be created
+                // Just ensure the path is valid
+                return ValidationResult.Success;
+            }
+            catch (Exception ex)
+            {
+                return new ValidationResult($"Invalid folder path: {ex.Message}");
+            }
+        }
+
+        // Override OnPropertyChanged to handle change tracking
+        protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+        {
+            base.OnPropertyChanged(e);
+
+            // Track changes for all properties except status properties
+            if (e.PropertyName != nameof(HasChanges) &&
+                e.PropertyName != nameof(StatusMessage) &&
+                e.PropertyName != nameof(IsError) &&
+                e.PropertyName != nameof(IsLoading) &&
+                e.PropertyName != nameof(IsSaving) &&
+                e.PropertyName != nameof(SelectedWatchFolder) &&
+                e.PropertyName != nameof(DebugInfo))
+            {
+                if (!IsLoading && !_isInitializing) // Don't mark as changed during load or init
                 {
                     HasChanges = true;
                 }
-            };
+            }
         }
 
         public async Task InitializeAsync()
         {
             try
             {
+                _isInitializing = true;
+
+                // Subscribe to collection changes
+                WatchFolders.CollectionChanged += (s, e) =>
+                {
+                    if (!IsLoading && !_isInitializing)
+                    {
+                        HasChanges = true;
+                    }
+                };
+
                 await LoadSettingsAsync();
             }
             catch (Exception ex)
@@ -186,6 +259,10 @@ namespace CamBridge.Config.ViewModels
                 System.Diagnostics.Debug.WriteLine($"Error initializing SettingsViewModel: {ex.Message}");
                 StatusMessage = "Failed to load settings";
                 IsError = true;
+            }
+            finally
+            {
+                _isInitializing = false;
             }
         }
 
@@ -201,15 +278,18 @@ namespace CamBridge.Config.ViewModels
                 var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
                 if (settings != null)
                 {
-                    _originalSettings = settings;
+                    _originalSettings = CloneSettings(settings);
                     MapFromSettings(settings);
                     HasChanges = false;
                     StatusMessage = "Settings loaded successfully";
                 }
                 else
                 {
-                    StatusMessage = "Failed to load settings";
-                    IsError = true;
+                    // Load defaults if no settings exist
+                    _originalSettings = new CamBridgeSettings();
+                    MapFromSettings(_originalSettings);
+                    HasChanges = false;
+                    StatusMessage = "Loaded default settings";
                 }
             }
             catch (Exception ex)
@@ -243,7 +323,7 @@ namespace CamBridge.Config.ViewModels
                 var settings = MapToSettings();
                 await _configurationService.SaveConfigurationAsync(settings);
 
-                _originalSettings = settings;
+                _originalSettings = CloneSettings(settings);
                 HasChanges = false;
                 StatusMessage = "Settings saved successfully";
             }
@@ -258,15 +338,23 @@ namespace CamBridge.Config.ViewModels
             }
         }
 
-        private bool CanSave() => HasChanges && !IsLoading && !IsSaving;
+        private bool CanSave() => HasChanges && !IsLoading && !IsSaving && !HasErrors;
 
         [RelayCommand(CanExecute = nameof(CanReset))]
         private void ResetSettings()
         {
-            MapFromSettings(_originalSettings);
-            HasChanges = false;
-            StatusMessage = "Settings reset to last saved state";
-            IsError = false;
+            try
+            {
+                _isInitializing = true;
+                MapFromSettings(_originalSettings);
+                HasChanges = false;
+                StatusMessage = "Settings reset to last saved state";
+                IsError = false;
+            }
+            finally
+            {
+                _isInitializing = false;
+            }
         }
 
         private bool CanReset() => HasChanges && !IsLoading && !IsSaving;
@@ -279,6 +367,15 @@ namespace CamBridge.Config.ViewModels
                 Path = @"C:\CamBridge\NewFolder",
                 Enabled = true,
                 FilePattern = "*.jpg;*.jpeg"
+            };
+
+            // Subscribe to changes
+            newFolder.PropertyChanged += (s, e) =>
+            {
+                if (!IsLoading && !_isInitializing)
+                {
+                    HasChanges = true;
+                }
             };
 
             WatchFolders.Add(newFolder);
@@ -299,6 +396,14 @@ namespace CamBridge.Config.ViewModels
 
         private bool CanRemoveWatchFolder() => SelectedWatchFolder != null;
 
+        [RelayCommand]
+        private void TestChangeDetection()
+        {
+            // Simple test to verify change detection works
+            DefaultOutputFolder = DefaultOutputFolder + "_test";
+            System.Diagnostics.Debug.WriteLine($"Test change - HasChanges: {HasChanges}, CanSave: {CanSave()}");
+        }
+
         private void MapFromSettings(CamBridgeSettings settings)
         {
             // Watch Folders
@@ -315,7 +420,13 @@ namespace CamBridge.Config.ViewModels
                 };
 
                 // Subscribe to changes
-                folderVm.PropertyChanged += (s, e) => HasChanges = true;
+                folderVm.PropertyChanged += (s, e) =>
+                {
+                    if (!IsLoading && !_isInitializing)
+                    {
+                        HasChanges = true;
+                    }
+                };
                 WatchFolders.Add(folderVm);
             }
 
@@ -455,6 +566,22 @@ namespace CamBridge.Config.ViewModels
 
             return settings;
         }
+
+        // Deep clone settings to keep original state
+        private CamBridgeSettings CloneSettings(CamBridgeSettings settings)
+        {
+            // Use JSON serialization for deep clone
+            var json = System.Text.Json.JsonSerializer.Serialize(settings);
+            return System.Text.Json.JsonSerializer.Deserialize<CamBridgeSettings>(json) ?? new CamBridgeSettings();
+        }
+
+        partial void OnHasChangesChanged(bool value)
+        {
+            // When HasChanges changes, notify commands
+            SaveSettingsCommand.NotifyCanExecuteChanged();
+            ResetSettingsCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(DebugInfo));
+        }
     }
 
     public partial class FolderConfigurationViewModel : ObservableValidator
@@ -462,9 +589,13 @@ namespace CamBridge.Config.ViewModels
         [ObservableProperty]
         [NotifyDataErrorInfo]
         [Required(ErrorMessage = "Path is required")]
+        [CustomValidation(typeof(SettingsViewModel), nameof(SettingsViewModel.ValidateFolderPath))]
         private string _path = string.Empty;
 
-        [ObservableProperty] private string? _outputPath;
+        [ObservableProperty]
+        [CustomValidation(typeof(SettingsViewModel), nameof(SettingsViewModel.ValidateFolderPath))]
+        private string? _outputPath;
+
         [ObservableProperty] private bool _enabled = true;
         [ObservableProperty] private bool _includeSubdirectories;
 

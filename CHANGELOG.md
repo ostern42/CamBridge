@@ -10,6 +10,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+# Changelog
+
+## [0.5.36] - 2025-06-06
+
+### Added
+- Pipeline Architecture Vision and Implementation Plan 🏗️
+- Comprehensive folder path validation in Settings
+- Debug info display for Settings troubleshooting
+- Test button for change detection in Settings
+
+### Fixed
+- Settings Save/Reset button functionality completely fixed
+- Watch Folder delete button now works correctly
+- Folder browse dialog now properly updates the UI
+- Command CanExecute notifications properly implemented
+- WPF binding issues with folder paths resolved
+
+### Changed
+- Settings ViewModel refactored for better change tracking
+- Improved error handling in ConfigurationService
+- Updated WISDOM files with Pipeline Architecture plans
+
+### Technical
+- Fixed PropertyChanged event handling in SettingsViewModel
+- Implemented proper IsLoading flag handling
+- Added Ookii.Dialogs integration for modern folder browsing
+- Resolved RelayCommand update notification issues
+
+### Next Steps
+- Sprint 5.3: Dead Letters UI Implementation
+- Sprint 6.0: Pipeline Architecture Core Model
+
+---
+*"From single workflow to multi-pipeline - the evolution continues!"*
+
 ## [0.5.35] - 2025-06-06
 
 ### Added

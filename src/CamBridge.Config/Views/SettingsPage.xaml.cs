@@ -1,9 +1,11 @@
 // src\CamBridge.Config\Views\SettingsPage.xaml.cs
-// Version: 0.5.26 - Mit vollem DI Support
+// Version: 0.5.36
+// Description: Fixed with Ookii.Dialogs for modern folder browsing
 
 using CamBridge.Config.Services;
 using CamBridge.Config.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Ookii.Dialogs.Wpf;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -67,10 +69,21 @@ namespace CamBridge.Config.Views
 
         private void BrowseWatchFolder_Click(object sender, RoutedEventArgs e)
         {
-            var folderPath = ShowFolderDialog("Select Watch Folder", _viewModel?.SelectedWatchFolder?.Path);
-            if (!string.IsNullOrEmpty(folderPath) && _viewModel?.SelectedWatchFolder != null)
+            if (_viewModel?.SelectedWatchFolder == null)
             {
-                _viewModel.SelectedWatchFolder.Path = folderPath;
+                MessageBox.Show("Please select a watch folder first.", "Information",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var folderPath = ShowFolderDialog("Select Watch Folder", _viewModel.SelectedWatchFolder.Path);
+            if (!string.IsNullOrEmpty(folderPath))
+            {
+                // WICHTIG: Force PropertyChanged durch Clear/Set
+                _viewModel.SelectedWatchFolder.Path = "";  // Clear first
+                _viewModel.SelectedWatchFolder.Path = folderPath;  // Then set new value
+
+                System.Diagnostics.Debug.WriteLine($"Watch folder path updated to: {folderPath}");
             }
         }
 
@@ -80,6 +93,7 @@ namespace CamBridge.Config.Views
             if (!string.IsNullOrEmpty(folderPath) && _viewModel != null)
             {
                 _viewModel.DefaultOutputFolder = folderPath;
+                System.Diagnostics.Debug.WriteLine($"Output folder path updated to: {folderPath}");
             }
         }
 
@@ -89,41 +103,31 @@ namespace CamBridge.Config.Views
             if (!string.IsNullOrEmpty(folderPath) && _viewModel != null)
             {
                 _viewModel.LogFolder = folderPath;
+                System.Diagnostics.Debug.WriteLine($"Log folder path updated to: {folderPath}");
             }
         }
 
         private string? ShowFolderDialog(string title, string? initialPath)
         {
-            // Try Windows Forms FolderBrowserDialog via reflection
-            try
+            // Use Ookii.Dialogs.Wpf for modern folder browsing
+            var dialog = new VistaFolderBrowserDialog
             {
-                var assemblyName = "System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089";
-                var assembly = System.Reflection.Assembly.Load(assemblyName);
-                var dialogType = assembly.GetType("System.Windows.Forms.FolderBrowserDialog");
+                Description = title,
+                UseDescriptionForTitle = true,
+                ShowNewFolderButton = true
+            };
 
-                if (dialogType != null)
-                {
-                    dynamic dialog = Activator.CreateInstance(dialogType)!;
-                    dialog.Description = title;
-                    dialog.ShowNewFolderButton = true;
-
-                    if (!string.IsNullOrEmpty(initialPath) && System.IO.Directory.Exists(initialPath))
-                    {
-                        dialog.SelectedPath = initialPath;
-                    }
-
-                    var dialogResultType = assembly.GetType("System.Windows.Forms.DialogResult");
-                    var okValue = Enum.Parse(dialogResultType!, "OK");
-
-                    if (dialog.ShowDialog() == okValue)
-                    {
-                        return dialog.SelectedPath;
-                    }
-                }
+            if (!string.IsNullOrEmpty(initialPath) && System.IO.Directory.Exists(initialPath))
+            {
+                dialog.SelectedPath = initialPath;
             }
-            catch (Exception ex)
+
+            // Get the window that owns this page
+            var owner = Window.GetWindow(this);
+
+            if (dialog.ShowDialog(owner) == true)
             {
-                System.Diagnostics.Debug.WriteLine($"FolderDialog error: {ex.Message}");
+                return dialog.SelectedPath;
             }
 
             return null;

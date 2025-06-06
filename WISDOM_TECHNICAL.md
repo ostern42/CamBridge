@@ -1,5 +1,5 @@
 # WISDOM Technical - Entwicklung & Technische Details
-**Letzte Aktualisierung:** 2025-06-06, 01:15 Uhr  
+**Letzte Aktualisierung:** 2025-06-06, 13:00 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Technische Kontinuität & Entwicklungsplan
 
@@ -19,6 +19,7 @@
 - 🐛 **[BUG]** - Bekannte Probleme die gelöst werden müssen
 - 🚀 **[NEXT]** - Nächster großer Schritt
 - 🛡️ **[PROTECTED]** - NIEMALS LÖSCHEN! Geschützte Features!
+- 🏗️ **[VISION]** - Langfristige Architektur-Ziele
 
 ## 🔒 [CORE] V.O.G.O.N. SYSTEM 
 **Verbose Operational Guidance & Organizational Navigation**
@@ -31,6 +32,7 @@
 4. **CURRENT STATE** - Wo stehen wir?
 5. **SUMMARY & CONFIRMATION** - Zusammenfassung erstellen
 6. **FEATURE CHECK** - Sind FTP, C-STORE, MWL, C-FIND noch da?
+7. **VISION CHECK** - Pipeline-Architektur Status? 🏗️
 
 ### 🔒 [CORE] "VOGON EXIT" - Chat-Abschluss
 **KRITISCHE REGEL:** Beim VOGON EXIT MÜSSEN IMMER erstellt werden:
@@ -40,6 +42,7 @@
 4. **Version.props** - Als VOLLSTÄNDIGES Artefakt
 5. **Git Commit Vorschlag** - Conventional Commits Format mit Tag
 6. **FEATURE CHECK** - Verifizieren dass FTP, C-STORE, MWL, C-FIND noch da sind!
+7. **PIPELINE CHECK** - Status der Pipeline-Migration dokumentieren! 🏗️
 
 ### 🔒 [CORE] ENTWICKLUNGS-REGELN
 1. **Source Code Header Standard** - Immer mit Pfad und Version
@@ -49,22 +52,29 @@
 5. **VERSIONS-REGEL:** Version zeigt aktuellen Stand!
    - Patch (+0.0.1): Bug Fixes, kleine Änderungen
    - Minor (+0.1.0): Neue Features
-   - Major (+1.0.0): Breaking Changes
+   - Major (+1.0.0): Breaking Changes (z.B. Pipeline-Architecture!)
    - **WORKFLOW:** Entwickle mit Version X → Committe als Version X → Erhöhe wenn NEUE Features kommen
 6. **FEATURE PROTECTION:** Die 4 medizinischen Features NIEMALS vergessen!
 7. **ARTEFAKT-REGEL:** Artefakte müssen KOMPLETT sein, nicht abgeschnitten!
 8. **PIPELINE-REGEL:** Die Pipeline ist EINE durchgehende Linie, nicht getrennte Teile!
 9. **FILETREE-REGEL:** IMMER erst FileTree checken vor Datei-Erstellung!
+10. **MIGRATION-REGEL:** Bei großen Änderungen IMMER Rückwärtskompatibilität! 🔄
 
 ## 🛡️ [CORE] TASK PROTECTION SYSTEM
 
 ### 🛡️ CURRENTLY PROTECTED TASKS:
 ```
-CAMB-001: Settings Save/Delete Tests [PROTECTED]
-          Status: Tests für Settings Page Buttons
-          Protected since: 2025-06-05
-          Details: Save Button ist grau, Settings-System verstehen
-          
+PIPELINE-001: Pipeline Architecture [IN PLANNING] 🏗️
+             Status: Implementationsplan erstellt
+             Created: 2025-06-06, 15:30
+             Details: Multi-Pipeline Support mit Mapping Sets
+             Priority: EPIC
+
+CAMB-001: Settings Save/Delete Tests [RESOLVED] ✅
+          Status: Settings System komplett gefixt
+          Resolved: 2025-06-06, 15:00
+          Details: Save/Reset funktioniert, Folder Dialog gefixt
+
 CAMB-004: Version.props Fix [PROTECTED] 🐛
           Status: Assembly Version Konflikt lösen
           Protected since: 2025-06-05, 12:15
@@ -118,6 +128,52 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 7. **Features schützen!**
 8. **Pipeline als Ganzes sehen!**
 9. **FileTree IMMER checken!**
+10. **Migration vor Revolution!** 🔄
+
+## 🏗️ [VISION] PIPELINE ARCHITECTURE v0.6.0
+
+### Konzept:
+Jeder Watch Folder wird zu einer kompletten Pipeline mit eigenen Settings:
+- Input (Watch Folder)
+- Processing (Options)
+- Output (Organization)
+- DICOM (Overrides)
+- Mapping (Set Selection)
+
+### Implementation Plan:
+```
+Phase 1: Core Model & Migration (Sprint 6.1)
+├── PipelineConfiguration.cs
+├── CamBridgeSettingsV2.cs
+└── Migration v1→v2
+
+Phase 2: Service Updates (Sprint 6.2)
+├── PipelineManager.cs
+├── Multi-Pipeline Processing
+└── Runtime Enable/Disable
+
+Phase 3: Mapping Sets UI (Sprint 6.3)
+├── Multiple Mapping Sets
+├── Save/Load/Duplicate
+└── Template Management
+
+Phase 4: Pipeline UI (Sprint 6.4)
+├── PipelineEditorPage
+├── Pipeline List View
+└── Per-Pipeline Settings
+
+Phase 5: Testing & Polish (Sprint 6.5)
+├── Integration Tests
+├── Performance Tests
+└── Documentation
+```
+
+### Benefits:
+- Multi-Department Support
+- Flexible Workflows
+- Reusable Mappings
+- Better Scalability
+- Cleaner Configuration
 
 ## 🛡️ [PROTECTED] PROTECTED FEATURES - NIEMALS LÖSCHEN!
 
@@ -145,7 +201,7 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 - **Geschützt seit:** 2025-06-05, 19:45
 - **NIEMALS LÖSCHEN OHNE:** "RELEASE PROTECTION: C-FIND"
 
-## 🎯 [MILESTONE] Aktueller Stand: v0.5.35
+## 🎯 [MILESTONE] Aktueller Stand: v0.5.36
 
 ### Sprint 5.1: Marvin Easter Egg ✅
 - Marvin Easter Egg implementiert
@@ -154,10 +210,16 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 - Animation State Tracking
 - QR-Code Easter Egg Idee geboren
 
+### Sprint 5.2: Settings System Fix ✅
+- Settings Save/Reset funktioniert
+- Folder Dialog mit Ookii.Dialogs
+- Validation für Folder Paths
+- Delete Button für Watch Folders gefixt
+
 ### Nächste Schritte:
-- Sprint 5.2: Dead Letters UI
-- Sprint 5.3: Settings System Fix
+- Sprint 5.3: Dead Letters UI
 - Sprint 5.4: Version.props Cleanup
+- Sprint 6.0: Pipeline Architecture! 🏗️
 
 ## 💡 [LESSON] Top 10 Lektionen
 
@@ -172,14 +234,24 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 9. **"Mut zum Neuanfang!"** - QRBridge 2.0 statt Flickwerk
 10. **"Artefakte komplett!"** - Nicht abschneiden!
 
+### 💡 [LESSON] Neue Lektionen aus Session 36:
+11. **"Commands müssen updated werden!"** - NotifyCanExecuteChanged nicht vergessen!
+12. **"WPF Bindings sind tricky!"** - Clear/Set Trick für Updates
+13. **"Große Visionen, kleine Schritte!"** - Pipeline-Architecture iterativ
+
 ## 🏗️ [KEEP] PIPELINE-ARCHITEKTUR
 
-### Datenfluss (EINE DURCHGEHENDE LINIE!):
+### Datenfluss (MEHRERE PARALLELE LINIEN!):
 ```
+Pipeline 1: Emergency Department
 QRBridge → Ricoh G900 II → JPEG → CamBridge → DICOM → PACS
     ↓           ↓            ↓         ↓          ↓       ↓
-QR Code    Scan & Store   Barcode   Process   Convert  Final
-UTF-8      APP5 Segment   Extract   Metadata   Format  Storage
+Settings    ER Camera    Barcode   ER Rules   ER Tags  Archive
+
+Pipeline 2: Radiology Department  
+QRBridge → Ricoh G900 II → JPEG → CamBridge → DICOM → PACS
+    ↓           ↓            ↓         ↓          ↓       ↓
+Settings   RAD Camera   Barcode  RAD Rules  RAD Tags  Archive
 ```
 
 ### Pipeline Status:
@@ -189,10 +261,12 @@ UTF-8      APP5 Segment   Extract   Metadata   Format  Storage
 - ✅ DICOM Converter (fo-dicom)
 - ✅ Windows Service
 - ✅ Deployment Package
+- 🏗️ Pipeline Architecture (Planning)
 
 ## 🔧 [CONFIG] Technologie-Stack
 ```
 GUI: WPF + ModernWpfUI 0.9.6 + CommunityToolkit.Mvvm 8.3.2
+     + Ookii.Dialogs.Wpf 5.0.1 (für moderne Dialoge)
 Service: ASP.NET Core 8.0 Minimal API + Windows Service
 Core: fo-dicom 5.2.2, ExifTool 13.30
 Tests: xUnit + FluentAssertions + Moq
@@ -230,11 +304,14 @@ TestImages:        C:\CamBridge\TestImages
 .\Get-WisdomFileTree.ps1 -Mode Compact   # By project
 .\Get-WisdomFileTree.ps1 -Mode Detailed  # With metadata
 
-# About Page sammeln
-@('src\CamBridge.Config\Views\AboutPage.xaml','src\CamBridge.Config\Views\AboutPage.xaml.cs') | %{ echo "=== $_ ==="; cat $_ } > about-current.txt
+# Settings Files sammeln
+@('src\CamBridge.Config\Views\SettingsPage.xaml','src\CamBridge.Config\Views\SettingsPage.xaml.cs','src\CamBridge.Config\ViewModels\SettingsViewModel.cs') | %{ echo "=== $_ ==="; cat $_ } > settings-current.txt
+
+# Pipeline Files sammeln (für v0.6.0)
+@('src\CamBridge.Core\PipelineConfiguration.cs','src\CamBridge.Infrastructure\Services\PipelineManager.cs') | %{ echo "=== $_ ==="; cat $_ } > pipeline-current.txt
 
 # QRBridge 2.0 testen
-& "C:\Users\aiadmin\source\repos\CamBridge\Deploy\CamBridge-Deploy-v0.5.33\QRBridge\CamBridge.QRBridge.exe" -examid "TEST" -name "Test, Patient" -timeout 5
+& "C:\Users\aiadmin\source\repos\CamBridge\Deploy\CamBridge-Deploy-v0.5.36\QRBridge\CamBridge.QRBridge.exe" -examid "TEST" -name "Test, Patient" -timeout 5
 ```
 
 ## 🚀 [KEEP] ENTWICKLUNGSFAHRPLAN
@@ -250,24 +327,24 @@ TestImages:        C:\CamBridge\TestImages
 
 ### 📝 Sprint 5: UI Polish & Easter Eggs (v0.5.35-v0.5.39) ← WIR SIND HIER
 - **Sprint 5.1:** Marvin Easter Egg ✅
-- **Sprint 5.2:** Dead Letters UI Implementation ← NEXT
-- **Sprint 5.3:** Settings System Fix (CAMB-001)
-- **Sprint 5.4:** Version.props Cleanup (CAMB-004)
-- **Sprint 5.5:** Marvin QR Commentary (CAMB-012)
+- **Sprint 5.2:** Settings System Fix ✅ 
+- **Sprint 5.3:** Dead Letters UI Implementation ← NEXT
+- **Sprint 5.4:** Version.props Cleanup
+- **Sprint 5.5:** Marvin QR Commentary
 
-### 🏥 Sprint 6: Medical Integration Phase 1 (v0.6.0-v0.6.5)
+### 🏗️ Sprint 6: Pipeline Architecture (v0.6.0-v0.6.5) ← MAJOR UPDATE!
+- **Sprint 6.1:** Core Model & Migration
+- **Sprint 6.2:** Service Layer Updates
+- **Sprint 6.3:** Mapping Sets UI
+- **Sprint 6.4:** Pipeline Configuration UI
+- **Sprint 6.5:** Testing & Polish
+
+### 🏥 Sprint 7: Medical Integration Phase 1 (v0.7.0-v0.7.5)
 - DICOM Validation Enhancement
 - Multi-Image Series Support
 - Advanced Mapping Features
 - Performance Optimization
 - Error Recovery & Resilience
-
-### 🔒 Sprint 7: Production Hardening (v0.7.0-v0.7.5)
-- Monitoring & Alerting
-- Backup & Recovery
-- Security Hardening
-- Documentation Complete
-- Installer & Deployment Tools
 
 ### 🛡️ Sprint 8: FTP Server [PROTECTED] (v0.8.0-v0.8.3)
 - Basic FTP Server Implementation
@@ -314,28 +391,32 @@ TestImages:        C:\CamBridge\TestImages
 - **QRBridge 2.0:** 05.06.2025, 22:30 🎯
 - **FileTree System:** 06.06.2025, 00:30 🔍
 - **Marvin Easter Egg:** 06.06.2025, 01:15 🤖
-- **Arbeitszeit gesamt:** ~39 Stunden
+- **Settings System Fix:** 06.06.2025, 15:00 ✅
+- **Pipeline Vision:** 06.06.2025, 15:30 🏗️
+- **Arbeitszeit gesamt:** ~45 Stunden
 
 ## 📝 [KEEP] Standard Prompt für nächste Session
 
 ```
 Ich arbeite an CamBridge v0.5.36.
-Sprint 5.2: Dead Letters UI Implementation
+Sprint 5.3: Dead Letters UI Implementation
+(oder Sprint 6.1: Pipeline Architecture Core Model)
 
 WICHTIG: Zuerst FileTree checken!
 .\Get-WisdomFileTree.ps1
 
 FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch in der Roadmap?
+PIPELINE CHECK: Wie ist der Status der Pipeline-Architecture?
 ```
 
 ## 🎯 Nächste Session Checkliste
 
 1. **VOGON INIT** durchführen
 2. **FileTree** checken (.\Get-WisdomFileTree.ps1)
-3. **Dead Letters UI** implementieren
-4. **Settings System** verstehen (CAMB-001)
-5. **Feature Check** (4 Medical Features)
-6. **Version** nicht vergessen zu erhöhen!
+3. **Entscheidung**: Dead Letters UI oder Pipeline Architecture?
+4. **Feature Check** (4 Medical Features + Pipeline)
+5. **Version** nicht vergessen zu erhöhen!
+6. **Git History** checken für bestehenden Code
 
 ---
 
