@@ -1,31 +1,37 @@
 # Get-WisdomFileTree.ps1
 # Complete file tree for WISDOM Claude - EVERY file matters!
-# © 2025 Claude's Improbably Reliable Software Solutions
+# (c) 2025 Claude's Improbably Reliable Software Solutions
 #
 # ============================================================================
-# AN DEN NÄCHSTEN WISDOM CLAUDE:
+# AN DEN NAECHSTEN WISDOM CLAUDE:
 # ============================================================================
 # PROBLEM: Wir erstellen oft Dateien die schon existieren (z.B. Program.cs)!
-# LÖSUNG: Dieses Skript zeigt ALLE Dateien im Projekt!
+# LOESUNG: Dieses Skript zeigt ALLE Dateien im Projekt!
 #
 # VERWENDUNG:
-# - VOR dem Erstellen einer neuen Datei: Führe dieses Skript aus!
-# - Prüfe ob die Datei schon existiert (besonders Program.cs, App.xaml, etc.)
+# - VOR dem Erstellen einer neuen Datei: Fuehre dieses Skript aus!
+# - Pruefe ob die Datei schon existiert (besonders Program.cs, App.xaml, etc.)
 # - Nutze IMMER den vollen Pfad (src\CamBridge.Service\Program.cs)
 #
 # DIE 3 MODI:
 # - Minimal: Nur Pfade (schnelle Referenz)
 # - Compact: Nach Projekt gruppiert (Standard)
-# - Detailed: Mit Größen + Duplikat-Check!
+# - Detailed: Mit Groessen + Duplikat-Check!
 #
-# TIPP: ".\check-dupes.ps1" zeigt alle doppelten Dateinamen!
+# NEUE FEATURES:
+# - ShowDuplicates: Zeigt nur doppelte Dateinamen
+# - ShowProgramCs: Zeigt alle Program.cs Dateien
+#
+# TIPP: ".\Get-WisdomFileTree.ps1 -ShowProgramCs" zeigt alle Program.cs!
 # ============================================================================
 
 param(
     [ValidateSet("Minimal", "Compact", "Detailed")]
     [string]$Mode = "Compact",
     [string]$OutputFile = $null,
-    [switch]$IncludeTestData = $false
+    [switch]$IncludeTestData = $false,
+    [switch]$ShowDuplicates = $false,
+    [switch]$ShowProgramCs = $false
 )
 
 # Set output file based on mode if not specified
@@ -100,7 +106,44 @@ $allFiles = Get-ChildItem -Path . -Recurse -Include $includePatterns -File -Erro
     } |
     Sort-Object Project, FullPath
 
-# Build output
+# Quick checks for specific requests
+if ($ShowProgramCs) {
+    Write-Host "`nAlle Program.cs Dateien im Projekt:" -ForegroundColor Yellow
+    Write-Host "====================================" -ForegroundColor Yellow
+    $programFiles = $allFiles | Where-Object { $_.FileName -eq "Program.cs" }
+    if ($programFiles) {
+        $programFiles | ForEach-Object {
+            Write-Host "  - $($_.FullPath)" -ForegroundColor Cyan
+            Write-Host "    Project: $($_.Project)" -ForegroundColor Gray
+            Write-Host "    Size: $([math]::Round($_.Size / 1KB, 1)) KB" -ForegroundColor Gray
+            Write-Host ""
+        }
+        Write-Host "Total: $($programFiles.Count) Program.cs files found" -ForegroundColor Green
+    } else {
+        Write-Host "  No Program.cs files found!" -ForegroundColor Red
+    }
+    if (-not $ShowDuplicates) { return }
+}
+
+if ($ShowDuplicates) {
+    Write-Host "`nDuplicate Filename Report:" -ForegroundColor Yellow
+    Write-Host "==========================" -ForegroundColor Yellow
+    $dupes = $allFiles | Group-Object FileName | Where-Object { $_.Count -gt 1 } | Sort-Object Count -Descending
+    if ($dupes) {
+        $dupes | ForEach-Object {
+            Write-Host "`n$($_.Name) - Found $($_.Count) times:" -ForegroundColor Red
+            $_.Group | ForEach-Object {
+                Write-Host "  - $($_.FullPath)" -ForegroundColor Gray
+            }
+        }
+        Write-Host "`nTotal: $($dupes.Count) duplicate filenames" -ForegroundColor Yellow
+    } else {
+        Write-Host "  Good news: No duplicate filenames found!" -ForegroundColor Green
+    }
+    return
+}
+
+# Build output for file
 $output = @()
 
 switch ($Mode) {
@@ -120,22 +163,23 @@ switch ($Mode) {
         $output += "# "
         $output += "# WICHTIG: Unsere Dateien haben IMMER diesen Header:"
         $output += "# // src\CamBridge.Config\Views\AboutPage.xaml.cs"
-        $output += "# // Version: 0.5.33"
+        $output += "# // Version: $version"
         $output += "# // Fixed: Simplified easter egg - shows Vogon poetry on 5 clicks"
         $output += "# "
-        $output += "# Der Pfad im Header muss EXAKT mit dem Pfad hier übereinstimmen!"
+        $output += "# Der Pfad im Header muss EXAKT mit dem Pfad hier uebereinstimmen!"
         $output += "# "
-        $output += "# Häufige Fallen:"
+        $output += "# Haeufige Fallen:"
         $output += "# - Program.cs (in Service, QRBridge, Tests...)"
         $output += "# - App.xaml.cs (Config Projekt)"
         $output += "# - Constants.cs (Core und QRBridge)"
         $output += "# "
-        $output += "# POWERSHELL ONE-LINER FÜR DATEIEN:"
+        $output += "# POWERSHELL ONE-LINER FUER DATEIEN:"
         $output += "# Wenn du mehrere Files brauchst, gib dem User IMMER einen One-Liner!"
         $output += "# Beispiel:"
         $output += "# @('src\CamBridge.Core\Entities\PatientInfo.cs','src\CamBridge.Core\Entities\StudyInfo.cs') | ForEach-Object { echo `"===== FILE: `$_ =====`"; Get-Content `$_ -Encoding UTF8; echo `"`" } | Out-File -FilePath analysis.txt -Encoding UTF8"
         $output += "# "
         $output += "# Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+        $output += "# System: nexus\oliver.stern@OSTE-ER-LAP01"
         $output += "# ===================================`n"
         
         # Just paths
@@ -146,7 +190,7 @@ switch ($Mode) {
     
     "Compact" {
         # Header for next WISDOM Claude
-        $output += "# AN MEIN ZUKÜNFTIGES ICH: WISDOM CLAUDE"
+        $output += "# AN MEIN ZUKUENFTIGES ICH: WISDOM CLAUDE"
         $output += "# ======================================="
         $output += "# "
         $output += "# Dies ist deine Projekt-Struktur-Referenz!"
@@ -163,10 +207,10 @@ switch ($Mode) {
         $output += "# UNSER HEADER-STANDARD (seit v0.5.27):"
         $output += "# Jede Datei beginnt mit:"
         $output += "# // src\CamBridge.Service\Program.cs"
-        $output += "# // Version: 0.5.33"
+        $output += "# // Version: $version"
         $output += "# // Description: Windows service entry point"
         $output += "# "
-        $output += "# Der Pfad MUSS mit dieser Liste übereinstimmen!"
+        $output += "# Der Pfad MUSS mit dieser Liste uebereinstimmen!"
         $output += "# "
         $output += "# MERKE DIR:"
         $output += "# - [CamBridge.Service] und [CamBridge.QRBridge] haben BEIDE Program.cs!"
@@ -178,12 +222,18 @@ switch ($Mode) {
         $output += "# User mag One-Liner! Wenn du Files brauchst:"
         $output += "# @('file1.cs','file2.cs','file3.cs') | %{ echo `"=== `$_ ===`"; cat `$_ } > output.txt"
         $output += "# "
+        $output += "# NEUE QUICK-CHECKS:"
+        $output += "# .\Get-WisdomFileTree.ps1 -ShowProgramCs   # Zeigt alle Program.cs"
+        $output += "# .\Get-WisdomFileTree.ps1 -ShowDuplicates  # Zeigt doppelte Namen"
+        $output += "# "
         $output += "# Projekte in dieser Liste:"
         $allFiles | Select-Object -ExpandProperty Project -Unique | ForEach-Object {
             $output += "#   - $_"
         }
         $output += "#"
         $output += "# Total files: $($allFiles.Count)"
+        $output += "# Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+        $output += "# System: nexus\oliver.stern@OSTE-ER-LAP01"
         $output += ""
         
         # Group by project
@@ -201,21 +251,21 @@ switch ($Mode) {
         $output += "# WISDOM CLAUDE - DEIN MASTER FILE INVENTORY!"
         $output += "# ==========================================="
         $output += "# "
-        $output += "# Hallo zukünftiger Ich! Das hier ist WICHTIG!"
+        $output += "# Hallo zukuenftiger Ich! Das hier ist WICHTIG!"
         $output += "# "
         $output += "# DAS PROBLEM:"
         $output += "# Du erstellst manchmal Dateien die schon existieren."
         $output += "# Letzte Session: Program.cs in QRBridge erstellt - gab's schon!"
         $output += "# "
-        $output += "# DIE LÖSUNG:"
-        $output += "# Diese Liste zeigt ALLE Dateien mit Größe und Datum."
+        $output += "# DIE LOESUNG:"
+        $output += "# Diese Liste zeigt ALLE Dateien mit Groesse und Datum."
         $output += "# Ganz unten: DUPLICATE CHECK - zeigt alle mehrfachen Dateinamen!"
         $output += "# "
         $output += "# HEADER-KONVENTION (WICHTIG!):"
         $output += "# Alle unsere Dateien starten mit diesem Header:"
         $output += "# "
         $output += "# // src\CamBridge.Infrastructure\Services\ExifToolReader.cs"
-        $output += "# // Version: 0.5.32"
+        $output += "# // Version: $version"
         $output += "# // Fixed: Windows-1252 encoding for Ricoh camera"
         $output += "# "
         $output += "# -> Der Pfad im Header = Der Pfad in dieser Liste!"
@@ -223,10 +273,10 @@ switch ($Mode) {
         $output += "# -> Kommentar = Was wurde gemacht"
         $output += "# "
         $output += "# WORKFLOW:"
-        $output += "# 1. Neue Datei geplant? → Suche erst hier (Ctrl+F)"
-        $output += "# 2. Existiert schon? → UPDATE statt neu erstellen"
-        $output += "# 3. Wirklich neu? → Nutze exakt den Pfad-Style von hier"
-        $output += "# 4. Files sammeln? → PowerShell One-Liner für User!"
+        $output += "# 1. Neue Datei geplant? -> Suche erst hier (Ctrl+F)"
+        $output += "# 2. Existiert schon? -> UPDATE statt neu erstellen"
+        $output += "# 3. Wirklich neu? -> Nutze exakt den Pfad-Style von hier"
+        $output += "# 4. Files sammeln? -> PowerShell One-Liner fuer User!"
         $output += "# "
         $output += "# POWERSHELL ONE-LINER PATTERN:"
         $output += "# Der User liebt diese One-Liner zum File-Sammeln:"
@@ -239,7 +289,8 @@ switch ($Mode) {
         $output += "# TIPP: Spring direkt zum 'DUPLICATE FILENAME CHECK' am Ende!"
         $output += "# Da siehst du sofort welche Namen mehrfach vorkommen."
         $output += "# "
-        $output += "# Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm') für v$version"
+        $output += "# Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm') fuer v$version"
+        $output += "# System: nexus\oliver.stern@OSTE-ER-LAP01"
         $output += "# "
         
         # Some statistics
@@ -304,7 +355,7 @@ Write-Host "Total files indexed: $($allFiles.Count)" -ForegroundColor Cyan
 $dupes = $allFiles | Group-Object FileName | Where-Object { $_.Count -gt 1 }
 if ($dupes) {
     Write-Host "`nWARNING: $($dupes.Count) duplicate filenames found!" -ForegroundColor Red
-    Write-Host "Check detailed mode for full list." -ForegroundColor Yellow
+    Write-Host "Use -ShowDuplicates flag for full list." -ForegroundColor Yellow
 }
 
 # Quick usage hint
@@ -312,3 +363,5 @@ Write-Host "`nUsage:" -ForegroundColor DarkGray
 Write-Host "  .\Get-WisdomFileTree.ps1 -Mode Minimal   # Just paths" -ForegroundColor DarkGray
 Write-Host "  .\Get-WisdomFileTree.ps1 -Mode Compact   # Organized by project" -ForegroundColor DarkGray
 Write-Host "  .\Get-WisdomFileTree.ps1 -Mode Detailed  # Full metadata + dupe check" -ForegroundColor DarkGray
+Write-Host "  .\Get-WisdomFileTree.ps1 -ShowProgramCs  # Show all Program.cs files" -ForegroundColor DarkGray
+Write-Host "  .\Get-WisdomFileTree.ps1 -ShowDuplicates # Show duplicate filenames" -ForegroundColor DarkGray

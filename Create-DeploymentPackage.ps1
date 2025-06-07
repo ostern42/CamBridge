@@ -1,10 +1,10 @@
 # Create-DeploymentPackage.ps1
 # Complete build and deployment package creator for CamBridge
-# Version: 0.5.33
+# Version: 0.6.4
 # Now includes QRBridge 2.0 in both Full and Ultra Slim editions!
 
 param(
-    [string]$Version = "0.5.33",
+    [string]$Version = "0.6.4",
     [string]$OutputPath = ".\Deploy",
     [switch]$SkipClean = $false,
     [switch]$SkipTests = $false,
@@ -426,14 +426,36 @@ if (Test-Path ".\TempQRBridgePublish") {
     Copy-Item ".\TempQRBridgePublish\*" -Destination $qrBridgeDir -Recurse -Force
     Remove-Item ".\TempQRBridgePublish" -Recurse -Force
 } else {
-    # Fallback to build output
+    # Fallback to build output - ENHANCED with additional paths
     $qrBridgePath = ".\src\CamBridge.QRBridge\bin\Release\net8.0-windows"
     if (Test-Path "$qrBridgePath\win-x64") {
         Copy-Item "$qrBridgePath\win-x64\*" -Destination $qrBridgeDir -Recurse -Force
     } elseif (Test-Path $qrBridgePath) {
         Copy-Item "$qrBridgePath\*" -Destination $qrBridgeDir -Recurse -Force
     } else {
-        Write-Warning "QRBridge not found!"
+        # Try publish path as last resort
+        $altPath = ".\src\CamBridge.QRBridge\bin\Release\net8.0-windows\publish"
+        if (Test-Path $altPath) {
+            Copy-Item "$altPath\*" -Destination $qrBridgeDir -Recurse -Force
+        } else {
+            Write-Warning "QRBridge not found in any expected location!"
+        }
+    }
+}
+
+# Additional check for empty QRBridge directory
+if (-not (Test-Path $qrBridgeDir) -or (Get-ChildItem $qrBridgeDir).Count -eq 0) {
+    Write-Warning "QRBridge directory is empty, trying alternate locations..."
+    @(
+        ".\src\CamBridge.QRBridge\bin\Release\net8.0-windows\publish",
+        ".\src\CamBridge.QRBridge\bin\Release\net8.0-windows",
+        ".\src\CamBridge.QRBridge\bin\x64\Release\net8.0-windows"
+    ) | ForEach-Object {
+        if (Test-Path $_) {
+            Write-Host "    Found QRBridge in: $_" -ForegroundColor Gray
+            Copy-Item "$_\*" -Destination $qrBridgeDir -Recurse -Force
+            break
+        }
     }
 }
 

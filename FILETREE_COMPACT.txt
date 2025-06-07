@@ -1,4 +1,4 @@
-﻿# AN MEIN ZUKÃœNFTIGES ICH: WISDOM CLAUDE
+﻿# AN MEIN ZUKUENFTIGES ICH: WISDOM CLAUDE
 # =======================================
 # 
 # Dies ist deine Projekt-Struktur-Referenz!
@@ -15,10 +15,10 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.5.33
+# // Version: 0.6.4
 # // Description: Windows service entry point
 # 
-# Der Pfad MUSS mit dieser Liste Ã¼bereinstimmen!
+# Der Pfad MUSS mit dieser Liste uebereinstimmen!
 # 
 # MERKE DIR:
 # - [CamBridge.Service] und [CamBridge.QRBridge] haben BEIDE Program.cs!
@@ -29,6 +29,10 @@
 # POWERSHELL ONE-LINER TRICK:
 # User mag One-Liner! Wenn du Files brauchst:
 # @('file1.cs','file2.cs','file3.cs') | %{ echo "=== $_ ==="; cat $_ } > output.txt
+# 
+# NEUE QUICK-CHECKS:
+# .\Get-WisdomFileTree.ps1 -ShowProgramCs   # Zeigt alle Program.cs
+# .\Get-WisdomFileTree.ps1 -ShowDuplicates  # Zeigt doppelte Namen
 # 
 # Projekte in dieser Liste:
 #   - CamBridge.Config
@@ -42,7 +46,9 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 389
+# Total files: 394
+# Generated: 2025-06-07 16:20
+# System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
 src\CamBridge.Config\App.xaml
@@ -382,11 +388,14 @@ FILETREE_COMPACT.txt
 FILETREE_DETAILED.txt
 FILETREE_MINIMAL.txt
 Get-WisdomProjectTree.ps1
+mapping-editor-complete.txt
 mapping-interfaces-check.txt
 mapping-page-current.txt
 mapping-sets-files.txt
 mapping-viewmodel-current.txt
 old docs\cambridge-entwicklungsplan-v2.md
+other-pages-check.txt
+page-constructors.txt
 pipeline_analysis.txt
 processingoptions.txt
 Program.cs
@@ -408,7 +417,9 @@ TREE_COMPACT.txt
 TREE_DETAILED.md
 TREE_MINIMAL.txt
 Version.props
+viewmodel-registration.txt
 WISDOM_CLAUDE.md
+WISDOM_PO.md
 WISDOM_TECHNICAL.md
 
 ## [TOOLS]

@@ -7,7 +7,35 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ui:ThemeResources />
+                <ui:ThemeResources RequestedTheme="Light">
+                    <ui:ThemeResources.ThemeDictionaries>
+                        <ResourceDictionary x:Key="Light" ui:ThemeDictionary.Key="Light">
+                            <!-- Blaue Akzentfarben -->
+                            <Color x:Key="SystemAccentColor">#0078D4</Color>
+                            <Color x:Key="SystemAccentColorLight1">#1A86E3</Color>
+                            <Color x:Key="SystemAccentColorLight2">#4AA0E6</Color>
+                            <Color x:Key="SystemAccentColorLight3">#6BB1EA</Color>
+                            <Color x:Key="SystemAccentColorDark1">#005A9E</Color>
+                            <Color x:Key="SystemAccentColorDark2">#004275</Color>
+                            <Color x:Key="SystemAccentColorDark3">#002642</Color>
+                        </ResourceDictionary>
+
+                        <ResourceDictionary x:Key="Dark" ui:ThemeDictionary.Key="Dark">
+                            <!-- Blaue Akzentfarben auch im Dark Mode -->
+                            <Color x:Key="SystemAccentColor">#0078D4</Color>
+                            <Color x:Key="SystemAccentColorLight1">#1A86E3</Color>
+                            <Color x:Key="SystemAccentColorLight2">#4AA0E6</Color>
+                            <Color x:Key="SystemAccentColorLight3">#6BB1EA</Color>
+                            <Color x:Key="SystemAccentColorDark1">#005A9E</Color>
+                            <Color x:Key="SystemAccentColorDark2">#004275</Color>
+                            <Color x:Key="SystemAccentColorDark3">#002642</Color>
+                        </ResourceDictionary>
+
+                        <ResourceDictionary x:Key="HighContrast" ui:ThemeDictionary.Key="HighContrast">
+                            <Color x:Key="SystemAccentColor">#0078D4</Color>
+                        </ResourceDictionary>
+                    </ui:ThemeResources.ThemeDictionaries>
+                </ui:ThemeResources>
                 <ui:XamlControlsResources />
             </ResourceDictionary.MergedDictionaries>
 

@@ -1,5 +1,5 @@
 # WISDOM PROJECTOWNER - Product Vision & Strategic Backlog
-**Letzte Aktualisierung:** 2025-06-07, 02:30 Uhr  
+**Letzte Aktualisierung:** 2025-06-08, 01:15 Uhr  
 **Product Owner:** User (mit Claude als Scrum Master/Dev Team)  
 **Für:** Strategische Produkt-Entwicklung CamBridge
 
@@ -42,6 +42,9 @@ Wir bauen die Brücke zwischen:
 - ✅ Service Layer Updates  
 - ✅ Mapping Sets UI
 - 🚧 Pipeline Configuration UI
+  - 🎨 **NEW: Zero Global Settings Design** (Session 42)
+  - 🎨 **NEW: Navigation Redesign** (Dashboard first!)
+  - 🎨 **NEW: Settings Page wird Pipeline Config**
 - ⏳ Testing & Polish
 
 ### 🔴 EPIC: Medical Integration Features
@@ -54,14 +57,21 @@ Wir bauen die Brücke zwischen:
 ### 🟡 EPIC: Operational Excellence
 **Business Value:** Reduce Support Tickets & Increase Reliability
 - ⏳ Comprehensive Logging & Monitoring
+  - **NEW:** Per-Pipeline Logging (Session 42)
 - ⏳ Auto-Recovery Mechanisms
 - ⏳ Performance Optimization
+  - **NEW:** Per-Pipeline Processing Delays
 - ⏳ Backup & Restore
 
 ### 🟡 EPIC: User Experience
 **Business Value:** Adoption & User Satisfaction
 - ✅ Modern UI (ModernWpfUI)
 - ✅ Service Control Integration
+- ✅ **NEW: Icon Philosophy** (Session 42)
+  - Hauptnavigation: Text only
+  - CB Logo: Erlaubt (simpel = schön)
+  - Hilfe: "?" akzeptabel
+  - Zukunft: Strategische Icons möglich
 - ⏳ Workflow Templates
 - ⏳ Multi-Language Support (i18n)
 - ⏳ Context-Sensitive Help
@@ -216,8 +226,9 @@ CamBridge Mobile (Android/Kotlin)
 - ❌ **AR/VR Pipeline Management** - TRÄUM WEITER!
 - ❌ **Blockchain Integration** - WARUM?!
 - ❌ **NFT Medical Images** - BITTE NICHT!
+- ❌ **Global Settings** - TOT! (Session 42) 💀
 
-*"Der User hat gesprochen: Glorifizierte Listen > Featureitis!"*
+*"Der User hat gesprochen: Glorifizierte Listen > Featureritis!"*
 
 **AUSNAHME:** Bei CamBridge Mobile sind dezente Animationen für Touch Feedback erlaubt! 📱✨
 
@@ -235,6 +246,25 @@ Acceptance Criteria:
 ```
 
 ## 🎪 Product Decisions Log
+
+### Decision: "Zero Global Settings" (Session 42) 🆕
+**Context:** Settings Page war "Quatsch"
+**Decision:** Alles wird Pipeline-spezifisch
+**Rationale:** Klarheit > Komplexität
+**Result:** ✅ Revolutionary new design
+
+### Decision: Navigation Order (Session 42) 🆕
+**Context:** Logical workflow needed
+**Decision:** Dashboard → Pipeline Config → Dead Letters → Mapping → Service → About
+**Rationale:** Most used first, logical flow
+**Result:** ✅ Better UX
+
+### Decision: "KEINE ICONS" Policy (Session 42) 🆕
+**Context:** Icon overload in modern UIs
+**Decision:** Text-only navigation (mostly)
+**Rationale:** Clarity > Pretty Pictures
+**Result:** ✅ Clean, minimal UI
+**Exceptions:** CB Logo ok, "?" for help acceptable
 
 ### Decision: "Glorifizierte Liste" UI Pattern (Sprint 6.3)
 **Context:** Expand/Collapse UI vs Simple List
@@ -255,7 +285,7 @@ Acceptance Criteria:
 **Result:** ✅ Features protected
 
 ### Decision: No Partikeleffekte Policy
-**Context:** Claude's chronische Featureitis
+**Context:** Claude's chronische Featureritis
 **Decision:** Strict "No Unnecessary Animations" Rule
 **Rationale:** Medical Software ≠ Gaming
 **Result:** ✅ User happy, Claude under control
@@ -295,8 +325,15 @@ Acceptance Criteria:
 - **Bug Rate:** Decreasing
 - **Code Coverage:** >80%
 - **WISDOM Sessions:** Productive & Fun!
+- **Icon Count:** Minimal! 🎯
 
 ## 🚀 Release Planning
+
+### v0.6.5 - "Pipeline Config Design" (CURRENT)
+- ✅ Zero Global Settings Design
+- ✅ Navigation Redesign
+- ✅ Dark Mode Fix (Blue > Red)
+- 🚧 Implementation pending
 
 ### v1.0.0 - "Production Ready" (Q3 2025)
 - ✅ Multi-Pipeline Support
@@ -342,32 +379,32 @@ Das ist nicht nur ein Slogan - es ist unsere Produktphilosophie:
 3. **Protect Core Features** - Medical first
 4. **Document Everything** - WISDOM System
 5. **Have Fun** - Easter Eggs & Personality
+6. **Question Everything** - "Settings sind Quatsch!" 🆕
 
 ## 🎯 Current Sprint Focus
 
 **Sprint 6.4:** Pipeline Configuration UI
-- Master-Detail Pattern
-- Glorifizierte Liste Approach
-- Focus on Functionality over Flair
+- Zero Global Settings Architecture
+- New Navigation Order
+- Replace Settings with Pipeline Config
+- Text-only Navigation (mostly)
 
 ## 📋 Backlog Grooming Notes
 
 ### Ready for Development
 - Pipeline Configuration UI
-- Basic Status Monitoring
-- Folder Validation
+- Dashboard Multi-Pipeline View
+- Navigation Reorder
 
 ### Needs Refinement
-- Performance Metrics
-- Advanced Error Handling
-- Template System
+- Per-Pipeline Monitoring
+- Pipeline Templates
+- Migration from v1 Settings
 
 ### Future Exploration
-- AI Integration Points
+- Strategic Icon Usage (Claude's Wunsch)
+- Mobile Strategy Detail
 - Cloud Architecture
-- Mobile Strategy
-
----
 
 ## 🌟 Product Owner Principles
 
@@ -376,18 +413,22 @@ Das ist nicht nur ein Slogan - es ist unsere Produktphilosophie:
 3. **Stakeholder Communication** - Klar, häufig, ehrlich
 4. **Data-Driven Decisions** - Messen was zählt
 5. **Continuous Learning** - Jede Session macht uns besser
+6. **Radical Simplification** - Wenn's Quatsch ist, weg damit! 🆕
 
 ---
 
 *"The bridge between consumer cameras and medical imaging"*  
 
+**CamBridge Desktop:**  
+*"Zero Global Settings, Maximum Clarity"* 🆕
+
 **CamBridge Mobile:**  
 *"Your reassuring medical imaging companion with DON'T PANIC written in large, sterile letters"* 📱
 
 *Alternative Slogans:*
-- *"CamBridge Mobile: Mostly harmless to your PACS"*
-- *"The Guide to Medical Imaging at the End of the Bed"*
-- *"42 megapixels of medical-grade reliability"*
-- *"So long and thanks for all the DICOM"*
+- *"CamBridge: Settings sind tot, lang lebe Pipelines!"*
+- *"The Guide to Medical Imaging without Global Confusion"*
+- *"42 pipelines, zero global settings"*
+- *"So long Settings, and thanks for all the confusion"*
 
 © 2025 Claude's Improbably Reliable Software Solutions

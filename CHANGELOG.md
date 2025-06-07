@@ -8,6 +8,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.5] - 2025-06-08
+### 🎨 Changed
+- Replaced Settings page with Pipeline Configuration - revolutionary UI redesign
+- Removed ALL global settings - everything is now pipeline-specific
+- Reordered navigation: Dashboard → Pipeline Config → Dead Letters → Mapping Editor → Service Control → About
+- Fixed Dark Mode colors - blue accent instead of red
+- Fixed logo color to use system accent brush
+- REMOVED all icons from navigation - text only for clarity*
+  - *Exceptions: CB logo allowed (simple = beautiful), "?" for help acceptable
+  - *Future: Strategic icon usage possible (Claude likes them so much 😊)
+
+### 🚀 Added
+- Pipeline Configuration page design (Sprint 6.4)
+- Multi-Pipeline dashboard concept
+- Zero Global Settings architecture
+- Per-pipeline logging configuration
+- Per-pipeline DICOM settings
+- Per-pipeline processing parameters
+
+### 🗑️ Removed
+- Settings page (replaced by Pipeline Config)
+- Global settings concept
+- Service timing configuration (unnecessary)
+- Navigation icons (KEINE ICONS!!)
+
+### 🛠️ Fixed
+- App.xaml theme colors for consistent blue accent
+- MainWindow.xaml title version to 0.6.4
+- AboutPage.xaml version display
+
+### 📝 Documentation
+- Created WISDOM_SPRINT.md with complete Pipeline UI design
+- Updated navigation order in all documentation
+- Added "KEINE ICONS" rule to development guidelines
+- Documented Zero Global Settings philosophy
+
+### 🔄 Internal
+- Prepared for Settings → Pipeline Config migration
+- Updated WISDOM files for Session 42
+
 ## [0.6.4] - 2025-06-07
 ### Fixed
 - Visual Studio Designer mode issues with MappingEditorPage
