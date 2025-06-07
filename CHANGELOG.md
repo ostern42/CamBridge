@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.4] - 2025-06-07
+### Fixed
+- Visual Studio Designer mode issues with MappingEditorPage
+- NullReferenceException when opening Mapping Editor
+- Missing ViewModel initialization in MappingEditorPage constructor
+- ILogger dependency injection for MappingEditorViewModel
+
+### Changed
+- Implemented pragmatic "glorified list" UI instead of complex Expand/Collapse
+- Added DesignerProperties.GetIsInDesignMode() checks
+- Improved error handling during ViewModel initialization
+
+### Added
+- InitializeViewModel pattern matching other pages
+- Designer mode detection to prevent VS crashes
+- Complete file artifacts instead of snippets in documentation
+
 ## [0.6.3] - 2025-06-07 - Mapping Sets UI Implementation
 
 ### Added

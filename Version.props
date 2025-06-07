@@ -1,10 +1,10 @@
 <!-- Version.props -->
-<!-- Version: 0.6.3 -->
+<!-- Version: 0.6.4 -->
 <!-- Description: Central version management for CamBridge solution -->
 <Project>
 	<PropertyGroup>
 		<!-- Version info for PROJECT_WISDOM and documentation -->
-		<VersionPrefix>0.6.3</VersionPrefix>
+		<VersionPrefix>0.6.4</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- IMPORTANT: DO NOT set AssemblyVersion or FileVersion! -->
@@ -12,13 +12,15 @@
 		<!-- Individual projects handle their assembly versions -->
 
 		<!-- Only metadata that won't cause conflicts -->
-		<InformationalVersion>0.6.3</InformationalVersion>
-		<PackageVersion>0.6.3</PackageVersion>
+		<InformationalVersion>0.6.4</InformationalVersion>
+		<PackageVersion>0.6.4</PackageVersion>
 
 		<!-- Company information -->
 		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>
 		<Product>CamBridge</Product>
+		<Description>Making the improbable reliably possible since 2025</Description>
+		<PackageDescription>JPEG to DICOM medical imaging converter - Making the improbable reliably possible since 2025</PackageDescription>
 
 		<!-- Build metadata -->
 		<RepositoryUrl>https://github.com/yourusername/CamBridge</RepositoryUrl>

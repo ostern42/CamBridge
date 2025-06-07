@@ -1,5 +1,5 @@
 # WISDOM Technical - Entwicklung & Technische Details
-**Letzte Aktualisierung:** 2025-06-07, 01:45 Uhr  
+**Letzte Aktualisierung:** 2025-06-07, 02:10 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Technische Kontinuität & Entwicklungsplan
 
@@ -67,6 +67,7 @@
 11. **GIT-REGEL:** WISDOM Files gehören zum Code - `git commit --amend` ist richtig!
 12. **UPDATE-REGEL:** Bei ähnlichen Code-Blöcken GANZEN Block ersetzen, nicht Teile!
 13. **DESIGN-REGEL:** UI-Entscheidungen in WISDOM_SPRINT dokumentieren! 🎨
+14. **PRAGMATIK-REGEL:** "Glorifizierte Liste" > Over-engineered UI! 💪
 
 ## 🛡️ [CORE] TASK PROTECTION SYSTEM
 
@@ -80,7 +81,7 @@ PIPELINE-001: Pipeline Architecture [IN PROGRESS] 🏗️
              Progress:
              - Phase 1: Core Model & Migration ✅
              - Phase 2: Service Layer Updates ✅
-             - Phase 3: Mapping Sets UI ✅
+             - Phase 3: Mapping Sets UI ✅ (glorifizierte Liste)
              - Phase 4: Pipeline UI [NEXT]
              - Phase 5: Testing & Polish [PLANNED]
 
@@ -135,6 +136,7 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 11. **WISDOM Files mit amend!** 📝
 12. **Bei Code-Updates: Ganzen Block ersetzen!** 🎯
 13. **Design VOR Implementation!** 🎨
+14. **Pragmatik VOR Perfektion!** 💪
 
 ## 🏗️ [VISION] PIPELINE ARCHITECTURE v0.6.0
 
@@ -155,12 +157,14 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 - ✅ ProcessingOptions mit DeadLetterFolder erweitert
 
 ### ✅ [DONE] Phase 3: Mapping Sets UI (Sprint 6.3)
-**Abgeschlossen:** 2025-06-07, 01:45
+**Abgeschlossen:** 2025-06-07, 02:10
 - ✅ Design Session mit Expand/Collapse Pattern
 - ✅ System Defaults Implementation
 - ✅ Load Order Fix (System Defaults first)
-- ✅ Expand/Collapse UI mit Animations
-- ✅ Visual Flow Diagram (Source → Transform → Target)
+- ❌ Expand/Collapse UI (verworfen)
+- ✅ Pragmatische "glorifizierte Liste" implementiert
+- ✅ Visual Studio Designer Mode Fix
+- ✅ DI Container Integration für ViewModels
 
 ### 🚀 [NEXT] Phase 4: Pipeline UI (Sprint 6.4)
 **Nächster Schritt!**
@@ -190,7 +194,7 @@ Phase 5: Testing & Polish (Sprint 6.5)
 ### Sprint 6.2: Service Layer Updates (v0.6.1) ✅
 ### Sprint 6.3: Mapping Sets UI (v0.6.2-v0.6.3) ✅
 - v0.6.2: Design Session & System Defaults Fix
-- v0.6.3: Expand/Collapse UI Implementation
+- v0.6.3: "Glorifizierte Liste" Implementation
 
 ### Nächste Schritte:
 - Sprint 6.4: Pipeline Configuration UI (v0.6.4)
@@ -212,6 +216,11 @@ Phase 5: Testing & Polish (Sprint 6.5)
 13. **"Nur User Sets speichern!"** - System Defaults bleiben im Code
 14. **"UI ist oft schon da!"** - Genau hinschauen bevor neu machen
 15. **"ESEL bei Wiederholungsfehlern!"** - FileTree wieder vergessen!
+16. **"Visual Studio Designer ist problematisch!"** - DesignerProperties.GetIsInDesignMode()
+17. **"ILogger muss registriert sein!"** - services.AddLogging() nicht vergessen
+18. **"Glorifizierte Liste > Komplexität!"** - User's pragmatische Lösung
+19. **"InitializeViewModel Pattern!"** - Von anderen Pages lernen
+20. **"Vollständige Artefakte!"** - Keine Snippets beim Fixen!
 
 ## 🏗️ [KEEP] CamBridge Architektur-Überblick
 
@@ -237,6 +246,7 @@ CamBridge.QRBridge    - QR Code Generator
 - **Commands** (ICommand) triggern Actions
 - **ObservableCollection** für UI-Listen
 - **INotifyPropertyChanged** für Updates
+- **DI Container** für ViewModels (App.xaml.cs)
 
 ## 🔧 [CONFIG] Technologie-Stack
 ```
@@ -266,6 +276,9 @@ Deploy Dir:        C:\Users\aiadmin\source\repos\CamBridge\Deploy
 
 # Pipeline Files für Sprint 6.4
 @('src\CamBridge.Core\PipelineConfiguration.cs','src\CamBridge.Config\Services\ConfigurationService.cs','src\CamBridge.Service\Program.cs') | %{ echo "=== $_ ==="; cat $_ } > pipeline-config-files.txt
+
+# Debug Visual Studio Issues
+dotnet clean && dotnet build
 ```
 
 ## 🚀 [KEEP] ENTWICKLUNGSFAHRPLAN
@@ -274,7 +287,7 @@ Deploy Dir:        C:\Users\aiadmin\source\repos\CamBridge\Deploy
 ### 🏗️ Sprint 6: Pipeline Architecture (v0.6.0-v0.6.5) ← WIR SIND HIER
 - ✅ Sprint 6.1: Core Model & Migration
 - ✅ Sprint 6.2: Service Layer Updates
-- ✅ Sprint 6.3: Mapping Sets UI
+- ✅ Sprint 6.3: Mapping Sets UI ("glorifizierte Liste")
 - 🚀 Sprint 6.4: Pipeline Configuration UI ← NEXT
 - Sprint 6.5: Testing & Polish
 
@@ -289,18 +302,19 @@ Deploy Dir:        C:\Users\aiadmin\source\repos\CamBridge\Deploy
 - **Pipeline Phase 2:** 06.06.2025, 16:17 ✅
 - **UI Design Session:** 06.06.2025, 23:42 🎨
 - **Session 39:** 07.06.2025, 01:00 - Mapping Sets UI fertig! ✅
-- **Arbeitszeit gesamt:** ~54 Stunden
+- **Session 40:** 07.06.2025, 01:40 - VS Designer Fix, glorifizierte Liste ✅
+- **Arbeitszeit gesamt:** ~56 Stunden
 
 ## 📝 [KEEP] Standard Prompt für nächste Session
 
 ```
-Ich arbeite an CamBridge v0.6.3.
+Ich arbeite an CamBridge v0.6.4.
 Sprint 6.4: Pipeline Configuration UI
 
 WICHTIG: 
-1. Version.props checken - muss 0.6.3 sein (vom letzten Commit)
+1. Version.props checken - muss 0.6.4 sein (vom letzten Commit)
 2. FileTree checken: .\Get-WisdomFileTree.ps1 -Mode Compact
-3. Sprint 6.3 ist DONE: Mapping Sets UI mit Expand/Collapse ✅
+3. Sprint 6.3 ist DONE: Mapping Sets UI (glorifizierte Liste) ✅
 4. Jetzt: Pipeline Configuration UI planen
 
 FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch geschützt?
@@ -315,7 +329,7 @@ FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch geschützt?
    - Pipeline List View
    - Per-Pipeline Settings (Folders, etc.)
 4. **Feature Check** (4 Medical Features)
-5. **Version** auf 0.6.3 checken
+5. **Version** auf 0.6.4 checken
 
 ---
 
