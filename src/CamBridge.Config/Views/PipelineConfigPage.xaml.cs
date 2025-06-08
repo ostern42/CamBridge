@@ -1,5 +1,5 @@
-// src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
-// Version: 0.6.4
+﻿// src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
+// Version: 0.6.7
 // Description: Pipeline Configuration page code-behind
 
 using System;
@@ -29,9 +29,9 @@ namespace CamBridge.Config.Views
 
             // Get the ViewModel from DI container
             var app = Application.Current as App;
-            if (app?.Services != null)
+            if (app?.Host?.Services != null)
             {
-                var viewModel = app.Services.GetRequiredService<PipelineConfigViewModel>();
+                var viewModel = app.Host.Services.GetRequiredService<PipelineConfigViewModel>();
                 DataContext = viewModel;
 
                 // Initialize the ViewModel
@@ -110,3 +110,5 @@ namespace CamBridge.Config.Views
         }
     }
 }
+
+

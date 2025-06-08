@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.8] - 2025-06-08 - Navigation Bug Partially Fixed 🔧
+
+### Changed
+- Fixed App.Services → App.Host.Services references
+- Attempted NavigationService integration (too complex)
+
+### Known Issues
+- Multi-Pipeline Dashboard still not showing
+- MainWindow still has NavigationService.SetFrame code
+- Need to revert to simple navigation in next session
+
+### Note
+Session ended early due to token limit. Navigation fix incomplete.
+
 ## [0.6.7] - 2025-06-08
 
 ### Added

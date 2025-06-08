@@ -1,5 +1,5 @@
 <!-- src\CamBridge.Config\MainWindow.xaml -->
-<!-- Version: 0.6.4 -->
+<!-- Version: 0.6.7 -->
 <!-- Description: Main navigation window - KEINE ICONS Edition! -->
 
 <Window x:Class="CamBridge.Config.MainWindow"
@@ -7,7 +7,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.modernwpf.com/2019"
         ui:WindowHelper.UseModernWindowStyle="True"
-        Title="CamBridge Configuration v0.6.4" 
+        Title="CamBridge Configuration v0.6.7" 
         Height="1000" Width="1500">
 
     <Grid>
@@ -32,3 +32,4 @@
         </ui:NavigationView>
     </Grid>
 </Window>
+

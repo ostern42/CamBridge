@@ -1,5 +1,5 @@
 // src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs
-// Version: 0.6.4
+// Version: 0.6.7
 // Description: Pipeline Configuration ViewModel - Zero Global Settings!
 
 using CamBridge.Config.Services;
@@ -556,3 +556,4 @@ namespace CamBridge.Config.ViewModels
         }
     }
 }
+

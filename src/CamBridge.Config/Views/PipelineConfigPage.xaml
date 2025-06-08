@@ -1,5 +1,5 @@
 <!-- src\CamBridge.Config\Views\PipelineConfigPage.xaml -->
-<!-- Version: 0.6.4 -->
+<!-- Version: 0.6.7 -->
 <!-- Description: Pipeline Configuration - Zero Global Settings! -->
 
 <Page x:Class="CamBridge.Config.Views.PipelineConfigPage"
@@ -710,3 +710,4 @@
         </Border>
     </Grid>
 </Page>
+

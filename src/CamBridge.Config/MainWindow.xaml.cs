@@ -1,12 +1,13 @@
-// src\CamBridge.Config\MainWindow.xaml.cs
-// Version: 0.6.4
-// Description: Main window with updated navigation order - No Settings!
+﻿// src\CamBridge.Config\MainWindow.xaml.cs
+// Version: 0.6.7
+// Description: Main window with simplified navigation
 
 using System;
 using System.Runtime.Versioning;
 using System.Windows;
-using CamBridge.Config.Views;
+using CamBridge.Config.Services;
 using CamBridge.Config.ViewModels;
+using CamBridge.Config.Views;
 using Microsoft.Extensions.DependencyInjection;
 using ModernWpf.Controls;
 
@@ -77,8 +78,6 @@ namespace CamBridge.Config
                     case "About":
                         page = new AboutPage();
                         break;
-
-                        // Settings is GONE! No more Settings!
                 }
 
                 if (page != null && ContentFrame != null)
