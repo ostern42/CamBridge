@@ -8,6 +8,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.9] - 2025-06-08 - Sprint 6.5 Dashboard Investigation 🔍
+
+### Added
+- Debug scripts for Pipeline settings verification
+- AppData support for ConfigurationService
+- Comprehensive Dashboard loading diagnostics
+- Multiple fallback paths for appsettings.json
+
+### Changed  
+- MainWindow now uses DI for ViewModel injection
+- DashboardPage simplified without manual fallback
+- Enhanced error messages for missing pipelines
+
+### Fixed
+- Config UI now searches in correct locations for settings
+- Navigation cache clearing for proper page refresh
+- Service DI registration documentation
+
+### Known Issues
+- 🐛 Dashboard still shows old version despite correct code
+- 🐛 ConfigurationService may not load from AppData correctly
+- 🐛 Service fails to start (ProcessingQueue not registered)
+- 🐛 Multi-Pipeline Dashboard requires Pipeline data to display
+
+### Developer Notes
+- Session 46: Identified root cause - missing Pipeline data
+- Oliver's intuition was correct: "No pipelines = old dashboard"
+- Need Visual Studio debug session to trace LoadConfigurationAsync
+- Consider fresh clone if issues persist
+
+### Next Session TODO
+1. Add debug output to ConfigurationService
+2. Set breakpoints in LoadConfigurationAsync
+3. Verify settings path resolution
+4. Fix Service DI registration
+ 
+
 ## [0.6.8] - 2025-06-08 - Navigation Bug Partially Fixed 🔧
 
 ### Changed

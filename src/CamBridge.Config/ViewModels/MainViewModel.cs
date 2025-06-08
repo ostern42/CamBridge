@@ -1,11 +1,12 @@
 // src\CamBridge.Config\ViewModels\MainViewModel.cs
-// Version: 0.6.7
+// Version: 0.6.8
 // Description: Main view model with correct version
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 namespace CamBridge.Config.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
-        public string Title => "CamBridge Configuration v0.6.7";
+        public string Title => "CamBridge Configuration v0.6.8";
     }
 }

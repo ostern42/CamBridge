@@ -1,6 +1,7 @@
-﻿// src\CamBridge.Config\MainWindow.xaml.cs
-// Version: 0.6.7
-// Description: Main window with simplified navigation
+// src\CamBridge.Config\MainWindow.xaml.cs
+// Version: 0.6.8
+// Description: Main window with proper DI-based navigation
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Runtime.Versioning;
@@ -53,37 +54,54 @@ namespace CamBridge.Config
             {
                 System.Windows.Controls.Page? page = null;
 
+                // Create pages WITH their ViewModels from DI!
                 switch (tag)
                 {
                     case "Dashboard":
+                        // Create page manually but inject ViewModel from DI
                         page = new DashboardPage();
+                        var dashboardVm = _serviceProvider.GetRequiredService<DashboardViewModel>();
+                        page.DataContext = dashboardVm;
+                        System.Diagnostics.Debug.WriteLine($"Created Dashboard with ViewModel - Pipelines: {dashboardVm.PipelineStatuses.Count}");
                         break;
 
                     case "PipelineConfig":
                         page = new PipelineConfigPage();
+                        page.DataContext = _serviceProvider.GetRequiredService<PipelineConfigViewModel>();
                         break;
 
                     case "DeadLetters":
                         page = new DeadLettersPage();
+                        page.DataContext = _serviceProvider.GetRequiredService<DeadLettersViewModel>();
                         break;
 
                     case "MappingEditor":
                         page = new MappingEditorPage();
+                        page.DataContext = _serviceProvider.GetRequiredService<MappingEditorViewModel>();
                         break;
 
                     case "ServiceControl":
                         page = new ServiceControlPage();
+                        page.DataContext = _serviceProvider.GetRequiredService<ServiceControlViewModel>();
                         break;
 
                     case "About":
                         page = new AboutPage();
+                        // AboutPage doesn't need a ViewModel
                         break;
                 }
 
                 if (page != null && ContentFrame != null)
                 {
+                    // Force complete refresh - clear navigation history
+                    ContentFrame.NavigationService.RemoveBackEntry();
+                    while (ContentFrame.NavigationService.CanGoBack)
+                    {
+                        ContentFrame.NavigationService.RemoveBackEntry();
+                    }
+
                     ContentFrame.Navigate(page);
-                    System.Diagnostics.Debug.WriteLine($"Navigated to {tag}");
+                    System.Diagnostics.Debug.WriteLine($"Navigated to {tag} - Page type: {page.GetType().Name}");
                 }
             }
             catch (Exception ex)

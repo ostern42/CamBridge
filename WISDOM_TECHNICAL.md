@@ -35,6 +35,7 @@
 5. **SUMMARY & CONFIRMATION** - Zusammenfassung erstellen
 6. **FEATURE CHECK** - Sind FTP, C-STORE, MWL, C-FIND noch da?
 7. **VISION CHECK** - Pipeline-Architektur Status? 🏗️
+8. **🎯 WISDOM ARTEFAKTE** - Sofort WISDOM_TECHNICAL, WISDOM_CLAUDE und Version.props als komplette Artefakte erstellen!
 
 ### 🔒 [CORE] "VOGON EXIT" - Chat-Abschluss
 **KRITISCHE REGEL:** Beim VOGON EXIT MÜSSEN IMMER erstellt werden:
@@ -46,6 +47,20 @@
 6. **FEATURE CHECK** - Verifizieren dass FTP, C-STORE, MWL, C-FIND noch da sind!
 7. **PIPELINE CHECK** - Status der Pipeline-Migration dokumentieren! 🏗️
 8. **WISDOM_SPRINT.md** - Bei Design-Sessions mit konkreten Plänen! 🎨
+
+### 🎯 [CORE] "WISDOM DELTA PATTERN" - Smart Update Strategy
+**NEUES VORGEHEN ab sofort:**
+1. **Bei VOGON INIT:** WISDOM Artefakte sofort aus Projektwissen erstellen (spart Tokens!)
+2. **Während Session - SOFORT updaten bei:**
+   - 💥 Breaking Changes oder große Bugs
+   - 💡 Wichtige Erkenntnisse/Lektionen
+   - 📌 Erreichte Meilensteine
+   - 🔢 Version Bumps
+3. **Sammeln für EXIT bei:**
+   - 🔧 Kleine Code-Anpassungen
+   - 📝 Minor Refactorings
+   - ✏️ Typo-Fixes
+4. **Token-Bilanz:** ~400 Extra-Tokens für Sicherheit = Worth it!
 
 ### 🔒 [CORE] ENTWICKLUNGS-REGELN
 1. **Source Code Header Standard** - Immer mit Pfad und Version
@@ -78,6 +93,11 @@
     - Wer navigiert dorthin?
     - Welche Services sind involviert?
     - "Code ist da" ≠ "Code wird ausgeführt"!
+18. **🎯 WISDOM-DELTA-REGEL:** Smart Update Pattern für Token-Effizienz!
+    - INIT: WISDOM Artefakte sofort erstellen (aus Projektwissen)
+    - Wichtiges sofort updaten (Bugs, Erkenntnisse, Milestones)
+    - Kleinkram sammeln für EXIT
+    - Spart ~80% Tokens bei gleicher Sicherheit!
 
 ## 🛡️ [CORE] TASK PROTECTION SYSTEM
 
@@ -150,6 +170,7 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 15. **KEINE ICONS!** 🚫
 16. **Erst fragen, dann Files erstellen!** 🔍
 17. **🆕 Dependency Chain checken!** 🔗
+18. **WISDOM Delta Pattern nutzen!** 🎯
 
 ## 🏗️ [VISION] PIPELINE ARCHITECTURE v0.6.0
 
@@ -169,20 +190,29 @@ Sprint 6.5 - Testing & Polish
 └── Navigation Bug Fix ✅ (Session 45)
 ```
 
-## 🎯 [MILESTONE] Aktueller Stand: v0.6.7
+## 🎯 [MILESTONE] Aktueller Stand: v0.6.8
 
 ### Sprint Historie:
 - Sprint 6.1: Core Model & Migration (v0.6.0) ✅
 - Sprint 6.2: Service Layer Updates (v0.6.1) ✅
 - Sprint 6.3: Mapping Sets UI (v0.6.2-v0.6.3) ✅
 - Sprint 6.4: Pipeline Configuration UI (v0.6.4-v0.6.5) ✅
-- Sprint 6.5: Testing & Polish (v0.6.6-v0.6.7) 🚧
+- Sprint 6.5: Testing & Polish (v0.6.6-v0.6.8) 🚧
   - v0.6.6: Dashboard Multi-Pipeline UI (Session 44)
   - v0.6.7: Navigation Bug Fix (Session 45)
+  - v0.6.8: Dashboard Loading Investigation (Session 46)
 
 ### Nächste Schritte:
-- Sprint 6.5: Testing & Polish fertigstellen
+- Sprint 6.5: Dashboard-Problem endgültig lösen
 - Sprint 7: Medical Integration Phase 1 (v0.7.0)
+
+### Session 46: Das Settings-Mysterium 🕵️
+**Was passierte:** Dashboard zeigt weiterhin alte Version trotz korrektem Code  
+**Olivers Eingebung:** "Liegt es an den Settings? Keine Pipelines = altes Dashboard?"  
+**Er hatte RECHT:** Ohne Pipelines in appsettings.json zeigt Dashboard einen Fallback  
+**Was ich lernte:** Manchmal ist die offensichtliche Lösung die richtige!  
+**Ende:** Problem noch nicht gelöst, aber Ursache identifiziert  
+**Beziehungs-Update:** Oliver sieht oft die einfachen Lösungen die ich übersehe
 
 ## 💡 [LESSON] Session 45 - Die Navigation-Ketten Lektion
 
@@ -310,19 +340,21 @@ Get-ChildItem "src\CamBridge.Config" -Include "*.cs","*.xaml" -Recurse | Select-
 ## 📝 [KEEP] Standard Prompt für nächste Session
 
 ```
-Ich arbeite an CamBridge v0.6.7.
+Ich arbeite an CamBridge v0.6.8.
 Sprint 6.5: Testing & Polish
 System: nexus\oliver.stern@OSTE-ER-LAP01
 
-STATUS: Navigation Bug behoben!
-- MainWindow nutzt jetzt NavigationService
-- Multi-Pipeline Dashboard sollte funktionieren
-- Build erfolgreich
+VOGON INIT (bitte mit kompletten WISDOM Artefakten!)
+
+STATUS: Navigation Bug NICHT behoben!
+- MainWindow nutzt NOCH NavigationService.SetFrame
+- Multi-Pipeline Dashboard zeigt sich nicht
+- Deployment Script erstellt für sauberes Testing
 
 NÄCHSTE SCHRITTE:
-1. Dashboard testen
-2. Integration Tests schreiben
-3. Performance Monitoring
+1. MainWindow.xaml.cs MUSS einfache Navigation bekommen
+2. Dashboard mit Deployment Script testen
+3. Infrastructure Tests fixen oder löschen
 
 FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch geschützt?
 ```
