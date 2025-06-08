@@ -1,10 +1,12 @@
 // src/CamBridge.Config/Converters/ValueConverters.cs
+// Version: 0.6.7
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media;
 
 namespace CamBridge.Config.Converters
 {
@@ -15,44 +17,61 @@ namespace CamBridge.Config.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is bool boolValue)
-            {
+            bool boolValue = value is bool b && b;
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return boolValue ? Visibility.Collapsed : Visibility.Visible;
+            else
                 return boolValue ? Visibility.Visible : Visibility.Collapsed;
-            }
-            return Visibility.Collapsed;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is Visibility visibility)
-            {
-                return visibility == Visibility.Visible;
-            }
-            return false;
+            throw new NotImplementedException();
         }
     }
 
     /// <summary>
-    /// Converts boolean values to Visibility (inverted)
+    /// Inverts boolean to visibility conversion
     /// </summary>
     public class InverseBooleanToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is bool boolValue)
-            {
-                return boolValue ? Visibility.Collapsed : Visibility.Visible;
-            }
-            return Visibility.Visible;
+            bool boolValue = value is bool b && b;
+            return boolValue ? Visibility.Collapsed : Visibility.Visible;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is Visibility visibility)
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts numeric values greater than zero to true
+    /// </summary>
+    public class GreaterThanZeroConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null) return false;
+
+            try
             {
-                return visibility != Visibility.Visible;
+                double numValue = System.Convert.ToDouble(value);
+                return numValue > 0;
             }
-            return true;
+            catch
+            {
+                return false;
+            }
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -63,7 +82,13 @@ namespace CamBridge.Config.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return value != null ? Visibility.Visible : Visibility.Collapsed;
+            bool isNull = value == null;
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return isNull ? Visibility.Visible : Visibility.Collapsed;
+            else
+                return isNull ? Visibility.Collapsed : Visibility.Visible;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -73,33 +98,108 @@ namespace CamBridge.Config.Converters
     }
 
     /// <summary>
-    /// Converts an enum type to a collection of its values for ComboBox binding
+    /// Converts zero values to Visibility
     /// </summary>
-    public class EnumToCollectionConverter : IValueConverter
+    public class ZeroToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value == null)
-                return Enumerable.Empty<object>();
+            bool isZero = false;
 
-            Type enumType;
-
-            // Check if value is an enum type itself
-            if (value is Type type && type.IsEnum)
+            if (value != null)
             {
-                enumType = type;
-            }
-            else
-            {
-                // Value is an enum instance
-                enumType = value.GetType();
-                if (!enumType.IsEnum)
+                try
                 {
-                    return Enumerable.Empty<object>();
+                    double numValue = System.Convert.ToDouble(value);
+                    isZero = Math.Abs(numValue) < 0.0001; // Floating point comparison
+                }
+                catch
+                {
+                    // If conversion fails, treat as non-zero
                 }
             }
 
-            return Enum.GetValues(enumType).Cast<object>().ToList();
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return isZero ? Visibility.Collapsed : Visibility.Visible;
+            else
+                return isZero ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts error count to color brush
+    /// </summary>
+    public class ErrorCountToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            int errorCount = 0;
+
+            if (value != null)
+            {
+                try
+                {
+                    errorCount = System.Convert.ToInt32(value);
+                }
+                catch
+                {
+                    // Default to 0 if conversion fails
+                }
+            }
+
+            // Return red color if errors exist, otherwise default
+            if (errorCount > 0)
+            {
+                return new SolidColorBrush(Color.FromRgb(255, 107, 107)); // Light red
+            }
+
+            return DependencyProperty.UnsetValue; // Use default style
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts boolean values to inverse boolean
+    /// </summary>
+    public class InverseBooleanConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return !(value is bool b && b);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return !(value is bool b && b);
+        }
+    }
+
+    /// <summary>
+    /// Converts empty string to visibility
+    /// </summary>
+    public class EmptyStringToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            string? str = value as string;
+            bool isEmpty = string.IsNullOrWhiteSpace(str);
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return isEmpty ? Visibility.Visible : Visibility.Collapsed;
+            else
+                return isEmpty ? Visibility.Collapsed : Visibility.Visible;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -115,19 +215,157 @@ namespace CamBridge.Config.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is string status)
+            string status = value as string ?? "";
+
+            return status.ToLower() switch
             {
-                return status switch
+                "running" => new SolidColorBrush(Colors.Green),
+                "stopped" => new SolidColorBrush(Colors.Red),
+                "paused" => new SolidColorBrush(Colors.Orange),
+                _ => new SolidColorBrush(Colors.Gray)
+            };
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts seconds to milliseconds
+    /// </summary>
+    public class SecondsToMillisecondsConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double seconds)
+                return seconds * 1000;
+            if (value is int intSeconds)
+                return intSeconds * 1000;
+            return 0;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double milliseconds)
+                return milliseconds / 1000;
+            if (value is int intMilliseconds)
+                return intMilliseconds / 1000;
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Converts enum value to boolean based on parameter
+    /// </summary>
+    public class EnumToBooleanConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null || parameter == null)
+                return false;
+
+            string enumValue = value.ToString();
+            string targetValue = parameter.ToString();
+
+            return enumValue.Equals(targetValue, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isChecked && isChecked)
+            {
+                if (parameter != null && targetType.IsEnum)
                 {
-                    "Running" => "#FF4CAF50",      // Green
-                    "Stopped" => "#FFB71C1C",      // Dark Red
-                    "Paused" => "#FFFFA726",       // Orange
-                    "StartPending" => "#FF2196F3", // Blue
-                    "StopPending" => "#FFFF5722",  // Deep Orange
-                    _ => "#FF9E9E9E"               // Gray
-                };
+                    return Enum.Parse(targetType, parameter.ToString());
+                }
             }
-            return "#FF9E9E9E";
+
+            return Binding.DoNothing;
+        }
+    }
+
+    /// <summary>
+    /// Converter for file selection dialogs
+    /// </summary>
+    public class FileSelectConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            // Simply pass through the value
+            return value;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            // Simply pass through the value
+            return value;
+        }
+    }
+
+    /// <summary>
+    /// Multi-value boolean OR converter
+    /// </summary>
+    public class MultiBooleanOrConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values == null || values.Length == 0)
+                return false;
+
+            foreach (var value in values)
+            {
+                if (value is bool b && b)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts enum types to collection for ComboBox binding
+    /// </summary>
+    public class EnumToCollectionConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return Enum.GetValues(parameter as Type ?? value?.GetType() ?? typeof(object));
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts file size to human-readable format
+    /// </summary>
+    public class FileSizeConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null) return "0 B";
+
+            long bytes = System.Convert.ToInt64(value);
+            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+            int order = 0;
+            double size = bytes;
+
+            while (size >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                size /= 1024;
+            }
+
+            return $"{size:0.##} {sizes[order]}";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -145,15 +383,14 @@ namespace CamBridge.Config.Converters
         {
             if (value is TimeSpan timeSpan)
             {
-                if (timeSpan == TimeSpan.Zero)
-                    return "Not running";
-
                 if (timeSpan.TotalDays >= 1)
-                    return $"{(int)timeSpan.TotalDays} days, {timeSpan.Hours:00}:{timeSpan.Minutes:00}:{timeSpan.Seconds:00}";
+                    return $"{(int)timeSpan.TotalDays}d {timeSpan.Hours}h {timeSpan.Minutes}m";
+                else if (timeSpan.TotalHours >= 1)
+                    return $"{(int)timeSpan.TotalHours}h {timeSpan.Minutes}m";
                 else
-                    return $"{timeSpan.Hours:00}:{timeSpan.Minutes:00}:{timeSpan.Seconds:00}";
+                    return $"{timeSpan.Minutes}m {timeSpan.Seconds}s";
             }
-            return "Unknown";
+            return "0s";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -163,84 +400,45 @@ namespace CamBridge.Config.Converters
     }
 
     /// <summary>
-    /// Formats file size to human readable string
+    /// Multi-value boolean AND converter
     /// </summary>
-    public class FileSizeConverter : IValueConverter
+    public class MultiBooleanAndConverter : IMultiValueConverter
     {
-        private static readonly string[] SizeSuffixes = { "B", "KB", "MB", "GB", "TB" };
-
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is long bytes)
-            {
-                if (bytes == 0)
-                    return "0 B";
-
-                int magnitude = (int)Math.Log(bytes, 1024);
-                decimal adjustedSize = (decimal)bytes / (1L << (magnitude * 10));
-
-                return $"{adjustedSize:n1} {SizeSuffixes[magnitude]}";
-            }
-            return "0 B";
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    /// <summary>
-    /// Converter that returns true if the value is greater than zero
-    /// </summary>
-    public class GreaterThanZeroConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if (value == null)
+            if (values == null || values.Length == 0)
                 return false;
 
-            return value switch
+            foreach (var value in values)
             {
-                int intValue => intValue > 0,
-                long longValue => longValue > 0,
-                double doubleValue => doubleValue > 0,
-                float floatValue => floatValue > 0,
-                decimal decimalValue => decimalValue > 0,
-                _ => false
-            };
+                if (!(value is bool b) || !b)
+                    return false;
+            }
+
+            return true;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }
     }
 
     /// <summary>
-    /// Converter that returns Visibility.Visible if the value is zero, Collapsed otherwise
+    /// Null and boolean AND converter
     /// </summary>
-    public class ZeroToVisibilityConverter : IValueConverter
+    public class NullBooleanAndConverter : IMultiValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value == null)
-                return Visibility.Collapsed;
+            if (values == null || values.Length < 2)
+                return false;
 
-            var isZero = value switch
-            {
-                int intValue => intValue == 0,
-                long longValue => longValue == 0,
-                double doubleValue => Math.Abs(doubleValue) < double.Epsilon,
-                float floatValue => Math.Abs(floatValue) < float.Epsilon,
-                decimal decimalValue => decimalValue == 0,
-                _ => false
-            };
-
-            return isZero ? Visibility.Visible : Visibility.Collapsed;
+            // First value should not be null, second should be true
+            return values[0] != null && values[1] is bool b && b;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

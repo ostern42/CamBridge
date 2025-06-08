@@ -1,74 +1,110 @@
-// src\CamBridge.Config\Views\DashboardPage.xaml.cs
-// Version: 0.5.26
-// Complete dashboard implementation with proper DI and error handling
+// src/CamBridge.Config/Views/DashboardPage.xaml.cs
+// Version: 0.6.7
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
-using CamBridge.Config.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
+using CamBridge.Config.Services;
+using CamBridge.Config.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CamBridge.Config.Views
 {
     /// <summary>
-    /// Dashboard page showing real-time statistics and system status
+    /// Interaction logic for DashboardPage.xaml
     /// </summary>
     public partial class DashboardPage : Page
     {
         private DashboardViewModel? _viewModel;
+        private HttpClient? _httpClient;
 
         public DashboardPage()
         {
             InitializeComponent();
-            InitializeViewModel();
+
+            // Force a complete refresh - alte Version könnte im Cache sein
+            System.Diagnostics.Debug.WriteLine("=== NEW MULTI-PIPELINE DASHBOARD LOADING ===");
+
+            DataContextChanged += OnDataContextChanged;
+            Loaded += OnLoaded;
+            Unloaded += OnUnloaded;
         }
 
-        private void InitializeViewModel()
+        private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
-            try
+            _viewModel = DataContext as DashboardViewModel;
+        }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            // Get the ViewModel from DI container if not already set
+            if (_viewModel == null)
             {
                 var app = Application.Current as App;
                 if (app?.Host?.Services != null)
                 {
-                    // Get ViewModel from DI container - all dependencies are properly injected
-                    _viewModel = app.Host.Services.GetRequiredService<DashboardViewModel>();
-                    DataContext = _viewModel;
-
-                    System.Diagnostics.Debug.WriteLine("DashboardViewModel loaded from DI container");
+                    try
+                    {
+                        _viewModel = app.Host.Services.GetRequiredService<DashboardViewModel>();
+                        DataContext = _viewModel;
+                    }
+                    catch
+                    {
+                        // Fallback if DI fails
+                        CreateViewModelManually();
+                    }
                 }
                 else
                 {
-                    // Fallback: Create HttpClient with proper configuration
-                    var httpClient = new System.Net.Http.HttpClient
-                    {
-                        BaseAddress = new Uri("http://localhost:5050/"),
-                        Timeout = TimeSpan.FromSeconds(30)
-                    };
-
-                    // Create ApiService with HttpClient
-                    var apiService = new Services.HttpApiService(httpClient, null);
-
-                    // Create ViewModel
-                    _viewModel = new DashboardViewModel(apiService);
-                    DataContext = _viewModel;
-
-                    System.Diagnostics.Debug.WriteLine("DashboardViewModel created manually with HttpClient");
+                    // No DI container available
+                    CreateViewModelManually();
                 }
             }
-            catch (Exception ex)
+
+            // Debug output to verify correct version loaded
+            System.Diagnostics.Debug.WriteLine($"Dashboard loaded - Multi-Pipeline: {_viewModel?.PipelineStatuses != null}");
+            System.Diagnostics.Debug.WriteLine($"Pipeline count: {_viewModel?.PipelineStatuses?.Count ?? 0}");
+
+            // Force immediate refresh
+            if (_viewModel != null)
             {
-                System.Diagnostics.Debug.WriteLine($"Error creating DashboardViewModel: {ex.Message}");
-                ShowError("Failed to initialize Dashboard", ex.Message);
+                _ = _viewModel.RefreshDataCommand.ExecuteAsync(null);
             }
         }
 
-        private void ShowError(string title, string message)
+        private void CreateViewModelManually()
         {
-            MessageBox.Show(
-                $"{message}\n\nPlease ensure the CamBridge Service is running on port 5050.",
-                title,
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+            try
+            {
+                // Create services manually
+                _httpClient = new HttpClient();
+                _httpClient.BaseAddress = new Uri("http://localhost:5111/");
+
+                var nullLogger = new NullLogger<HttpApiService>();
+                var apiService = new HttpApiService(_httpClient, nullLogger);
+
+                _viewModel = new DashboardViewModel(apiService);
+                DataContext = _viewModel;
+
+                System.Diagnostics.Debug.WriteLine("Dashboard ViewModel created manually");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to create Dashboard ViewModel: {ex.Message}");
+            }
+        }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            // Clean up timer when page is unloaded
+            _viewModel?.Cleanup();
+
+            // Dispose HttpClient if we created it manually
+            _httpClient?.Dispose();
+            _httpClient = null;
         }
     }
 }

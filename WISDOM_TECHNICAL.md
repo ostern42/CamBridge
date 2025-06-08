@@ -1,5 +1,5 @@
 # WISDOM Technical - Entwicklung & Technische Details
-**Letzte Aktualisierung:** 2025-06-08, 01:00 Uhr  
+**Letzte Aktualisierung:** 2025-06-08, 11:15 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Technische Kontinuität & Entwicklungsplan
 
@@ -72,13 +72,14 @@
     - Ausnahme: CB Logo ist erlaubt (so simpel dass es schön ist)
     - Ausnahme: "?" für Hilfe wäre ok (aber "Help" Text wäre stringenter)
     - Später: Strategische Icons möglich (Claude mag sie so gerne 😊)
+16. **FILE-CHECK-REGEL:** IMMER erst nach existierenden Files fragen bevor neue erstellt werden!
 
 ## 🛡️ [CORE] TASK PROTECTION SYSTEM
 
 ### 🛡️ CURRENTLY PROTECTED TASKS:
 ```
 PIPELINE-001: Pipeline Architecture [IN PROGRESS] 🏗️
-             Status: Phase 1, 2 & 3 COMPLETED ✅
+             Status: Phase 1, 2, 3 & 4 COMPLETED ✅
              Created: 2025-06-06, 15:30
              Details: Multi-Pipeline Support mit Mapping Sets
              Priority: EPIC
@@ -86,8 +87,8 @@ PIPELINE-001: Pipeline Architecture [IN PROGRESS] 🏗️
              - Phase 1: Core Model & Migration ✅
              - Phase 2: Service Layer Updates ✅
              - Phase 3: Mapping Sets UI ✅ (glorifizierte Liste)
-             - Phase 4: Pipeline UI [CURRENT] 🚀
-             - Phase 5: Testing & Polish [PLANNED]
+             - Phase 4: Pipeline UI ✅ [COMPLETED SESSION 43!]
+             - Phase 5: Testing & Polish [NEXT]
 
 CAMB-004: Version.props Fix [PROTECTED] 🐛
           Status: Assembly Version Konflikt lösen
@@ -142,6 +143,7 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 13. **Design VOR Implementation!** 🎨
 14. **Pragmatik VOR Perfektion!** 💪
 15. **KEINE ICONS!** 🚫
+16. **Erst fragen, dann Files erstellen!** 🔍
 
 ## 🏗️ [VISION] PIPELINE ARCHITECTURE v0.6.0
 
@@ -171,81 +173,52 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 - ✅ Visual Studio Designer Mode Fix
 - ✅ DI Container Integration für ViewModels
 
-### 🚀 [CURRENT] Phase 4: Pipeline UI (Sprint 6.4)
-**Sprint 6.4 - Pipeline Configuration UI**
+### ✅ [DONE] Phase 4: Pipeline UI (Sprint 6.4)
+**Abgeschlossen:** 2025-06-08, 02:15 (Session 43!)
+- ✅ Settings Page KOMPLETT ENTFERNT
+- ✅ PipelineConfigPage implementiert
+- ✅ Navigation neu sortiert (KEINE ICONS!)
+- ✅ Zero Global Settings umgesetzt
+- ✅ Alle 6 Tabs funktionieren
+- ✅ Speichern über Neustart hinweg funktioniert
+- ✅ Multi-Pipeline Management komplett
+- ✅ Build-Fehler alle behoben (DeadLetterThreshold)
+- ✅ 112 Warnings sind akzeptabel
 
-#### 🎨 [DESIGN] Session 42 UI-Konzept (08.06.2025)
-- **Settings komplett neu gedacht!**
-- **ZERO Global Settings** - Alles pro Pipeline
-- **Navigation neu sortiert:** Dashboard → Pipeline Config → Dead Letters → Mapping Editor → Service Control → About
-- **KEINE ICONS in Navigation!**
-- **Ein Service, N Pipelines**
-- **Dashboard wird Multi-Pipeline-aware**
-
-**User Stories:**
-- Mehrere Pipelines für verschiedene Abteilungen anlegen
-- Eigene Ordner pro Pipeline konfigurieren
-- Mapping Sets einer Pipeline zuordnen
-- Status jeder Pipeline sehen
-- Pipelines aktivieren/deaktivieren
-
-### 📋 [PLANNED] Phase 5:
+### 🚀 [NEXT] Phase 5: Testing & Polish (Sprint 6.5)
 ```
-Phase 5: Testing & Polish (Sprint 6.5)
-├── Integration Tests
-├── Performance Tests
-└── Documentation
+Sprint 6.5 - Testing & Polish
+├── Integration Tests für Pipeline Manager
+├── Performance Tests für Multi-Pipeline
+├── Dashboard Multi-Pipeline View ← Session 44 Started!
+├── Documentation Update
+├── Warning Reduction (optional)
+└── GUI Function Debugging ← Session 45 NEXT!
 ```
 
-## 🛡️ [PROTECTED] PROTECTED FEATURES - NIEMALS LÖSCHEN!
-
-### 🔒 FTP-Server (Sprint 8) - GESCHÜTZT
-### 🔒 C-STORE (Sprint 9) - GESCHÜTZT
-### 🔒 MWL - Modality Worklist (Sprint 10) - GESCHÜTZT
-### 🔒 C-FIND (Sprint 11) - GESCHÜTZT
-
-## 🎯 [MILESTONE] Aktueller Stand: v0.6.4
+## 🎯 [MILESTONE] Aktueller Stand: v0.6.6
 
 ### Sprint 6.1: Core Model & Migration (v0.6.0) ✅
 ### Sprint 6.2: Service Layer Updates (v0.6.1) ✅
 ### Sprint 6.3: Mapping Sets UI (v0.6.2-v0.6.3) ✅
-- v0.6.2: Design Session & System Defaults Fix
-- v0.6.3: "Glorifizierte Liste" Implementation
-
-### Sprint 6.4: Pipeline Configuration UI (v0.6.4) 🚀
-- Status: IN PROGRESS
-- Start: Session 41 (07.06.2025, 11:30)
-- Session 42: UI Design komplett überarbeitet!
-- Goal: Multi-Department Pipeline Management
+### Sprint 6.4: Pipeline Configuration UI (v0.6.4-v0.6.5) ✅
+### Sprint 6.5: Testing & Polish (v0.6.6-v0.6.7) 🚧
+- v0.6.6: Dashboard Multi-Pipeline UI (Session 44)
+- v0.6.7: GUI Functions Fix (Session 45 planned)
 
 ### Nächste Schritte:
-- Sprint 6.5: Testing & Polish (v0.6.5)
+- Sprint 6.5: Testing & Polish fertigstellen
+- Sprint 7: Medical Integration Phase 1 (v0.7.0)
 
-## 💡 [LESSON] Top 20 Lektionen (destilliert)
+## 💡 [LESSON] Session 44 Lektionen
 
-1. **"IMMER FileTree checken!"** - Program.cs existiert 5+ mal!
-2. **"Eine durchgehende Linie!"** - Pipeline ganzheitlich sehen
-3. **"Encoding ist KRITISCH!"** - Windows-1252 ≠ UTF-8
-4. **"Features schützen!"** - Sonst verschwinden sie
-5. **"Mut zum Neuanfang!"** - QRBridge 2.0 statt Flickwerk
-6. **"Große Visionen, kleine Schritte!"** - Pipeline-Architecture iterativ
-7. **"Git amend für WISDOM!"** - Dokumentation gehört zum Commit
-8. **"Bei ähnlichem Code: Ganzen Block ersetzen!"** - Partial Updates = Probleme
-9. **"Design VOR Code!"** - Expand/Collapse UI durchdacht
-10. **"Keine Featureritis bei UI!"** - Pragmatisch bleiben
-11. **"Version beim EXIT erhöhen!"** - Committed Version bekommen, beim Exit +0.0.1
-12. **"System Defaults IMMER zuerst!"** - Basis vor Migration
-13. **"Nur User Sets speichern!"** - System Defaults bleiben im Code
-14. **"UI ist oft schon da!"** - Genau hinschauen bevor neu machen
-15. **"ESEL bei Wiederholungsfehlern!"** - FileTree wieder vergessen!
-16. **"Visual Studio Designer ist problematisch!"** - DesignerProperties.GetIsInDesignMode()
-17. **"ILogger muss registriert sein!"** - services.AddLogging() nicht vergessen
-18. **"Glorifizierte Liste > Komplexität!"** - User's pragmatische Lösung
-19. **"InitializeViewModel Pattern!"** - Von anderen Pages lernen
-20. **"Vollständige Artefakte!"** - Keine Snippets beim Fixen!
-21. **"Settings sind Quatsch!"** - Multi-Pipeline braucht neues Konzept! (Session 42)
-22. **"Zero Global Settings!"** - Alles pro Pipeline ist klarer! (Session 42)
-23. **"KEINE ICONS!"** - Text only in Navigation! (Session 42)
+1. **"IMMER erst nach existierenden Files fragen!"** - Hätte viel Zeit gespart
+2. **"XAML ≠ XAML.CS"** - Peinlicher aber lehrreicher Fehler
+3. **"Encoding-Probleme bei Artefakten"** - Umlaute können problematisch sein
+4. **"Visual Studio Designer kann täuschen"** - Build Success ≠ UI funktioniert
+5. **"Logger sind oft vergessen"** - ViewModels brauchen mehr als ConfigService
+6. **"SymbolIcon hat kein FontSize"** - ModernWpfUI Eigenheiten beachten
+7. **"Build läuft ≠ GUI funktioniert"** - Testing ist essentiell
 
 ## 🏗️ [KEEP] CamBridge Architektur-Überblick
 
@@ -256,22 +229,30 @@ View (XAML) ←→ ViewModel ←→ Model/Service
  UI Layout    Business Logic  Data/Config
 ```
 
-### Projekt-Struktur:
+### Pipeline Configuration Architektur:
 ```
-CamBridge.Core        - Models, Interfaces, Settings
-CamBridge.Infrastructure - Services (File, DICOM, etc.)
-CamBridge.Config      - WPF GUI Application
-CamBridge.Service     - Windows Service
-CamBridge.QRBridge    - QR Code Generator
+PipelineConfigPage.xaml
+    ↓
+PipelineConfigViewModel
+    ↓
+ConfigurationService (v2 aware)
+    ↓
+CamBridgeSettingsV2 (mit Migration)
+    ↓
+appsettings.v2.json
 ```
 
-### Wichtige Zusammenhänge:
-- **ConfigurationService** lädt/speichert Settings
-- **ViewModels** binden an Views via DataContext
-- **Commands** (ICommand) triggern Actions
-- **ObservableCollection** für UI-Listen
-- **INotifyPropertyChanged** für Updates
-- **DI Container** für ViewModels (App.xaml.cs)
+### Dashboard Multi-Pipeline Architektur (NEU):
+```
+DashboardPage.xaml
+    ↓
+DashboardViewModel
+    ↓
+├── IApiService (Service Status)
+└── IConfigurationService (Pipeline Configs)
+    ↓
+PipelineStatusViewModel[] (pro Pipeline)
+```
 
 ## 🔧 [CONFIG] Technologie-Stack
 ```
@@ -291,17 +272,6 @@ Deploy Dir:        C:\Users\oliver.stern\source\repos\CamBridge\Deploy
 System:            nexus\oliver.stern@OSTE-ER-LAP01
 ```
 
-## 🔄 [KEEP] SYSTEM MIGRATION CHECKLIST
-**Für Umzüge zwischen Entwicklungsumgebungen:**
-1. Alle absoluten Pfade in WISDOM_TECHNICAL.md anpassen ✅
-2. FileTree neu generieren: `.\Get-WisdomFileTree.ps1 -Mode Compact`
-3. Git Config anpassen: `git config user.name` und `git config user.email`
-4. Visual Studio User Settings prüfen
-5. NuGet Package Cache löschen (optional)
-6. Erste Test-Builds durchführen
-7. Service Pfade in launchSettings.json prüfen
-8. Check-CamBridge.ps1 ausführen für Health Check
-
 ## 📌 [KEEP] PowerShell One-Liner Sammlung
 
 ```powershell
@@ -311,34 +281,31 @@ System:            nexus\oliver.stern@OSTE-ER-LAP01
 # Health Check nach Migration
 .\Check-CamBridge.ps1 -Fix
 
-# Mapping Files für Sprint 6.3
-@('src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs','src\CamBridge.Config\Views\MappingEditorPage.xaml','src\CamBridge.Core\PipelineConfiguration.cs') | %{ echo "=== $_ ==="; cat $_ } > mapping-sprint-files.txt
+# Dashboard Multi-Pipeline Files (Session 44)
+@('src\CamBridge.Config\Views\DashboardPage.xaml','src\CamBridge.Config\ViewModels\DashboardViewModel.cs','src\CamBridge.Config\Converters\ValueConverters.cs') | %{ echo "=== $_ ==="; cat $_ } > dashboard-complete.txt
 
-# Pipeline Files für Sprint 6.4
-@('src\CamBridge.Core\PipelineConfiguration.cs','src\CamBridge.Config\Services\ConfigurationService.cs','src\CamBridge.Service\Program.cs') | %{ echo "=== $_ ==="; cat $_ } > pipeline-config-files.txt
+# Build mit Error Capture
+dotnet build 2>&1 | Tee-Object -Variable buildOutput
 
-# Debug Visual Studio Issues
-dotnet clean && dotnet build
+# Fix für fehlende Properties
+(Get-Content src\CamBridge.Core\NotificationSettings.cs -Raw) -replace '(DailySummaryHour.*?})', '$1`n`n    public int DeadLetterThreshold { get; set; } = 100;' | Set-Content src\CamBridge.Core\NotificationSettings.cs
 
-# Alle Program.cs finden
-.\Get-WisdomFileTree.ps1 -ShowProgramCs
+# Start Config GUI
+.\src\CamBridge.Config\bin\Debug\net8.0-windows\CamBridge.Config.exe
 
-# UI Farben checken (Session 42)
-Get-ChildItem -Path "src\CamBridge.Config" -Filter "*.xaml" -Recurse | Select-String -Pattern "(Background=|Foreground=|Color=|Fill=|Stroke=)" | Select-String -Pattern "(Black|Dark|#[0-9A-Fa-f]{6})" | Select-Object -Unique Filename, LineNumber, Line
+# Check für richtige XAML/CS Files
+Get-Content "src\CamBridge.Config\Views\*.xaml" -First 1 | Select-String "<Page"
 ```
 
 ## 🚀 [KEEP] ENTWICKLUNGSFAHRPLAN
 
 ### ✅ Sprint 1-5: Foundation (DONE)
-### 🏗️ Sprint 6: Pipeline Architecture (v0.6.0-v0.6.5) ← WIR SIND HIER
+### ✅ Sprint 6: Pipeline Architecture (v0.6.0-v0.6.7)
 - ✅ Sprint 6.1: Core Model & Migration
 - ✅ Sprint 6.2: Service Layer Updates
-- ✅ Sprint 6.3: Mapping Sets UI ("glorifizierte Liste")
-- 🚀 Sprint 6.4: Pipeline Configuration UI ← CURRENT
-  - Session 42: Komplettes UI-Redesign!
-  - Zero Global Settings Konzept
-  - Navigation neu sortiert
-- Sprint 6.5: Testing & Polish
+- ✅ Sprint 6.3: Mapping Sets UI
+- ✅ Sprint 6.4: Pipeline Configuration UI
+- 🚧 Sprint 6.5: Testing & Polish ← CURRENT (Session 44-45)
 
 ### 🏥 Sprint 7: Medical Integration Phase 1 (v0.7.0-v0.7.5)
 ### 🛡️ Sprint 8-11: Protected Medical Features
@@ -351,48 +318,65 @@ Get-ChildItem -Path "src\CamBridge.Config" -Filter "*.xaml" -Recurse | Select-St
 - **Pipeline Phase 2:** 06.06.2025, 16:17 ✅
 - **UI Design Session:** 06.06.2025, 23:42 🎨
 - **Session 39:** 07.06.2025, 01:00 - Mapping Sets UI fertig! ✅
-- **Session 40:** 07.06.2025, 01:40 - VS Designer Fix, glorifizierte Liste ✅
-- **System Migration:** 07.06.2025, 11:30 - Von GROKLIGHT zu OSTE-ER-LAP01 🔄
+- **Session 40:** 07.06.2025, 01:40 - VS Designer Fix ✅
+- **System Migration:** 07.06.2025, 11:30 - OSTE-ER-LAP01 🔄
 - **Session 41:** 07.06.2025, 11:30 - Sprint 6.4 Start 🚀
-- **Session 42:** 08.06.2025, 01:00 - Pipeline UI Design Revolution! 🎨
-- **Arbeitszeit gesamt:** ~60 Stunden
+- **Session 42:** 08.06.2025, 01:00 - UI Design Revolution! 🎨
+- **Session 43:** 08.06.2025, 01:30-02:15 - Pipeline UI COMPLETE! ✅
+- **Session 44:** 08.06.2025, 10:00-11:15 - Dashboard Multi-Pipeline 🚧
+- **Arbeitszeit gesamt:** ~67 Stunden
 
 ## 📝 [KEEP] Standard Prompt für nächste Session
 
 ```
-Ich arbeite an CamBridge v0.6.4.
-Sprint 6.4: Pipeline Configuration UI
+Ich arbeite an CamBridge v0.6.6.
+Sprint 6.5: Testing & Polish
 System: nexus\oliver.stern@OSTE-ER-LAP01
 
-WICHTIG: 
-1. Version.props checken - muss 0.6.4 sein (vom letzten Commit)
-2. FileTree checken: .\Get-WisdomFileTree.ps1 -Mode Compact
-3. WISDOM_SPRINT.md lesen für Pipeline UI Design!
-4. Navigation: Dashboard → Pipeline Config → Dead Letters → Mapping Editor → Service Control → About
-5. KEINE ICONS in Navigation!
-6. Zero Global Settings - alles pro Pipeline!
+STATUS: Dashboard Multi-Pipeline UI implementiert
+- Build erfolgreich (0 Fehler)
+- GUI Funktionen arbeiten nicht korrekt
+- Event-Handler müssen geprüft werden
+
+PROBLEME:
+- Dashboard zeigt evtl. alte Version
+- MappingEditor Events nicht verbunden?
+- ViewModels Bindings prüfen
+
+NÄCHSTE SCHRITTE:
+1. GUI Debugging
+2. Event-Handler verifizieren
+3. Service-Integration testen
 
 FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch geschützt?
 ```
 
-## 🎯 Nächste Session Checkliste
+## 🎯 Session 44 Summary
 
-1. **VOGON INIT** durchführen
-2. **FileTree** checken (IMMER!)
-3. **WISDOM_SPRINT.md** lesen für Design-Details
-4. **Sprint 6.4**: Pipeline Configuration UI
-   - PipelineConfigPage erstellen
-   - MainWindow Navigation anpassen (neue Reihenfolge!)
-   - Settings Page ERSETZEN
-   - Dashboard Multi-Pipeline vorbereiten
-5. **Feature Check** (4 Medical Features)
-6. **Version** auf 0.6.4 checken
+**ERFOLGE:**
+1. ✅ Multi-Pipeline Dashboard UI implementiert
+2. ✅ MappingEditor Build-Fehler behoben
+3. ✅ ValueConverters erweitert (Zero, Error)
+4. ✅ Constructor-Probleme gelöst (Logger)
+5. ✅ XAML/CS Verwirrung aufgeklärt
+6. ✅ Build erfolgreich!
+
+**PROBLEME:**
+1. 🐛 GUI Funktionen nicht voll funktionsfähig
+2. 🐛 Dashboard zeigt möglicherweise alte Version
+3. 🐛 Event-Handler Verbindungen unklar
+
+**TECHNISCHE DETAILS:**
+- DashboardViewModel braucht nur IApiService (ConfigService wird intern erstellt)
+- MappingEditorViewModel braucht ILogger<T> und IConfigurationService
+- SymbolIcon hat keine FontSize Property in ModernWpfUI
+- Visual Studio Designer kann irreführende Fehler zeigen
 
 ---
 
 ## 🏁 ENDE DES WISDOM_TECHNICAL
 
-**Die technische Referenz für CamBridge Development**
+**Sprint 6.5: Testing & Polish - Dashboard implementiert, GUI debugging needed!**
 
 *"Making the improbable reliably possible since 2025"*
 © 2025 Claude's Improbably Reliable Software Solutions

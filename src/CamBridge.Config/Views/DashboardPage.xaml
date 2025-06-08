@@ -6,11 +6,13 @@
       Title="Dashboard">
 
     <Page.Resources>
-        <!-- Converters -->
+        <!-- Converters - ALLE die wir brauchen! -->
         <conv:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
         <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility"/>
         <conv:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
         <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+        <conv:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter"/>
+        <conv:ErrorCountToColorConverter x:Key="ErrorCountToColorConverter"/>
 
         <!-- Styles -->
         <Style x:Key="StatCardStyle" TargetType="Border">
@@ -34,6 +36,14 @@
         <Style x:Key="StatLabelStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Opacity" Value="0.7"/>
+        </Style>
+
+        <Style x:Key="PipelineCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="8,4"/>
+            <Setter Property="MinHeight" Value="120"/>
         </Style>
     </Page.Resources>
 
@@ -84,6 +94,7 @@
                       VerticalScrollBarVisibility="Auto">
             <Grid Margin="16,0,16,16">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -138,74 +149,204 @@
                     </Grid>
                 </Border>
 
-                <!-- Statistics Cards -->
-                <UniformGrid Grid.Row="1" 
-                             Rows="1" 
-                             Columns="4"
-                             Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisibility}}">
+                <!-- Overall Statistics Cards -->
+                <StackPanel Grid.Row="1" 
+                            Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="Overall Statistics" 
+                               FontSize="20" 
+                               FontWeight="SemiBold"
+                               Margin="8,16,8,4"/>
 
-                    <!-- Files Processed -->
-                    <Border Style="{StaticResource StatCardStyle}">
-                        <StackPanel>
-                            <ui:SymbolIcon Symbol="Document" 
-                                           HorizontalAlignment="Left"/>
-                            <TextBlock Text="{Binding SuccessCount}" 
-                                       Style="{StaticResource StatValueStyle}"/>
-                            <TextBlock Text="Files Processed" 
-                                       Style="{StaticResource StatLabelStyle}"/>
+                    <UniformGrid Rows="1" Columns="4">
+                        <!-- Total Files Processed -->
+                        <Border Style="{StaticResource StatCardStyle}">
+                            <StackPanel>
+                                <ui:SymbolIcon Symbol="Document" 
+                                               HorizontalAlignment="Left"/>
+                                <TextBlock Text="{Binding TotalSuccessCount}" 
+                                           Style="{StaticResource StatValueStyle}"/>
+                                <TextBlock Text="Total Processed" 
+                                           Style="{StaticResource StatLabelStyle}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Overall Success Rate -->
+                        <Border Style="{StaticResource StatCardStyle}">
+                            <StackPanel>
+                                <ui:SymbolIcon Symbol="Accept" 
+                                               HorizontalAlignment="Left"/>
+                                <TextBlock Text="{Binding OverallSuccessRate, StringFormat='{}{0:F1}%'}" 
+                                           Style="{StaticResource StatValueStyle}"/>
+                                <TextBlock Text="Success Rate" 
+                                           Style="{StaticResource StatLabelStyle}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Total Queue -->
+                        <Border Style="{StaticResource StatCardStyle}">
+                            <StackPanel>
+                                <ui:SymbolIcon Symbol="Clock" 
+                                               HorizontalAlignment="Left"/>
+                                <TextBlock Text="{Binding TotalQueueLength}" 
+                                           Style="{StaticResource StatValueStyle}"/>
+                                <TextBlock Text="Total in Queue" 
+                                           Style="{StaticResource StatLabelStyle}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Total Errors -->
+                        <Border>
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource StatCardStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TotalErrorCount, 
+                                                              Converter={StaticResource GreaterThanZeroConverter}}" 
+                                                     Value="True">
+                                            <Setter Property="Background" Value="#10FF6B6B"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <ui:SymbolIcon Symbol="Important" 
+                                               HorizontalAlignment="Left"/>
+                                <TextBlock Text="{Binding TotalErrorCount}" 
+                                           Style="{StaticResource StatValueStyle}"/>
+                                <TextBlock Text="Total Errors" 
+                                           Style="{StaticResource StatLabelStyle}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+                </StackPanel>
+
+                <!-- Pipeline Status Cards -->
+                <StackPanel Grid.Row="2" 
+                            Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="Pipeline Status" 
+                               FontSize="20" 
+                               FontWeight="SemiBold"
+                               Margin="8,24,8,12"/>
+
+                    <ItemsControl ItemsSource="{Binding PipelineStatuses}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource PipelineCardStyle}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="3"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Status Color Bar -->
+                                        <Rectangle Grid.Column="0" 
+                                                   Fill="{Binding StatusColor}"
+                                                   RadiusX="1.5"
+                                                   RadiusY="1.5"
+                                                   Margin="-16,0,12,0"/>
+
+                                        <!-- Pipeline Info -->
+                                        <Grid Grid.Column="1">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <StackPanel Grid.Row="0" 
+                                                        Orientation="Horizontal">
+                                                <TextBlock Text="{Binding PipelineName}" 
+                                                           FontSize="18" 
+                                                           FontWeight="SemiBold"/>
+                                                <Border Background="{Binding StatusColor}"
+                                                        CornerRadius="4"
+                                                        Padding="8,2"
+                                                        Margin="12,0,0,0">
+                                                    <TextBlock Text="{Binding Status}"
+                                                               Foreground="White"
+                                                               FontSize="12"/>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Row="1" 
+                                                       Text="{Binding WatchFolder}"
+                                                       FontSize="12"
+                                                       Opacity="0.7"
+                                                       Margin="0,4,0,0"/>
+
+                                            <StackPanel Grid.Row="2" 
+                                                        Orientation="Horizontal"
+                                                        Margin="0,8,0,0">
+                                                <TextBlock FontSize="14">
+                                                    <Run Text="Processed:" FontWeight="SemiBold"/>
+                                                    <Run Text="{Binding ProcessedToday}"/>
+                                                </TextBlock>
+                                                <TextBlock FontSize="14" Margin="16,0,0,0">
+                                                    <Run Text="Errors:" FontWeight="SemiBold"/>
+                                                    <Run Text="{Binding ErrorsToday}"/>
+                                                </TextBlock>
+                                                <TextBlock FontSize="14" Margin="16,0,0,0">
+                                                    <Run Text="Queue:" FontWeight="SemiBold"/>
+                                                    <Run Text="{Binding QueueLength}"/>
+                                                </TextBlock>
+                                                <TextBlock FontSize="14" Margin="16,0,0,0">
+                                                    <Run Text="Success:" FontWeight="SemiBold"/>
+                                                    <Run Text="{Binding SuccessRate, StringFormat='{}{0:F1}%'}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- Last Processed Time -->
+                                        <StackPanel Grid.Column="2" 
+                                                    VerticalAlignment="Center"
+                                                    Margin="16,0,0,0">
+                                            <TextBlock Text="Last processed"
+                                                       FontSize="12"
+                                                       Opacity="0.7"
+                                                       HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding LastProcessed, StringFormat='{}{0:HH:mm:ss}'}"
+                                                       FontSize="14"
+                                                       HorizontalAlignment="Right"
+                                                       Visibility="{Binding LastProcessed, Converter={StaticResource NullToVisibility}}"/>
+                                            <TextBlock Text="Never"
+                                                       FontSize="14"
+                                                       Opacity="0.5"
+                                                       HorizontalAlignment="Right"
+                                                       Visibility="{Binding LastProcessed, Converter={StaticResource NullToVisibility}, ConverterParameter=Inverse}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- No Pipelines Message -->
+                    <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                            CornerRadius="8"
+                            Padding="32"
+                            Margin="8"
+                            Visibility="{Binding PipelineStatuses.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <ui:SymbolIcon Symbol="Document"
+                                           Width="48"
+                                           Height="48"
+                                           Opacity="0.3"/>
+                            <TextBlock Text="No pipelines configured"
+                                       FontSize="16"
+                                       Opacity="0.5"
+                                       Margin="0,12,0,0"
+                                       HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-
-                    <!-- Success Rate -->
-                    <Border Style="{StaticResource StatCardStyle}">
-                        <StackPanel>
-                            <ui:SymbolIcon Symbol="Accept" 
-                                           HorizontalAlignment="Left"/>
-                            <TextBlock Text="{Binding SuccessRate, StringFormat='{}{0:F1}%'}" 
-                                       Style="{StaticResource StatValueStyle}"/>
-                            <TextBlock Text="Success Rate" 
-                                       Style="{StaticResource StatLabelStyle}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Processing Queue -->
-                    <Border Style="{StaticResource StatCardStyle}">
-                        <StackPanel>
-                            <ui:SymbolIcon Symbol="Clock" 
-                                           HorizontalAlignment="Left"/>
-                            <TextBlock Text="{Binding QueueLength}" 
-                                       Style="{StaticResource StatValueStyle}"/>
-                            <TextBlock Text="In Queue" 
-                                       Style="{StaticResource StatLabelStyle}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Dead Letters / Errors -->
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource StatCardStyle}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ErrorCount, 
-                                                          Converter={StaticResource GreaterThanZeroConverter}}" 
-                                                 Value="True">
-                                        <Setter Property="Background" Value="#10FF6B6B"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel>
-                            <ui:SymbolIcon Symbol="Important" 
-                                           HorizontalAlignment="Left"/>
-                            <TextBlock Text="{Binding ErrorCount}" 
-                                       Style="{StaticResource StatValueStyle}"/>
-                            <TextBlock Text="Errors" 
-                                       Style="{StaticResource StatLabelStyle}"/>
-                        </StackPanel>
-                    </Border>
-                </UniformGrid>
+                </StackPanel>
 
                 <!-- Recent Activity -->
-                <TextBlock Grid.Row="2" 
+                <TextBlock Grid.Row="3" 
                            Text="Recent Activity" 
                            FontSize="20" 
                            FontWeight="SemiBold"
@@ -213,18 +354,18 @@
                            Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisibility}}"/>
 
                 <!-- Activity List -->
-                <Border Grid.Row="3" 
+                <Border Grid.Row="4" 
                         Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                         CornerRadius="8"
                         Margin="8"
+                        MinHeight="200"
                         Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisibility}}">
 
                     <Grid>
                         <ListBox ItemsSource="{Binding RecentActivities}"
                                  Background="Transparent"
                                  BorderThickness="0"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 Visibility="{Binding HasItems, RelativeSource={RelativeSource Self}, Converter={StaticResource BoolToVisibility}}">
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border Padding="16,8" BorderThickness="0,0,0,1" 
@@ -233,6 +374,7 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
 
                                             <ui:SymbolIcon Grid.Column="0" 
@@ -254,8 +396,17 @@
                                                 </ui:SymbolIcon.Style>
                                             </ui:SymbolIcon>
 
-                                            <TextBlock Grid.Column="1" 
-                                                       Text="{Binding Message}"
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Message}"/>
+                                                <TextBlock Text="{Binding PipelineName}"
+                                                           FontSize="12"
+                                                           Opacity="0.7"/>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="2" 
+                                                       Text="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss}'}"
+                                                       FontSize="12"
+                                                       Opacity="0.7"
                                                        VerticalAlignment="Center"/>
                                         </Grid>
                                     </Border>
@@ -267,7 +418,7 @@
                         <StackPanel HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Margin="48"
-                                    Visibility="{Binding HasItems, ElementName=RecentActivityList, Converter={StaticResource InverseBoolToVisibility}}">
+                                    Visibility="{Binding RecentActivities.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
                             <ui:SymbolIcon Symbol="Document"
                                            Width="48"
                                            Height="48"
@@ -282,7 +433,7 @@
 
                 <!-- Disconnected State -->
                 <Border Grid.Row="1" 
-                        Grid.RowSpan="3"
+                        Grid.RowSpan="4"
                         Visibility="{Binding IsConnected, Converter={StaticResource InverseBoolToVisibility}}">
                     <StackPanel HorizontalAlignment="Center"
                                 VerticalAlignment="Center"

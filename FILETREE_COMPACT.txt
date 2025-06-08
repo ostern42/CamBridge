@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.6.4
+# // Version: 0.6.7
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -46,8 +46,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 394
-# Generated: 2025-06-07 16:20
+# Total files: 375
+# Generated: 2025-06-08 11:56
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -77,6 +77,7 @@ src\CamBridge.Config\ViewModels\DashboardViewModel.cs
 src\CamBridge.Config\ViewModels\DeadLettersViewModel.cs
 src\CamBridge.Config\ViewModels\MainViewModel.cs
 src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs
+src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs
 src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs
 src\CamBridge.Config\ViewModels\ServiceControlViewModelExtension.cs
 src\CamBridge.Config\ViewModels\SettingsViewModel.cs
@@ -89,6 +90,8 @@ src\CamBridge.Config\Views\DeadLettersPage.xaml
 src\CamBridge.Config\Views\DeadLettersPage.xaml.cs
 src\CamBridge.Config\Views\MappingEditorPage.xaml
 src\CamBridge.Config\Views\MappingEditorPage.xaml.cs
+src\CamBridge.Config\Views\PipelineConfigPage.xaml
+src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
 src\CamBridge.Config\Views\ServiceControlPage.xaml
 src\CamBridge.Config\Views\ServiceControlPage.xaml.cs
 src\CamBridge.Config\Views\SettingsPage.xaml
@@ -355,7 +358,6 @@ _archived_collectors\collect-sources-balanced.bat
 _archived_collectors\collect-sources-gui-config.bat
 _archived_collectors\collect-sources-mapping-editor.bat
 _archived_collectors\collect-sources-test.bat
-about-current.txt
 Build-QRBridgeUltraSlim.ps1
 CamBridge.ParserDebug\CamBridge.ParserDebug.csproj
 CamBridge.ParserDebug\Program.cs
@@ -370,14 +372,7 @@ collect-smart.bat
 collect-sources.bat
 ConnectionTest\ConnectionTest.cs
 ConnectionTest\ConnectionTest.csproj
-core-entities.txt
 Create-DeploymentPackage.ps1
-current-mapping-ui.txt
-current-processing.txt
-current-service.txt
-current-settings-model.txt
-encoding-fix-analysis.txt
-exiftool-encoding-test.txt
 ExifToolQuickTest\exif_output.json
 ExifToolQuickTest\ExifToolQuickTest.csproj
 ExifToolQuickTest\Program.cs
@@ -389,35 +384,21 @@ FILETREE_DETAILED.txt
 FILETREE_MINIMAL.txt
 Get-WisdomProjectTree.ps1
 mapping-editor-complete.txt
-mapping-interfaces-check.txt
-mapping-page-current.txt
-mapping-sets-files.txt
-mapping-viewmodel-current.txt
+mapping-editor-current-state.txt
 old docs\cambridge-entwicklungsplan-v2.md
-other-pages-check.txt
-page-constructors.txt
-pipeline_analysis.txt
-processingoptions.txt
 Program.cs
 project_structure.txt
 PROJECT_TREE.md
 PROJECT_WISDOM.md
 protected-features-manifest.md
-qrbridge-analysis.txt
 README.md
 README-Deployment.md
-servicecollection-current.txt
-service-layer-current.txt
-settings-current.txt
-settings-definitions.txt
-Temp.txt
 Test-CompletePipeline.ps1
 Test-QRBridge.ps1
 TREE_COMPACT.txt
 TREE_DETAILED.md
 TREE_MINIMAL.txt
 Version.props
-viewmodel-registration.txt
 WISDOM_CLAUDE.md
 WISDOM_PO.md
 WISDOM_TECHNICAL.md

@@ -1,8 +1,8 @@
 // src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
-// Version: 0.6.2
+// Version: 0.6.7
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
-// Modified: 2025-06-07
-// Status: Development/Local - Multiple Mapping Sets Support
+// Modified: 2025-06-08
+// Status: Development/Local - Fixed Command Names
 
 using CamBridge.Config.Dialogs;
 using CamBridge.Config.Extensions;
@@ -229,7 +229,7 @@ namespace CamBridge.Config.ViewModels
                         Path.Combine(assemblyDir, "..", "..", "..", "..", "..", "CamBridge.Service", "mappings.json"),
                         Path.Combine(Environment.CurrentDirectory, "mappings.json"),
                         Path.Combine(Environment.CurrentDirectory, "src", "CamBridge.Service", "mappings.json"),
-                        @"C:\Users\aiadmin\source\repos\CamBridge\src\CamBridge.Service\mappings.json"
+                        @"C:\Users\oliver.stern\source\repos\CamBridge\src\CamBridge.Service\mappings.json"
                     };
 
                     foreach (var path in possiblePaths)
@@ -738,6 +738,88 @@ namespace CamBridge.Config.ViewModels
         }
 
         private bool CanExportMappings() => SelectedMappingSet != null;
+
+        [RelayCommand]
+        private async Task TestMappingAsync()
+        {
+            if (SelectedMappingSet == null)
+            {
+                MessageBox.Show("Please select a mapping set to test", "No Mapping Set",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                IsLoading = true;
+                StatusMessage = "Testing mapping configuration...";
+
+                // Create test data
+                var testData = new System.Collections.Generic.Dictionary<string, string>
+                {
+                    { "examid", "TEST001" },
+                    { "name", "Test, Patient" },
+                    { "birthdate", "1990-01-15" },
+                    { "gender", "M" },
+                    { "comment", "Test mapping" },
+                    { "patientid", "PAT001" },
+                    { "Make", "RICOH" },
+                    { "Model", "G900 II" },
+                    { "DateTimeOriginal", DateTime.Now.ToString("yyyy:MM:dd HH:mm:ss") },
+                    { "Software", "CamBridge Test" }
+                };
+
+                var results = new System.Text.StringBuilder();
+                results.AppendLine($"Testing Mapping Set: {SelectedMappingSet.Name}");
+                results.AppendLine($"Rules: {SelectedMappingSet.Rules.Count}");
+                results.AppendLine();
+
+                int successCount = 0;
+                int errorCount = 0;
+
+                foreach (var rule in SelectedMappingSet.Rules)
+                {
+                    try
+                    {
+                        if (testData.TryGetValue(rule.SourceField, out var sourceValue))
+                        {
+                            var transformedValue = rule.ApplyTransform(sourceValue);
+                            results.AppendLine($"✓ {rule.SourceField} → {rule.DicomTag}: '{transformedValue}'");
+                            successCount++;
+                        }
+                        else
+                        {
+                            results.AppendLine($"⚠ {rule.SourceField}: No test data available");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        results.AppendLine($"✗ {rule.SourceField}: Error - {ex.Message}");
+                        errorCount++;
+                    }
+                }
+
+                results.AppendLine();
+                results.AppendLine($"Summary: {successCount} successful, {errorCount} errors");
+
+                // Show results
+                MessageBox.Show(results.ToString(), "Mapping Test Results",
+                    MessageBoxButton.OK,
+                    errorCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+
+                StatusMessage = $"Test completed: {successCount} successful, {errorCount} errors";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to test mappings");
+                MessageBox.Show($"Error testing mappings: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
 
         [RelayCommand(CanExecute = nameof(CanEditSelectedRule))]
         private void SelectDicomTag()

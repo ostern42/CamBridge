@@ -1,78 +1,247 @@
-// src/CamBridge.Core/ProcessingOptions.cs
-// Version: 0.6.0
-// Description: Processing options with DeadLetterFolder for pipeline architecture
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// src\CamBridge.Core\ProcessingOptions.cs
+// Version: 0.6.5
+// Description: Processing options with INotifyPropertyChanged support
 
 using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 
 namespace CamBridge.Core
 {
     /// <summary>
-    /// Processing options for file handling
+    /// Options for processing JPEG files
     /// </summary>
-    public class ProcessingOptions
+    public class ProcessingOptions : INotifyPropertyChanged
     {
-        public PostProcessingAction SuccessAction { get; set; } = PostProcessingAction.Archive;
-        public PostProcessingAction FailureAction { get; set; } = PostProcessingAction.MoveToError;
-
-        public string ArchiveFolder { get; set; } = @"C:\CamBridge\Archive";
-        public string ErrorFolder { get; set; } = @"C:\CamBridge\Errors";
-        public string BackupFolder { get; set; } = @"C:\CamBridge\Backup";
+        private PostProcessingAction _successAction = PostProcessingAction.Archive;
+        private PostProcessingAction _failureAction = PostProcessingAction.MoveToError;
+        private string _archiveFolder = @"C:\CamBridge\Archive";
+        private string _errorFolder = @"C:\CamBridge\Errors";
+        private string _backupFolder = @"C:\CamBridge\Backup";
+        private string? _deadLetterFolder = @"C:\CamBridge\DeadLetters";
+        private bool _createBackup = true;
+        private int _maxConcurrentProcessing = 2;
+        private bool _retryOnFailure = true;
+        private int _maxRetryAttempts = 3;
+        private OutputOrganization _outputOrganization = OutputOrganization.ByPatientAndDate;
+        private bool _processExistingOnStartup = true;
+        private TimeSpan? _maxFileAge;
+        private long? _minimumFileSizeBytes;
+        private long? _maximumFileSizeBytes;
+        private string? _outputFilePattern;
+        private int _retryDelaySeconds = 5;
 
         /// <summary>
-        /// Folder for dead letter items (files that failed processing after all retries)
+        /// Action to take on successful processing
         /// </summary>
-        public string DeadLetterFolder { get; set; } = @"C:\CamBridge\DeadLetter";
+        public PostProcessingAction SuccessAction
+        {
+            get => _successAction;
+            set { _successAction = value; OnPropertyChanged(); }
+        }
 
-        public bool CreateBackup { get; set; } = true;
-        public int MaxConcurrentProcessing { get; set; } = 2;
-        public bool RetryOnFailure { get; set; } = true;
-        public int MaxRetryAttempts { get; set; } = 3;
+        /// <summary>
+        /// Action to take on failed processing
+        /// </summary>
+        public PostProcessingAction FailureAction
+        {
+            get => _failureAction;
+            set { _failureAction = value; OnPropertyChanged(); }
+        }
 
-        public OutputOrganization OutputOrganization { get; set; } = OutputOrganization.ByPatientAndDate;
-        public bool ProcessExistingOnStartup { get; set; } = true;
-        public TimeSpan? MaxFileAge { get; set; } = TimeSpan.FromDays(30);
+        /// <summary>
+        /// Archive folder for successfully processed files
+        /// </summary>
+        public string ArchiveFolder
+        {
+            get => _archiveFolder;
+            set { _archiveFolder = value; OnPropertyChanged(); }
+        }
 
-        // Additional properties required by Infrastructure
-        public long MinimumFileSizeBytes { get; set; } = 1024; // 1 KB minimum
-        public long MaximumFileSizeBytes { get; set; } = 104857600; // 100 MB maximum
-        public string OutputFilePattern { get; set; } = "{PatientID}_{StudyDate}_{InstanceNumber}.dcm";
-        public int RetryDelaySeconds { get; set; } = 2;
+        /// <summary>
+        /// Error folder for failed files
+        /// </summary>
+        public string ErrorFolder
+        {
+            get => _errorFolder;
+            set { _errorFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Backup folder for original files
+        /// </summary>
+        public string BackupFolder
+        {
+            get => _backupFolder;
+            set { _backupFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Dead letter folder for unprocessable files
+        /// </summary>
+        public string? DeadLetterFolder
+        {
+            get => _deadLetterFolder;
+            set { _deadLetterFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether to create backup before processing
+        /// </summary>
+        public bool CreateBackup
+        {
+            get => _createBackup;
+            set { _createBackup = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum concurrent file processing
+        /// </summary>
+        public int MaxConcurrentProcessing
+        {
+            get => _maxConcurrentProcessing;
+            set { _maxConcurrentProcessing = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether to retry on failure
+        /// </summary>
+        public bool RetryOnFailure
+        {
+            get => _retryOnFailure;
+            set { _retryOnFailure = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum retry attempts
+        /// </summary>
+        public int MaxRetryAttempts
+        {
+            get => _maxRetryAttempts;
+            set { _maxRetryAttempts = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Output folder organization strategy
+        /// </summary>
+        public OutputOrganization OutputOrganization
+        {
+            get => _outputOrganization;
+            set { _outputOrganization = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether to process existing files on startup
+        /// </summary>
+        public bool ProcessExistingOnStartup
+        {
+            get => _processExistingOnStartup;
+            set { _processExistingOnStartup = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum age of files to process
+        /// </summary>
+        public TimeSpan? MaxFileAge
+        {
+            get => _maxFileAge;
+            set { _maxFileAge = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Minimum file size in bytes
+        /// </summary>
+        public long? MinimumFileSizeBytes
+        {
+            get => _minimumFileSizeBytes;
+            set { _minimumFileSizeBytes = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum file size in bytes
+        /// </summary>
+        public long? MaximumFileSizeBytes
+        {
+            get => _maximumFileSizeBytes;
+            set { _maximumFileSizeBytes = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Pattern for output file naming
+        /// </summary>
+        public string? OutputFilePattern
+        {
+            get => _outputFilePattern;
+            set { _outputFilePattern = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Delay between retry attempts in seconds
+        /// </summary>
+        public int RetryDelaySeconds
+        {
+            get => _retryDelaySeconds;
+            set { _retryDelaySeconds = value; OnPropertyChanged(); }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 
     /// <summary>
-    /// Actions to take after processing a file
+    /// Actions to take after processing
     /// </summary>
     public enum PostProcessingAction
     {
-        /// <summary>Leave the file in place</summary>
+        /// <summary>
+        /// Leave the file in place
+        /// </summary>
         Leave,
 
-        /// <summary>Move to archive folder</summary>
+        /// <summary>
+        /// Move to archive folder
+        /// </summary>
         Archive,
 
-        /// <summary>Delete the file</summary>
+        /// <summary>
+        /// Delete the file
+        /// </summary>
         Delete,
 
-        /// <summary>Move to error folder</summary>
+        /// <summary>
+        /// Move to error folder
+        /// </summary>
         MoveToError
     }
 
     /// <summary>
-    /// How to organize output files
+    /// Output folder organization strategies
     /// </summary>
     public enum OutputOrganization
     {
-        /// <summary>No organization, all files in root</summary>
+        /// <summary>
+        /// No organization
+        /// </summary>
         None,
 
-        /// <summary>Organize by patient ID</summary>
+        /// <summary>
+        /// Organize by patient name
+        /// </summary>
         ByPatient,
 
-        /// <summary>Organize by study date</summary>
+        /// <summary>
+        /// Organize by date
+        /// </summary>
         ByDate,
 
-        /// <summary>Organize by patient ID and then date</summary>
+        /// <summary>
+        /// Organize by patient and date
+        /// </summary>
         ByPatientAndDate
     }
 }

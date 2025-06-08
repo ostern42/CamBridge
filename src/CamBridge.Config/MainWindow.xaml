@@ -1,9 +1,13 @@
+<!-- src\CamBridge.Config\MainWindow.xaml -->
+<!-- Version: 0.6.4 -->
+<!-- Description: Main navigation window - KEINE ICONS Edition! -->
+
 <Window x:Class="CamBridge.Config.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.modernwpf.com/2019"
         ui:WindowHelper.UseModernWindowStyle="True"
-        Title="CamBridge Configuration v0.4.2" 
+        Title="CamBridge Configuration v0.6.4" 
         Height="1000" Width="1500">
 
     <Grid>
@@ -14,17 +18,14 @@
                           SelectionChanged="NavigationView_SelectionChanged">
 
             <ui:NavigationView.MenuItems>
-                <ui:NavigationViewItem Icon="Home" Content="Dashboard" Tag="Dashboard"/>
-                <ui:NavigationViewItem Icon="Play" Content="Service Control" Tag="ServiceControl"/>
-                <ui:NavigationViewItem Icon="Document" Content="Dead Letters" Tag="DeadLetters"/>
-                <ui:NavigationViewItem Icon="Edit" Content="Mapping Editor" Tag="MappingEditor"/>
+                <!-- Neue Reihenfolge, KEINE ICONS! -->
+                <ui:NavigationViewItem Content="Dashboard" Tag="Dashboard"/>
+                <ui:NavigationViewItem Content="Pipeline Config" Tag="PipelineConfig"/>
+                <ui:NavigationViewItem Content="Dead Letters" Tag="DeadLetters"/>
+                <ui:NavigationViewItem Content="Mapping Editor" Tag="MappingEditor"/>
                 <ui:NavigationViewItemSeparator/>
-                <ui:NavigationViewItem Icon="Setting" Content="Settings" Tag="Settings"/>
-                <ui:NavigationViewItem Content="About" Tag="About">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:FontIcon Glyph="&#xE946;"/>
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="Service Control" Tag="ServiceControl"/>
+                <ui:NavigationViewItem Content="About" Tag="About"/>
             </ui:NavigationView.MenuItems>
 
             <Frame x:Name="ContentFrame" NavigationUIVisibility="Hidden"/>

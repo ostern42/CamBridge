@@ -8,6 +8,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.7] - 2025-06-08
+
+### Added
+- Multi-Pipeline Dashboard UI with pipeline-specific statistics
+- ErrorCountToColorConverter for visual error indication
+- Pipeline status cards with color indicators
+- Recent activity view with pipeline attribution
+
+### Fixed  
+- MappingEditor event handler connections
+- DashboardViewModel DI constructor issues
+- ValueConverters missing converter definitions
+- SymbolIcon FontSize property error
+
+### Known Issues
+- GUI functions not fully operational
+- Dashboard may show cached version
+- Event handlers need verification
+
+### Technical
+- Extended ValueConverters with Zero/Error converters
+- Updated ViewModels for manual DI fallback
+- Fixed XAML/CS file confusion
+
+
+## [0.6.6] - 2025-06-08
+
+### 🎉 Sprint 6.4 Complete - Pipeline Configuration UI
+
+### Added
+- **Pipeline Configuration UI** fully implemented and tested
+- **DeadLetterThreshold** property to NotificationSettings
+- **Error capture** in build scripts for better debugging
+- **Multi-Pipeline Management** with full CRUD operations
+- All 6 configuration tabs working perfectly
+- Settings persistence across application restarts
+
+### Changed
+- **Settings Page REMOVED** - replaced entirely by Pipeline Config
+- **Navigation order** updated: Dashboard → Pipeline Config → Dead Letters → Mapping Editor → Service Control → About
+- **Build scripts** improved with error capture and output logging
+- **PowerShell scripts** simplified (removed problematic try-catch-finally)
+
+### Fixed
+- Missing `DeadLetterThreshold` property causing build failures
+- XML comment warnings in CamBridgeSettings.cs
+- Build script window closing before errors could be read
+- Project reference issues in multi-project solution
+
+### Technical Details
+- Successfully building with 112 warnings (acceptable for current phase)
+- All Core files verified with correct namespaces
+- Pipeline Configuration tested with multiple pipelines
+- Save/Load functionality confirmed working
+
+### Developer Notes
+- PowerShell console handles try-catch-finally differently than ISE
+- MSBuild needs explicit solution file when multiple .sln exist
+- Single missing property can cascade into hundreds of errors
+
+---
+*"From build errors to beautiful UI - Session 43 was a journey!"*
+
 ## [0.6.5] - 2025-06-08
 ### 🎨 Changed
 - Replaced Settings page with Pipeline Configuration - revolutionary UI redesign

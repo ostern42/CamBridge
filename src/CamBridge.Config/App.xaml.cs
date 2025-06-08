@@ -1,5 +1,6 @@
 // src\CamBridge.Config\App.xaml.cs
-// Version: 0.5.26 - Improved with Services property
+// Version: 0.6.4
+// Description: Updated DI registration - PipelineConfig instead of Settings
 
 using System;
 using System.Runtime.Versioning;
@@ -33,16 +34,20 @@ namespace CamBridge.Config
                     services.AddSingleton<IServiceManager, ServiceManager>();
                     services.AddSingleton<IConfigurationService, ConfigurationService>();
 
-                    // ViewModels - All must be registered!
+                    // ViewModels - Updated for Pipeline Architecture!
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ServiceControlViewModel>();
-                    services.AddTransient<SettingsViewModel>();
+                    services.AddTransient<PipelineConfigViewModel>();  // NEW! Replaces SettingsViewModel
                     services.AddTransient<DeadLettersViewModel>();
                     services.AddTransient<MappingEditorViewModel>();
+                    // SettingsViewModel REMOVED - Zero Global Settings!
 
                     // Main Window
                     services.AddSingleton<MainWindow>();
+
+                    // Logging
+                    services.AddLogging();
                 })
                 .ConfigureLogging(logging =>
                 {

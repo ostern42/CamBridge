@@ -1,5 +1,6 @@
 // src\CamBridge.Config\MainWindow.xaml.cs
-// Version: 0.5.26 - Improved navigation with ViewModels
+// Version: 0.6.4
+// Description: Main window with updated navigation order - No Settings!
 
 using System;
 using System.Runtime.Versioning;
@@ -57,8 +58,8 @@ namespace CamBridge.Config
                         page = new DashboardPage();
                         break;
 
-                    case "ServiceControl":
-                        page = new ServiceControlPage();
+                    case "PipelineConfig":
+                        page = new PipelineConfigPage();
                         break;
 
                     case "DeadLetters":
@@ -69,13 +70,15 @@ namespace CamBridge.Config
                         page = new MappingEditorPage();
                         break;
 
-                    case "Settings":
-                        page = new SettingsPage();
+                    case "ServiceControl":
+                        page = new ServiceControlPage();
                         break;
 
                     case "About":
                         page = new AboutPage();
                         break;
+
+                        // Settings is GONE! No more Settings!
                 }
 
                 if (page != null && ContentFrame != null)

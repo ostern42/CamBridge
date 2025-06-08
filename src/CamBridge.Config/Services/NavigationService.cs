@@ -1,4 +1,7 @@
-// src/CamBridge.Config/Services/NavigationService.cs
+// src\CamBridge.Config\Services\NavigationService.cs
+// Version: 0.6.4
+// Description: Navigation service with PipelineConfig instead of Settings
+
 using System;
 using System.Collections.Generic;
 using System.Windows.Controls;
@@ -13,13 +16,14 @@ namespace CamBridge.Config.Services
 
         public NavigationService()
         {
-            // Register pages
+            // Register pages - New order, no Settings!
             _pages["Dashboard"] = typeof(DashboardPage);
-            _pages["ServiceControl"] = typeof(ServiceControlPage);
+            _pages["PipelineConfig"] = typeof(PipelineConfigPage);      // NEW!
             _pages["DeadLetters"] = typeof(DeadLettersPage);
-            _pages["Settings"] = typeof(SettingsPage);
-            _pages["MappingEditor"] = typeof(MappingEditorPage);  // FIXED: Added missing registration!
-            _pages["About"] = typeof(AboutPage);                    // ADDED: Also register AboutPage
+            _pages["MappingEditor"] = typeof(MappingEditorPage);
+            _pages["ServiceControl"] = typeof(ServiceControlPage);
+            _pages["About"] = typeof(AboutPage);
+            // Settings REMOVED - Zero Global Settings!
         }
 
         public bool CanGoBack => _frame?.CanGoBack ?? false;
@@ -34,7 +38,10 @@ namespace CamBridge.Config.Services
             if (_frame != null && _pages.TryGetValue(pageKey, out var pageType))
             {
                 var page = Activator.CreateInstance(pageType);
-                _frame.Navigate(page);
+                if (page != null)
+                {
+                    _frame.Navigate(page);
+                }
             }
         }
 
