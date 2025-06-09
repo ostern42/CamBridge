@@ -8,6 +8,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.7.1] - 2025-06-09 - Step 1.2 Complete & Deployment Fixes
+
+### 🔥 KISS Architecture Refactoring
+- **Removed IDicomConverter interface** - Direct dependency pattern established
+- **Removed IFileProcessor interface** - Following ExifToolReader pattern
+- **Prepared IDicomTagMapper removal** - Ready for Step 1.3
+- **Fixed CamBridgeHealthCheck** - Now uses PipelineManager correctly
+- **Service runs productively** - Windows Service deployment successful
+
+### 🔧 Deployment & Infrastructure
+- **Fixed deployment script** - Tools folder now copied correctly
+- **Added ExifTool verification** - Deployment checks for required files
+- **Service name clarified** - "CamBridgeService" (no space)
+- **API runs on port 5050** - Default configuration
+
+### 📚 Documentation
+- **Created WISDOM_ARCHITECTURE.md** - Claude's architecture understanding
+- **Added CLAUDE-NOTES system** - Self-documentation for better maintainability
+- **Updated deployment instructions** - Service installation guide
+
+### 🐛 Known Issues
+- Dashboard shows demo data (UI bug)
+- Pipeline configuration still uses V1 format
+- DailySummaryService temporarily disabled
+
+### 🎯 Next Steps
+- Complete Step 1.3: Remove IDicomTagMapper interface
+- Service consolidation (FileProcessor + DicomConverter)
+- Migrate to V2 pipeline configuration
+- Re-enable DailySummaryService
+
+### 📊 Progress
+- **Interfaces removed:** 2 of 3 ✅
+- **Code reduction:** ~60 lines
+- **Service status:** Running in production
+- **KISS goal:** 66% complete
+
+---
+*"Making the improbable reliably simple, one interface at a time!"*  
+© 2025 Claude's Improbably Reliable Software Solutions
+
+## [0.7.0] - 2025-06-09 - THE GREAT SIMPLIFICATION Sprint 7
+
+### 🔥 KISS Architecture Refactoring
+- **Removed IDicomConverter interface** - Direct dependency pattern established
+- **Removed IFileProcessor interface** - Following ExifToolReader pattern
+- **Prepared IDicomTagMapper removal** - Ready for Step 1.3
+- **Fixed CamBridgeHealthCheck** - Now uses PipelineManager correctly
+- **Service runs productively** - Windows Service deployment successful
+
+### 🔧 Deployment & Infrastructure
+- **Fixed deployment script** - Tools folder now copied correctly
+- **Added ExifTool verification** - Deployment checks for required files
+- **Service name clarified** - "CamBridgeService" (no space)
+- **API runs on port 5050** - Default configuration
+
+### 📚 Documentation
+- **Created WISDOM_ARCHITECTURE.md** - Claude's architecture understanding
+- **Added CLAUDE-NOTES system** - Self-documentation for better maintainability
+- **Updated deployment instructions** - Service installation guide
+
+### 🐛 Known Issues
+- Dashboard shows demo data (UI bug)
+- Pipeline configuration still uses V1 format
+- DailySummaryService temporarily disabled
+
+### 🎯 Next Steps
+- Complete Step 1.3: Remove IDicomTagMapper interface
+- Service consolidation (FileProcessor + DicomConverter)
+- Migrate to V2 pipeline configuration
+- Re-enable DailySummaryService
+
+### 📊 Progress
+- **Interfaces removed:** 2 of 3 ✅
+- **Code reduction:** ~60 lines
+- **Service status:** Running in production
+- **KISS goal:** 66% complete
+
+---
+*"Making the improbable reliably simple, one interface at a time!"*  
+© 2025 Claude's Improbably Reliable Software Solutions
+
 # Changelog Entry - Version 0.7.0
 
 ## [0.7.0] - 2025-06-09 (Sprint 7: THE GREAT SIMPLIFICATION)

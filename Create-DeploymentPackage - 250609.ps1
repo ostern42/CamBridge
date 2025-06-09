@@ -1,8 +1,7 @@
 # Create-DeploymentPackage.ps1
 # Complete build and deployment package creator for CamBridge
-# Version: 0.7.0
+# Version: 0.6.8
 # Updated for Multi-Pipeline Architecture
-# KISS UPDATE: Now includes Tools folder copy!
 
 param(
     [string]$Version = "",  # Auto-detect from Version.props
@@ -166,26 +165,6 @@ if (Test-Path $servicePath) {
     exit 1
 }
 
-# KISS FIX: Copy Tools folder (ExifTool) - THIS WAS MISSING!
-Write-Host "  Copying Tools folder (ExifTool)..." -ForegroundColor Gray
-$toolsSource = ".\src\CamBridge.Service\Tools"
-$toolsTarget = Join-Path $serviceDir "Tools"
-if (Test-Path $toolsSource) {
-    Copy-Item $toolsSource -Destination $serviceDir -Recurse -Force
-    
-    # Verify exiftool.exe exists
-    $exifToolPath = Join-Path $toolsTarget "exiftool.exe"
-    if (Test-Path $exifToolPath) {
-        Write-Host "    [OK] ExifTool copied successfully" -ForegroundColor Green
-    } else {
-        Write-Warning "    ExifTool.exe not found in Tools folder!"
-        Write-Host "    Please ensure exiftool.exe is in: $toolsSource" -ForegroundColor Yellow
-    }
-} else {
-    Write-Error "Tools folder not found at $toolsSource - ExifTool will be missing!"
-    Write-Host "  The service WILL NOT WORK without ExifTool!" -ForegroundColor Red
-}
-
 # Copy Config UI - Check all possible paths
 Write-Host "  Copying Configuration UI..." -ForegroundColor Gray
 $configFound = $false
@@ -240,12 +219,6 @@ Components:
 - CamBridge Config (Pipeline Configuration UI)
 $(if (-not $SkipQRBridge) { "- CamBridge QRBridge 2.0 (QR Code Generator)" })
 
-New in v0.7.x:
-- THE GREAT SIMPLIFICATION (KISS Architecture)
-- Direct Dependencies (No unnecessary interfaces)
-- Simplified Service Layer
-- Improved Performance
-
 New in v0.6.x:
 - Multi-Pipeline Architecture
 - Pipeline-specific Mapping Sets
@@ -255,10 +228,6 @@ New in v0.6.x:
 System Requirements:
 - Windows 10/11 or Windows Server 2019+
 - .NET 8.0 Runtime
-- ExifTool (included in Tools folder)
-
-IMPORTANT: ExifTool is required for operation!
-The Tools folder must be in the same directory as CamBridge.Service.exe
 "@
 $versionContent | Set-Content "$deployDir\version.txt"
 
@@ -291,15 +260,6 @@ Write-Host ""
 Write-Host "Output Files:" -ForegroundColor Cyan
 Write-Host "  Folder: $deployDir" -ForegroundColor White
 Write-Host "  ZIP:    $zipPath" -ForegroundColor White
-Write-Host ""
-
-# Check if ExifTool was included
-$deployedExifTool = Join-Path $serviceDir "Tools\exiftool.exe"
-if (Test-Path $deployedExifTool) {
-    Write-Host "ExifTool included in deployment" -ForegroundColor Green
-} else {
-    Write-Host "WARNING: ExifTool NOT included - Service will fail!" -ForegroundColor Red
-}
 Write-Host ""
 
 # Interactive Launch Menu

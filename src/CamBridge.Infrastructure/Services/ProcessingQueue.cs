@@ -1,3 +1,8 @@
+// src/CamBridge.Infrastructure/Services/ProcessingQueue.cs
+// Version: 0.7.0
+// Description: Thread-safe queue for managing file processing - KISS approach
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -14,6 +19,7 @@ namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
     /// Thread-safe queue for managing file processing with retry logic and dead letter support
+    /// KISS UPDATE: Using direct FileProcessor dependency instead of interface
     /// </summary>
     public class ProcessingQueue
     {
@@ -85,7 +91,8 @@ namespace CamBridge.Infrastructure.Services
             // Check if file should be processed using a new scope
             using (var scope = _scopeFactory.CreateScope())
             {
-                var fileProcessor = scope.ServiceProvider.GetRequiredService<IFileProcessor>();
+                // KISS: Direct FileProcessor dependency, no interface!
+                var fileProcessor = scope.ServiceProvider.GetRequiredService<FileProcessor>();
                 if (!fileProcessor.ShouldProcessFile(filePath))
                 {
                     _logger.LogDebug("File {FilePath} does not meet processing criteria", filePath);
@@ -219,7 +226,8 @@ namespace CamBridge.Infrastructure.Services
                 FileProcessingResult result;
                 using (var scope = _scopeFactory.CreateScope())
                 {
-                    var fileProcessor = scope.ServiceProvider.GetRequiredService<IFileProcessor>();
+                    // KISS: Direct FileProcessor dependency, no interface!
+                    var fileProcessor = scope.ServiceProvider.GetRequiredService<FileProcessor>();
                     result = await fileProcessor.ProcessFileAsync(item.FilePath);
                 }
 

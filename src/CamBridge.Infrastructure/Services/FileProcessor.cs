@@ -404,4 +404,61 @@ namespace CamBridge.Infrastructure.Services
             return string.Join("_", pathComponent.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
         }
     }
+
+    /// <summary>
+    /// Result of file processing operation
+    /// </summary>
+    /// <remarks>
+    /// CLAUDE-NOTE: Moved from IFileProcessor to here - these belong to the processor, not the interface!
+    /// </remarks>
+    public class FileProcessingResult
+    {
+        public string SourceFile { get; init; } = string.Empty;
+        public string? OutputFile { get; init; }
+        public bool Success { get; init; }
+        public string? ErrorMessage { get; init; }
+        public DateTime ProcessedAt { get; init; } = DateTime.UtcNow;
+        public TimeSpan ProcessingTime { get; init; }
+
+        public static FileProcessingResult CreateSuccess(string source, string output, TimeSpan time)
+            => new()
+            {
+                SourceFile = source,
+                OutputFile = output,
+                Success = true,
+                ProcessingTime = time
+            };
+
+        public static FileProcessingResult CreateFailure(string source, string error, TimeSpan time)
+            => new()
+            {
+                SourceFile = source,
+                Success = false,
+                ErrorMessage = error,
+                ProcessingTime = time
+            };
+    }
+
+    public class FileProcessingEventArgs : EventArgs
+    {
+        public string FilePath { get; }
+        public DateTime Timestamp { get; }
+
+        public FileProcessingEventArgs(string filePath)
+        {
+            FilePath = filePath;
+            Timestamp = DateTime.UtcNow;
+        }
+    }
+
+    public class FileProcessingErrorEventArgs : FileProcessingEventArgs
+    {
+        public Exception Exception { get; }
+
+        public FileProcessingErrorEventArgs(string filePath, Exception exception)
+            : base(filePath)
+        {
+            Exception = exception;
+        }
+    }
 }
