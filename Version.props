@@ -1,10 +1,10 @@
 <!-- Version.props -->
-<!-- Version: 0.6.10 -->
+<!-- Version: 0.6.11 -->
 <!-- Description: Central version management for CamBridge solution -->
 <Project>
 	<PropertyGroup>
 		<!-- Version info for PROJECT_WISDOM and documentation -->
-		<VersionPrefix>0.6.10</VersionPrefix>
+		<VersionPrefix>0.6.11</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- IMPORTANT: DO NOT set AssemblyVersion or FileVersion! -->
@@ -12,8 +12,8 @@
 		<!-- Individual projects handle their assembly versions -->
 
 		<!-- Only metadata that won't cause conflicts -->
-		<InformationalVersion>0.6.10</InformationalVersion>
-		<PackageVersion>0.6.10</PackageVersion>
+		<InformationalVersion>0.6.11</InformationalVersion>
+		<PackageVersion>0.6.11</PackageVersion>
 
 		<!-- Company information -->
 		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>

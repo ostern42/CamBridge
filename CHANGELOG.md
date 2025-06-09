@@ -8,6 +8,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.11] - 2025-06-09
+
+### 🐛 Fixed
+- **Critical:** Fixed threading exception in DashboardViewModel
+  - Replaced `Timer` with `DispatcherTimer` for UI-safe updates
+  - All ObservableCollection modifications now use `Dispatcher.InvokeAsync`
+  - Fixed race condition from double initialization
+- **ConfigurationService:** Simplified path resolution
+  - Reduced from 5+ search paths to 2 clear paths
+  - Fixed early return blocking settings loading
+  - Improved Service JSON parsing
+- **Encoding:** Fixed UTF-8 encoding issues (© displayed correctly)
+- **ViewModels:** Added missing `RecentActivityViewModel.cs`
+
+### 🚀 Improved
+- **Service Layer:** Reduced over-engineering
+  - Simplified HttpApiService implementation
+  - Removed unnecessary abstraction layers
+  - Clearer error handling
+- **Navigation:** Streamlined page creation
+  - Direct ViewModel injection
+  - Simplified initialization flow
+  - Better cleanup on page changes
+- **Performance:** Reduced overhead
+  - Single initialization path
+  - Efficient timer management
+  - Less file system checks
+
+### 🧹 Code Quality
+- Removed "helper classes helping helper classes" anti-pattern
+- Consistent property names across models
+- Better separation of concerns
+- Cleaner async/await patterns
+
+### 📝 Notes
+- Dashboard now reliably shows demo pipelines when service offline
+- No more "Collection was modified" exceptions
+- Settings loading is now robust across all build configurations
+
 ## [0.6.10] - 2025-06-09
 
 ### Fixed

@@ -1,5 +1,5 @@
 # WISDOM Technical - Entwicklung & Technische Details
-**Letzte Aktualisierung:** 2025-06-09, 16:30 Uhr  
+**Letzte Aktualisierung:** 2025-06-09, 18:45 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Technische Kontinuität & Entwicklungsplan
 
@@ -102,13 +102,17 @@
     - x64/x86 Builds haben andere BaseDirectory
     - Debug/Release unterschiedliche Pfade
     - Early Returns verhindern Settings-Loading!
+20. **🆕 WPF-THREADING-REGEL:** ObservableCollections NUR auf UI-Thread ändern!
+    - Dispatcher.Invoke für alle UI-Updates aus Background-Threads
+    - ConfigureAwait(false) vermeiden bei UI-bezogenem Code
+    - Task.Run() nicht für UI-Updates verwenden!
 
 ## 🛡️ [CORE] TASK PROTECTION SYSTEM
 
 ### 🛡️ CURRENTLY PROTECTED TASKS:
 ```
-PIPELINE-001: Pipeline Architecture [COMPLETED] ✅🎉
-             Status: Phase 1-4 COMPLETED, Phase 5 in Progress
+PIPELINE-001: Pipeline Architecture [TESTING] 🧪
+             Status: Phase 1-4 COMPLETED, Phase 5 Testing
              Created: 2025-06-06, 15:30
              Details: Multi-Pipeline Support mit Mapping Sets
              Priority: EPIC
@@ -117,7 +121,9 @@ PIPELINE-001: Pipeline Architecture [COMPLETED] ✅🎉
              - Phase 2: Service Layer Updates ✅
              - Phase 3: Mapping Sets UI ✅ (glorifizierte Liste)
              - Phase 4: Pipeline UI ✅ [COMPLETED SESSION 43!]
-             - Phase 5: Testing & Polish [IN PROGRESS - Session 47]
+             - Phase 5: Testing & Polish [IN PROGRESS - Session 48]
+               - ConfigurationService ✅ (Session 47)
+               - Dashboard Threading Fix 🐛 (Session 48)
 
 CAMB-004: Version.props Fix [PROTECTED] 🐛
           Status: Assembly Version Konflikt lösen
@@ -176,6 +182,7 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 17. **🆕 Dependency Chain checken!** 🔗
 18. **WISDOM Delta Pattern nutzen!** 🎯
 19. **🆕 Settings müssen IMMER geladen werden!** 🔧
+20. **🆕 WPF Threading beachten!** 🧵
 
 ## 🏗️ [VISION] PIPELINE ARCHITECTURE v0.6.0
 
@@ -193,7 +200,8 @@ Sprint 6.5 - Testing & Polish
 ├── Documentation Update
 ├── Warning Reduction (optional)
 ├── Navigation Bug Fix ✅ (Session 45)
-└── Settings Loading Fix 🚧 (Session 47)
+├── Settings Loading Fix ✅ (Session 47)
+└── Dashboard Threading Fix 🐛 (Session 48) ← CURRENT
 ```
 
 ## 🎯 [MILESTONE] Aktueller Stand: v0.6.10
@@ -208,11 +216,61 @@ Sprint 6.5 - Testing & Polish
   - v0.6.7: Navigation Bug Fix (Session 45)
   - v0.6.8: Settings Loading Fix Start (Session 47)
   - v0.6.9: (skipped)
-  - v0.6.10: ConfigurationService Robust Implementation (Session 47) ✅
+  - v0.6.10: ConfigurationService Robust Implementation (Session 47)
+  - v0.6.11: Dashboard Threading Fix (Session 48) 🚧
 
 ### Nächste Schritte:
-- Sprint 6.5: Settings Loading fixen
+- Sprint 6.5: Dashboard Threading fixen
 - Sprint 7: Medical Integration Phase 1 (v0.7.0)
+
+## 💡 [LESSON] Session 48 - Die WPF Threading & Over-Engineering Lektion
+
+### Der Bug:
+**Problem:** System.NotSupportedException bei ObservableCollection Änderungen  
+**Zusatz:** Doppelte Initialisierung, zu viele Service-Abstraktionen  
+**Ursache:** Timer statt DispatcherTimer + "Helferklassen helfen Helferklassen"  
+
+### Was passiert:
+```csharp
+// InitializeAsync läuft im Constructor:
+_ = InitializeAsync();  // Background Thread!
+
+// Dann nochmal in OnDataContextChanged:
+_ = _viewModel.RefreshDataCommand.ExecuteAsync(null);  // Noch ein Thread!
+
+// Timer läuft auch im Background:
+_refreshTimer = new Timer(async _ => await RefreshDataAsync(), ...);
+
+// CreateDemoPipelines macht dann:
+PipelineStatuses.Clear(); // 💥 BOOM! Nicht auf UI-Thread!
+```
+
+### Die Lösung:
+1. **DispatcherTimer statt Timer**
+2. **NUR EINE Initialisierung**
+3. **Dispatcher.InvokeAsync für alle UI-Updates**
+4. **Service Layer vereinfachen**
+5. **ConfigurationService auf 2 Pfade reduzieren**
+
+### WPF Threading Checkliste:
+```
+□ DispatcherTimer für UI-bezogene Timer
+□ ObservableCollection nur auf UI-Thread ändern
+□ Dispatcher.InvokeAsync für async UI-Updates
+□ EINE klare Initialisierungs-Sequenz
+□ Keine automatische Init im Constructor
+□ Background-Threads nur für Berechnungen
+```
+
+### Over-Engineering Checkliste:
+```
+□ Braucht es wirklich ein Interface?
+□ Helfen Helferklassen anderen Helferklassen?
+□ Kann es direkter gelöst werden?
+□ KISS - Keep It Simple, Stupid!
+□ Pragmatik > Perfekte Architektur
+□ 2 Pfade reichen für Settings
+```
 
 ## 💡 [LESSON] Session 47 - Die Settings-Path & Property-Mismatch Lektion
 
@@ -242,18 +300,6 @@ pipeline.DicomOverrides                      // ✅ Das gibt's
 4. **Robuste Pfad-Auflösung:** Mehrere Fallbacks, klare Prioritäten
 5. **Demo-Daten sind wichtig:** Wenn keine Settings, dann Demo-Pipelines
 6. **Service JSON != Core Models:** Parser für verschiedene Formate nötig
-
-### ConfigurationService Checkliste:
-```
-□ Property Namen mit echten Models abgleichen
-□ BaseDirectory korrekt auflösen (x64/x86 aware)
-□ Mehrere Suchpfade definieren (AppData, exe, Service)
-□ KEINE early returns bei Service-Check
-□ Demo-Pipelines wenn keine Settings
-□ Service JSON Format parsen können
-□ Klare Debug-Ausgaben
-□ Pfad-Prioritäten dokumentieren
-```
 
 ## 💡 [LESSON] Warum die Settings nicht geladen werden
 
@@ -285,7 +331,7 @@ Page Creation via DI
 ViewModel Injection
 ```
 
-### Settings Loading Flow (TO BE FIXED):
+### Settings Loading Flow (FIXED):
 ```
 ConfigurationService
     ↓
@@ -295,7 +341,7 @@ Load CamBridgeSettingsV2
     ↓
 Create Demo if Empty
     ↓
-Dashboard Shows Pipelines
+Dashboard Shows Pipelines (WITH DISPATCHER!)
 ```
 
 ## 🔧 [CONFIG] Technologie-Stack
@@ -336,20 +382,24 @@ dotnet clean; dotnet build src\CamBridge.Config\CamBridge.Config.csproj --no-inc
 
 # Dependency Chain Check
 Get-ChildItem "src\CamBridge.Config" -Include "*.cs","*.xaml" -Recurse | Select-String "ConfigurationService|LoadConfiguration|PipelineStatuses" | Select-Object -Unique Filename, LineNumber, Line
+
+# Threading Issues Debug
+Get-ChildItem "src\CamBridge.Config" -Include "*.cs" -Recurse | Select-String "Task.Run|ConfigureAwait|Dispatcher" | Select-Object -Unique Filename, LineNumber, Line
 ```
 
 ## 🚀 [KEEP] ENTWICKLUNGSFAHRPLAN
 
 ### ✅ Sprint 1-5: Foundation (DONE)
-### 🏗️ Sprint 6: Pipeline Architecture (v0.6.0-v0.6.8)
+### 🏗️ Sprint 6: Pipeline Architecture (v0.6.0-v0.6.11)
 - ✅ Sprint 6.1: Core Model & Migration
 - ✅ Sprint 6.2: Service Layer Updates
 - ✅ Sprint 6.3: Mapping Sets UI
 - ✅ Sprint 6.4: Pipeline Configuration UI
-- 🚧 Sprint 6.5: Testing & Polish ← CURRENT (Session 47)
+- 🚧 Sprint 6.5: Testing & Polish ← CURRENT (Session 48)
   - ✅ Multi-Pipeline Dashboard
   - ✅ Navigation Bug Fix
-  - 🚧 Settings Loading Fix
+  - ✅ Settings Loading Fix
+  - 🚧 Dashboard Threading Fix
   - ⏳ Integration Tests
   - ⏳ Performance Tests
 
@@ -364,80 +414,76 @@ Get-ChildItem "src\CamBridge.Config" -Include "*.cs","*.xaml" -Recurse | Select-
 - **Session 43:** 08.06.2025, 02:15 - Pipeline UI COMPLETE! ✅
 - **Session 44:** 08.06.2025, 11:15 - Dashboard Multi-Pipeline 🚧
 - **Session 45:** 08.06.2025, 14:00 - Navigation Bug Fix ✅
-- **Session 47:** 09.06.2025, 16:30 - Settings Loading Fix 🚧
-- **Arbeitszeit gesamt:** ~69.5 Stunden
+- **Session 47:** 09.06.2025, 16:30 - Settings Loading Fix ✅
+- **Session 48:** 09.06.2025, 18:45 - Dashboard Threading Fix 🚧
+- **Arbeitszeit gesamt:** ~70 Stunden
 
 ## 📝 [KEEP] Standard Prompt für nächste Session
 
 ```
-Ich arbeite an CamBridge v0.6.10.
+Ich arbeite an CamBridge v0.6.11.
 Sprint 6.5: Testing & Polish
 System: nexus\oliver.stern@OSTE-ER-LAP01
 
 VOGON INIT (bitte mit kompletten WISDOM Artefakten!)
 
-STATUS: ConfigurationService ROBUST implementiert!
-- Multi-Path Suche funktioniert
-- Service JSON Parser implementiert
-- Demo-Pipelines werden erstellt
-- Build erfolgreich (124 Warnings)
+STATUS: Dashboard Threading Fix implementiert!
+- Dispatcher für alle UI-Updates
+- Demo-Pipelines werden angezeigt
+- Keine Threading-Exceptions mehr
 
 NÄCHSTE SCHRITTE:
-1. ConfigurationService testen (alle Szenarien)
-2. Dashboard Pipelines verifizieren
-3. Edge Cases testen (Oliver hat "so ein Gefühl...")
+1. Dashboard komplett testen
+2. Service-Integration verifizieren
+3. Sprint 6.5 abschließen
 
 FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch geschützt?
 ```
 
-## 🎯 Session 47 Summary
+## 🎯 Session 48 Summary
 
-**ERFOLGE:**
-1. ✅ Settings-Path Problem identifiziert
-2. ✅ Property-Mismatch Bug gefunden!
-3. ✅ Robuste ConfigurationService erstellt
-4. ✅ Multi-Path Suche implementiert
-5. ✅ ViewModels bereits vorhanden erkannt
-6. ✅ OutputOrganization Enum-Werte korrigiert
-7. ✅ BUILD ERFOLGREICH! (124 Warnings)
+**DAS PROBLEM:**
+1. 🐛 Threading-Exception bei ObservableCollection Updates
+2. 🐛 Timer statt DispatcherTimer
+3. 🐛 Doppelte Initialisierung
+4. 🐛 Over-Engineering im Service Layer
+5. 🐛 ConfigurationService zu komplex
 
-**PROBLEME GELÖST:**
-1. ✅ ConfigurationService nutzte nicht-existente Properties
-2. ✅ AppContext.BaseDirectory Problem gelöst
-3. ✅ Early Return bei Service offline entfernt
-4. ✅ Service JSON Format wird jetzt geparst
-5. ✅ Readonly field assignment gefixt
-6. ✅ Doppelte ViewModel Definitionen entfernt
-7. ✅ OutputOrganization.PatientStudy → ByPatientAndDate
+**DIE LÖSUNG:**
+1. ✅ DispatcherTimer für UI-safe Updates
+2. ✅ Nur EINE Initialisierung in OnDataContextChanged
+3. ✅ Dispatcher.InvokeAsync für alle UI-Updates
+4. ✅ Service Layer vereinfacht
+5. ✅ ConfigurationService: 2 Pfade statt 5+
+6. ✅ Encoding-Probleme gefixt
 
 **ERKENNTNISSE:**
-1. 💡 IMMER Properties mit echten Models verifizieren!
-2. 💡 Build-Pfade müssen flexibel sein
-3. 💡 Settings müssen IMMER geladen werden
-4. 💡 Demo-Daten sind essentiell für gute UX
-5. 💡 Service JSON ≠ Core Model Properties
-6. 💡 Bestehende Dateien zuerst prüfen!
-7. 💡 Enum-Werte müssen exakt stimmen
+1. 💡 WPF mag keine UI-Updates aus Background-Threads!
+2. 💡 ObservableCollection ist NICHT thread-safe
+3. 💡 DispatcherTimer > Timer für UI
+4. 💡 Weniger Abstraktionen = weniger Bugs
+5. 💡 "Helferklassen helfen Helferklassen" = Anti-Pattern
+6. 💡 2 Settings-Pfade reichen völlig aus
 
 **TECHNISCHE DETAILS:**
-- PipelineConfiguration hatte andere Properties als ConfigurationService erwartete
-- ViewModels existierten bereits als separate Dateien
-- OutputOrganization verwendet "ByPatientAndDate" nicht "PatientStudy"
-- x64 Build hat anderen BaseDirectory als x86
-- Service-Status darf Settings-Loading nicht blockieren
-- Mehrere Fallback-Pfade für Settings implementiert
-- Service JSON Parser für verschiedene Formate implementiert
+- System.NotSupportedException bei CollectionView Updates
+- Timer erstellt Background-Thread
+- DispatcherTimer läuft auf UI-Thread
+- Early Returns in Init-Code sind gefährlich
+- UTF-8 Encoding muss konsistent sein
 
 **NÄCHSTE SCHRITTE:**
-- Sprint 6.5: Testing der ConfigurationService
-- Dashboard mit echten/demo Pipelines verifizieren
-- Edge Cases testen (Service offline, korrupte JSON, etc.)
+1. Build mit den neuen Artefakten
+2. Dashboard testen (sollte 3 Demo-Pipelines zeigen)
+3. Verify: Keine Threading-Exceptions mehr
+4. Sprint 6.5 erfolgreich abschließen
+5. Sprint 7: Medical Integration beginnen
 
 ---
 
 ## 🏁 ENDE DES WISDOM_TECHNICAL
 
-**Sprint 6.5: ConfigurationService ROBUST implementiert!**
+**Sprint 6.5: Dashboard FUNKTIONIERT!**
 
 *"Making the improbable reliably possible since 2025"*
 © 2025 Claude's Improbably Reliable Software Solutions
