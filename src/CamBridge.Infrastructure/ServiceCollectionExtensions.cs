@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/ServiceCollectionExtensions.cs
-// Version: 0.6.0
-// Description: Extension methods for configuring infrastructure services with pipeline support
+// Version: 0.7.0
+// Description: Extension methods for configuring infrastructure services - KISS approach
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -19,6 +19,7 @@ namespace CamBridge.Infrastructure
 {
     /// <summary>
     /// Extension methods for configuring infrastructure services
+    /// KISS UPDATE: Removing unnecessary interfaces step by step
     /// </summary>
     public static class ServiceCollectionExtensions
     {
@@ -28,8 +29,8 @@ namespace CamBridge.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             // Core Processing Services (shared across all pipelines)
-            services.AddSingleton<IFileProcessor, FileProcessor>();
-            services.AddSingleton<IDicomConverter, DicomConverter>();
+            services.AddSingleton<IFileProcessor, FileProcessor>(); // TODO: Remove interface in next step
+            services.AddSingleton<DicomConverter>(); // KISS: No interface needed!
             services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
 
             // ExifTool Reader - The ONLY solution! No interfaces, no fallbacks!
@@ -100,8 +101,8 @@ namespace CamBridge.Infrastructure
                 var criticalServices = new[]
                 {
                     typeof(ExifToolReader),  // Direct type, no interface!
-                    typeof(IFileProcessor),
-                    typeof(IDicomConverter),
+                    typeof(IFileProcessor),  // TODO: Remove interface in next step
+                    typeof(DicomConverter),  // KISS: Direct type!
                     typeof(PipelineManager)  // New orchestrator
                 };
 
@@ -119,6 +120,10 @@ namespace CamBridge.Infrastructure
                 var exifToolReader = provider.GetRequiredService<ExifToolReader>();
                 logger.LogInformation("ExifTool reader validated - the ONLY EXIF solution");
 
+                // Validate DicomConverter (KISS: Direct reference!)
+                var dicomConverter = provider.GetRequiredService<DicomConverter>();
+                logger.LogInformation("DicomConverter validated - KISS approach working!");
+
                 // Validate Pipeline Manager
                 var pipelineManager = provider.GetRequiredService<PipelineManager>();
                 logger.LogInformation("Pipeline Manager validated - ready for multi-pipeline processing");
@@ -134,7 +139,7 @@ namespace CamBridge.Infrastructure
                     logger.LogInformation("Found {Count} configured pipelines", settingsV2.Value.Pipelines.Count);
                 }
 
-                logger.LogInformation("Infrastructure validation completed successfully");
+                logger.LogInformation("Infrastructure validation completed successfully - KISS approach: 1 interface removed!");
             }
             catch (Exception ex)
             {

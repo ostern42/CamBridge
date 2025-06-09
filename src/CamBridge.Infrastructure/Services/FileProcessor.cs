@@ -1,6 +1,7 @@
 // src\CamBridge.Infrastructure\Services\FileProcessor.cs
-// Version: 0.5.26
-// Complete file with fixed GenerateOutputFileName method
+// Version: 0.7.0
+// Description: Complete file processor without IDicomConverter interface - KISS approach
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Diagnostics;
@@ -17,12 +18,13 @@ namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
     /// Orchestrates the complete JPEG to DICOM conversion process
+    /// KISS UPDATE: Using direct DicomConverter dependency instead of interface
     /// </summary>
     public class FileProcessor : IFileProcessor
     {
         private readonly ILogger<FileProcessor> _logger;
         private readonly ExifToolReader _exifToolReader; // Direct dependency - no interface!
-        private readonly IDicomConverter _dicomConverter;
+        private readonly DicomConverter _dicomConverter; // KISS: Direct dependency like ExifToolReader!
         private readonly ProcessingOptions _processingOptions;
         private readonly CamBridgeSettings _settings;
 
@@ -33,7 +35,7 @@ namespace CamBridge.Infrastructure.Services
         public FileProcessor(
             ILogger<FileProcessor> logger,
             ExifToolReader exifToolReader,  // No interface!
-            IDicomConverter dicomConverter,
+            DicomConverter dicomConverter,   // KISS: No interface here either!
             IOptions<ProcessingOptions> processingOptions,
             IOptions<CamBridgeSettings> settings)
         {
@@ -78,7 +80,7 @@ namespace CamBridge.Infrastructure.Services
                 // Determine output path
                 var outputPath = DetermineOutputPath(metadata, filePath);
 
-                // Convert to DICOM
+                // Convert to DICOM - KISS: Direct method call, no interface!
                 var conversionResult = await _dicomConverter.ConvertToDicomAsync(
                     filePath,
                     outputPath,

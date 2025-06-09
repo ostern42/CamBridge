@@ -277,12 +277,12 @@ try
             // Show active features
             Log.Information("=========================================");
             Log.Information("AKTIVE FEATURES v0.6.0:");
-            Log.Information("✔ Pipeline Architecture");
-            Log.Information("✔ Multi-Pipeline Support");
-            Log.Information("✔ Basic Pipeline (ExifTool → DICOM)");
-            Log.Information("✔ Health Checks");
-            Log.Information("✔ Web API");
-            Log.Information(isService ? "✔ Windows Service" : "✔ Console Mode");
+            Log.Information("✓ Pipeline Architecture");
+            Log.Information("✓ Multi-Pipeline Support");
+            Log.Information("✓ Basic Pipeline (ExifTool → DICOM)");
+            Log.Information("✓ Health Checks");
+            Log.Information("✓ Web API");
+            Log.Information(isService ? "✓ Windows Service" : "✓ Console Mode");
             Log.Information("=========================================");
         }
         catch (Exception ex)
