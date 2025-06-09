@@ -224,8 +224,8 @@ try
         services.AddHealthChecks()
             .AddCheck<CamBridgeHealthCheck>("cambridge");
 
-        // Daily Summary Service
-        services.AddHostedService<DailySummaryService>();
+        // Daily Summary Service - TEMPORARILY DISABLED until we fix per-pipeline queues
+        // services.AddHostedService<DailySummaryService>();
 
         // Web API
         services.AddControllers();

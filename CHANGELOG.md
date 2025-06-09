@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.12] - 2025-06-09 - "PANEFUL" UI Fix
+
+### 🐛 Fixed
+- **Dashboard UI Overlay Bug** - Service offline overlay no longer hides pipeline cards
+  - Removed `Grid.RowSpan="4"` from disconnected state border
+  - Pipeline status cards now always visible regardless of service state
+  - Recent activity section now always visible
+  - Service offline message moved to statistics area only
+
+### 🎨 UI/UX Improvements  
+- Dashboard now functional in offline mode
+- Pipelines configuration visible without running service
+- Clearer separation between service status and pipeline configuration
+- "Start Service" button when service is offline
+
+### 📚 Lessons Learned
+- UI bugs often have simple causes - check XAML first!
+- Grid.RowSpan with overlays can hide entire sections
+- Debug output doesn't guarantee UI visibility
+- "PANEFUL" - Best bug name of the project!
+
+### 🔧 Technical Details
+- Fixed: `DashboardPage.xaml` visibility bindings
+- Fixed: Overlay z-order issues
+- Version bump: ConfigurationService and HttpApiService to 0.6.12
+
 ## [0.6.11] - 2025-06-09
 
 ### 🐛 Fixed

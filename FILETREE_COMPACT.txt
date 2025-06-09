@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.6.10
+# // Version: 0.6.11
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 369
-# Generated: 2025-06-09 18:33
+# Total files: 363
+# Generated: 2025-06-09 19:14
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -345,8 +345,6 @@ _archived_collectors\collect-sources-balanced.bat
 _archived_collectors\collect-sources-gui-config.bat
 _archived_collectors\collect-sources-mapping-editor.bat
 _archived_collectors\collect-sources-test.bat
-api-check.txt
-appsettings_with_pipelines.json
 Build-QRBridgeUltraSlim.ps1
 CamBridge.ParserDebug\CamBridge.ParserDebug.csproj
 CamBridge.ParserDebug\Program.cs
@@ -361,10 +359,8 @@ collect-smart.bat
 collect-sources.bat
 ConnectionTest\ConnectionTest.cs
 ConnectionTest\ConnectionTest.csproj
-core-classes.txt
 Create-DeploymentPackage - 250608.ps1
 Create-DeploymentPackage.ps1
-dashboard-complete.txt
 ExifToolQuickTest\exif_output.json
 ExifToolQuickTest\ExifToolQuickTest.csproj
 ExifToolQuickTest\Program.cs
@@ -382,8 +378,6 @@ PROJECT_WISDOM.md
 protected-features-manifest.md
 README.md
 README-Deployment.md
-settings-complete.txt
-settings-debug.txt
 Test-CompletePipeline.ps1
 Test-QRBridge.ps1
 TREE_COMPACT.txt

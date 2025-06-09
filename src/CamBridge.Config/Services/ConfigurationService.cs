@@ -1,6 +1,6 @@
 // src\CamBridge.Config\Services\ConfigurationService.cs
-// Version: 0.6.11
-// Description: Simplified configuration service with fewer search paths
+// Version: 0.6.12
+// Description: Fixed configuration service - WatchSettings → PipelineWatchSettings
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -66,7 +66,7 @@ namespace CamBridge.Config.Services
                             var settings = JsonSerializer.Deserialize<T>(json, _jsonOptions);
                             if (settings != null)
                             {
-                                Debug.WriteLine("✓ Loaded settings from primary location");
+                                Debug.WriteLine("✅ Loaded settings from primary location");
                                 return settings;
                             }
                         }
@@ -76,7 +76,7 @@ namespace CamBridge.Config.Services
                             var serviceSettings = ParseServiceFormat(json);
                             if (serviceSettings != null)
                             {
-                                Debug.WriteLine("✓ Parsed service format from primary location");
+                                Debug.WriteLine("✅ Parsed service format from primary location");
                                 return serviceSettings as T;
                             }
                         }
@@ -222,7 +222,7 @@ namespace CamBridge.Config.Services
                         Name = "Radiology Pipeline",
                         Enabled = true,
                         Description = "Main pipeline for radiology department",
-                        WatchSettings = new WatchSettings
+                        WatchSettings = new PipelineWatchSettings  // ✅ FIXED!
                         {
                             Path = @"C:\CamBridge\Watch\Radiology",
                             FilePattern = "*.jpg;*.jpeg",
@@ -244,7 +244,7 @@ namespace CamBridge.Config.Services
                         Name = "Cardiology Pipeline",
                         Enabled = true,
                         Description = "Pipeline for cardiology department",
-                        WatchSettings = new WatchSettings
+                        WatchSettings = new PipelineWatchSettings  // ✅ FIXED!
                         {
                             Path = @"C:\CamBridge\Watch\Cardiology",
                             FilePattern = "*.jpg;*.jpeg"
@@ -261,7 +261,7 @@ namespace CamBridge.Config.Services
                         Name = "Emergency Pipeline",
                         Enabled = false,
                         Description = "High-priority pipeline for ER (disabled by default)",
-                        WatchSettings = new WatchSettings
+                        WatchSettings = new PipelineWatchSettings  // ✅ FIXED!
                         {
                             Path = @"C:\CamBridge\Watch\Emergency",
                             FilePattern = "*.jpg;*.jpeg",
@@ -278,12 +278,12 @@ namespace CamBridge.Config.Services
                 }
             };
 
-            // Initialize other settings with defaults
-            settings.GlobalDicomSettings = new DicomSettings();
-            settings.DefaultProcessingOptions = new ProcessingOptions();
-            settings.Logging = new LoggingSettings();
-            settings.Service = new ServiceSettings();
-            settings.Notifications = new NotificationSettings();
+            // Initialize other settings with defaults - ALL CORRECT NAMES!
+            settings.GlobalDicomSettings = new DicomSettings();         // ✅ CORRECT!
+            settings.DefaultProcessingOptions = new ProcessingOptions(); // ✅ CORRECT!
+            settings.Logging = new LoggingSettings();                   // ✅ CORRECT!
+            settings.Service = new ServiceSettings();                   // ✅ CORRECT!
+            settings.Notifications = new NotificationSettings();        // ✅ CORRECT!
 
             return settings;
         }
