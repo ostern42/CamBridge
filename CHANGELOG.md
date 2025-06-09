@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.6.10] - 2025-06-09
+
+### Fixed
+- ConfigurationService now uses correct property names from PipelineConfiguration
+- Robust path resolution with multiple fallbacks (AppData, exe dir, service dir)
+- Service JSON parser implementation for loading pipelines from appsettings.json
+- Removed early returns that prevented settings loading when service offline
+- Fixed readonly field assignment with Clear/AddRange pattern
+- Corrected OutputOrganization enum values (ByPatientAndDate)
+- Removed duplicate ViewModel definitions
+
+### Changed
+- ConfigurationService completely rewritten for robustness
+- Multi-path search for configuration files
+- Always creates demo pipelines when no settings found
+
+### Technical Details
+- Fixed property mismatches between ConfigurationService and Core models
+- ViewModels already existed as separate files (removed duplicates)
+- Build successful with 124 warnings (mostly nullable reference types)
+
+### Developer Notes
+- Session 47: Wild ride through cascading errors but BUILD SUCCESS!
+- "Ich hab da so ein Gefühl..." - Testing needed in next session
+
 ## [0.6.9] - 2025-06-08 - Sprint 6.5 Dashboard Investigation 🔍
 
 ### Added

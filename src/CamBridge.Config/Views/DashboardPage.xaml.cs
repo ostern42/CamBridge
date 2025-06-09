@@ -3,6 +3,7 @@
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using CamBridge.Config.ViewModels;
@@ -21,8 +22,8 @@ namespace CamBridge.Config.Views
             InitializeComponent();
 
             // Debug output to confirm correct version
-            System.Diagnostics.Debug.WriteLine("=== MULTI-PIPELINE DASHBOARD CONSTRUCTOR ===");
-            System.Diagnostics.Debug.WriteLine($"XAML loaded at: {DateTime.Now:HH:mm:ss.fff}");
+            Debug.WriteLine("=== MULTI-PIPELINE DASHBOARD CONSTRUCTOR ===");
+            Debug.WriteLine($"XAML loaded at: {DateTime.Now:HH:mm:ss.fff}");
 
             DataContextChanged += OnDataContextChanged;
             Loaded += OnLoaded;
@@ -35,26 +36,38 @@ namespace CamBridge.Config.Views
 
             if (_viewModel != null)
             {
-                System.Diagnostics.Debug.WriteLine($"Dashboard ViewModel set - Pipelines: {_viewModel.PipelineStatuses?.Count ?? 0}");
+                Debug.WriteLine($"Dashboard ViewModel set - Pipelines: {_viewModel.PipelineStatuses?.Count ?? 0}");
 
-                // Force immediate refresh when ViewModel is set
-                _ = _viewModel.RefreshDataCommand.ExecuteAsync(null);
+                // SAFE CALL with null checks!
+                if (_viewModel.RefreshDataCommand != null && _viewModel.RefreshDataCommand.CanExecute(null))
+                {
+                    Debug.WriteLine("Executing initial refresh...");
+                    _ = _viewModel.RefreshDataCommand.ExecuteAsync(null);
+                }
+                else
+                {
+                    Debug.WriteLine("WARNING: RefreshDataCommand is null or cannot execute!");
+                }
+            }
+            else
+            {
+                Debug.WriteLine("WARNING: DataContext is not a DashboardViewModel!");
             }
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine($"Dashboard Page Loaded - ViewModel present: {_viewModel != null}");
-            System.Diagnostics.Debug.WriteLine($"Pipeline count: {_viewModel?.PipelineStatuses?.Count ?? 0}");
+            Debug.WriteLine($"Dashboard Page Loaded - ViewModel present: {_viewModel != null}");
+            Debug.WriteLine($"Pipeline count: {_viewModel?.PipelineStatuses?.Count ?? 0}");
 
             // Double-check we have the right dashboard
             if (_viewModel?.PipelineStatuses != null)
             {
-                System.Diagnostics.Debug.WriteLine("✓ Multi-Pipeline Dashboard confirmed!");
+                Debug.WriteLine("✓ Multi-Pipeline Dashboard confirmed!");
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("⚠ WARNING: No PipelineStatuses collection!");
+                Debug.WriteLine("⚠ WARNING: No PipelineStatuses collection!");
             }
         }
 
@@ -62,7 +75,7 @@ namespace CamBridge.Config.Views
         {
             // Clean up timer when page is unloaded
             _viewModel?.Cleanup();
-            System.Diagnostics.Debug.WriteLine("Dashboard Page Unloaded");
+            Debug.WriteLine("Dashboard Page Unloaded");
         }
     }
 }

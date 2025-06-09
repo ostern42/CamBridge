@@ -220,6 +220,28 @@ namespace CamBridge.Core
     }
 
     /// <summary>
+    /// File action types
+    /// </summary>
+    public enum FileActionType
+    {
+        Delete,
+        Move,
+        Keep
+    }
+
+    /// <summary>
+    /// Output organization types
+    /// </summary>
+    public enum OutputOrganizationType
+    {
+        Flat,           // All files in one folder
+        YearMonth,      // Year/Month subfolders
+        PatientStudy,   // Patient/Study subfolders
+        DatePatient     // Date/Patient subfolders
+    }
+
+
+    /// <summary>
     /// Output folder organization strategies
     /// </summary>
     public enum OutputOrganization
@@ -243,5 +265,7 @@ namespace CamBridge.Core
         /// Organize by patient and date
         /// </summary>
         ByPatientAndDate
+
+        
     }
 }
