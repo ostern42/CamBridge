@@ -29,8 +29,8 @@ namespace CamBridge.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             // Core Processing Services (shared across all pipelines)
-            services.AddSingleton<IFileProcessor, FileProcessor>(); // TODO: Remove interface in next step
-            services.AddSingleton<DicomConverter>(); // KISS: No interface needed!
+            services.AddSingleton<FileProcessor>(); // KISS: No interface needed! Step 1.2 done!
+            services.AddSingleton<DicomConverter>(); // KISS: No interface needed! Step 1.1 done!
             services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
 
             // ExifTool Reader - The ONLY solution! No interfaces, no fallbacks!
@@ -101,8 +101,8 @@ namespace CamBridge.Infrastructure
                 var criticalServices = new[]
                 {
                     typeof(ExifToolReader),  // Direct type, no interface!
-                    typeof(IFileProcessor),  // TODO: Remove interface in next step
-                    typeof(DicomConverter),  // KISS: Direct type!
+                    typeof(FileProcessor),   // KISS: Direct type! Step 1.2 done!
+                    typeof(DicomConverter),  // KISS: Direct type! Step 1.1 done!
                     typeof(PipelineManager)  // New orchestrator
                 };
 
@@ -124,6 +124,10 @@ namespace CamBridge.Infrastructure
                 var dicomConverter = provider.GetRequiredService<DicomConverter>();
                 logger.LogInformation("DicomConverter validated - KISS approach working!");
 
+                // Validate FileProcessor (KISS: Direct reference!)
+                var fileProcessor = provider.GetRequiredService<FileProcessor>();
+                logger.LogInformation("FileProcessor validated - Step 1.2 complete!");
+
                 // Validate Pipeline Manager
                 var pipelineManager = provider.GetRequiredService<PipelineManager>();
                 logger.LogInformation("Pipeline Manager validated - ready for multi-pipeline processing");
@@ -139,7 +143,7 @@ namespace CamBridge.Infrastructure
                     logger.LogInformation("Found {Count} configured pipelines", settingsV2.Value.Pipelines.Count);
                 }
 
-                logger.LogInformation("Infrastructure validation completed successfully - KISS approach: 1 interface removed!");
+                logger.LogInformation("Infrastructure validation completed successfully - KISS approach: 2 interfaces removed!");
             }
             catch (Exception ex)
             {

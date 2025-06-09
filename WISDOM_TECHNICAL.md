@@ -1,5 +1,5 @@
 # WISDOM Technical - Entwicklung & Technische Details
-**Letzte Aktualisierung:** 2025-06-10, 22:10 Uhr  
+**Letzte Aktualisierung:** 2025-06-09, 22:45 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Technische Kontinuität & Entwicklungsplan
 **Version:** 0.7.0
@@ -64,10 +64,10 @@
 4. **Klein anfangen, groß denken**
 
 ### Phase 2: Quick Wins (v0.7.0)
-1. **DailySummaryService auskommentieren** (sofort)
-2. **Unnötige Interfaces identifizieren** (nicht löschen!)
+1. **DailySummaryService auskommentieren** ✅
+2. **Unnötige Interfaces identifizieren** ✅
 3. **Test-Coverage sicherstellen**
-4. **Einen Service vereinfachen als Proof of Concept**
+4. **Einen Service vereinfachen als Proof of Concept** ✅
 
 ### Phase 3: Schrittweise Vereinfachung (v0.7.1-v0.7.3)
 1. **Service by Service refactoren**
@@ -116,10 +116,11 @@ PIPELINE-001: Pipeline Architecture [SIMPLIFYING] 🔥
              - Sprint 7: THE GREAT SIMPLIFICATION (VORSICHTIG!)
 
 KISS-001: Service Layer Simplification [ACTIVE] 🔥
-          Status: Planning Phase
+          Status: Step 1.1 DONE, Step 1.2 NEXT
           Created: 2025-06-10, 09:00
           Details: Von 15+ auf 5-6 Services
           Approach: VORSICHTIG, Schritt für Schritt
+          Done: IDicomConverter Interface entfernt ✅
 
 CAMB-FTP: FTP Server Implementation [PROTECTED] 🛡️
           Status: Geplant für Sprint 8
@@ -164,19 +165,19 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
   - 15+ Services, 5000+ LOC
   - DailySummaryService broken
 - Sprint 7: THE GREAT SIMPLIFICATION 🔥
-  - v0.7.0: MCSA Step 1.1 ERFOLGREICH!
+  - v0.7.0: MCSA Step 1.1 ERFOLGREICH! ✅
   - IDicomConverter Interface entfernt ✅
   - CamBridgeHealthCheck gefixt ✅
   - Service und Config Tool laufen stabil ✅
 
 ### Erreichte Vereinfachungen:
-- **Interfaces entfernt:** 1 von 3
+- **Interfaces entfernt:** 1 von 3 ✅
 - **Code-Reduktion:** ~30 Zeilen
 - **Neue Bugs gefixt:** HealthCheck nutzt jetzt PipelineManager
 - **Stabilität:** Keine Breaking Changes!
 
 ### Nächste Schritte:
-- Step 1.2: IFileProcessor Interface entfernen
+- Step 1.2: IFileProcessor Interface entfernen 🎯
 - Step 1.3: IDicomTagMapper Interface entfernen
 - Phase 2: Service Consolidation
 
@@ -244,41 +245,36 @@ Get-ChildItem "src\CamBridge.Service","src\CamBridge.Infrastructure\Services" -I
 
 # Line Count Analysis
 Get-ChildItem "src" -Include "*.cs" -Recurse | %{ $lines = (cat $_).Count; "$lines`t$($_.FullName)" } | Sort-Object { [int]$_.Split("`t")[0] } -Descending | Select-Object -First 20 > biggest-files.txt
+
+# KISS Step 1.2 Files (IFileProcessor)
+@('src\CamBridge.Core\Interfaces\IFileProcessor.cs','src\CamBridge.Infrastructure\Services\FileProcessor.cs','src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs','src\CamBridge.Service\Worker.cs','src\CamBridge.Infrastructure\Services\PipelineManager.cs') | %{ echo "=== $_ ==="; cat $_ } > kiss-step-1-2-files.txt
+
+# KISS Step 1.3 Files (IDicomTagMapper)
+@('src\CamBridge.Core\Interfaces\IDicomTagMapper.cs','src\CamBridge.Infrastructure\Services\DicomTagMapper.cs','src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs','src\CamBridge.Infrastructure\Services\FileProcessor.cs') | %{ echo "=== $_ ==="; cat $_ } > kiss-step-1-3-files.txt
 ```
 
 ## 🔥 [KISS] Sprint 7 - Vereinfachungs-Strategie
 
 ### Die VORSICHTIGE Herangehensweise:
 
-#### Step 1: Verstehen (JETZT!)
-```powershell
-# Wir brauchen ALLES für den Überblick:
-.\Get-WisdomFileTree.ps1 -Mode Detailed > filetree-detailed.txt
+#### Step 1: Verstehen (DONE! ✅)
+- Service Layer analysiert
+- Over-Engineering identifiziert
+- Abhängigkeiten verstanden
 
-# Service Layer komplett
-Get-ChildItem "src\CamBridge.Service","src\CamBridge.Infrastructure" -Include "*.cs" -Recurse | %{ echo "=== $($_.FullName) ==="; cat $_ } > service-complete.txt
+#### Step 2: Quick Fix (DONE! ✅)
+- DailySummaryService auskommentiert
+- System läuft stabil
 
-# DI Container Analyse
-Select-String -Path "src\**\*.cs" -Pattern "services\.Add" -Recurse > di-analysis.txt
-```
+#### Step 3: Interface Removal (IN PROGRESS 🚧)
+- **Step 1.1:** IDicomConverter entfernt ✅
+- **Step 1.2:** IFileProcessor entfernen 🎯
+- **Step 1.3:** IDicomTagMapper entfernen
 
-#### Step 2: Quick Fix (v0.7.0)
-```csharp
-// In Program.cs - ERSTMAL NUR AUSKOMMENTIEREN:
-// services.AddHostedService<DailySummaryService>();
-```
-
-#### Step 3: Analyse der Dependencies
-- Welche Services nutzen ProcessingQueue?
-- Welche Services nutzen PipelineManager?
-- Was kann zusammengelegt werden?
-- Was ist wirklich unabhängig?
-
-#### Step 4: Ein Service als Test
-- Z.B. FileProcessor + DicomConverter → CamBridgeProcessor
+#### Step 4: Service Consolidation (NEXT)
+- FileProcessor + DicomConverter → CamBridgeProcessor
 - Tests schreiben
 - Performance vergleichen
-- Rollback wenn nötig
 
 ### Was NICHT tun:
 - ❌ Alles auf einmal umbauen
@@ -299,10 +295,14 @@ Select-String -Path "src\**\*.cs" -Pattern "services\.Add" -Recurse > di-analysi
 ### ✅ Sprint 1-5: Foundation (DONE)
 ### ✅ Sprint 6: Pipeline Architecture (DONE but complex)
 ### 🔥 Sprint 7: THE GREAT SIMPLIFICATION (v0.7.0-v0.7.5)
-- Phase 1: Analyse & Quick Fix
-- Phase 2: Service Consolidation  
-- Phase 3: Test & Stabilize
-- Phase 4: Documentation Update
+- Phase 1: Analyse & Quick Fix ✅
+- Phase 2: Interface Removal 🚧
+  - Step 1.1: IDicomConverter ✅
+  - Step 1.2: IFileProcessor 🎯
+  - Step 1.3: IDicomTagMapper
+- Phase 3: Service Consolidation
+- Phase 4: Test & Stabilize
+- Phase 5: Documentation Update
 ### 🏥 Sprint 8-11: Protected Medical Features (aber SIMPLE!)
 
 ## 📝 [KEEP] Standard Prompt für nächste Session
@@ -315,10 +315,9 @@ System: nexus\oliver.stern@OSTE-ER-LAP01
 VOGON INIT (bitte mit kompletten WISDOM Artefakten!)
 
 STATUS: 
-- Sprint 7 gestartet: VORSICHTIGE Vereinfachung
-- DailySummaryService auskommentiert?
-- Service-Analyse durchgeführt?
-- Tests laufen noch?
+- MCSA Step 1.1 DONE: IDicomConverter Interface entfernt ✅
+- Service und Config Tool laufen stabil
+- Ready für Step 1.2: IFileProcessor Interface
 
 PHILOSOPHIE: 
 - KISS > Architecture!
@@ -327,42 +326,67 @@ PHILOSOPHIE:
 - Mit Tests absichern
 
 NÄCHSTE SCHRITTE:
-1. [Abhängig vom Fortschritt]
+1. Step 1.2: IFileProcessor Interface entfernen
+2. Dependency Check durchführen
+3. Build & Test
 
 FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch geschützt?
 ```
 
-## 🎯 Session 50 - KISS Implementation Start
+## 🤖 CLAUDE-NOTES: Meine persönlichen Code-Markierungen
+
+Ab jetzt verwende ich spezielle Markierungen FÜR MICH:
+- **CLAUDE-PATTERN:** Ein Muster das funktioniert
+- **CLAUDE-TRAP:** Eine Falle in die ich tappe
+- **CLAUDE-AHA:** Ein Erleuchtungsmoment
+- **CLAUDE-TODO:** Dinge die ich nicht vergessen darf
+- **CLAUDE-WARNING:** Gefährliche Stellen im Code
+- **CLAUDE-INSIGHT:** Tiefere Erkenntnis über das System
+
+Diese helfen MIR, den Code besser zu verstehen und zu warten!
+
+## 🎯 Session 51 - KISS Step 1.2 Prepared
 
 **STATUS UPDATE:**
-1. ✅ Service Layer analysiert (4000+ LOC!)
-2. ✅ Over-Engineering identifiziert
-3. ✅ WISDOM_SPRINT.md erstellt mit detailliertem Plan
-4. 🚧 Step 1.1: IDicomConverter Interface entfernen (READY!)
+1. ✅ Step 1.1 erfolgreich: IDicomConverter entfernt
+2. ✅ CamBridgeHealthCheck gefixt für PipelineManager
+3. ✅ Service und Config Tool laufen stabil
+4. 🎯 Step 1.2 VORBEREITET: IFileProcessor Interface Removal
 
-**GEFUNDENE PROBLEME:**
-- 15+ Services in DI Container
-- Unnötige Interfaces (nur eine Implementation)
-- Per-Pipeline Queues (overkill)
-- DailySummaryService erwartet globale Queue (bereits auskommentiert ✅)
+**NEUE DOKUMENTATION:**
+- WISDOM_ARCHITECTURE erstellt - Mein Architektur-Gedächtnis
+- CLAUDE-NOTES System eingeführt für bessere Wartbarkeit
+- Eigene Markierungen für Code-Verständnis
 
-**KISS IMPLEMENTATION - Step 1.1:**
-- **FileProcessor.cs** - IDicomConverter → DicomConverter
-- **ServiceCollectionExtensions.cs** - DI angepasst
-- Nur ~10 Zeilen geändert!
-- Folgt dem ExifToolReader Pattern
+**KISS IMPLEMENTATION - Step 1.2 READY:**
+- **ProcessingQueue.cs** - IFileProcessor → FileProcessor (2 Stellen)
+- **ServiceCollectionExtensions.cs** - DI direkt registriert
+- **FileProcessor.cs** - Interface-Vererbung entfernt
+- **IFileProcessor.cs** - Kann gelöscht werden
+
+**DATEIEN BEREIT ZUM DEPLOYMENT:**
+1. ProcessingQueue.cs (KISS Update)
+2. ServiceCollectionExtensions.cs (KISS Update)
+3. FileProcessor.cs (ohne Interface)
+4. IFileProcessor.cs (zum Löschen markiert)
 
 **NÄCHSTE SCHRITTE:**
-1. Build & Test der Änderungen
-2. Step 1.2: IFileProcessor entfernen
-3. Step 1.3: IDicomTagMapper entfernen
-4. Phase 2: Service Consolidation
+1. Diese 4 Dateien deployen
+2. Build & Test
+3. IFileProcessor.cs löschen wenn alles läuft
+4. Step 1.3: IDicomTagMapper entfernen
+
+**LEARNINGS:**
+- CLAUDE-NOTES helfen mir, den Code zu verstehen
+- Kleine Schritte funktionieren
+- 2 von 3 Interfaces fast entfernt
+- KISS Pattern etabliert
 
 ---
 
 ## 🏁 ENDE DES WISDOM_TECHNICAL
 
-**Sprint 7: THE GREAT SIMPLIFICATION beginnt - aber VORSICHTIG!**
+**Sprint 7: THE GREAT SIMPLIFICATION - Step 1.2 bereit zum Test!**
 
 *"Making the improbable reliably simple since 2025"*
 © 2025 Claude's Improbably Reliable Software Solutions
