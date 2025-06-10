@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.6.12
+# // Version: 0.7.1
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 376
-# Generated: 2025-06-09 21:09
+# Total files: 366
+# Generated: 2025-06-10 10:25
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -114,7 +114,6 @@ src\CamBridge.Core\Entities\QRCodeRequest.cs
 src\CamBridge.Core\Entities\StudyInfo.cs
 src\CamBridge.Core\Interfaces\IDicomConverter.cs
 src\CamBridge.Core\Interfaces\IDicomTagMapper.cs
-src\CamBridge.Core\Interfaces\IFileProcessor.cs
 src\CamBridge.Core\Interfaces\IMappingConfiguration.cs
 src\CamBridge.Core\MappingRule.cs
 src\CamBridge.Core\NotificationSettings.cs
@@ -345,8 +344,6 @@ _archived_collectors\collect-sources-balanced.bat
 _archived_collectors\collect-sources-gui-config.bat
 _archived_collectors\collect-sources-mapping-editor.bat
 _archived_collectors\collect-sources-test.bat
-all-settings-classes.txt
-all-viewmodels.txt
 Build-QRBridgeUltraSlim.ps1
 CamBridge.ParserDebug\CamBridge.ParserDebug.csproj
 CamBridge.ParserDebug\Program.cs
@@ -361,15 +358,8 @@ collect-smart.bat
 collect-sources.bat
 ConnectionTest\ConnectionTest.cs
 ConnectionTest\ConnectionTest.csproj
-core-models.txt
-core-models-check.txt
-core-settings-current.txt
-Create-DeploymentPackage - 250608.ps1
+Create-DeploymentPackage - 250609.ps1
 Create-DeploymentPackage.ps1
-current-configservice.txt
-dashboard-complete.txt
-dashboard-debug.txt
-dashboard-settings-debug.txt
 ExifToolQuickTest\exif_output.json
 ExifToolQuickTest\ExifToolQuickTest.csproj
 ExifToolQuickTest\Program.cs
@@ -380,23 +370,23 @@ FILETREE_COMPACT.txt
 FILETREE_DETAILED.txt
 FILETREE_MINIMAL.txt
 Get-WisdomProjectTree.ps1
-missing-settings.txt
+kiss-step-1-2-files.txt
+kiss-step-1-3-files.txt
 old docs\cambridge-entwicklungsplan-v2.md
-pipeline-config-debug.txt
+processing-queue-check.txt
 Program.cs
 PROJECT_TREE.md
 PROJECT_WISDOM.md
 protected-features-manifest.md
 README.md
 README-Deployment.md
-saved-config-file.txt
-service-layer.txt
 Test-CompletePipeline.ps1
 Test-QRBridge.ps1
 TREE_COMPACT.txt
 TREE_DETAILED.md
 TREE_MINIMAL.txt
 Version.props
+WISDOM_ARCHITECTURE.md
 WISDOM_CLAUDE.md
 WISDOM_PO.md
 WISDOM_TECHNICAL.md
