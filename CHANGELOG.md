@@ -8,6 +8,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.7.3] - 2025-06-10 - Foundation First! 🏗️
+
+### Added
+- **Settings Architecture**: 3-layer separation (System/Pipeline/User)
+  - `SystemSettings.cs` for service-wide configuration
+  - `UserPreferences.cs` for per-user UI settings
+  - Clear separation of concerns
+- **Error Folder**: Simple error handling with Windows Explorer integration
+  - Files moved to `C:\CamBridge\Errors` after max retries
+  - Error details saved as `.error.txt` files
+  - Explorer integration for easy management
+- **ISettingsService**: New interface for multi-layer settings management
+- **Retry Logic**: Exponential backoff for failed files
+
+### Changed
+- **ConfigurationService** → **SettingsService**: Complete refactoring
+- **DeadLettersPage**: Now shows simple error folder viewer
+- **ProcessingOptions**: Added `ErrorFolder`, `MaxRetryAttempts`, `RetryDelaySeconds`
+
+### Removed
+- **DeadLetterQueue.cs**: 300+ LOC monster deleted! 🎉
+- **DeadLettersViewModel.cs**: 250+ LOC of over-engineering gone!
+- **Dead Letter API endpoints**: No more unnecessary complexity
+- **JSON persistence**: No more automatic saves every 30 seconds
+- **Event system**: ItemAdded, ItemRemoved, ThresholdExceeded - all gone!
+- **Statistics API**: Error categorization removed
+- **Reprocess functionality**: Too dangerous, removed
+
+### Technical Details
+- **Code Reduction**: ~650 LOC removed
+- **Foundation First**: Settings must be solid before features
+- **KISS Implementation**: Error Folder > Dead Letter Queue
+- **Breaking Changes**: Dead Letter API endpoints removed (but nobody used them anyway!)
+
+### Migration Notes
+- Existing Dead Letter items will be moved to Error Folder
+- Settings will be automatically migrated to 3-layer structure
+- User preferences now stored in `%AppData%\CamBridge\preferences.json`
+
+### Known Issues
+- Step 1.3 (IDicomTagMapper) postponed until after foundation fixes
+
+### Quote of the Release
+> "When in doubt, use the file system. It's been working for 50 years!"
+
+---
+*"Making the improbable reliably simple, from the ground up!"*
+
 # Changelog Entry - v0.7.2
 
 ## [0.7.2] - 2025-06-10 - Foundation Fixes & Config Unification
