@@ -1,5 +1,5 @@
 // src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
-// Version: 0.6.7
+// Version: 0.7.7
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 // Modified: 2025-06-08
 // Status: Development/Local - Fixed Command Names

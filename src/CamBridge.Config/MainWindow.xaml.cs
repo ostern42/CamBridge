@@ -1,96 +1,73 @@
 // src\CamBridge.Config\MainWindow.xaml.cs
-// Version: 0.6.11
-// Description: Main window with simplified navigation
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Version: 0.7.7
+// Description: Main window code-behind with dynamic version display
 
 using System;
-using System.Diagnostics;
-using System.Runtime.Versioning;
+using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
+using ModernWpf.Controls;
 using CamBridge.Config.Services;
 using CamBridge.Config.ViewModels;
 using CamBridge.Config.Views;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CamBridge.Config
 {
-    [SupportedOSPlatform("windows")]
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly IServiceProvider _serviceProvider;
-        private System.Windows.Controls.Page? _currentPage;
+        private readonly INavigationService _navigationService;
+        private readonly MainViewModel _viewModel;
 
-        public MainWindow(IServiceProvider serviceProvider)
+        public MainWindow()
         {
-            _serviceProvider = serviceProvider;
             InitializeComponent();
 
-            // Set MainViewModel
-            DataContext = _serviceProvider.GetRequiredService<MainViewModel>();
+            // Set version dynamically from assembly
+            var version = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "Unknown";
 
-            // Navigate to Dashboard on startup
-            Loaded += (s, e) => NavigateToPage("Dashboard");
-        }
+            Title = $"CamBridge Configuration v{version}";
 
-        [SupportedOSPlatform("windows7.0")]
-        private void NavigationView_SelectionChanged(ModernWpf.Controls.NavigationView sender,
-            ModernWpf.Controls.NavigationViewSelectionChangedEventArgs args)
-        {
-            if (args.SelectedItemContainer?.Tag is string tag)
+            // Get services from DI
+            var app = (App)App.Current;
+            _navigationService = app.Host!.Services.GetRequiredService<INavigationService>();
+            _viewModel = app.Host!.Services.GetRequiredService<MainViewModel>();
+
+            DataContext = _viewModel;
+
+            // Initialize navigation
+            if (_navigationService is NavigationService navService)
             {
-                NavigateToPage(tag);
+                navService.SetFrame(ContentFrame);
             }
+
+            // Navigate to dashboard on startup
+            NavView.SelectedItem = NavView.MenuItems[0];
         }
 
-        private void NavigateToPage(string tag)
+        private void NavigationView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
-            try
+            if (args.SelectedItem is NavigationViewItem item)
             {
-                Debug.WriteLine($"\n=== NAVIGATION: {tag} ===");
-
-                // Cleanup current page
-                if (_currentPage is DashboardPage dashboardPage)
+                var tag = item.Tag?.ToString();
+                if (!string.IsNullOrEmpty(tag))
                 {
-                    (dashboardPage.DataContext as DashboardViewModel)?.Cleanup();
-                }
-
-                System.Windows.Controls.Page? page = tag switch
-                {
-                    "Dashboard" => CreatePageWithViewModel<DashboardPage, DashboardViewModel>(),
-                    "PipelineConfig" => CreatePageWithViewModel<PipelineConfigPage, PipelineConfigViewModel>(),
-                    "DeadLetters" => CreatePageWithViewModel<DeadLettersPage, DeadLettersViewModel>(),
-                    "MappingEditor" => CreatePageWithViewModel<MappingEditorPage, MappingEditorViewModel>(),
-                    "ServiceControl" => CreatePageWithViewModel<ServiceControlPage, ServiceControlViewModel>(),
-                    "About" => new AboutPage(),
-                    _ => null
-                };
-
-                if (page != null && ContentFrame != null)
-                {
-                    _currentPage = page;
-                    ContentFrame.Navigate(page);
-                    Debug.WriteLine($"✓ Navigated to {tag}");
+                    _navigationService.NavigateTo(tag);
                 }
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"✗ Navigation error: {ex.Message}");
-                MessageBox.Show($"Error navigating to {tag}: {ex.Message}", "Navigation Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
         }
 
-        private TPage CreatePageWithViewModel<TPage, TViewModel>()
-            where TPage : System.Windows.Controls.Page, new()
-            where TViewModel : class
+        protected override void OnClosed(EventArgs e)
         {
-            var page = new TPage();
-            var viewModel = _serviceProvider.GetRequiredService<TViewModel>();
-            page.DataContext = viewModel;
+            base.OnClosed(e);
 
-            Debug.WriteLine($"Created {typeof(TPage).Name} with {typeof(TViewModel).Name}");
-
-            return page;
+            // Clean shutdown
+            Application.Current.Shutdown();
         }
     }
 }

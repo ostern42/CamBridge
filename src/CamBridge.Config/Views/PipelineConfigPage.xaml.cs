@@ -1,5 +1,5 @@
-﻿// src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
-// Version: 0.6.7
+// src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
+// Version: 0.7.7
 // Description: Pipeline Configuration page code-behind
 
 using System;

@@ -1,5 +1,5 @@
 // src\CamBridge.Config\Services\NavigationService.cs
-// Version: 0.6.7
+// Version: 0.7.7
 // Description: Navigation service with PipelineConfig instead of Settings
 
 using System;

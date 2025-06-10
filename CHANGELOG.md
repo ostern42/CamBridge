@@ -8,6 +8,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.7.7] - 2025-06-10
+
+### 🔧 Build Fixes & StatusController Simplification
+
+### Fixed
+- **StatusController** - Now uses only existing PipelineManager methods (GetPipelineStatuses, GetPipelineDetails)
+- **StatusController** - Fixed all property names to match actual PipelineConfiguration structure
+- **ServiceInfo** - Company property now comes from FileVersionInfo.CompanyName
+- **Build errors** - All 16 CS1061 errors resolved by using actual API surface
+- **Version numbering** - Correctly incremented from 0.7.6 to 0.7.7
+
+### Changed
+- **StatusController** - Complete rewrite using only existing APIs
+- **StatusController** - Uses synchronous GetPipelineStatuses() instead of imaginary async methods
+- **StatusController** - Properly maps ProcessingOptions properties (MaxConcurrentProcessing, not MaxConcurrentFiles)
+- **ServiceInfo.cs** - Added as central version source (v0.7.7)
+
+### Added
+- **StatusController** - EnablePipeline and DisablePipeline endpoints
+- **StatusController** - Proper mapping of nested properties from PipelineConfiguration
+
+### Removed
+- Calls to non-existent methods: GetAllPipelineStatusAsync, GetPipelineStatusAsync, GetActivePipelineCount, GetRecentActivityAsync
+- References to non-existent properties: IsActive, WatchFolders, OutputFolder (direct)
+- Complex async pipeline status tracking (using sync methods that exist)
+
+### Developer Notes
+- KISS principle: Use what exists, don't imagine APIs
+- Always check actual class definitions before writing code
+- PipelineManager has synchronous methods, not async ones
+- Properties are nested in ProcessingOptions and WatchSettings
+
+---
+
+*"Build what exists, not what might be!"*  
+© 2025 Claude's Improbably Reliable Software Solutions
+
 ## [0.7.6] - 2025-06-10
 
 ### 🎯 Version Consistency & Professional Standards

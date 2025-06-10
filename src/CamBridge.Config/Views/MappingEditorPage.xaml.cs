@@ -1,5 +1,5 @@
 // src/CamBridge.Config/Views/MappingEditorPage.xaml.cs
-// Version: 0.6.7
+// Version: 0.7.7
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System.Windows;

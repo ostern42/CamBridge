@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.7.4
+# // Version: 0.7.6
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -45,14 +45,13 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 234
-# Generated: 2025-06-10 17:24
+# Total files: 253
+# Generated: 2025-06-10 23:06
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
 src\CamBridge.Config\App.xaml
 src\CamBridge.Config\App.xaml.cs
-src\CamBridge.Config\AssemblyInfo.cs
 src\CamBridge.Config\CamBridge.Config.csproj
 src\CamBridge.Config\Converters\ValueConverters.cs
 src\CamBridge.Config\Dialogs\DicomTagBrowserDialog.xaml
@@ -170,6 +169,7 @@ src\CamBridge.Service\DailySummaryService.cs
 src\CamBridge.Service\mappings.json
 src\CamBridge.Service\Program.cs
 src\CamBridge.Service\Properties\launchSettings.json
+src\CamBridge.Service\ServiceInfo.cs
 src\CamBridge.Service\Tools\exiftool.exe
 src\CamBridge.Service\Tools\exiftool_files\lib\auto\B\B.xs.dll
 src\CamBridge.Service\Tools\exiftool_files\lib\auto\Compress\Raw\Bzip2\Bzip2.xs.dll
@@ -225,6 +225,18 @@ _archive\old_collectors\collect-sources-mapping-editor.bat
 _archive\old_collectors\collect-sources-test.bat
 _archive\old_docs\cambridge-entwicklungsplan-v2.md
 _archive\README_ARCHIVE.md
+00-build-zip.ps1
+0-build.ps1
+1-deploy-update.ps1
+2-config.ps1
+3-service.ps1
+4-console.ps1
+5-test-api.ps1
+6-logs.ps1
+7-clean.ps1
+8-status.ps1
+99-testit-full.ps1
+9-testit.ps1
 Build-QRBridgeUltraSlim.ps1
 CamBridge.ParserDebug\CamBridge.ParserDebug.csproj
 CamBridge.ParserDebug\Program.cs
@@ -238,7 +250,11 @@ COLLECTOR_README.md
 ConnectionTest\ConnectionTest.cs
 ConnectionTest\ConnectionTest.csproj
 Create-DeploymentPackage - 250609.ps1
+Create-DeploymentPackage - 250610.ps1
+Create-DeploymentPackage - Kopie.ps1
 Create-DeploymentPackage.ps1
+Create-NumberedTools.ps1
+Directory.Build.props
 ExifToolQuickTest\exif_output.json
 ExifToolQuickTest\ExifToolQuickTest.csproj
 ExifToolQuickTest\Program.cs
@@ -246,11 +262,14 @@ ExifToolTest\ExifToolTest.csproj
 ExifToolTest\Program.cs
 FILETREE_COMPACT.txt
 Get-WisdomProjectTree.ps1
+h-help.ps1
 Migrate-CamBridgeConfig.ps1
 Program.cs
 PROJECT_WISDOM.md
 README.md
 README-Deployment.md
+service-manager.ps1
+test-api.ps1
 Test-CompletePipeline.ps1
 Test-QRBridge.ps1
 Version.props

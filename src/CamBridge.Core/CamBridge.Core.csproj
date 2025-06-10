@@ -13,6 +13,4 @@
 	  <PackageReference Include="fo-dicom" Version="5.1.2" />
 	</ItemGroup>
 
-	<Import Project="..\..\Version.props" />
-
 </Project>

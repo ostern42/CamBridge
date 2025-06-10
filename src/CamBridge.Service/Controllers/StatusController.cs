@@ -1,119 +1,79 @@
-// src/CamBridge.Service/Controllers/StatusController.cs
-// Version: 0.7.5+tools
-// Description: API controller for service status - focused on pipelines
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// src\CamBridge.Service\Controllers\StatusController.cs
+// Version: 0.7.7
+// Description: Simple service status API controller (without DeadLetterQueue)
 
+using Microsoft.AspNetCore.Mvc;
 using CamBridge.Core;
 using CamBridge.Infrastructure.Services;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Reflection;
 
 namespace CamBridge.Service.Controllers
 {
-    /// <summary>
-    /// API controller for service and pipeline status
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class StatusController : ControllerBase
     {
-        private readonly ILogger<StatusController> _logger;
         private readonly PipelineManager _pipelineManager;
-        private readonly IOptionsMonitor<CamBridgeSettingsV2> _settingsMonitor;
-        private readonly IHostApplicationLifetime _lifetime;
+        private readonly IOptions<CamBridgeSettingsV2> _settings;
+        private readonly ILogger<StatusController> _logger;
+        private static readonly DateTime _startTime = DateTime.UtcNow;
 
         public StatusController(
-            ILogger<StatusController> logger,
             PipelineManager pipelineManager,
-            IOptionsMonitor<CamBridgeSettingsV2> settingsMonitor,
-            IHostApplicationLifetime lifetime)
+            IOptions<CamBridgeSettingsV2> settings,
+            ILogger<StatusController> logger)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _pipelineManager = pipelineManager ?? throw new ArgumentNullException(nameof(pipelineManager));
-            _settingsMonitor = settingsMonitor ?? throw new ArgumentNullException(nameof(settingsMonitor));
-            _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
+            _pipelineManager = pipelineManager;
+            _settings = settings;
+            _logger = logger;
         }
 
         /// <summary>
-        /// Gets current service status and statistics
+        /// Get service status
         /// </summary>
         [HttpGet]
-        [ProducesResponseType(typeof(ServiceStatusDto), 200)]
         public IActionResult GetStatus()
         {
             try
             {
                 var pipelineStatuses = _pipelineManager.GetPipelineStatuses();
-                var settings = _settingsMonitor.CurrentValue;
 
-                // Calculate aggregate statistics
-                var totalQueued = pipelineStatuses.Sum(p => p.Value.QueueLength);
-                var totalActive = pipelineStatuses.Sum(p => p.Value.ActiveProcessing);
-                var totalProcessed = pipelineStatuses.Sum(p => p.Value.TotalProcessed);
-                var totalSuccessful = pipelineStatuses.Sum(p => p.Value.TotalSuccessful);
-                var totalFailed = pipelineStatuses.Sum(p => p.Value.TotalFailed);
-                var successRate = totalProcessed > 0
-                    ? (double)totalSuccessful / totalProcessed * 100
-                    : 0;
-
-                var uptime = DateTime.UtcNow - Program.ServiceStartTime;
-                var processingRate = uptime.TotalMinutes > 0
-                    ? totalProcessed / uptime.TotalMinutes
-                    : 0;
-
-                var status = new ServiceStatusDto
+                var status = new
                 {
-                    ServiceStatus = "Running",
+                    ServiceName = ServiceInfo.ServiceName,
                     Version = ServiceInfo.Version,
+                    Status = "Online",
                     Timestamp = DateTime.UtcNow,
-                    Uptime = uptime,
-                    ConfigPath = ConfigurationPaths.GetPrimaryConfigPath(),
-                    ConfigExists = ConfigurationPaths.PrimaryConfigExists(),
-
-                    // Pipeline summary
-                    PipelineCount = pipelineStatuses.Count,
-                    ActivePipelines = pipelineStatuses.Count(p => p.Value.IsActive),
-
-                    // Aggregate statistics
-                    QueueLength = totalQueued,
-                    ActiveProcessing = totalActive,
-                    TotalProcessed = totalProcessed,
-                    TotalSuccessful = totalSuccessful,
-                    TotalFailed = totalFailed,
-                    SuccessRate = successRate,
-                    ProcessingRate = processingRate,
-
-                    // Per-pipeline details
-                    Pipelines = pipelineStatuses.Select(p => new PipelineStatusDto
+                    Uptime = GetUptime(),
+                    Environment = new
                     {
-                        Id = p.Key,
-                        Name = p.Value.Name,
-                        IsActive = p.Value.IsActive,
-                        QueueLength = p.Value.QueueLength,
-                        ActiveProcessing = p.Value.ActiveProcessing,
-                        TotalProcessed = p.Value.TotalProcessed,
-                        TotalSuccessful = p.Value.TotalSuccessful,
-                        TotalFailed = p.Value.TotalFailed,
-                        SuccessRate = p.Value.TotalProcessed > 0
-                            ? (double)p.Value.TotalSuccessful / p.Value.TotalProcessed * 100
-                            : 0,
-                        WatchedFolders = p.Value.WatchedFolders
+                        MachineName = Environment.MachineName,
+                        OSVersion = Environment.OSVersion.ToString(),
+                        ProcessorCount = Environment.ProcessorCount,
+                        WorkingSet = Environment.WorkingSet / (1024 * 1024),
+                        DotNetVersion = Environment.Version.ToString()
+                    },
+                    Pipelines = pipelineStatuses.Select(kvp => new
+                    {
+                        kvp.Value.Id,
+                        kvp.Value.Name,
+                        kvp.Value.IsActive,
+                        kvp.Value.QueueLength,
+                        kvp.Value.ActiveProcessing,
+                        kvp.Value.TotalProcessed,
+                        kvp.Value.TotalSuccessful,
+                        kvp.Value.TotalFailed
                     }).ToList(),
-
-                    // Configuration info
-                    Configuration = new ConfigurationDto
+                    TotalStatistics = new
                     {
-                        DefaultOutputFolder = settings.DefaultOutputFolder,
-                        ExifToolPath = settings.ExifToolPath,
-                        ConfigVersion = settings.Version
-                    }
+                        TotalPipelines = pipelineStatuses.Count,
+                        ActivePipelines = pipelineStatuses.Count(p => p.Value.IsActive),
+                        TotalProcessed = pipelineStatuses.Sum(p => p.Value.TotalProcessed),
+                        TotalErrors = pipelineStatuses.Sum(p => p.Value.TotalFailed),
+                        TotalQueued = pipelineStatuses.Sum(p => p.Value.QueueLength)
+                    },
+                    ConfigurationPath = ConfigurationPaths.GetPrimaryConfigPath()
                 };
 
                 return Ok(status);
@@ -121,314 +81,220 @@ namespace CamBridge.Service.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting service status");
-                return StatusCode(500, new { error = "Failed to retrieve status" });
+                return StatusCode(500, new { Error = "Failed to retrieve service status" });
             }
         }
 
         /// <summary>
-        /// Gets pipeline-specific statistics
+        /// Get status for a specific pipeline
         /// </summary>
-        [HttpGet("pipelines")]
-        [ProducesResponseType(typeof(Dictionary<string, PipelineStatusDto>), 200)]
-        public IActionResult GetPipelines()
-        {
-            try
-            {
-                var statuses = _pipelineManager.GetPipelineStatuses();
-                var result = statuses.ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => new PipelineStatusDto
-                    {
-                        Id = kvp.Value.Id,
-                        Name = kvp.Value.Name,
-                        IsActive = kvp.Value.IsActive,
-                        QueueLength = kvp.Value.QueueLength,
-                        ActiveProcessing = kvp.Value.ActiveProcessing,
-                        TotalProcessed = kvp.Value.TotalProcessed,
-                        TotalSuccessful = kvp.Value.TotalSuccessful,
-                        TotalFailed = kvp.Value.TotalFailed,
-                        SuccessRate = kvp.Value.TotalProcessed > 0
-                            ? (double)kvp.Value.TotalSuccessful / kvp.Value.TotalProcessed * 100
-                            : 0,
-                        WatchedFolders = kvp.Value.WatchedFolders
-                    });
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting pipeline statuses");
-                return StatusCode(500, new { error = "Failed to retrieve pipeline statuses" });
-            }
-        }
-
-        /// <summary>
-        /// Gets detailed information for a specific pipeline
-        /// </summary>
-        [HttpGet("pipelines/{id}")]
-        [ProducesResponseType(typeof(PipelineDetailedDto), 200)]
-        [ProducesResponseType(404)]
-        public IActionResult GetPipelineDetails(string id)
+        [HttpGet("pipeline/{id}")]
+        public IActionResult GetPipelineStatus(string id)
         {
             try
             {
                 var details = _pipelineManager.GetPipelineDetails(id);
                 if (details == null)
                 {
-                    return NotFound(new { error = $"Pipeline '{id}' not found" });
+                    return NotFound(new { Error = $"Pipeline '{id}' not found" });
                 }
 
-                var result = new PipelineDetailedDto
-                {
-                    Id = details.Id,
-                    Name = details.Name,
-                    Description = details.Description,
-                    IsActive = details.IsActive,
-
-                    // Configuration details
-                    WatchFolder = details.Configuration.WatchSettings.Path,
-                    FilePattern = details.Configuration.WatchSettings.FilePattern,
-                    IncludeSubdirectories = details.Configuration.WatchSettings.IncludeSubdirectories,
-                    OutputFolder = details.Configuration.OutputSettings.Path,
-
-                    // Processing options
-                    MaxConcurrentProcessing = details.Configuration.ProcessingOptions.MaxConcurrentProcessing,
-                    ProcessExistingOnStartup = details.Configuration.ProcessingOptions.ProcessExistingOnStartup,
-                    SuccessAction = details.Configuration.ProcessingOptions.SuccessAction.ToString(),
-                    FailureAction = details.Configuration.ProcessingOptions.FailureAction.ToString(),
-
-                    // Statistics
-                    QueueStatistics = details.QueueStatistics != null ? new QueueStatisticsDto
-                    {
-                        QueueLength = details.QueueStatistics.QueueLength,
-                        ActiveProcessing = details.QueueStatistics.ActiveProcessing,
-                        TotalProcessed = details.QueueStatistics.TotalProcessed,
-                        TotalSuccessful = details.QueueStatistics.TotalSuccessful,
-                        TotalFailed = details.QueueStatistics.TotalFailed,
-                        SuccessRate = details.QueueStatistics.SuccessRate,
-                        ProcessingRate = details.QueueStatistics.ProcessingRate,
-                        AverageProcessingTime = details.QueueStatistics.AverageProcessingTime,
-                        LastProcessedTime = details.QueueStatistics.LastProcessedTime
-                    } : null,
-
-                    // Active items
-                    ActiveItems = details.ActiveItems.Select(item => new ActiveItemDto
-                    {
-                        FilePath = item.FilePath,
-                        FileName = Path.GetFileName(item.FilePath),
-                        StartTime = item.StartTime,
-                        AttemptCount = item.AttemptCount,
-                        Duration = item.Duration
-                    }).ToList()
-                };
-
-                return Ok(result);
+                return Ok(details);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting pipeline details for {PipelineId}", id);
-                return StatusCode(500, new { error = "Failed to retrieve pipeline details" });
+                _logger.LogError(ex, "Error getting pipeline status for {PipelineId}", id);
+                return StatusCode(500, new { Error = "Failed to retrieve pipeline status" });
             }
         }
 
         /// <summary>
-        /// Health check endpoint
+        /// Get health status (minimal endpoint for monitoring)
         /// </summary>
         [HttpGet("health")]
-        [ProducesResponseType(typeof(HealthStatusDto), 200)]
         public IActionResult GetHealth()
+        {
+            var pipelineStatuses = _pipelineManager.GetPipelineStatuses();
+
+            return Ok(new
+            {
+                Status = "Healthy",
+                Version = ServiceInfo.Version,
+                Timestamp = DateTime.UtcNow,
+                ActivePipelines = pipelineStatuses.Count(p => p.Value.IsActive)
+            });
+        }
+
+        /// <summary>
+        /// Get version information
+        /// </summary>
+        [HttpGet("version")]
+        public IActionResult GetVersion()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var fileVersionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location);
+
+            return Ok(new
+            {
+                Version = ServiceInfo.Version,
+                AssemblyVersion = assembly.GetName().Version?.ToString() ?? "Unknown",
+                FileVersion = fileVersionInfo.FileVersion ?? "Unknown",
+                ProductVersion = fileVersionInfo.ProductVersion ?? "Unknown",
+                InformationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? ServiceInfo.Version,
+                Copyright = ServiceInfo.Copyright,
+                Company = fileVersionInfo.CompanyName ?? "Claude's Improbably Reliable Software Solutions",
+                Product = ServiceInfo.DisplayName,
+                BuildConfiguration =
+#if DEBUG
+                    "Debug"
+#else
+                    "Release"
+#endif
+            });
+        }
+
+        /// <summary>
+        /// Get pipeline configurations
+        /// </summary>
+        [HttpGet("pipelines")]
+        public IActionResult GetPipelines()
+        {
+            try
+            {
+                var pipelines = _settings.Value.Pipelines.Select(p => new
+                {
+                    p.Id,
+                    p.Name,
+                    p.Description,
+                    IsEnabled = p.Enabled,
+                    WatchPath = p.WatchSettings.Path,
+                    WatchPattern = p.WatchSettings.FilePattern,
+                    IncludeSubdirectories = p.WatchSettings.IncludeSubdirectories,
+                    Output = new
+                    {
+                        Folder = p.WatchSettings.OutputPath ?? p.ProcessingOptions.ArchiveFolder,
+                        Organization = p.ProcessingOptions.OutputOrganization.ToString(),
+                        FilePattern = p.ProcessingOptions.OutputFilePattern ?? "{PatientID}_{StudyDate}_{InstanceNumber}"
+                    },
+                    Processing = new
+                    {
+                        DeleteOriginalAfterProcessing = p.ProcessingOptions.SuccessAction == PostProcessingAction.Delete,
+                        MaxConcurrentProcessing = p.ProcessingOptions.MaxConcurrentProcessing,
+                        MaxRetryAttempts = p.ProcessingOptions.MaxRetryAttempts,
+                        RetryDelaySeconds = p.ProcessingOptions.RetryDelaySeconds
+                    }
+                }).ToList();
+
+                return Ok(new
+                {
+                    Count = pipelines.Count,
+                    Pipelines = pipelines
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting pipeline configurations");
+                return StatusCode(500, new { Error = "Failed to retrieve pipeline configurations" });
+            }
+        }
+
+        /// <summary>
+        /// Get pipeline statistics
+        /// </summary>
+        [HttpGet("statistics")]
+        public IActionResult GetStatistics()
         {
             try
             {
                 var pipelineStatuses = _pipelineManager.GetPipelineStatuses();
 
-                // Calculate overall health
-                var totalProcessed = pipelineStatuses.Sum(p => p.Value.TotalProcessed);
-                var totalSuccessful = pipelineStatuses.Sum(p => p.Value.TotalSuccessful);
-                var overallSuccessRate = totalProcessed > 0
-                    ? (double)totalSuccessful / totalProcessed * 100
-                    : 100; // No failures if nothing processed
-
-                var totalQueued = pipelineStatuses.Sum(p => p.Value.QueueLength);
-                var activePipelines = pipelineStatuses.Count(p => p.Value.IsActive);
-
-                // Determine health status
-                var isHealthy = overallSuccessRate >= 50 && totalQueued < 1000;
-                var status = isHealthy ? "Healthy" : overallSuccessRate < 25 ? "Unhealthy" : "Degraded";
-
-                return Ok(new HealthStatusDto
+                var statistics = new
                 {
-                    Status = status,
                     Timestamp = DateTime.UtcNow,
-                    Version = ServiceInfo.Version,
-                    Uptime = DateTime.UtcNow - Program.ServiceStartTime,
-                    Checks = new Dictionary<string, string>
+                    Pipelines = pipelineStatuses.Select(kvp => new
                     {
-                        ["service"] = "OK",
-                        ["pipelines"] = activePipelines > 0 ? "OK" : "Warning",
-                        ["queue"] = totalQueued < 1000 ? "OK" : totalQueued < 5000 ? "Warning" : "Error",
-                        ["success_rate"] = overallSuccessRate >= 50 ? "OK" : overallSuccessRate >= 25 ? "Warning" : "Error",
-                        ["config"] = ConfigurationPaths.PrimaryConfigExists() ? "OK" : "Error"
-                    },
-                    Details = new
+                        kvp.Value.Id,
+                        kvp.Value.Name,
+                        Statistics = new
+                        {
+                            ProcessedCount = kvp.Value.TotalProcessed,
+                            SuccessCount = kvp.Value.TotalSuccessful,
+                            ErrorCount = kvp.Value.TotalFailed
+                        },
+                        QueueDepth = kvp.Value.QueueLength,
+                        IsProcessing = kvp.Value.ActiveProcessing > 0
+                    }).ToList(),
+                    Summary = new
                     {
-                        ActivePipelines = activePipelines,
                         TotalPipelines = pipelineStatuses.Count,
-                        QueuedItems = totalQueued,
-                        SuccessRate = overallSuccessRate,
-                        TotalProcessed = totalProcessed
+                        ActivePipelines = pipelineStatuses.Count(p => p.Value.IsActive),
+                        TotalProcessed = pipelineStatuses.Sum(p => p.Value.TotalProcessed),
+                        TotalErrors = pipelineStatuses.Sum(p => p.Value.TotalFailed),
+                        TotalQueued = pipelineStatuses.Sum(p => p.Value.QueueLength)
                     }
-                });
+                };
+
+                return Ok(statistics);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting health status");
-                return Ok(new HealthStatusDto
-                {
-                    Status = "Error",
-                    Timestamp = DateTime.UtcNow,
-                    Version = ServiceInfo.Version,
-                    Checks = new Dictionary<string, string>
-                    {
-                        ["service"] = "Error",
-                        ["error"] = ex.Message
-                    }
-                });
+                _logger.LogError(ex, "Error getting statistics");
+                return StatusCode(500, new { Error = "Failed to retrieve statistics" });
             }
         }
 
         /// <summary>
-        /// Gets service version information
+        /// Enable a pipeline
         /// </summary>
-        [HttpGet("version")]
-        [ProducesResponseType(typeof(VersionInfoDto), 200)]
-        public IActionResult GetVersion()
+        [HttpPost("pipeline/{id}/enable")]
+        public async Task<IActionResult> EnablePipeline(string id)
         {
-            return Ok(new VersionInfoDto
+            try
             {
-                Version = ServiceInfo.Version,
-                ServiceName = ServiceInfo.ServiceName,
-                DisplayName = ServiceInfo.DisplayName,
-                Description = ServiceInfo.Description,
-                Copyright = ServiceInfo.Copyright,
-                AssemblyVersion = ServiceInfo.GetVersion(),
-                ApiPort = ServiceInfo.ApiPort,
-                BuildDate = new FileInfo(typeof(Program).Assembly.Location).LastWriteTime
-            });
+                await _pipelineManager.EnablePipelineAsync(id);
+                return Ok(new { Message = $"Pipeline {id} enabled" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enabling pipeline {PipelineId}", id);
+                return StatusCode(500, new { Error = "Failed to enable pipeline" });
+            }
         }
-    }
 
-    // DTOs for API responses
-    public class ServiceStatusDto
-    {
-        public string ServiceStatus { get; set; } = string.Empty;
-        public string Version { get; set; } = string.Empty;
-        public DateTime Timestamp { get; set; }
-        public TimeSpan Uptime { get; set; }
-        public string ConfigPath { get; set; } = string.Empty;
-        public bool ConfigExists { get; set; }
+        /// <summary>
+        /// Disable a pipeline
+        /// </summary>
+        [HttpPost("pipeline/{id}/disable")]
+        public async Task<IActionResult> DisablePipeline(string id)
+        {
+            try
+            {
+                await _pipelineManager.DisablePipelineAsync(id);
+                return Ok(new { Message = $"Pipeline {id} disabled" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error disabling pipeline {PipelineId}", id);
+                return StatusCode(500, new { Error = "Failed to disable pipeline" });
+            }
+        }
 
-        public int PipelineCount { get; set; }
-        public int ActivePipelines { get; set; }
+        private string GetUptime()
+        {
+            var uptime = DateTime.UtcNow - _startTime;
 
-        public int QueueLength { get; set; }
-        public int ActiveProcessing { get; set; }
-        public int TotalProcessed { get; set; }
-        public int TotalSuccessful { get; set; }
-        public int TotalFailed { get; set; }
-        public double SuccessRate { get; set; }
-        public double ProcessingRate { get; set; }
-
-        public List<PipelineStatusDto> Pipelines { get; set; } = new();
-        public ConfigurationDto Configuration { get; set; } = new();
-    }
-
-    public class PipelineStatusDto
-    {
-        public string Id { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
-        public int QueueLength { get; set; }
-        public int ActiveProcessing { get; set; }
-        public int TotalProcessed { get; set; }
-        public int TotalSuccessful { get; set; }
-        public int TotalFailed { get; set; }
-        public double SuccessRate { get; set; }
-        public List<string> WatchedFolders { get; set; } = new();
-    }
-
-    public class PipelineDetailedDto
-    {
-        public string Id { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string? Description { get; set; }
-        public bool IsActive { get; set; }
-
-        // Configuration
-        public string WatchFolder { get; set; } = string.Empty;
-        public string FilePattern { get; set; } = string.Empty;
-        public bool IncludeSubdirectories { get; set; }
-        public string OutputFolder { get; set; } = string.Empty;
-
-        // Processing options
-        public int MaxConcurrentProcessing { get; set; }
-        public bool ProcessExistingOnStartup { get; set; }
-        public string SuccessAction { get; set; } = string.Empty;
-        public string FailureAction { get; set; } = string.Empty;
-
-        // Statistics
-        public QueueStatisticsDto? QueueStatistics { get; set; }
-        public List<ActiveItemDto> ActiveItems { get; set; } = new();
-    }
-
-    public class QueueStatisticsDto
-    {
-        public int QueueLength { get; set; }
-        public int ActiveProcessing { get; set; }
-        public int TotalProcessed { get; set; }
-        public int TotalSuccessful { get; set; }
-        public int TotalFailed { get; set; }
-        public double SuccessRate { get; set; }
-        public double ProcessingRate { get; set; }
-        public TimeSpan AverageProcessingTime { get; set; }
-        public DateTime? LastProcessedTime { get; set; }
-    }
-
-    public class ActiveItemDto
-    {
-        public string FilePath { get; set; } = string.Empty;
-        public string FileName { get; set; } = string.Empty;
-        public DateTime? StartTime { get; set; }
-        public int AttemptCount { get; set; }
-        public TimeSpan Duration { get; set; }
-    }
-
-    public class ConfigurationDto
-    {
-        public string? DefaultOutputFolder { get; set; }
-        public string? ExifToolPath { get; set; }
-        public int ConfigVersion { get; set; }
-    }
-
-    public class HealthStatusDto
-    {
-        public string Status { get; set; } = string.Empty;
-        public DateTime Timestamp { get; set; }
-        public string Version { get; set; } = string.Empty;
-        public TimeSpan Uptime { get; set; }
-        public Dictionary<string, string> Checks { get; set; } = new();
-        public object? Details { get; set; }
-    }
-
-    public class VersionInfoDto
-    {
-        public string Version { get; set; } = string.Empty;
-        public string ServiceName { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public string Copyright { get; set; } = string.Empty;
-        public string AssemblyVersion { get; set; } = string.Empty;
-        public int ApiPort { get; set; }
-        public DateTime BuildDate { get; set; }
+            if (uptime.TotalDays >= 1)
+            {
+                return $"{(int)uptime.TotalDays}d {uptime.Hours}h {uptime.Minutes}m";
+            }
+            else if (uptime.TotalHours >= 1)
+            {
+                return $"{(int)uptime.TotalHours}h {uptime.Minutes}m";
+            }
+            else
+            {
+                return $"{(int)uptime.TotalMinutes}m";
+            }
+        }
     }
 }

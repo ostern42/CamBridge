@@ -262,7 +262,13 @@ namespace CamBridge.Infrastructure.Services
         {
             var pattern = _processingOptions.OutputFilePattern;
 
-            // Replace tokens - fixed version with proper string assignment
+            // Fix: Handle null pattern with default
+            if (string.IsNullOrEmpty(pattern))
+            {
+                pattern = "{PatientID}_{StudyDate}_{InstanceNumber}";
+            }
+
+            // Replace tokens - now pattern is guaranteed non-null
             string fileName = pattern;
             fileName = fileName.Replace("{PatientID}", SanitizeFileName(metadata.Patient.Id.Value));
             fileName = fileName.Replace("{PatientName}", SanitizeFileName(metadata.Patient.Name));

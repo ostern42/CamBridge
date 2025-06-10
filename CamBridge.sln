@@ -16,6 +16,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		CAMBRIDGE_TREE_STRUCTURE.md = CAMBRIDGE_TREE_STRUCTURE.md
 		CHANGELOG.md = CHANGELOG.md
 		Create-DeploymentPackage.ps1 = Create-DeploymentPackage.ps1
+		Directory.Build.props = Directory.Build.props
 		GUI-Readme.md = GUI-Readme.md
 		LICENSE = LICENSE
 		PROJECT_WISDOM.md = PROJECT_WISDOM.md

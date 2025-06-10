@@ -24,8 +24,6 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.5" />
 		<PackageReference Include="System.Diagnostics.EventLog" Version="8.0.0" />
 	</ItemGroup>
-
-  <Import Project="..\..\Version.props" />
   
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
