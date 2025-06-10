@@ -1,6 +1,6 @@
 // src\CamBridge.Config\Views\AboutPage.xaml.cs
-// Version: 0.5.35
-// Description: About page with enhanced Marvin AND Vogon poetry easter eggs
+// Version: 0.7.3
+// Description: About page with enhanced Marvin quotes and version display
 
 using System;
 using System.Collections.Generic;
@@ -60,7 +60,19 @@ namespace CamBridge.Config.Views
                 // Update version to current
                 if (FindName("VersionText") is TextBlock versionText)
                 {
-                    versionText.Text = "Version 0.5.35";
+                    versionText.Text = "Version 0.7.3";
+                }
+
+                // Show Debug/Release configuration
+                if (FindName("BuildConfigText") is TextBlock buildText)
+                {
+#if DEBUG
+                    buildText.Text = "Debug Build";
+                    buildText.Foreground = new SolidColorBrush(Colors.Orange);
+#else
+                    buildText.Text = "Release Build";
+                    buildText.Foreground = new SolidColorBrush(Colors.Green);
+#endif
                 }
             }
             catch (Exception ex)
@@ -308,29 +320,12 @@ namespace CamBridge.Config.Views
         }
 
         /// <summary>
-        /// Shows the ultimate secret - VogonPoetryWindow
+        /// Shows the ultimate secret - simplified without VogonPoetryWindow
         /// </summary>
         private void ShowUltimateSecret()
         {
-            try
-            {
-                // Cancel any existing timers
-                _restoreTimer?.Stop();
-                _isAnimating = false; // Allow new clicks after window shows
-
-                var poetryWindow = new VogonPoetryWindow
-                {
-                    Owner = Window.GetWindow(this),
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                };
-                poetryWindow.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Failed to show Vogon Poetry Window: {ex.Message}");
-                // Fallback to Marvin quote about the crash
-                ShowMarvinMessage();
-            }
+            // Just show another Marvin quote for the 10th click
+            ShowMarvinMessage();
         }
 
         /// <summary>

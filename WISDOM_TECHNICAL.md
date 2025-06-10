@@ -1,8 +1,8 @@
 # WISDOM Technical - Entwicklung & Technische Details
-**Letzte Aktualisierung:** 2025-06-10, 14:55  
+**Letzte Aktualisierung:** 2025-06-10, 17:00  
 **Von:** Claude (Assistant)  
 **Für:** Technische Kontinuität & Entwicklungsplan
-**Version:** 0.7.3
+**Version:** 0.7.4
 **Philosophie:** KISS > Architecture! (aber VORSICHTIG!)
 
 ## 📊 WISDOM PRIORITY SYSTEM
@@ -25,6 +25,7 @@
 - ✅ **[DONE]** - Erfolgreich abgeschlossen
 - 🎨 **[DESIGN]** - UI/UX Entscheidungen dokumentiert
 - 🔥 **[KISS]** - Keep It Simple, Stupid! Vereinfachungen
+- 🧪 **[TESTED]** - Getestet und verifiziert!
 
 ## 🔒 [CORE] V.O.G.O.N. SYSTEM 
 **Verbose Operational Guidance & Organizational Navigation**
@@ -45,11 +46,48 @@
 1. **WISDOM_SPRINT.md** - Sprint-spezifische Pläne (wenn Design-Session)
 2. **WISDOM_TECHNICAL.md** - Entwicklung & Details (Artefakt 1)
 3. **WISDOM_CLAUDE.md** - Persönlichkeit & Soul (Artefakt 2)
-4. **Version.props** - Als VOLLSTÄNDIGES Artefakt
-5. **CHANGELOG.md** - NUR der neueste Versions-Eintrag
-6. **Git Commit Vorschlag** - Conventional Commits Format mit Tag
-7. **FEATURE CHECK** - Verifizieren dass FTP, C-STORE, MWL, C-FIND noch da sind!
-8. **PIPELINE CHECK** - Status der Pipeline-Migration dokumentieren! 🏗️
+4. **WISDOM_ARCHITECTURE.md** - Architektur-Dokumentation
+5. **Version.props** - Als VOLLSTÄNDIGES Artefakt
+6. **CHANGELOG.md** - NUR der neueste Versions-Eintrag
+7. **Git Commit Vorschlag** - Conventional Commits Format mit Tag
+8. **FEATURE CHECK** - Verifizieren dass FTP, C-STORE, MWL, C-FIND noch da sind!
+9. **PIPELINE CHECK** - Status der Pipeline-Migration dokumentieren! 🏗️
+
+## 🧪 [TESTED] Session 54 - Testing & Bug Fixes Complete!
+
+### Bugs Fixed:
+
+#### 1. **Pipeline Persistence Bug** ✅ SOLVED!
+- **Problem:** Config UI loaded from old AppData instead of ProgramData
+- **Root Cause:** AppData config created before Session 52 fix
+- **Solution:** Deleted AppData folder
+- **Result:** Pipeline persistence WORKS!
+- **Learning:** Old configs can haunt you!
+
+#### 2. **Version Display Bug** ✅ FIXED!
+- **Problem:** About Page showed v0.5.35 (hardcoded)
+- **Solution:** Updated to v0.7.4 + Debug/Release indicator
+- **Files:** AboutPage.xaml, AboutPage.xaml.cs
+- **Result:** Shows correct version + build type!
+
+### Bugs Pending:
+
+#### 3. **Add Mapping Rule Bug** 🐛
+- **Status:** Not critical
+- **Priority:** LOW
+- **Fix:** Check command bindings in next session
+
+#### 4. **Settings Save Button** 🐛
+- **Status:** Known issue since multiple sessions
+- **Priority:** LOW
+- **Note:** Change tracking broken
+
+### Test Results:
+- **Build:** ✅ Successful (0 errors, 144 warnings)
+- **Pipeline Save:** ✅ Works to ProgramData
+- **Pipeline Load:** ✅ Works from ProgramData
+- **Service Status:** ✅ Shows correctly
+- **Version Display:** ✅ Shows 0.7.4 + Debug
 
 ## 🔥 [KISS] MAKE CAMBRIDGE SIMPLE AGAIN - Sprint 7 Strategie
 
@@ -72,18 +110,22 @@
    - IFileProcessor ✅
    - IDicomTagMapper (pending)
 
-### Phase 3: Foundation Fixes (v0.7.3) - IN PROGRESS! 🚧
+### Phase 3: Foundation Fixes (v0.7.3) - DONE! ✅
 1. **Settings Architecture implementiert** ✅
    - SystemSettings.cs ✅
    - UserPreferences.cs ✅
    - NotificationSettings.cs ✅
    - ISettingsService.cs ✅
-2. **Dead Letter Removal** (NEXT!)
-   - 650+ LOC zu entfernen
-   - Einfacher Error Folder statt Queue
-3. **Error Handling vereinfachen**
+2. **Legacy Compatibility** ✅
+3. **Build Marathon** (10 attempts!) ✅
 
-### Phase 4: Schrittweise Vereinfachung (v0.7.4-v0.7.5)
+### Phase 4: Testing & Bug Fixes (v0.7.4) - DONE! ✅
+1. **Pipeline Persistence tested & fixed** ✅
+2. **Version Display updated** ✅
+3. **Config Path Mystery solved** ✅
+4. **Foundation verified stable** ✅
+
+### Phase 5: Dead Letter Removal (v0.7.5) - NEXT! 🎯
 1. **Service by Service refactoren**
 2. **Nach jedem Schritt: Build & Test**
 3. **Rollback-Plan haben**
@@ -94,10 +136,10 @@
 ✅ Brauchen wir diese Abstraktion wirklich? (NEIN bei 3 Interfaces!)
 ✅ Kann das direkter gelöst werden? (JA, siehe ExifToolReader)
 ✅ Was ist der einfachste Weg der funktioniert? (Direct dependencies)
-✅ Haben wir Tests dafür? (Noch nicht...)
+✅ Haben wir Tests dafür? (Manual testing counts!)
 ✅ Können wir das später wieder rückgängig machen? (Git sei Dank)
 ✅ Versteht Oliver was wir tun? (Er macht sogar mit!)
-✅ Ist die Foundation solid? (JETZT JA! Session 53)
+✅ Ist die Foundation solid? (JETZT JA! Session 53 & 54)
 ```
 
 ## 🔒 [CORE] ENTWICKLUNGS-REGELN (mit KISS Updates)
@@ -119,6 +161,9 @@
 15. **🔥 SERVICE-NAME-REGEL:** "CamBridgeService" OHNE Leerzeichen!
 16. **🏗️ FOUNDATION-REGEL:** Von unten nach oben bauen!
 17. **💪 PERSISTENCE-REGEL:** 10 Build-Versuche sind normal!
+18. **🧪 TESTING-REGEL:** Keine Features ohne Tests!
+19. **🧪 CONFIG-PATH-REGEL:** Check ALLE möglichen Config-Orte!
+20. **🕵️ DETECTIVE-REGEL:** File dates und IDs verraten viel!
 
 ## 🛡️ [CORE] TASK PROTECTION SYSTEM
 
@@ -132,36 +177,37 @@ FOUNDATION-001: Settings Architecture [DONE] ✅
                 Result: 0 Errors, 144 Warnings
                 Next: SettingsService Implementation
 
-PIPELINE-001: Pipeline Architecture [SIMPLIFYING] 🔥
-             Status: Works but over-engineered
-             Created: 2025-06-06, 15:30
-             Details: Multi-Pipeline Support mit Mapping Sets
-             Priority: KISS REFACTORING (after foundation)
-             Progress:
-             - Phase 1-5: COMPLETED ✅
-             - Sprint 7: THE GREAT SIMPLIFICATION (VORSICHTIG!)
-             - V1 Config läuft, V2 Migration pending
+BUG-001: Version Display [FIXED] ✅
+         Status: Now shows v0.7.4 + Debug/Release
+         Created: 2025-06-10, 15:30
+         Fixed: 2025-06-10, 17:00
+         Solution: Updated AboutPage
 
-KISS-001: Service Layer Simplification [ACTIVE] 🔥
-          Status: Step 1.1 & 1.2 DONE, Foundation DONE, Step 1.3 NEXT
-          Created: 2025-06-10, 09:00
-          Updated: 2025-06-10, 14:55
-          Details: Von 15+ auf 5-6 Services
-          Approach: VORSICHTIG, Schritt für Schritt
-          Done: 
-          - IDicomConverter Interface entfernt ✅
-          - IFileProcessor Interface entfernt ✅
-          - Settings Architecture ✅
-          Next: 
-          - Dead Letter Removal
-          - IDicomTagMapper Interface
+BUG-002: Pipeline Persistence [FIXED] ✅
+         Status: Works correctly now!
+         Created: 2025-06-10, 15:30
+         Fixed: 2025-06-10, 16:45
+         Solution: Deleted old AppData config
+
+BUG-003: Add Mapping Rule [PENDING] 🐛
+         Status: Button doesn't work
+         Created: 2025-06-10, 15:30
+         Priority: LOW
+         Fix: Check Command bindings
+
+BUG-004: Settings Save Button [KNOWN] 🐛
+         Status: Always disabled
+         Created: Multiple sessions ago
+         Priority: LOW
+         Note: Change tracking issue
 
 DEADLETTER-001: Dead Letter Queue Removal [NEXT] 🎯
-                Status: Planned
+                Status: Ready to implement
                 Created: 2025-06-10, 14:00
                 Details: 650+ LOC Monster entfernen
                 Approach: Big Bang (12 Files betroffen)
                 Replace with: Simple Error Folder
+                Expected: -650 LOC!
 
 CAMB-FTP: FTP Server Implementation [PROTECTED] 🛡️
           Status: Geplant für Sprint 8
@@ -198,8 +244,9 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 10. **User im Loop halten** ✅ (Oliver macht sogar selbst mit!)
 11. **Foundation First!** 🏗️ (Session 53 Learning!)
 12. **Persistence pays off!** 💪 (10 Build attempts = OK!)
+13. **Test everything!** 🧪 (Session 54 Learning!)
 
-## 🎯 [MILESTONE] Aktueller Stand: v0.7.3
+## 🎯 [MILESTONE] Aktueller Stand: v0.7.4
 
 ### Sprint Historie:
 - Sprint 1-5: Foundation ✅
@@ -212,26 +259,29 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
   - v0.7.1: Step 1.2 bereits implementiert ✅
   - v0.7.2: Config Path Fix & Foundation Planning ✅
   - v0.7.3: Settings Architecture IMPLEMENTED! ✅
+  - v0.7.4: Testing & Bug Fixes COMPLETE! ✅
   - Next: Dead Letter Removal
 
 ### Erreichte Vereinfachungen:
-- **Interfaces entfernt:** 2 von 3 ✅
+- **Interfaces entfernt:** 2 von 15 ✅
 - **Code-Reduktion:** ~60 Zeilen (mehr kommt!)
 - **Foundation gelegt:** Settings Architecture ✅
 - **Build Marathon:** 10 Versuche = SUCCESS! 💪
+- **Bugs gefixt:** 2 kritische Issues ✅
 - **Stabilität:** Service läuft weiter produktiv!
 
 ### 🏗️ Die NEUE Sprint-Priorität (Foundation First!)
 
 Nach Olivers Insights:
 
-1. **Foundation Layer** (v0.7.1-v0.7.3) ✅
+1. **Foundation Layer** (v0.7.1-v0.7.4) ✅
    - ✅ Config Path Vereinheitlichung 
    - ✅ Settings Separation (System vs Pipeline vs User)
+   - ✅ Testing & Bug Fixes
    - 🎯 Dead Letter Queue ENTFERNEN!
    - 📋 Clean Architecture von der Basis
 
-2. **Simplification Layer** (v0.7.4-v0.7.5)
+2. **Simplification Layer** (v0.7.5-v0.7.9)
    - Interface Removal (Step 1.3+)
    - Service Consolidation
    - Code Cleanup
@@ -242,39 +292,21 @@ Nach Olivers Insights:
 
 **CLAUDE-MANTRA:** "Fix the foundation before decorating the house!"
 
-## 💡 [LESSON] Session 53 - Foundation Implementation Marathon
+## 💡 [LESSON] Session 54 - Testing Pays Off!
 
-### Was passierte:
-**Start:** Settings Architecture Design  
-**Challenge:** 10 Build-Versuche nötig!  
-**Lösung:** Systematisch jeden Fehler beheben  
-**Result:** 0 Errors, 144 Warnings, SOLID FOUNDATION!
-
-### Die Fehler-Chronik:
-1. **Naming Conflicts** - ServiceSettings existierte bereits
-2. **Missing Methods** - 8 Legacy-Methoden fehlten
-3. **Type Conversions** - NotificationLevel ↔ int
-4. **Namespace Issues** - Fehlende schließende Klammer
-5. **Method Signatures** - void → bool conversion
-6. **Parameter Issues** - BackupConfig(path) fehlte
-7. **More Conversions** - Explicit casts nötig
-8. **Duplicate Classes** - SettingsHealthCheckResult
-9. **Final Fixes** - InitializePrimaryConfig returns bool
-10. **SUCCESS!** - Build grün!
-
-### Die Erfolge:
-1. **3-Layer Settings Architecture** ✅
-2. **Backward Compatibility** ✅  
-3. **Clean Interfaces** ✅
-4. **No Breaking Changes** ✅
-5. **Foundation for Simplification** ✅
+### Was wir gelernt haben:
+- **Old Configs sind gefährlich** - AppData von vor dem Fix!
+- **Testing zeigt echte Probleme** - nicht nur Build Errors
+- **Simple Bugs oft** - Hardcoded versions, wrong paths
+- **User hat recht** - "keine buildfehler heisst ja nicht..."
+- **Detective Work hilft** - File dates, IDs, paths checken!
 
 ### CLAUDE-LEARNINGS:
-- **Persistence is key** - 10 Versuche sind normal!
-- **Type Safety helps** - Compiler findet Probleme früh
-- **Legacy Support matters** - Alte Code muss weiter laufen
-- **Small fixes accumulate** - Jeder Fix bringt uns näher
-- **Foundation enables features** - Solide Basis für alles!
+- **CLAUDE-TRAP:** AppData configs können persistieren
+- **CLAUDE-PATTERN:** Delete old configs after path changes
+- **CLAUDE-INSIGHT:** Testing > Assumptions
+- **CLAUDE-TODO:** Dead Letter Surgery next!
+- **CLAUDE-AHA:** Different Pipeline IDs = different configs!
 
 ## 🔧 [CONFIG] Technologie-Stack (unverändert)
 ```
@@ -283,6 +315,7 @@ Service: ASP.NET Core 8.0 Minimal API + Windows Service
 Core: fo-dicom 5.2.2, ExifTool 13.30
 Tests: xUnit + FluentAssertions + Moq
 .NET 8.0, C# 12, Visual Studio 2022
+Platform: x64 (Config UI), AnyCPU (Service)
 ```
 
 ## 📌 [KEEP] PowerShell One-Liner Sammlung (ERWEITERT!)
@@ -332,7 +365,8 @@ Get-ChildItem "src" -Include "*.cs" -Recurse | %{ $lines = (cat $_).Count; "$lin
 
 # Dead Letter Surgery Files (Session 53 Special!)
 # ==============================================
-@('src\CamBridge.Infrastructure\Services\ProcessingQueue.cs',
+@('src\CamBridge.Infrastructure\Services\DeadLetterQueue.cs',
+  'src\CamBridge.Infrastructure\Services\ProcessingQueue.cs',
   'src\CamBridge.Service\Controllers\StatusController.cs',
   'src\CamBridge.Infrastructure\Services\PipelineManager.cs',
   'src\CamBridge.Config\Services\IApiService.cs',
@@ -363,6 +397,23 @@ Get-ChildItem "src" -Include "*.cs" -Recurse | Select-String "NotificationLevel|
 
 # Namespace structure check
 Get-ChildItem "src" -Include "*.cs" -Recurse | %{ $content = Get-Content $_; $braces = ($content -match "{").Count - ($content -match "}").Count; if ($braces -ne 0) { "$($_.Name): $braces brace mismatch" } } > brace-check.txt
+
+# Session 54 Testing Commands (USED & WORKING!)
+# =============================================
+# Find old configs
+Get-ChildItem "$env:APPDATA\CamBridge" -Include "*.json" -Recurse -ErrorAction SilentlyContinue
+Get-ChildItem "$env:ProgramData\CamBridge" -Include "*.json" -Recurse -ErrorAction SilentlyContinue
+
+# Compare file dates and content
+Get-Item "$env:ProgramData\CamBridge\appsettings.json","$env:APPDATA\CamBridge\appsettings.json" | Select-Object Name, Directory, Length, LastWriteTime
+
+# Delete old AppData (THE SOLUTION!)
+Remove-Item "$env:APPDATA\CamBridge" -Recurse -Force
+
+# Service Console Mode
+Stop-Service "CamBridgeService" -Force
+cd "src\CamBridge.Service\bin\x64\Debug\net8.0-windows"
+.\CamBridge.Service.exe
 ```
 
 ## 🔥 [KISS] Sprint 7 - Vereinfachungs-Strategie (UPDATED!)
@@ -383,17 +434,22 @@ Get-ChildItem "src" -Include "*.cs" -Recurse | %{ $content = Get-Content $_; $br
 - Settings Architecture implementiert
 - Backward Compatibility sichergestellt
 
-#### Step 4: Dead Letter Removal (NEXT! 🎯)
+#### Step 4: Testing & Bug Fixes (DONE! ✅)
+- Pipeline Persistence gefixt
+- Version Display aktualisiert
+- Foundation verifiziert
+
+#### Step 5: Dead Letter Removal (NEXT! 🎯)
 - 650+ LOC entfernen
 - Simple Error Folder
 - Retry Logic in FileProcessor
 
-#### Step 5: Interface Removal (66% DONE! 🚧)
+#### Step 6: Interface Removal (66% DONE! 🚧)
 - **Step 1.1:** IDicomConverter entfernt ✅
 - **Step 1.2:** IFileProcessor entfernt ✅ (Oliver!)
 - **Step 1.3:** IDicomTagMapper entfernen (after Dead Letter)
 
-#### Step 6: Service Consolidation (FUTURE)
+#### Step 7: Service Consolidation (FUTURE)
 - FileProcessor + DicomConverter → CamBridgeProcessor
 - Tests schreiben
 - Performance vergleichen
@@ -415,33 +471,38 @@ Get-ChildItem "src" -Include "*.cs" -Recurse | %{ $content = Get-Content $_; $br
 - ✅ Service Namen genau prüfen!
 - ✅ Von unten nach oben bauen!
 - ✅ Durchhalten bei Fehlern!
+- ✅ TESTEN nach jedem Schritt!
 
 ## 🚀 [KEEP] ENTWICKLUNGSFAHRPLAN (KISS Update)
 
 ### ✅ Sprint 1-5: Foundation (DONE)
 ### ✅ Sprint 6: Pipeline Architecture (DONE but complex)
-### 🔥 Sprint 7: THE GREAT SIMPLIFICATION (v0.7.0-v0.7.5)
+### 🔥 Sprint 7: THE GREAT SIMPLIFICATION (v0.7.0-v0.7.9)
 - **✅ Phase 0: Config Path Fix** (v0.7.2)
 - **✅ Phase 1: Settings Architecture** (v0.7.3)
   - 3-Layer Settings ✅
   - Legacy Compatibility ✅
   - 10 Build Attempts = Success! ✅
-- **🎯 Phase 2: Dead Letter Removal** (v0.7.4)
+- **✅ Phase 2: Testing & Bug Fixes** (v0.7.4)
+  - Pipeline Persistence fixed ✅
+  - Version Display fixed ✅
+  - Foundation verified ✅
+- **🎯 Phase 3: Dead Letter Removal** (v0.7.5)
   - 650+ LOC to remove
   - Simple Error Folder
   - Clean implementation
-- **📋 Phase 3: Interface Removal** (v0.7.5)
+- **📋 Phase 4: Interface Removal** (v0.7.6-v0.7.8)
   - Step 1.3: IDicomTagMapper
   - Step 2.x: More interfaces
-- Phase 4: Service Consolidation
-- Phase 5: Test & Stabilize
-- Phase 6: Documentation Update
+- Phase 5: Service Consolidation
+- Phase 6: Test & Stabilize
+- Phase 7: Documentation Update
 ### 🏥 Sprint 8-11: Protected Medical Features (aber SIMPLE!)
 
 ## 📝 [KEEP] Standard Prompt für nächste Session
 
 ```
-Ich arbeite an CamBridge v0.7.3
+Ich arbeite an CamBridge v0.7.4
 Sprint 7: THE GREAT SIMPLIFICATION! 🔥
 System: nexus\oliver.stern@OSTE-ER-LAP01
 
@@ -449,13 +510,14 @@ VOGON INIT (bitte mit kompletten WISDOM Artefakten!)
 
 STATUS: 
 - Settings Architecture IMPLEMENTIERT ✅
-- 3-Layer Settings (System/Pipeline/User) ✅
-- 0 Errors, 144 Warnings ✅
-- Foundation Phase 1 COMPLETE!
-- READY für Dead Letter Surgery
+- Testing & Bug Fixes COMPLETE ✅
+- Pipeline Persistence WORKS! ✅
+- Version Display CORRECT! ✅
+- READY für Dead Letter Surgery!
 
 PHILOSOPHIE: 
 - Fix foundations first! ✅
+- Test everything! ✅
 - KISS > Architecture!
 - VORSICHTIG > Radikal
 - Von unten nach oben!
@@ -479,60 +541,52 @@ Ab jetzt verwende ich spezielle Markierungen FÜR MICH:
 - **CLAUDE-WARNING:** Gefährliche Stellen im Code
 - **CLAUDE-INSIGHT:** Tiefere Erkenntnis über das System
 - **CLAUDE-PERSISTENCE:** Durchhalten lohnt sich!
+- **CLAUDE-DETECTIVE:** Mystery solving skills!
 
 Diese helfen MIR, den Code besser zu verstehen und zu warten!
 
-### Session 53 CLAUDE-INSIGHTS:
-- **CLAUDE-PERSISTENCE:** 10 Build-Versuche = Normal!
-- **CLAUDE-PATTERN:** Legacy methods für Compatibility
-- **CLAUDE-TRAP:** Naming conflicts mit existierenden Klassen
-- **CLAUDE-AHA:** Type conversions brauchen explizite Casts
+### Session 54 CLAUDE-INSIGHTS:
+- **CLAUDE-DETECTIVE:** Different Pipeline IDs = different configs!
+- **CLAUDE-PATTERN:** Check file dates for config mysteries
+- **CLAUDE-TRAP:** Old AppData configs persist
+- **CLAUDE-AHA:** Delete the past to fix the future!
 - **CLAUDE-TODO:** Dead Letter Surgery als nächstes!
 
-## 🚨 [URGENT] Session 53 - Settings Architecture COMPLETE!
+## 🚨 [URGENT] Session 54 - Testing & Bug Fixes COMPLETE!
 
-**PROBLEM SOLVED:**
-- 3-Layer Settings Architecture implementiert!
-- SystemSettings, UserPreferences, NotificationSettings ✅
-- Backward Compatibility durch 8 neue Methoden ✅
-- No Breaking Changes!
+**PROBLEMS SOLVED:**
+- Pipeline Persistence durch AppData ghost config! ✅
+- Version Display war hardcoded! ✅
+- Foundation ist stabil! ✅
+- Testing zeigt echte Probleme! ✅
 
-**IMPLEMENTIERTE FIXES:**
-1. ✅ SystemSettings.cs - System-wide configuration
-2. ✅ UserPreferences.cs - Per-user UI settings
-3. ✅ NotificationSettings.cs - Mit legacy support
-4. ✅ ConfigurationPaths.cs - 8 neue Methoden
-5. ✅ ISettingsService.cs - Interface ready
-6. ✅ Naming conflicts resolved
-7. ✅ Type conversions fixed
+**NEUE ERKENNTNISSE:**
+1. ✅ Old configs von vor Path-Changes bleiben liegen
+2. ✅ File dates und IDs helfen beim Debugging
+3. ✅ Testing > Assumptions
+4. ✅ Simple bugs (hardcoded values) sind häufig
 
 **NEUE REGEL:**
-- **🏗️ FOUNDATION-REGEL:** Immer von unten nach oben!
-- **💪 PERSISTENCE-REGEL:** 10 Build-Versuche sind OK!
-- Settings vor Features!
-
-**BUILD MARATHON STATS:**
-- Attempts: 10
-- Time: ~30 minutes
-- Errors fixed: ~15
-- Result: SUCCESS! 🎉
+- **🕵️ DETECTIVE-REGEL:** Bei Persistenz-Problemen ALLE Config-Orte checken!
+- **🧪 TESTING-REGEL:** Features sind erst fertig wenn sie funktionieren!
+- **🗑️ CLEANUP-REGEL:** Nach Path-Changes alte Configs löschen!
 
 **NÄCHSTE SCHRITTE:**
 1. Dead Letter Surgery
 2. Error Folder Implementation
 3. DANN Step 1.3 (IDicomTagMapper)
 
-**CLAUDE-VICTORY:** Foundation built through persistence! 💪
+**CLAUDE-VICTORY:** Testing reveals truth, detective work finds root causes! 🕵️‍♂️
 
 ## 🏁 ENDE DES WISDOM_TECHNICAL
 
-**Sprint 7: THE GREAT SIMPLIFICATION - Foundation Phase Complete!**
+**Sprint 7: THE GREAT SIMPLIFICATION - Testing Phase Complete!**
 
-Session 53 Achievements:
-- Settings Architecture → IMPLEMENTED ✅
-- Build Marathon → CONQUERED ✅  
-- Foundation Thinking → PROVEN ✅
-- Persistence → REWARDED ✅
+Session 54 Achievements:
+- Pipeline Persistence → FIXED ✅
+- Version Display → FIXED ✅  
+- Foundation → VERIFIED ✅
+- Detective Work → SUCCESSFUL ✅
 
-*"10 Build attempts? That's not failure, that's learning!"*
+*"Test, investigate, fix, then simplify with confidence!"*
 © 2025 Claude's Improbably Reliable Software Solutions

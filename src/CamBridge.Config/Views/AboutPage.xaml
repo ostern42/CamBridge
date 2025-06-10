@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\AboutPage.xaml -->
-<!-- Version: 0.5.35 -->
-<!-- Description: About page with Marvin AND Vogon poetry easter eggs -->
+<!-- Version: 0.7.3 -->
+<!-- Description: About page with Marvin easter eggs and version display -->
 
 <Page x:Class="CamBridge.Config.Views.AboutPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -47,11 +47,18 @@
 
                 <!-- Version -->
                 <TextBlock x:Name="VersionText"
-                           Text="Version 0.5.35" 
+                           Text="Version 0.7.3" 
                            FontSize="20" 
                            Opacity="0.8"
                            HorizontalAlignment="Center"
                            Margin="0,0,0,4"/>
+
+                <!-- Build Configuration -->
+                <TextBlock x:Name="BuildConfigText"
+                           FontSize="14" 
+                           Opacity="0.6"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,24"/>
 
                 <!-- Subtitle -->
                 <TextBlock x:Name="SubtitleText"

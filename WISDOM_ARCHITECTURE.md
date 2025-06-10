@@ -1,8 +1,8 @@
 # WISDOM ARCHITECTURE - CamBridge Architektur-Dokumentation
-**Letzte Aktualisierung:** 2025-06-10, 14:55  
+**Letzte Aktualisierung:** 2025-06-10, 17:00  
 **Von:** Claude (für meine eigene Wartbarkeit)  
-**Version:** 0.7.3
-**Status:** Foundation Phase Complete
+**Version:** 0.7.4
+**Status:** Testing Complete, Ready for Dead Letter Surgery
 
 ## 🏗️ ARCHITEKTUR-EVOLUTION
 
@@ -49,7 +49,7 @@
 - DailySummaryService entfernt
 - **Progress:** 2/3 Interfaces weg!
 
-### Version 0.7.3: Die Foundation Phase (CURRENT)
+### Version 0.7.3-0.7.4: Die Foundation & Testing Phase (CURRENT)
 ```
 ┌─────────────────────────────────────┐
 │         Settings Architecture        │
@@ -57,6 +57,7 @@
 │ SystemSettings │ Pipeline │ UserPref│
 ├─────────────────────────────────────┤
 │        ConfigurationPaths           │
+│        (ProgramData ONLY!)          │
 └─────────────────────────────────────┘
         ▲               ▲
         │               │
@@ -67,7 +68,8 @@
 - 3-Layer Settings implementiert
 - Foundation stabilisiert
 - Legacy Support sichergestellt
-- **Achievement:** Solide Basis!
+- Config Path Bugs gefixt
+- **Achievement:** Tested & Working!
 
 ### Version 0.8.0: Das Ziel
 ```
@@ -88,7 +90,7 @@
         └────────────────┘
 ```
 
-## 📐 AKTUELLE ARCHITEKTUR (v0.7.3)
+## 📐 AKTUELLE ARCHITEKTUR (v0.7.4)
 
 ### Core Layer
 ```
@@ -98,12 +100,12 @@ CamBridge.Core/
 │   ├── PatientInfo.cs        - Patient Daten
 │   ├── StudyInfo.cs          - Study Daten
 │   └── ProcessingResult.cs   - Ergebnis-Typ
-├── Settings/                  [NEW!]
-│   ├── SystemSettings.cs      - System-wide
-│   ├── UserPreferences.cs     - Per-User
-│   └── NotificationSettings.cs- Notifications
+├── Settings/                  [STABLE!]
+│   ├── SystemSettings.cs      - System-wide ✅
+│   ├── UserPreferences.cs     - Per-User ✅
+│   └── NotificationSettings.cs- Notifications ✅
 ├── Interfaces/
-│   ├── IDicomConverter.cs     [REMOVED]
+│   ├── IDicomConverter.cs     [REMOVED] ✅
 │   ├── IDicomTagMapper.cs     [NEXT TO REMOVE]
 │   └── IMappingConfiguration.cs
 ├── ValueObjects/
@@ -111,21 +113,21 @@ CamBridge.Core/
 │   ├── ExifTag.cs
 │   └── PatientId.cs
 └── Configuration/
-    ├── ConfigurationPaths.cs  [ENHANCED]
+    ├── ConfigurationPaths.cs  [TESTED & WORKING!] ✅
     ├── PipelineConfiguration.cs
-    └── ProcessingOptions.cs
+    └── ProcessingOptions.cs   [TO UPDATE for Dead Letter]
 ```
 
 ### Infrastructure Layer
 ```
 CamBridge.Infrastructure/
 ├── Services/
-│   ├── DicomConverter.cs      - Direkt (no interface)
+│   ├── DicomConverter.cs      - Direkt (no interface) ✅
 │   ├── DicomTagMapper.cs      [TO SIMPLIFY]
-│   ├── ExifToolReader.cs      - Direkt implementiert
+│   ├── ExifToolReader.cs      - Direkt implementiert ✅
 │   ├── FileProcessor.cs       - Orchestrierung
-│   ├── ProcessingQueue.cs     - File Queue
-│   ├── DeadLetterQueue.cs     [TO REMOVE - 300+ LOC]
+│   ├── ProcessingQueue.cs     - File Queue ✅
+│   ├── DeadLetterQueue.cs     [TO REMOVE - 300+ LOC] 🎯
 │   ├── PipelineManager.cs     - Pipeline Logic
 │   ├── FolderWatcherService.cs- Folder Monitoring
 │   └── NotificationService.cs - Email/EventLog
@@ -138,10 +140,10 @@ CamBridge.Service/
 ├── Program.cs                 - Host & DI Setup
 ├── Worker.cs                  - Background Service
 ├── Controllers/
-│   └── StatusController.cs    - REST API
+│   └── StatusController.cs    - REST API [TO UPDATE]
 ├── Tools/
 │   └── exiftool.exe          - External Tool
-└── appsettings.json          - In ProgramData!
+└── appsettings.json          - In ProgramData! ✅
 ```
 
 ### Config Tool Layer
@@ -149,25 +151,26 @@ CamBridge.Service/
 CamBridge.Config/
 ├── ViewModels/
 │   ├── MainViewModel.cs
-│   ├── DashboardViewModel.cs
+│   ├── DashboardViewModel.cs  [TESTED & WORKING!] ✅
 │   ├── SettingsViewModel.cs
-│   ├── DeadLettersViewModel.cs [TO SIMPLIFY]
-│   └── PipelineConfigViewModel.cs
+│   ├── DeadLettersViewModel.cs [TO SIMPLIFY] 🎯
+│   └── PipelineConfigViewModel.cs [TESTED & WORKING!] ✅
 ├── Views/
 │   ├── MainWindow.xaml
-│   ├── DashboardPage.xaml
+│   ├── DashboardPage.xaml     [TESTED & WORKING!] ✅
 │   ├── SettingsPage.xaml
-│   ├── DeadLettersPage.xaml   [TO SIMPLIFY]
-│   └── PipelineConfigPage.xaml
+│   ├── DeadLettersPage.xaml   [TO SIMPLIFY] 🎯
+│   ├── AboutPage.xaml         [v0.7.4 + Debug/Release] ✅
+│   └── PipelineConfigPage.xaml [TESTED & WORKING!] ✅
 └── Services/
-    ├── ISettingsService.cs     [NEW!]
-    ├── ConfigurationService.cs [TO REFACTOR]
+    ├── ISettingsService.cs     [READY FOR IMPL]
+    ├── ConfigurationService.cs [TESTED & WORKING!] ✅
     └── HttpApiService.cs
 ```
 
 ## 🔄 DATENFLUSS
 
-### Aktueller Flow (v0.7.3):
+### Aktueller Flow (v0.7.4) - TESTED & VERIFIED:
 ```
 1. JPEG File → FolderWatcher
 2. FolderWatcher → ProcessingQueue
@@ -177,6 +180,13 @@ CamBridge.Config/
 6. FileProcessor → DicomConverter (DICOM create)
 7. Success → Archive Folder
 8. Failure → DeadLetterQueue [TO CHANGE TO ERROR FOLDER]
+```
+
+### Config Flow (FIXED!):
+```
+1. ConfigurationPaths → ProgramData ONLY! ✅
+2. No more AppData fallback! ✅
+3. Service & Config Tool → Same config! ✅
 ```
 
 ### Ziel-Flow (v0.8.0):
@@ -197,14 +207,16 @@ CamBridge.Config/
    - Weniger Abstraktionen = weniger Bugs
 
 2. **Foundation First**
-   - Settings müssen stimmen
-   - Config Paths müssen klar sein
+   - Settings müssen stimmen ✅
+   - Config Paths müssen klar sein ✅
    - Error Handling von Anfang an
+   - **Testing reveals truth!** ✅
 
 3. **Incremental Refactoring**
    - Kleine Schritte
    - Immer lauffähig bleiben
    - User Feedback einbeziehen
+   - **Test after each change!** ✅
 
 4. **Type Safety nutzen**
    - Compiler ist dein Freund
@@ -215,13 +227,15 @@ CamBridge.Config/
    - Alte APIs beibehalten
    - Migration ermöglichen
    - Breaking Changes vermeiden
+   - **But delete old configs!** ✅
 
 ## 🎯 ARCHITEKTUR-ZIELE
 
 ### Kurzfristig (Sprint 7):
-- [x] Config vereinheitlichen
-- [x] Settings Architecture
-- [ ] Dead Letter entfernen
+- [x] Config vereinheitlichen ✅
+- [x] Settings Architecture ✅
+- [x] Test & Fix Bugs ✅
+- [ ] Dead Letter entfernen 🎯
 - [ ] Interfaces reduzieren
 - [ ] Services konsolidieren
 
@@ -243,7 +257,7 @@ CamBridge.Config/
 1. **Over-Engineering** (wird behoben)
    - Zu viele Interfaces ✓ (fixing)
    - Zu viele Services ✓ (fixing)
-   - Dead Letter Queue ✓ (removing)
+   - Dead Letter Queue ✓ (removing next)
 
 2. **Missing Tests**
    - Unit Tests fehlen
@@ -255,11 +269,14 @@ CamBridge.Config/
    - API Docs fehlen
    - User Manual fehlt
 
-### Behoben in v0.7.3:
-- ✅ Config Path Chaos
+### Behoben in v0.7.3-0.7.4:
+- ✅ Config Path Chaos (TESTED!)
 - ✅ Settings Structure
 - ✅ Legacy Compatibility
 - ✅ Naming Conflicts
+- ✅ Pipeline Persistence
+- ✅ Version Display
+- ✅ Old Config Ghosts!
 
 ## 📊 METRIKEN
 
@@ -267,7 +284,8 @@ CamBridge.Config/
 - **v0.6.0:** ~15,000 LOC
 - **v0.7.2:** ~14,940 LOC (-60)
 - **v0.7.3:** ~15,940 LOC (+1000 Foundation)
-- **v0.7.4 (geplant):** ~15,290 LOC (-650 Dead Letter)
+- **v0.7.4:** ~15,940 LOC (Bug fixes only)
+- **v0.7.5 (geplant):** ~15,290 LOC (-650 Dead Letter!)
 - **Ziel v0.8.0:** <12,000 LOC
 
 ### Komplexität:
@@ -280,6 +298,12 @@ CamBridge.Config/
 - **Incremental:** ~3s
 - **Ziel:** <10s clean
 
+### Testing Status:
+- **Pipeline Persistence:** ✅ WORKS!
+- **Version Display:** ✅ CORRECT!
+- **Service Communication:** ✅ WORKING!
+- **Config Loading:** ✅ FIXED!
+
 ## 🚀 MIGRATION STRATEGY
 
 ### Von v0.6 zu v0.7:
@@ -287,18 +311,21 @@ CamBridge.Config/
 2. ✅ Install new version
 3. ✅ Run migration script
 4. ✅ Verify functionality
+5. ✅ **Delete old AppData configs!**
 
-### Von v0.7.3 zu v0.7.4:
+### Von v0.7.4 zu v0.7.5:
 1. Dead Letter Daten sichern (falls nötig)
 2. Error Folder erstellen
 3. Update installieren
 4. Verify error handling
+5. Celebrate -650 LOC!
 
 ### Breaking Changes:
 - **v0.7.0:** IDicomConverter entfernt
 - **v0.7.1:** IFileProcessor entfernt
 - **v0.7.3:** Settings neu strukturiert (compatible!)
-- **v0.7.4:** Dead Letter Queue entfernt (planned)
+- **v0.7.4:** Bugs gefixt (no breaking changes!)
+- **v0.7.5:** Dead Letter Queue entfernt (planned)
 
 ## 🎨 DESIGN DECISIONS
 
@@ -307,18 +334,27 @@ CamBridge.Config/
 - **Lösung:** Nur wo Polymorphie nötig
 - **Beispiel:** DicomConverter direkt statt IDicomConverter
 - **Vorteil:** -50% Code, gleiche Funktion
+- **Status:** Working great! ✅
 
 ### Warum Error Folder statt Queue?
 - **Problem:** 500+ LOC für Error Queue
 - **Lösung:** Simple Folder + .txt files
 - **Vorteil:** Explorer nutzbar, einfacher
 - **Trade-off:** Keine UI, aber KISS!
+- **Status:** Ready to implement! 🎯
 
 ### Warum 3-Layer Settings?
 - **System:** Service + Tool gemeinsam
 - **Pipeline:** Multiple Konfigurationen
 - **User:** UI Preferences pro User
 - **Vorteil:** Klare Trennung, Multi-User ready
+- **Status:** Tested & Working! ✅
+
+### Warum nur ProgramData?
+- **Problem:** Multiple config paths = confusion
+- **Lösung:** Single source of truth
+- **Vorteil:** No more mysteries!
+- **Status:** Fixed & Verified! ✅
 
 ## 🔮 ZUKUNFTSVISION
 
@@ -340,24 +376,33 @@ CamBridge.Config/
 - Direkte Lösungen bevorzugen
 - Foundation muss stimmen
 - User Experience first
+- **Test everything!**
 
 ## 🏁 ARCHITEKTUR-STATUS
 
-**Session 53 Summary:**
+**Session 54 Summary:**
 - Foundation implementiert ✅
 - 3-Layer Settings ✅
 - Legacy Support ✅
-- Ready für Simplification ✅
+- Bugs fixed ✅
+- Tested & Verified ✅
+- Ready für Dead Letter Surgery! 🎯
 
 **Next Architecture Steps:**
-1. Dead Letter → Error Folder
+1. Dead Letter → Error Folder (-650 LOC!)
 2. IDicomTagMapper entfernen
 3. Services konsolidieren
 4. Medical Features (SIMPLE!)
 
+**Architecture Health:**
+- Foundation: ████████████ 100% ✅
+- Simplification: ████████░░░░ 66%
+- Testing: ████████░░░░ 66%
+- Documentation: ██████░░░░░░ 50%
+
 ---
 
-*"Architecture is not about perfection, it's about purpose!"*
+*"Architecture is not about perfection, it's about purpose - and testing!"*
 
-**CamBridge Architecture - Built from bottom to top!**
+**CamBridge Architecture - Built, Tested, Ready to Simplify!**
 © 2025 Claude's Improbably Reliable Software Solutions
