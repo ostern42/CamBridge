@@ -8,6 +8,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.7.5+tools] - 2025-06-10 18:20
+
+### 🧪 Testing Tools Added
+
+### Added
+- **Tab-Complete Testing System** - Numbered scripts for instant access
+  - `0-build.ps1` - Build without ZIP (fast!)
+  - `00-build-zip.ps1` - Build with ZIP (distribution)
+  - `1-deploy-update.ps1` - Complete service update cycle
+  - `2-config.ps1` through `8-status.ps1` - Various tools
+  - `9-testit.ps1` - Quick test without build
+  - `99-testit-full.ps1` - Full test with build
+  - `h-help.ps1` - Quick reference
+- **Create-NumberedTools-Fixed.ps1** - Generator for all tools
+
+### Changed
+- **Create-DeploymentPackage.ps1** - Added `-SkipZip` parameter
+- **Create-DeploymentPackage.ps1** - Removed interactive menu
+- Build scripts now show numbered tools instead of menu
+
+### Fixed
+- PowerShell encoding issues - all scripts now ASCII only
+- No more Unicode characters causing parse errors
+
+### Developer Notes
+- Tab completion revolutionizes testing workflow
+- `0[TAB] 9[TAB]` = complete dev test cycle
+- ZIP creation optional saves 10-20 seconds per build
+- "keine buildfehler heisst ja nicht, dass es auch funktioniert!"
+
+---
+
+*"Testing is now just a number away!"*  
+© 2025 Claude's Improbably Reliable Software Solutions
+
+[0.7.4] - 2025-06-10
+🧪 Testing & Bug Fixes Session
+Fixed
+
+Pipeline Persistence Bug - Config UI now correctly loads from ProgramData
+
+Root cause: Old AppData config from before Session 52 fix was being loaded
+Solution: Deleted AppData folder to force ProgramData usage
+Result: Pipeline configurations persist correctly across restarts
+
+
+Version Display - About page now shows correct version (was hardcoded to v0.5.35)
+
+Updated to v0.7.4 in both XAML and code-behind
+Added Debug/Release build indicator (orange/green text)
+Removed VogonPoetryWindow reference (simplified to Marvin quote)
+
+
+
+Changed
+
+ConfigurationPaths verified to use ProgramData as single source of truth
+About Page enhanced with build configuration display
+Testing discipline established - "keine buildfehler heisst ja nicht, dass es auch funktioniert"
+
+Technical Details
+
+Session Type: Testing & Bug Discovery
+Bugs Fixed: 2 of 4 identified
+Files Modified: AboutPage.xaml, AboutPage.xaml.cs
+Config Mystery: Solved old AppData ghost config issue
+Build Results: 0 errors, 144 warnings (unchanged)
+
+Testing Results
+
+✅ Pipeline save/load functionality
+✅ Version display accuracy
+✅ Service status communication
+✅ Configuration persistence
+✅ Foundation stability verified
+
+Known Issues (Not Critical)
+
+Add Mapping Rule button non-functional (low priority)
+Settings Save button remains disabled (old issue)
+
+Next Steps
+
+Dead Letter Queue removal (-650 LOC expected)
+Error folder implementation
+Continue interface simplification
+
+Developer Notes
+
+Old configuration files can persist after path changes - always check all locations!
+Testing reveals real issues that successful builds don't catch
+Detective work on config paths led to root cause discovery
+
 ## [0.7.3] - 2025-06-10
 
 ### Added

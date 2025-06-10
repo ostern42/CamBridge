@@ -1,7 +1,7 @@
 # Create-DeploymentPackage.ps1
 # Complete build and deployment package creator for CamBridge
-# Version: 0.7.5 (ENHANCED with locked file handling)
-# Updated: Service-aware deployment with automatic conflict resolution
+# Version: 0.7.4
+# Updated: No interactive menu - use numbered tools instead!
 
 param(
     [string]$Version = "",  # Auto-detect from Version.props
@@ -41,13 +41,13 @@ if (-not $SkipClean) {
     Write-Host "Step 1: Cleaning build directories..." -ForegroundColor Yellow
     
     # Clean all bin and obj folders
-    Get-ChildItem -Path "src","tests" -Include "bin","obj" -Recurse -Directory | ForEach-Object {
+    Get-ChildItem -Path "src" -Include "bin","obj" -Recurse -Directory | ForEach-Object {
         Write-Host "  Cleaning: $($_.FullName)" -ForegroundColor Gray
         Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
     }
     
     # Also clean test folders
-    Get-ChildItem -Path "tests" -Include "bin","obj" -Recurse -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+    Get-ChildItem -Path "tests" -Include "bin","obj" -Recurse -Directory | ForEach-Object {
         Write-Host "  Cleaning: $($_.FullName)" -ForegroundColor Gray
         Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -73,7 +73,7 @@ Write-Host ""
 # Step 3: Build Config UI with explicit x64 platform
 Write-Host "Step 3: Building Configuration UI (x64)..." -ForegroundColor Yellow
 # Try MSBuild first for proper x64 platform build
-$msbuildPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe 2>$null | Select-Object -First 1
+$msbuildPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1
 
 if ($msbuildPath -and (Test-Path $msbuildPath)) {
     Write-Host "  Using MSBuild for x64 platform build..." -ForegroundColor Gray
@@ -139,66 +139,16 @@ if (-not $SkipTests) {
 # Step 7: Create deployment package
 Write-Host "Step 7: Creating deployment package..." -ForegroundColor Yellow
 
-# Create deployment structure with enhanced locked file handling
+# Create deployment structure
 $deployDir = Join-Path $OutputPath "CamBridge-Deploy-v$Version"
 $serviceDir = Join-Path $deployDir "Service"
 $configDir = Join-Path $deployDir "Config"
 $qrBridgeDir = Join-Path $deployDir "QRBridge"
 
-# Clean and create directories with locked file handling
+# Clean and create directories
 if (Test-Path $deployDir) {
-    Write-Host "  Removing existing deployment..." -ForegroundColor Gray
-    
-    # Try graceful removal first
-    try {
-        Remove-Item $deployDir -Recurse -Force -ErrorAction Stop
-        Write-Host "    [OK] Old deployment removed" -ForegroundColor Green
-    } catch {
-        Write-Host "    [WARNING] Some files are locked (service running?)" -ForegroundColor Yellow
-        
-        # Try to stop service if it's using the files
-        $service = Get-Service "CamBridgeService" -ErrorAction SilentlyContinue
-        if ($service -and $service.Status -eq "Running") {
-            Write-Host "    Stopping CamBridge Service temporarily..." -ForegroundColor Yellow
-            Stop-Service "CamBridgeService" -Force -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 2
-            
-            # Try removal again
-            try {
-                Remove-Item $deployDir -Recurse -Force -ErrorAction Stop
-                Write-Host "    [OK] Deployment removed after stopping service" -ForegroundColor Green
-                
-                # Restart service
-                Write-Host "    Restarting service..." -ForegroundColor Gray
-                Start-Service "CamBridgeService" -ErrorAction SilentlyContinue
-            } catch {
-                # Ultimate fallback: rename old directory
-                $backupDir = "$deployDir-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-                Write-Host "    [FALLBACK] Renaming locked directory to backup" -ForegroundColor Yellow
-                try {
-                    Rename-Item $deployDir $backupDir -ErrorAction Stop
-                    Write-Host "    [OK] Old deployment backed up to: $backupDir" -ForegroundColor Green
-                } catch {
-                    Write-Error "Cannot remove or rename deployment directory! Please stop the service manually and try again."
-                    exit 1
-                }
-            }
-        } else {
-            # Ultimate fallback: rename old directory
-            $backupDir = "$deployDir-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-            Write-Host "    [FALLBACK] Renaming locked directory to backup" -ForegroundColor Yellow
-            try {
-                Rename-Item $deployDir $backupDir -ErrorAction Stop
-                Write-Host "    [OK] Old deployment backed up to: $backupDir" -ForegroundColor Green
-            } catch {
-                Write-Error "Cannot remove deployment directory! Files may be locked by other process."
-                exit 1
-            }
-        }
-    }
+    Remove-Item $deployDir -Recurse -Force
 }
-
-# Create fresh directories
 New-Item -Path $serviceDir -ItemType Directory -Force | Out-Null
 New-Item -Path $configDir -ItemType Directory -Force | Out-Null
 if (-not $SkipQRBridge) {
@@ -215,7 +165,7 @@ if (Test-Path $servicePath) {
     exit 1
 }
 
-# ENHANCED: Copy Tools folder (ExifTool) with verification
+# KISS FIX: Copy Tools folder (ExifTool) - THIS WAS MISSING!
 Write-Host "  Copying Tools folder (ExifTool)..." -ForegroundColor Gray
 $toolsSource = ".\src\CamBridge.Service\Tools"
 $toolsTarget = Join-Path $serviceDir "Tools"
@@ -226,14 +176,6 @@ if (Test-Path $toolsSource) {
     $exifToolPath = Join-Path $toolsTarget "exiftool.exe"
     if (Test-Path $exifToolPath) {
         Write-Host "    [OK] ExifTool copied successfully" -ForegroundColor Green
-        
-        # Get ExifTool version for verification
-        try {
-            $exifVersion = & $exifToolPath -ver 2>$null
-            Write-Host "    ExifTool version: $exifVersion" -ForegroundColor DarkGray
-        } catch {
-            Write-Host "    [WARNING] Could not verify ExifTool version" -ForegroundColor Yellow
-        }
     } else {
         Write-Warning "    ExifTool.exe not found in Tools folder!"
         Write-Host "    Please ensure exiftool.exe is in: $toolsSource" -ForegroundColor Yellow
@@ -284,7 +226,7 @@ Write-Host "  Adding deployment scripts..." -ForegroundColor Gray
     }
 }
 
-# Create version file with enhanced information
+# Create version file
 $versionContent = @"
 CamBridge Deployment Package
 Version: $Version
@@ -296,12 +238,6 @@ Components:
 - CamBridge Service (Multi-Pipeline JPEG to DICOM)
 - CamBridge Config (Pipeline Configuration UI)
 $(if (-not $SkipQRBridge) { "- CamBridge QRBridge 2.0 (QR Code Generator)" })
-
-New in v0.7.5:
-- Deploy Infrastructure Enhanced
-- Tab-Complete Testing Tools
-- Service-Aware Deployment
-- Locked File Handling
 
 New in v0.7.x:
 - THE GREAT SIMPLIFICATION (KISS Architecture)
@@ -322,11 +258,6 @@ System Requirements:
 
 IMPORTANT: ExifTool is required for operation!
 The Tools folder must be in the same directory as CamBridge.Service.exe
-
-Deployment Notes:
-- Service-aware deployment with automatic conflict resolution
-- Locked file handling with graceful fallbacks
-- Automatic service restart after deployment updates
 "@
 $versionContent | Set-Content "$deployDir\version.txt"
 
@@ -369,32 +300,16 @@ Write-Host "  Folder: $deployDir" -ForegroundColor White
 if (-not $SkipZip) {
     Write-Host "  ZIP:    $zipPath" -ForegroundColor White
 } else {
-    Write-Host "  ZIP:    [SKIPPED - Use 00[TAB] for ZIP]" -ForegroundColor DarkGray
+    Write-Host "  ZIP:    [SKIPPED - Use 00-build-zip for ZIP]" -ForegroundColor DarkGray
 }
 Write-Host ""
 
-# Enhanced verification
+# Check if ExifTool was included
 $deployedExifTool = Join-Path $serviceDir "Tools\exiftool.exe"
-$deployedService = Join-Path $serviceDir "CamBridge.Service.exe"
-$deployedConfig = Join-Path $configDir "CamBridge.Config.exe"
-
-Write-Host "Deployment Verification:" -ForegroundColor Cyan
 if (Test-Path $deployedExifTool) {
-    Write-Host "  [OK] ExifTool included" -ForegroundColor Green
+    Write-Host "ExifTool included in deployment" -ForegroundColor Green
 } else {
-    Write-Host "  [FAIL] ExifTool missing - Service will fail!" -ForegroundColor Red
-}
-
-if (Test-Path $deployedService) {
-    Write-Host "  [OK] Service executable present" -ForegroundColor Green
-} else {
-    Write-Host "  [FAIL] Service executable missing!" -ForegroundColor Red
-}
-
-if (Test-Path $deployedConfig) {
-    Write-Host "  [OK] Config UI executable present" -ForegroundColor Green
-} else {
-    Write-Host "  [FAIL] Config UI executable missing!" -ForegroundColor Red
+    Write-Host "WARNING: ExifTool NOT included - Service will fail!" -ForegroundColor Red
 }
 
 Write-Host ""
@@ -404,7 +319,6 @@ Write-Host "================================================" -ForegroundColor C
 Write-Host ""
 Write-Host "Use the numbered tools for testing:" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "  1[TAB]  - Deploy & Update Service (with auto-stop/start)" -ForegroundColor Gray
 Write-Host "  2[TAB]  - Start Configuration UI" -ForegroundColor Gray
 Write-Host "  3[TAB]  - Service Manager" -ForegroundColor Gray
 Write-Host "  9[TAB]  - Quick test (no build)" -ForegroundColor Gray

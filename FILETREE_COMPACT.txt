@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.7.3
+# // Version: 0.7.4
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 245
-# Generated: 2025-06-10 14:02
+# Total files: 234
+# Generated: 2025-06-10 17:24
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -71,6 +71,7 @@ src\CamBridge.Config\Services\IApiService.cs
 src\CamBridge.Config\Services\IConfigurationService.cs
 src\CamBridge.Config\Services\INavigationService.cs
 src\CamBridge.Config\Services\IServiceManager.cs
+src\CamBridge.Config\Services\ISettingsService.cs
 src\CamBridge.Config\Services\NavigationService.cs
 src\CamBridge.Config\Services\ServiceManager.cs
 src\CamBridge.Config\ViewModels\DashboardViewModel.cs
@@ -123,6 +124,7 @@ src\CamBridge.Core\PipelineConfiguration.cs
 src\CamBridge.Core\ProcessingOptions.cs
 src\CamBridge.Core\ProcessingSummary.cs
 src\CamBridge.Core\SystemSettings.cs
+src\CamBridge.Core\UserPreferences.cs
 src\CamBridge.Core\ValueObjects\DicomTag.cs
 src\CamBridge.Core\ValueObjects\ExifTag.cs
 src\CamBridge.Core\ValueObjects\PatientId.cs
@@ -233,37 +235,24 @@ CamBridge.ServiceDebug\Program.cs
 CamBridge.sln
 CHANGELOG.md
 COLLECTOR_README.md
-collect-smart.bat
 ConnectionTest\ConnectionTest.cs
 ConnectionTest\ConnectionTest.csproj
 Create-DeploymentPackage - 250609.ps1
 Create-DeploymentPackage.ps1
-dead-letter-surgery-files.txt
 ExifToolQuickTest\exif_output.json
 ExifToolQuickTest\ExifToolQuickTest.csproj
 ExifToolQuickTest\Program.cs
 ExifToolTest\ExifToolTest.csproj
 ExifToolTest\Program.cs
-filetree.txt
 FILETREE_COMPACT.txt
-FILETREE_DETAILED.txt
-FILETREE_MINIMAL.txt
 Get-WisdomProjectTree.ps1
-kiss-step-1-2-files.txt
-kiss-step-1-3-files.txt
 Migrate-CamBridgeConfig.ps1
-processing-queue-check.txt
 Program.cs
-PROJECT_TREE.md
 PROJECT_WISDOM.md
-protected-features-manifest.md
 README.md
 README-Deployment.md
 Test-CompletePipeline.ps1
 Test-QRBridge.ps1
-TREE_COMPACT.txt
-TREE_DETAILED.md
-TREE_MINIMAL.txt
 Version.props
 WISDOM_ARCHITECTURE.md
 WISDOM_CLAUDE.md
