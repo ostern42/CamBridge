@@ -116,6 +116,7 @@ namespace CamBridge.Core
         /// </summary>
         public string ImplementationVersionName { get; set; } = "CAMBRIDGE_001";
 
+        /// <summary>
         /// Source Application Entity Title
         /// </summary>
         public string SourceApplicationEntityTitle { get; set; } = "CAMBRIDGE";

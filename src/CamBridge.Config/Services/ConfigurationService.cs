@@ -131,7 +131,7 @@ namespace CamBridge.Config.Services
                 {
                     try
                     {
-                        var backupPath = ConfigurationPaths.BackupConfig();
+                        var backupPath = ConfigurationPaths.BackupConfig(ConfigurationPaths.GetPrimaryConfigPath());
                         Debug.WriteLine($"Created backup: {backupPath}");
                     }
                     catch (Exception backupEx)

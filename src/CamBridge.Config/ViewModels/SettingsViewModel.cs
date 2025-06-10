@@ -471,7 +471,7 @@ namespace CamBridge.Config.ViewModels
                 SmtpPassword = settings.Notifications.Email.Password;
             }
 
-            MinimumEmailLevel = settings.Notifications?.MinimumEmailLevel ?? NotificationLevel.Warning;
+            MinimumEmailLevel = (NotificationLevel)settings.Notifications.MinimumEmailLevel;
             SendDailySummary = settings.Notifications?.SendDailySummary ?? false;
             DailySummaryHour = settings.Notifications?.DailySummaryHour ?? 8;
 
@@ -530,7 +530,7 @@ namespace CamBridge.Config.ViewModels
                         Username = SmtpUsername,
                         Password = SmtpPassword
                     },
-                    MinimumEmailLevel = MinimumEmailLevel,
+                    MinimumEmailLevel = (int)MinimumEmailLevel,
                     SendDailySummary = SendDailySummary,
                     DailySummaryHour = DailySummaryHour
                 },

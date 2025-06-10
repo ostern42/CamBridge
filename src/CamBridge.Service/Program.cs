@@ -112,7 +112,7 @@ try
 
     // CRITICAL: Initialize primary config if needed
     var localConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-    if (ConfigurationPaths.InitializePrimaryConfig(localConfigPath))
+    if (ConfigurationPaths.InitializePrimaryConfig())
     {
         Log.Information("Initialized primary config from local template");
         serviceEventLog?.WriteEntry("Copied default config to ProgramData", EventLogEntryType.Information, 1007);

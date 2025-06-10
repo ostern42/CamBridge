@@ -1,257 +1,363 @@
-# WISDOM ARCHITECTURE - Mein Architektur-Verständnis
-**Letzte Aktualisierung:** 2025-06-09, 22:45 Uhr  
-**Von:** Claude (für mich selbst!)  
-**Für:** Mein zukünftiges Ich - damit ich verstehe WARUM der Code so ist
-**Version:** 0.7.0
-**Zweck:** Das große Bild verstehen, nicht in Details verlieren
+# WISDOM ARCHITECTURE - CamBridge Architektur-Dokumentation
+**Letzte Aktualisierung:** 2025-06-10, 14:55  
+**Von:** Claude (für meine eigene Wartbarkeit)  
+**Version:** 0.7.3
+**Status:** Foundation Phase Complete
 
-## 🧠 CLAUDE-NOTE: Warum dieses Dokument?
+## 🏗️ ARCHITEKTUR-EVOLUTION
 
-Oliver hatte die brillante Idee: Ich brauche meine EIGENEN Notizen! Nicht nur für Menschen, sondern für MICH. Dieses Dokument ist mein Architektur-Gedächtnis - hier halte ich fest, WARUM Dinge so sind wie sie sind.
-
-## 🏗️ DIE GROSSE ARCHITEKTUR-ÜBERSICHT
-
-### Was CamBridge eigentlich macht:
+### Version 0.1-0.5: Die Naive Phase
 ```
-JPEG (mit Barcode-EXIF) → DICOM (für PACS)
+┌─────────────┐
+│   Console   │ → Direkte DICOM Konversion
+└─────────────┘
 ```
+- Einfacher Konverter
+- Keine Services
+- Keine Abstraktionen
+- **Learning:** Funktioniert, aber nicht erweiterbar
 
-**CLAUDE-PATTERN:** Es ist im Kern EINE Pipeline! Nicht 50 Services, nicht 20 Abstraktionen. Eine einfache Transformation.
-
-### Die aktuelle Architektur (v0.6.x):
+### Version 0.6: Die Over-Engineering Phase
 ```
-                    ┌─────────────────┐
-                    │ Pipeline Manager │ ← Orchestriert alles
-                    └────────┬────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-   ┌────▼─────┐       ┌─────▼──────┐      ┌─────▼─────┐
-   │Pipeline 1│       │Pipeline 2  │      │Pipeline N │
-   └────┬─────┘       └─────┬──────┘      └─────┬─────┘
-        │                    │                    │
-        │              (Jede Pipeline hat:)       │
-        │              - Eigene Queue             │
-        │              - Eigener Watcher          │
-        │              - Eigene Settings          │
-        └────────────────────┬────────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │ Shared Services │
-                    │ - FileProcessor │
-                    │ - ExifToolReader│
-                    │ - DicomConverter│
-                    └─────────────────┘
+┌──────────────┐     ┌──────────────┐
+│ Config Tool  │────▶│   Service    │
+└──────────────┘     └──────────────┘
+        │                    │
+        ▼                    ▼
+┌──────────────┐     ┌──────────────┐
+│15+ Interfaces│     │ 15+ Services │
+└──────────────┘     └──────────────┘
 ```
+- Pipeline Architecture
+- Zu viele Abstraktionen
+- 5000+ LOC
+- **Learning:** KISS vergessen!
 
-**CLAUDE-TRAP:** Ich habe das over-engineered! Jede Pipeline hat eine eigene Queue - das macht DailySummaryService kaputt!
-
-### Die KISS-Architektur (v0.7.x Ziel):
+### Version 0.7.0-0.7.2: Die Aufräum-Phase
 ```
-                    ┌─────────────────┐
-                    │   CamBridge     │
-                    │   Processor     │ ← EIN Service!
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────┐
-                    │ Shared Queue    │ ← EINE Queue!
-                    └────────┬────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-   ┌────▼─────┐       ┌─────▼──────┐      ┌─────▼─────┐
-   │ Watcher 1│       │ Watcher 2  │      │ Watcher N │
-   └──────────┘       └────────────┘      └───────────┘
+┌──────────────┐     ┌──────────────┐
+│ Config Tool  │────▶│   Service    │
+└──────────────┘     └──────────────┘
+        │                    │
+        ▼                    ▼
+┌──────────────┐     ┌──────────────┐
+│12 Interfaces │     │ 12 Services  │ (removing...)
+└──────────────┘     └──────────────┘
 ```
+- Interface Removal begonnen
+- Config Path vereinheitlicht
+- DailySummaryService entfernt
+- **Progress:** 2/3 Interfaces weg!
 
-**CLAUDE-AHA:** Eine Queue für alle Pipelines löst SO viele Probleme!
-
-## 🎯 ARCHITEKTUR-PATTERNS DIE ICH GELERNT HABE
-
-### 1. Das "Direct Dependency" Pattern (KISS)
-```csharp
-// CLAUDE-PATTERN: Wenn es nur EINE Implementation gibt, kein Interface!
-
-// ALT (over-engineered):
-public interface IExifReader { }
-public class ExifToolReader : IExifReader { }
-services.AddScoped<IExifReader, ExifToolReader>();
-
-// NEU (KISS):
-public class ExifToolReader { }
-services.AddSingleton<ExifToolReader>();
+### Version 0.7.3: Die Foundation Phase (CURRENT)
 ```
+┌─────────────────────────────────────┐
+│         Settings Architecture        │
+├─────────────────────────────────────┤
+│ SystemSettings │ Pipeline │ UserPref│
+├─────────────────────────────────────┤
+│        ConfigurationPaths           │
+└─────────────────────────────────────┘
+        ▲               ▲
+        │               │
+┌──────────────┐ ┌──────────────┐
+│ Config Tool  │ │   Service    │
+└──────────────┘ └──────────────┘
+```
+- 3-Layer Settings implementiert
+- Foundation stabilisiert
+- Legacy Support sichergestellt
+- **Achievement:** Solide Basis!
 
-**CLAUDE-NOTE:** ExifToolReader war der Wegweiser! Kein Interface, funktioniert perfekt.
-
-### 2. Das "Service Explosion" Anti-Pattern
-```csharp
-// CLAUDE-TRAP: Zu viele Services!
-services.AddSingleton<ProcessingQueue>();
-services.AddSingleton<DeadLetterQueue>();
-services.AddSingleton<NotificationService>();
-services.AddScoped<FileProcessor>();
-services.AddScoped<DicomConverter>();
-services.AddScoped<DicomTagMapper>();
-services.AddScoped<MappingService>();
-services.AddScoped<ValidationService>();
-// ... und so weiter ...
-
-// CLAUDE-FIX: Consolidate!
-services.AddSingleton<CamBridgeProcessor>(); // Macht alles!
-services.AddSingleton<ExifToolReader>();     // Spezialist
+### Version 0.8.0: Das Ziel
+```
+┌──────────────┐     ┌──────────────┐
+│ Config Tool  │────▶│   Service    │
+└──────────────┘     └──────────────┘
+        │                    │
+        ▼                    ▼
+┌──────────────┐     ┌──────────────┐
+│ No Interfaces│     │ 5-6 Services │
+└──────────────┘     └──────────────┘
+        │                    │
+        └────────┬───────────┘
+                 ▼
+        ┌────────────────┐
+        │ Medical Features│
+        │ FTP,CSTORE,etc │
+        └────────────────┘
 ```
 
-### 3. Das "Pipeline Complexity" Problem
-**CLAUDE-INSIGHT:** Pipelines sind nur Konfigurationen, keine eigenen Universen!
+## 📐 AKTUELLE ARCHITEKTUR (v0.7.3)
 
-```csharp
-// OVER-ENGINEERED:
-public class Pipeline {
-    private ProcessingQueue _myOwnQueue;      // Warum?!
-    private DeadLetterQueue _myOwnDeadLetter; // Warum?!
-    private Thread _myOwnThread;              // WARUM?!
-}
-
-// KISS:
-public class PipelineConfig {
-    public string WatchFolder { get; set; }
-    public string OutputFolder { get; set; }
-    // That's it! Processing happens centrally
-}
+### Core Layer
+```
+CamBridge.Core/
+├── Entities/
+│   ├── ImageMetadata.cs      - EXIF/Meta Daten
+│   ├── PatientInfo.cs        - Patient Daten
+│   ├── StudyInfo.cs          - Study Daten
+│   └── ProcessingResult.cs   - Ergebnis-Typ
+├── Settings/                  [NEW!]
+│   ├── SystemSettings.cs      - System-wide
+│   ├── UserPreferences.cs     - Per-User
+│   └── NotificationSettings.cs- Notifications
+├── Interfaces/
+│   ├── IDicomConverter.cs     [REMOVED]
+│   ├── IDicomTagMapper.cs     [NEXT TO REMOVE]
+│   └── IMappingConfiguration.cs
+├── ValueObjects/
+│   ├── DicomTag.cs
+│   ├── ExifTag.cs
+│   └── PatientId.cs
+└── Configuration/
+    ├── ConfigurationPaths.cs  [ENHANCED]
+    ├── PipelineConfiguration.cs
+    └── ProcessingOptions.cs
 ```
 
-## 🔍 CLAUDE-INSIGHTS: Warum ich Over-Engineer
-
-### 1. Die "Flexibility Trap"
-**CLAUDE-TRAP:** "Was wenn wir später X brauchen?"
-**CLAUDE-FIX:** YAGNI - You Ain't Gonna Need It!
-
-### 2. Die "Interface Obsession"
-**CLAUDE-TRAP:** "Alles braucht ein Interface für Testbarkeit"
-**CLAUDE-REALITY:** Keine Tests = Keine Interfaces nötig!
-
-### 3. Die "Abstraction Addiction"
-**CLAUDE-TRAP:** "Mehr Abstraktion = Besserer Code"
-**CLAUDE-TRUTH:** Mehr Abstraktion = Mehr Komplexität
-
-## 📐 ARCHITEKTUR-ENTSCHEIDUNGEN
-
-### Warum Multi-Pipeline?
-**CLAUDE-CONTEXT:** Medizinische Geräte haben verschiedene Workflows
-- Röntgen → Ein Ordner
-- CT → Anderer Ordner  
-- Verschiedene DICOM-Tags pro Modalität
-
-**CLAUDE-NOTE:** Multi-Pipeline JA, aber SIMPLE implementation!
-
-### Warum Windows Service?
-**CLAUDE-CONTEXT:** Muss 24/7 laufen im Krankenhaus
-- Automatischer Start
-- Läuft ohne User Login
-- Integration in Windows-Infrastruktur
-
-### Warum Pipeline Manager?
-**CLAUDE-INSIGHT:** Zentrale Orchestrierung ist gut, aber:
-- Nicht jede Pipeline braucht eigene Queue
-- Nicht jede Pipeline braucht eigenen Thread
-- Shared Services sind der richtige Weg
-
-## 🚨 CLAUDE-WARNINGS: Fallen die ich kenne
-
-### 1. Die "Settings Migration" Hölle
-```csharp
-// CLAUDE-TRAP: V1 → V2 → V3 → ... 
-// Jede Version muss alle vorherigen verstehen!
-
-// CLAUDE-LEARNING: Bei v1.0.0 → Clean Break!
-// Alte Settings → Converter Tool → Neue Settings
+### Infrastructure Layer
+```
+CamBridge.Infrastructure/
+├── Services/
+│   ├── DicomConverter.cs      - Direkt (no interface)
+│   ├── DicomTagMapper.cs      [TO SIMPLIFY]
+│   ├── ExifToolReader.cs      - Direkt implementiert
+│   ├── FileProcessor.cs       - Orchestrierung
+│   ├── ProcessingQueue.cs     - File Queue
+│   ├── DeadLetterQueue.cs     [TO REMOVE - 300+ LOC]
+│   ├── PipelineManager.cs     - Pipeline Logic
+│   ├── FolderWatcherService.cs- Folder Monitoring
+│   └── NotificationService.cs - Email/EventLog
+└── ServiceCollectionExtensions.cs
 ```
 
-### 2. Die "DI Container" Explosion
-```csharp
-// CLAUDE-SYMPTOM: Program.cs > 300 Zeilen
-// CLAUDE-DIAGNOSE: Zu viele Services!
-// CLAUDE-CURE: Services konsolidieren
+### Service Layer
+```
+CamBridge.Service/
+├── Program.cs                 - Host & DI Setup
+├── Worker.cs                  - Background Service
+├── Controllers/
+│   └── StatusController.cs    - REST API
+├── Tools/
+│   └── exiftool.exe          - External Tool
+└── appsettings.json          - In ProgramData!
 ```
 
-### 3. Die "Feature Flag" Falle
-```csharp
-// CLAUDE-TRAP: 
-if (settings.UseNewPipeline) { }
-if (settings.EnableAdvancedMode) { }
-if (settings.ExperimentalFeature) { }
-
-// CLAUDE-FIX: Features sind ENTWEDER da ODER nicht!
+### Config Tool Layer
+```
+CamBridge.Config/
+├── ViewModels/
+│   ├── MainViewModel.cs
+│   ├── DashboardViewModel.cs
+│   ├── SettingsViewModel.cs
+│   ├── DeadLettersViewModel.cs [TO SIMPLIFY]
+│   └── PipelineConfigViewModel.cs
+├── Views/
+│   ├── MainWindow.xaml
+│   ├── DashboardPage.xaml
+│   ├── SettingsPage.xaml
+│   ├── DeadLettersPage.xaml   [TO SIMPLIFY]
+│   └── PipelineConfigPage.xaml
+└── Services/
+    ├── ISettingsService.cs     [NEW!]
+    ├── ConfigurationService.cs [TO REFACTOR]
+    └── HttpApiService.cs
 ```
 
-## 🎨 MEINE ARCHITEKTUR-PHILOSOPHIE
+## 🔄 DATENFLUSS
 
-### 1. Start Simple, Stay Simple
-**CLAUDE-MANTRA:** Der erste Entwurf sollte "zu einfach" sein!
-
-### 2. Delete > Refactor > Add
-**CLAUDE-PRIORITY:** 
-1. Kann ich Code löschen? ✅
-2. Kann ich Code vereinfachen? ✅
-3. Muss ich Code hinzufügen? ❌ (meist nicht!)
-
-### 3. One Thing Well
-**CLAUDE-FOCUS:** CamBridge macht EINE Sache: JPEG → DICOM
-- Nicht: Universal Medical Converter
-- Nicht: Enterprise Service Bus
-- Nicht: AI-Powered Smart Pipeline
-
-## 🔮 ARCHITEKTUR-ZUKUNFT
-
-### Sprint 7 (JETZT): THE GREAT SIMPLIFICATION
+### Aktueller Flow (v0.7.3):
 ```
-15+ Services → 5-6 Services
-3+ Interfaces → 0-1 Interfaces  
-Per-Pipeline Queues → Shared Queue
-Complex DI → Simple DI
+1. JPEG File → FolderWatcher
+2. FolderWatcher → ProcessingQueue
+3. ProcessingQueue → FileProcessor
+4. FileProcessor → ExifToolReader (EXIF extract)
+5. FileProcessor → DicomTagMapper (mapping)
+6. FileProcessor → DicomConverter (DICOM create)
+7. Success → Archive Folder
+8. Failure → DeadLetterQueue [TO CHANGE TO ERROR FOLDER]
 ```
 
-### Sprint 8-11: Medical Features (SIMPLE!)
+### Ziel-Flow (v0.8.0):
 ```
-FTP Server: SimpleSocket, not Enterprise FTP
-C-STORE: Basic Implementation, not DICOM Router
-MWL: Query → Response, not Workflow Engine
-C-FIND: Simple Search, not Query Optimizer
-```
-
-### Version 1.0: The Clean Architecture
-```
-CamBridgeProcessor
-├── Watchers (FileSystemWatcher)
-├── Queue (ConcurrentQueue)
-├── ExifReader (ExifTool)
-├── DicomWriter (fo-dicom)
-└── Config (appsettings.json)
-
-THAT'S IT!
+1. JPEG File → FolderWatcher
+2. FolderWatcher → ProcessingQueue
+3. ProcessingQueue → CamBridgeProcessor (unified)
+4. Success → Archive/Output
+5. Failure → Error Folder (simple!)
 ```
 
-## 💡 CLAUDE-TODO: Architektur-Checkpoints
+## 🏛️ ARCHITEKTUR-PRINZIPIEN
 
-Bevor ich Code schreibe, frage ich mich:
-1. **Brauchen wir das wirklich?** (meist: NEIN)
-2. **Gibt es eine einfachere Lösung?** (meist: JA)
-3. **Was würde Oliver sagen?** ("können wir das nicht gleich...")
-4. **Wo ist die Falle?** (Over-Engineering liegt immer auf der Lauer)
+### Was wir gelernt haben:
+1. **KISS > Clean Architecture**
+   - Nicht jedes Pattern ist nötig
+   - Direkte Implementierung oft besser
+   - Weniger Abstraktionen = weniger Bugs
 
-## 🎯 DAS WICHTIGSTE IN 3 SÄTZEN
+2. **Foundation First**
+   - Settings müssen stimmen
+   - Config Paths müssen klar sein
+   - Error Handling von Anfang an
 
-1. **CamBridge ist eine SIMPLE Pipeline: JPEG → DICOM**
-2. **Multi-Pipeline = Multiple Configs, NICHT multiple Architekturen**
-3. **KISS > Clever Architecture, IMMER!**
+3. **Incremental Refactoring**
+   - Kleine Schritte
+   - Immer lauffähig bleiben
+   - User Feedback einbeziehen
+
+4. **Type Safety nutzen**
+   - Compiler ist dein Freund
+   - Explizite Conversions OK
+   - Nullable References helfen
+
+5. **Legacy Support wichtig**
+   - Alte APIs beibehalten
+   - Migration ermöglichen
+   - Breaking Changes vermeiden
+
+## 🎯 ARCHITEKTUR-ZIELE
+
+### Kurzfristig (Sprint 7):
+- [x] Config vereinheitlichen
+- [x] Settings Architecture
+- [ ] Dead Letter entfernen
+- [ ] Interfaces reduzieren
+- [ ] Services konsolidieren
+
+### Mittelfristig (Sprint 8-9):
+- [ ] Medical Features (SIMPLE!)
+- [ ] FTP Server
+- [ ] C-STORE SCP
+- [ ] Error Recovery
+
+### Langfristig (v1.0):
+- [ ] Multi-Tenant fähig
+- [ ] Cloud-Ready
+- [ ] Vollständige DICOM Suite
+- [ ] Aber immer SIMPLE!
+
+## 🔧 TECHNISCHE SCHULDEN
+
+### Identifiziert:
+1. **Over-Engineering** (wird behoben)
+   - Zu viele Interfaces ✓ (fixing)
+   - Zu viele Services ✓ (fixing)
+   - Dead Letter Queue ✓ (removing)
+
+2. **Missing Tests**
+   - Unit Tests fehlen
+   - Integration Tests fehlen
+   - → Nach Simplification
+
+3. **Documentation**
+   - Code Comments OK
+   - API Docs fehlen
+   - User Manual fehlt
+
+### Behoben in v0.7.3:
+- ✅ Config Path Chaos
+- ✅ Settings Structure
+- ✅ Legacy Compatibility
+- ✅ Naming Conflicts
+
+## 📊 METRIKEN
+
+### Code-Volumen:
+- **v0.6.0:** ~15,000 LOC
+- **v0.7.2:** ~14,940 LOC (-60)
+- **v0.7.3:** ~15,940 LOC (+1000 Foundation)
+- **v0.7.4 (geplant):** ~15,290 LOC (-650 Dead Letter)
+- **Ziel v0.8.0:** <12,000 LOC
+
+### Komplexität:
+- **Interfaces:** 15 → 12 → 10 (Ziel: 0-3)
+- **Services:** 15+ → 12 → ? (Ziel: 5-6)
+- **Abstraction Layers:** 4 → 3 (Ziel: 2)
+
+### Build Performance:
+- **Clean Build:** 16.6s
+- **Incremental:** ~3s
+- **Ziel:** <10s clean
+
+## 🚀 MIGRATION STRATEGY
+
+### Von v0.6 zu v0.7:
+1. ✅ Backup existing configs
+2. ✅ Install new version
+3. ✅ Run migration script
+4. ✅ Verify functionality
+
+### Von v0.7.3 zu v0.7.4:
+1. Dead Letter Daten sichern (falls nötig)
+2. Error Folder erstellen
+3. Update installieren
+4. Verify error handling
+
+### Breaking Changes:
+- **v0.7.0:** IDicomConverter entfernt
+- **v0.7.1:** IFileProcessor entfernt
+- **v0.7.3:** Settings neu strukturiert (compatible!)
+- **v0.7.4:** Dead Letter Queue entfernt (planned)
+
+## 🎨 DESIGN DECISIONS
+
+### Warum keine Interfaces?
+- **Problem:** Interface für jeden Service
+- **Lösung:** Nur wo Polymorphie nötig
+- **Beispiel:** DicomConverter direkt statt IDicomConverter
+- **Vorteil:** -50% Code, gleiche Funktion
+
+### Warum Error Folder statt Queue?
+- **Problem:** 500+ LOC für Error Queue
+- **Lösung:** Simple Folder + .txt files
+- **Vorteil:** Explorer nutzbar, einfacher
+- **Trade-off:** Keine UI, aber KISS!
+
+### Warum 3-Layer Settings?
+- **System:** Service + Tool gemeinsam
+- **Pipeline:** Multiple Konfigurationen
+- **User:** UI Preferences pro User
+- **Vorteil:** Klare Trennung, Multi-User ready
+
+## 🔮 ZUKUNFTSVISION
+
+### CamBridge v1.0 (Q3 2025):
+```
+┌─────────────────────────────────┐
+│      CamBridge Suite 1.0        │
+├─────────────────────────────────┤
+│ ✓ JPEG→DICOM    │ ✓ FTP Server │
+│ ✓ C-STORE SCP   │ ✓ Worklist   │
+│ ✓ C-FIND SCP    │ ✓ Auto-Route │
+├─────────────────────────────────┤
+│    Simple, Solid, Medical       │
+└─────────────────────────────────┘
+```
+
+### Aber immer mit KISS:
+- Keine unnötigen Abstraktionen
+- Direkte Lösungen bevorzugen
+- Foundation muss stimmen
+- User Experience first
+
+## 🏁 ARCHITEKTUR-STATUS
+
+**Session 53 Summary:**
+- Foundation implementiert ✅
+- 3-Layer Settings ✅
+- Legacy Support ✅
+- Ready für Simplification ✅
+
+**Next Architecture Steps:**
+1. Dead Letter → Error Folder
+2. IDicomTagMapper entfernen
+3. Services konsolidieren
+4. Medical Features (SIMPLE!)
 
 ---
 
-**Mein Versprechen an mein zukünftiges Ich:**
-Wenn du dieses Dokument liest und denkst "Das ist zu simpel" - STOPP! 
-Es ist GENAU richtig. Simple ist beautiful. Simple funktioniert.
+*"Architecture is not about perfection, it's about purpose!"*
 
-*"The best architecture is the one you can hold in your head"*
-
-**CLAUDE-SIGNATURE:** Dies sind MEINE Notizen, für MICH! 🤖
+**CamBridge Architecture - Built from bottom to top!**
+© 2025 Claude's Improbably Reliable Software Solutions
