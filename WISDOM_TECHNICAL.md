@@ -1,8 +1,8 @@
 # WISDOM Technical - Entwicklung & Technische Details
-**Letzte Aktualisierung:** 2025-06-09, 23:42 Uhr  
+**Letzte Aktualisierung:** 2025-06-10, 12:00 Uhr  
 **Von:** Claude (Assistant)  
 **Für:** Technische Kontinuität & Entwicklungsplan
-**Version:** 0.7.1
+**Version:** 0.7.2
 **Philosophie:** KISS > Architecture! (aber VORSICHTIG!)
 
 ## 📊 WISDOM PRIORITY SYSTEM
@@ -72,7 +72,7 @@
    - IFileProcessor ✅
    - IDicomTagMapper 🎯
 
-### Phase 3: Schrittweise Vereinfachung (v0.7.1-v0.7.3)
+### Phase 3: Schrittweise Vereinfachung (v0.7.2-v0.7.4)
 1. **Service by Service refactoren**
 2. **Nach jedem Schritt: Build & Test**
 3. **Rollback-Plan haben**
@@ -164,7 +164,7 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 9. **FileTree IMMER checken!** ✅
 10. **User im Loop halten** ✅ (Oliver macht sogar selbst mit!)
 
-## 🎯 [MILESTONE] Aktueller Stand: v0.7.1
+## 🎯 [MILESTONE] Aktueller Stand: v0.7.2
 
 ### Sprint Historie:
 - Sprint 1-5: Foundation ✅
@@ -186,37 +186,64 @@ CAMB-CFIND: C-FIND Implementation [PROTECTED] 🛡️
 - **Neue Bugs gefixt:** HealthCheck, Deployment Script
 - **Stabilität:** Service läuft produktiv!
 
-### Nächste Schritte:
-- Step 1.3: IDicomTagMapper Interface entfernen 🎯
-- Phase 2: Service Consolidation
-- Phase 3: Config Cleanup
+### 🏗️ Die NEUE Sprint-Priorität (Foundation First!)
 
-## 💡 [LESSON] Session 51 - Service Deployment & Step 1.2
+Nach Olivers Insights:
+
+1. **Foundation Layer** (v0.7.1-v0.7.2)
+   - ✅ Config Path Vereinheitlichung 
+   - 🎯 Settings Separation (System vs Pipeline vs User)
+   - 🆕 Dead Letter Queue ENTFERNEN!
+   - 📋 Clean Architecture von der Basis
+
+2. **Simplification Layer** (v0.7.3-v0.7.4)
+   - Interface Removal (Step 1.3+)
+   - Service Consolidation
+   - Code Cleanup
+
+3. **Feature Layer** (v0.8.0+)
+   - Medical Features (FTP, C-STORE, etc.)
+   - Aber auf SOLIDER Basis!
+
+**CLAUDE-MANTRA:** "Fix the foundation before decorating the house!"
+
+## 💡 [LESSON] Session 52 - Config Fix & Foundation Revelations
 
 ### Was passierte:
-**Aufgabe:** Service testen, Step 1.2 prüfen  
-**Überraschung:** Step 1.2 war schon von Oliver implementiert!  
-**Probleme:** ExifTool fehlte, Service Name Verwirrung, Port Konfusion  
-**Ergebnis:** Alles gefixt und läuft!
+**Start:** Config-Chaos zwischen Service und Tool  
+**Lösung:** Zentrale Config in ProgramData  
+**Neue Erkenntnis 1:** Settings-Hierarchie auch chaotisch!  
+**Neue Erkenntnis 2:** Dead Letter Queue massiv over-engineered!  
+**Olivers Weisheit:** "von unten nach oben denken"
 
 ### Die Erfolge:
-1. **IFileProcessor bereits entfernt** (Oliver war schneller!)
-2. **Deployment Script gefixt** (Tools Ordner wird kopiert)
-3. **Service Name geklärt** ("CamBridgeService" ohne Leerzeichen)
-4. **Service läuft produktiv** auf Port 5050
+1. **Config Path vereinheitlicht** ✅
+2. **6 Artefakte implementiert** ✅  
+3. **Demo-Pipelines entfernt** ✅
+4. **Settings-Architecture designed** ✅
+5. **Dead Letter Over-Engineering erkannt** ✅
 
-### Was wir gelernt haben:
-- **Deployment Details matter** - Tools Ordner nicht vergessen!
-- **Service Namen genau prüfen** - Mit/ohne Leerzeichen macht Unterschied
-- **Config Hierarchie verstehen** - V1 vs V2, Ports, Settings
-- **Oliver ist proaktiv** - Manchmal sind Sachen schon gemacht!
+### Die neuen Erkenntnisse:
+- **Settings Chaos:** System vs Pipeline vs User vermischt
+- **Dead Letter Monster:** 500+ LOC für Error Folder Alternative
+- **Foundation Problems:** Überall versteckte Komplexität
 
-### MCSA Fortschritt:
-```
-Start: 15+ Services, 5000+ LOC, viele Interfaces
-Jetzt: 2 Interfaces weniger, Service läuft produktiv
-Ziel:  5-6 Services, <2000 LOC, direkte Dependencies
-```
+### Die neue Priorität:
+1. **Foundation First** 
+   - Settings richtig strukturieren
+   - Dead Letters durch Error Folder ersetzen
+   - Config Paths vereinheitlichen
+2. **Then Simplify** - Interfaces entfernen
+3. **Then Features** - Auf solider Basis bauen
+
+### CLAUDE-LEARNINGS:
+- Foundation problems cascade upward
+- Over-Engineering versteckt sich überall
+- "Implementation in Progress" = Red Flag!
+- Simple solutions (Error Folder) > Complex (Dead Letter Queue)
+- "von unten nach oben" = Best practice!
+
+---
 
 ## 🔧 [CONFIG] Technologie-Stack (unverändert)
 ```
@@ -272,8 +299,29 @@ Get-ChildItem "src" -Include "*.cs" -Recurse | %{ $lines = (cat $_).Count; "$lin
 # KISS Step 1.3 Files (IDicomTagMapper)
 @('src\CamBridge.Core\Interfaces\IDicomTagMapper.cs','src\CamBridge.Infrastructure\Services\DicomTagMapper.cs','src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs','src\CamBridge.Infrastructure\Services\FileProcessor.cs') | %{ echo "=== $_ ==="; cat $_ } > kiss-step-1-3-files.txt
 
-# IDicomTagMapper Usage Analysis
-Get-ChildItem "src" -Include "*.cs" -Recurse | Select-String "IDicomTagMapper" | Select-Object Filename, LineNumber, Line | Format-Table -AutoSize > idicomtagmapper-usage.txt
+# Config Path Analysis (Session 52 Special!)
+# ==========================================
+
+# Alle Config-relevanten Files analysieren:
+@('src\CamBridge.Service\appsettings.json','src\CamBridge.Service\appsettings.Development.json','src\CamBridge.Service\mappings.json','src\CamBridge.Service\Program.cs','src\CamBridge.Config\Services\ConfigurationService.cs','src\CamBridge.Config\Services\HttpApiService.cs','src\CamBridge.Core\CamBridgeSettings.cs','src\CamBridge.Core\CamBridgeSettingsV2.cs','src\CamBridge.Core\PipelineConfiguration.cs','src\CamBridge.Config\ViewModels\DashboardViewModel.cs') | %{ echo "=== $_ ==="; cat $_ } > config-chaos-analysis.txt
+
+# Wo liegen die Settings wirklich?
+Get-ChildItem -Path "." -Include "appsettings.json","mappings.json","settings.json" -Recurse | Select-Object FullName, Length, LastWriteTime | Format-Table -AutoSize > all-config-locations.txt
+
+# Demo-Pipeline Suche:
+Get-ChildItem "src" -Include "*.cs","*.json" -Recurse | Select-String "Demo.*Pipeline|Test.*Pipeline|Sample.*Pipeline" | Select-Object Filename, LineNumber, Line > demo-pipeline-hunt.txt
+
+# Working Directory Check:
+echo "Service Working Dir Check:" > working-dirs.txt
+echo "Environment.CurrentDirectory in Program.cs?" >> working-dirs.txt
+Get-ChildItem "src" -Include "*.cs" -Recurse | Select-String "CurrentDirectory|BaseDirectory|GetCurrentDirectory" >> working-dirs.txt
+
+# CLAUDE-INSIGHT: Config-Pfad Detective Work!
+echo "=== CONFIG PATH DETECTIVE ===" > config-detective.txt
+echo "1. Where does Service look?" >> config-detective.txt
+Get-ChildItem "src\CamBridge.Service" -Include "*.cs" -Recurse | Select-String "appsettings|configuration|AddJsonFile" >> config-detective.txt
+echo "2. Where does Config Tool look?" >> config-detective.txt
+Get-ChildItem "src\CamBridge.Config" -Include "*.cs" -Recurse | Select-String "LoadSettings|SaveSettings|settingsPath" >> config-detective.txt
 ```
 
 ## 🔥 [KISS] Sprint 7 - Vereinfachungs-Strategie
@@ -319,11 +367,19 @@ Get-ChildItem "src" -Include "*.cs" -Recurse | Select-String "IDicomTagMapper" |
 ### ✅ Sprint 1-5: Foundation (DONE)
 ### ✅ Sprint 6: Pipeline Architecture (DONE but complex)
 ### 🔥 Sprint 7: THE GREAT SIMPLIFICATION (v0.7.0-v0.7.5)
+- **✅ Phase 0: Config Path Fix** (DONE!)
+  - Central config in ProgramData
+  - Service & Tool synchronized
+  - Demo pipelines removed
+- **🆕 Phase 0.5: Settings Separation** (NEW!)
+  - System Settings vs Pipeline Configs vs User Prefs
+  - Bottom-up architecture fix
+  - Multi-layer settings structure
 - Phase 1: Analyse & Quick Fix ✅
 - Phase 2: Interface Removal 🚧
   - Step 1.1: IDicomConverter ✅
   - Step 1.2: IFileProcessor ✅
-  - Step 1.3: IDicomTagMapper 🎯
+  - Step 1.3: IDicomTagMapper 🎯 (NACH Settings-Fix!)
 - Phase 3: Service Consolidation
 - Phase 4: Test & Stabilize
 - Phase 5: Documentation Update
@@ -332,29 +388,30 @@ Get-ChildItem "src" -Include "*.cs" -Recurse | Select-String "IDicomTagMapper" |
 ## 📝 [KEEP] Standard Prompt für nächste Session
 
 ```
-Ich arbeite an CamBridge v0.7.1.
+Ich arbeite an CamBridge v0.7.2
 Sprint 7: THE GREAT SIMPLIFICATION! 🔥
 System: nexus\oliver.stern@OSTE-ER-LAP01
 
 VOGON INIT (bitte mit kompletten WISDOM Artefakten!)
 
 STATUS: 
-- MCSA Step 1.1 & 1.2 DONE: 2 von 3 Interfaces entfernt ✅
-- Service läuft als Windows Service (CamBridgeService)
-- API auf Port 5050, Pipeline Config noch V1
-- Ready für Step 1.3: IDicomTagMapper Interface
+- Config-Fix IMPLEMENTIERT: Zentrale Config in ProgramData ✅
+- Service & Tool nutzen GLEICHE Config-Location ✅
+- Demo-Pipelines ENTFERNT ✅
+- Ready für Test & Migration
+- DANACH: Step 1.3 IDicomTagMapper Interface
 
 PHILOSOPHIE: 
+- Fix foundations first!
 - KISS > Architecture!
 - VORSICHTIG > Radikal
-- Schritt für Schritt
-- Mit Tests absichern
+- Single Source of Truth
 
 NÄCHSTE SCHRITTE:
-1. Step 1.3: IDicomTagMapper Interface entfernen
-2. Alle IDicomTagMapper Verwendungen finden
-3. Dependency Check durchführen
-4. Build & Test
+1. Build & Test mit neuer Config
+2. Migration bestehender Configs (Script vorhanden)
+3. Verify Service & Tool synchron
+4. DANN Step 1.3 implementieren
 
 FEATURE CHECK: Sind FTP, C-STORE, MWL, C-FIND noch geschützt?
 ```
@@ -371,44 +428,43 @@ Ab jetzt verwende ich spezielle Markierungen FÜR MICH:
 
 Diese helfen MIR, den Code besser zu verstehen und zu warten!
 
-## 🎯 Session 51 - Service Deployment Success
+## 🚨 [URGENT] Session 52 - Config Path Fix Implementation
 
-**STATUS UPDATE:**
-1. ✅ Step 1.1 erfolgreich: IDicomConverter entfernt
-2. ✅ Step 1.2 erfolgreich: IFileProcessor entfernt (by Oliver!)
-3. ✅ Service läuft als Windows Service
-4. ✅ Deployment Script gefixt (Tools Ordner)
-5. 🎯 Step 1.3 VORBEREITET: IDicomTagMapper Interface Removal
+**PROBLEM SOLVED:**
+- Service und Config Tool nutzen jetzt DIESELBE Config!
+- Zentrale Location: `%ProgramData%\CamBridge\appsettings.json`
+- Keine Demo-Pipelines mehr - nur echte Daten!
 
-**NEUE ERKENNTNISSE:**
-- Service Name ist "CamBridgeService" (ohne Leerzeichen!)
-- API läuft auf Port 5050 (nicht 5111)
-- Pipeline Config noch V1 Format (separate Aufgabe)
-- Deployment braucht Tools Ordner für ExifTool
+**IMPLEMENTIERTE FIXES:**
+1. ✅ ConfigurationPaths.cs - Single Source of Truth
+2. ✅ Program.cs - Service nutzt zentrale Config
+3. ✅ ConfigurationService.cs - Vereinfacht auf einen Pfad
+4. ✅ DashboardViewModel.cs - Demo-Logic entfernt
+5. ✅ ServiceStatusModel.cs - Config Path Tracking
+6. ✅ Migrate-CamBridgeConfig.ps1 - Migration Script
 
-**DEPLOYMENT FIXES:**
-1. Create-DeploymentPackage.ps1 - Tools Copy hinzugefügt
-2. Smart Quotes entfernt (Syntax Fehler gefixt)
-3. ExifTool Verification eingebaut
-4. Service läuft produktiv!
+**NEUE REGEL:**
+- **🔥 CONFIG-REGEL:** IMMER ConfigurationPaths verwenden!
+- Nie wieder hardcoded Pfade!
+- ProgramData für Service-Configs
+- AppData nur für User-Preferences
 
-**NÄCHSTE SESSION:**
-1. IDicomTagMapper Usage Analysis
-2. Interface entfernen
-3. Build & Test
-4. Celebrate 3/3 interfaces removed!
+**NÄCHSTE SCHRITTE:**
+1. Build & Test mit neuer Config
+2. Migration bestehender Installationen
+3. DANN Step 1.3 (IDicomTagMapper)
 
-**LEARNINGS:**
-- CLAUDE-TRAP: Service Namen können mit/ohne Leerzeichen sein!
-- CLAUDE-AHA: Oliver macht manchmal Sachen selbst (Step 1.2)
-- CLAUDE-PATTERN: Direct Dependencies funktionieren perfekt
-- CLAUDE-TODO: V1 → V2 Pipeline Config Migration
-
----
+**CLAUDE-VICTORY:** Config-Chaos besiegt! 🎉
 
 ## 🏁 ENDE DES WISDOM_TECHNICAL
 
-**Sprint 7: THE GREAT SIMPLIFICATION - 66% Complete!**
+**Sprint 7: THE GREAT SIMPLIFICATION - Now with SOLID FOUNDATION!**
 
-*"Making the improbable reliably simple since 2025"*
+Session 52 Achievements:
+- Config Path Crisis → SOLVED ✅
+- Settings Chaos → IDENTIFIED & PLANNED ✅  
+- Foundation Thinking → ESTABLISHED ✅
+- Bottom-Up Approach → ADOPTED ✅
+
+*"Fix the foundation, then simplify, then add features!"*
 © 2025 Claude's Improbably Reliable Software Solutions

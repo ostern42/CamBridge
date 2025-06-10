@@ -8,6 +8,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+# Changelog Entry - v0.7.2
+
+## [0.7.2] - 2025-06-10 - Foundation Fixes & Config Unification
+
+### 🏗️ Foundation Improvements
+- **BREAKING:** Unified configuration path to `%ProgramData%\CamBridge\appsettings.json`
+- Implemented `ConfigurationPaths` class for single source of truth
+- Service and Config Tool now use identical configuration location
+- Added migration script `Migrate-CamBridgeConfig.ps1` for existing installations
+
+### 🔥 Removed
+- Demo pipeline generation in `DashboardViewModel`
+- Automatic fallback configurations that caused confusion
+- Config path ambiguity between Debug/Release/Service modes
+
+### ✨ Added
+- `ConfigurationPaths.cs` - Central configuration path management
+- `ServiceStatusModel` with config path tracking for diagnostics
+- `DeadLetterModels.cs` - Missing model definitions (temporary)
+- Settings architecture documentation and models for future separation
+
+### 🐛 Fixed
+- Service and Config Tool using different configuration files
+- Dashboard showing demo pipelines instead of real data
+- Build errors due to missing namespace references
+- Debug vs Release configuration inconsistencies
+
+### 🔍 Discovered Issues
+- Settings hierarchy mixing system, pipeline, and user preferences
+- Dead Letter Queue implementation severely over-engineered (500+ LOC)
+- Need for "bottom-up" architecture approach
+
+### 📝 Technical Debt Identified
+- Settings need separation into System/Pipeline/User layers
+- Dead Letter Queue should be replaced with simple error folder
+- Further interface removal blocked by foundation issues
+
+### 🎯 Next Steps
+1. Test and deploy unified configuration
+2. Implement settings separation (v0.7.3)
+3. Remove Dead Letter Queue complexity
+4. Continue with IDicomTagMapper interface removal
+
+**Session:** 52  
+**Philosophy:** "Fix the foundation before decorating the house!"
+
 ## [0.7.1] - 2025-06-09 - Step 1.2 Complete & Deployment Fixes
 
 ### 🔥 KISS Architecture Refactoring

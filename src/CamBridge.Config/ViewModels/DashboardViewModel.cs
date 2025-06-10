@@ -1,6 +1,6 @@
 // src\CamBridge.Config\ViewModels\DashboardViewModel.cs
-// Version: 0.6.11
-// Description: Dashboard ViewModel with FIXED threading and simplified initialization
+// Version: 0.7.1
+// Description: Dashboard ViewModel without demo pipelines - shows real data only!
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -59,12 +59,16 @@ namespace CamBridge.Config.ViewModels
         [ObservableProperty]
         private string statusMessage = "";
 
+        [ObservableProperty]
+        private string configPath = "";
+
         // Collections - created on UI thread
         public ObservableCollection<PipelineStatusViewModel> PipelineStatuses { get; }
         public ObservableCollection<RecentActivityViewModel> RecentActivities { get; }
 
         // Commands
         public IAsyncRelayCommand RefreshDataCommand { get; }
+        public IRelayCommand ShowConfigPathCommand { get; }
 
         public DashboardViewModel(
             IApiService apiService,
@@ -77,12 +81,14 @@ namespace CamBridge.Config.ViewModels
             PipelineStatuses = new ObservableCollection<PipelineStatusViewModel>();
             RecentActivities = new ObservableCollection<RecentActivityViewModel>();
 
-            // Initialize command
+            // Initialize commands
             RefreshDataCommand = new AsyncRelayCommand(RefreshDataAsync);
+            ShowConfigPathCommand = new RelayCommand(ShowConfigPath);
+
+            // Set config path for display
+            ConfigPath = ConfigurationPaths.GetPrimaryConfigPath();
 
             Debug.WriteLine("DashboardViewModel created - waiting for initialization");
-
-            // NO automatic initialization here! Wait for InitializeAsync()
         }
 
         public async Task InitializeAsync()
@@ -114,6 +120,7 @@ namespace CamBridge.Config.ViewModels
             try
             {
                 Debug.WriteLine($"\n=== DASHBOARD REFRESH START (Thread: {Thread.CurrentThread.ManagedThreadId}) ===");
+                Debug.WriteLine($"Config Path: {ConfigPath}");
 
                 IsLoading = true;
                 StatusMessage = "Refreshing...";
@@ -126,6 +133,7 @@ namespace CamBridge.Config.ViewModels
                 {
                     ConnectionStatus = "Service Offline";
                     ServiceStatus = "Offline";
+                    StatusMessage = "Service is not running. Please start the service.";
                 }
 
                 // Load configuration
@@ -133,17 +141,17 @@ namespace CamBridge.Config.ViewModels
 
                 if (settings?.Pipelines == null || settings.Pipelines.Count == 0)
                 {
-                    Debug.WriteLine("No pipelines configured - creating demo data");
-                    await CreateDemoPipelinesAsync();
-                    ConnectionStatus = isAvailable ? "Connected (Demo Mode)" : "Service Offline (Demo Mode)";
-                    StatusMessage = "Showing demo pipelines";
+                    Debug.WriteLine("No pipelines configured");
+                    await ClearPipelinesAsync();
+                    ConnectionStatus = isAvailable ? "Connected (No Pipelines)" : "Service Offline";
+                    StatusMessage = "No pipelines configured. Use Pipeline Configuration to add pipelines.";
                 }
                 else
                 {
                     Debug.WriteLine($"Loading {settings.Pipelines.Count} configured pipelines");
-                    await UpdatePipelineStatusesAsync(settings);
-                    ConnectionStatus = isAvailable ? "Connected" : "Service Offline (Configuration Loaded)";
-                    StatusMessage = $"{settings.Pipelines.Count} pipelines configured";
+                    await UpdatePipelineStatusesAsync(settings, isAvailable);
+                    ConnectionStatus = isAvailable ? "Connected" : "Service Offline (Config Loaded)";
+                    StatusMessage = $"{settings.Pipelines.Count} pipeline(s) configured";
                 }
 
                 // Get service status if online
@@ -155,12 +163,25 @@ namespace CamBridge.Config.ViewModels
                         if (status != null)
                         {
                             UpdateOverallStatistics(status);
+
+                            // Check if service uses same config
+                            if (status.ConfigPath != null && status.ConfigPath != ConfigPath)
+                            {
+                                StatusMessage += $" ⚠️ Service uses different config!";
+                                Debug.WriteLine($"CONFIG MISMATCH! Tool: {ConfigPath}, Service: {status.ConfigPath}");
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
                         Debug.WriteLine($"Failed to get service status: {ex.Message}");
                     }
+                }
+
+                // Update activities if we have pipelines
+                if (PipelineStatuses.Count > 0)
+                {
+                    UpdateRecentActivities();
                 }
 
                 LastUpdate = DateTime.Now;
@@ -172,12 +193,6 @@ namespace CamBridge.Config.ViewModels
                 ConnectionStatus = "Error";
                 StatusMessage = $"Error: {ex.Message}";
                 IsConnected = false;
-
-                // Show demo pipelines on error
-                if (PipelineStatuses.Count == 0)
-                {
-                    await CreateDemoPipelinesAsync();
-                }
             }
             finally
             {
@@ -185,68 +200,16 @@ namespace CamBridge.Config.ViewModels
             }
         }
 
-        private async Task CreateDemoPipelinesAsync()
+        private async Task ClearPipelinesAsync()
         {
-            Debug.WriteLine("=== Creating DEMO pipelines (async) ===");
-
-            // ALL UI updates must be on UI thread!
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 PipelineStatuses.Clear();
-
-                // Demo Pipeline 1 - Radiology
-                PipelineStatuses.Add(new PipelineStatusViewModel
-                {
-                    PipelineId = Guid.NewGuid(),
-                    PipelineName = "Radiology Pipeline",
-                    IsEnabled = true,
-                    Status = "Active",
-                    WatchFolder = @"C:\CamBridge\Watch\Radiology",
-                    ProcessedToday = 42,
-                    ErrorsToday = 2,
-                    QueueLength = 5,
-                    SuccessRate = 95.2,
-                    LastProcessed = DateTime.Now.AddMinutes(-15)
-                });
-
-                // Demo Pipeline 2 - Cardiology
-                PipelineStatuses.Add(new PipelineStatusViewModel
-                {
-                    PipelineId = Guid.NewGuid(),
-                    PipelineName = "Cardiology Pipeline",
-                    IsEnabled = true,
-                    Status = "Processing",
-                    WatchFolder = @"C:\CamBridge\Watch\Cardiology",
-                    ProcessedToday = 18,
-                    ErrorsToday = 0,
-                    QueueLength = 2,
-                    SuccessRate = 100,
-                    LastProcessed = DateTime.Now.AddMinutes(-2)
-                });
-
-                // Demo Pipeline 3 - Emergency (Disabled)
-                PipelineStatuses.Add(new PipelineStatusViewModel
-                {
-                    PipelineId = Guid.NewGuid(),
-                    PipelineName = "Emergency Pipeline",
-                    IsEnabled = false,
-                    Status = "Disabled",
-                    WatchFolder = @"C:\CamBridge\Watch\Emergency",
-                    ProcessedToday = 0,
-                    ErrorsToday = 0,
-                    QueueLength = 0,
-                    SuccessRate = 0,
-                    LastProcessed = null
-                });
-
-                // Also create some demo activities
-                CreateDemoActivities();
+                RecentActivities.Clear();
             });
-
-            Debug.WriteLine($"=== Created {PipelineStatuses.Count} DEMO pipelines ===");
         }
 
-        private async Task UpdatePipelineStatusesAsync(CamBridgeSettingsV2 settings)
+        private async Task UpdatePipelineStatusesAsync(CamBridgeSettingsV2 settings, bool serviceAvailable)
         {
             Debug.WriteLine("=== Updating pipeline statuses ===");
 
@@ -262,25 +225,25 @@ namespace CamBridge.Config.ViewModels
                         PipelineName = pipeline.Name,
                         IsEnabled = pipeline.Enabled,
                         WatchFolder = pipeline.WatchSettings?.Path ?? "",
-                        Status = pipeline.Enabled ? "Active" : "Disabled"
+                        Status = pipeline.Enabled ? (serviceAvailable ? "Active" : "Service Offline") : "Disabled"
                     };
 
-                    // Simulate some stats for now
-                    if (pipeline.Enabled)
+                    // If service is available, real-time stats will be updated from service
+                    // Otherwise, show zero stats
+                    if (!serviceAvailable)
                     {
-                        var random = new Random();
-                        pipelineStatus.ProcessedToday = random.Next(10, 100);
-                        pipelineStatus.ErrorsToday = random.Next(0, 5);
-                        pipelineStatus.QueueLength = random.Next(0, 10);
-                        pipelineStatus.SuccessRate = pipelineStatus.ProcessedToday > 0
-                            ? ((double)(pipelineStatus.ProcessedToday - pipelineStatus.ErrorsToday) / pipelineStatus.ProcessedToday) * 100
-                            : 100;
-                        pipelineStatus.LastProcessed = DateTime.Now.AddMinutes(-random.Next(1, 60));
+                        pipelineStatus.ProcessedToday = 0;
+                        pipelineStatus.ErrorsToday = 0;
+                        pipelineStatus.QueueLength = 0;
+                        pipelineStatus.SuccessRate = 0;
+                        pipelineStatus.LastProcessed = null;
                     }
 
                     PipelineStatuses.Add(pipelineStatus);
                 }
             });
+
+            Debug.WriteLine($"Updated {PipelineStatuses.Count} pipeline statuses");
         }
 
         private void UpdateOverallStatistics(ServiceStatusModel status)
@@ -292,32 +255,58 @@ namespace CamBridge.Config.ViewModels
             TotalErrorCount = status.TotalFailed;
             OverallSuccessRate = Math.Round(status.SuccessRate, 1);
             Uptime = status.Uptime;
-        }
 
-        private void CreateDemoActivities()
-        {
-            RecentActivities.Clear();
-
-            var activities = new[]
+            // Update individual pipeline stats if available
+            if (status.Pipelines != null)
             {
-                ("IMG_001.jpg → PAT123_20250609_0001.dcm", true, "Radiology Pipeline"),
-                ("IMG_002.jpg → PAT124_20250609_0001.dcm", true, "Cardiology Pipeline"),
-                ("IMG_003.jpg - Missing patient data", false, "Radiology Pipeline"),
-                ("IMG_004.jpg → PAT125_20250609_0001.dcm", true, "Emergency Pipeline"),
-                ("IMG_005.jpg → PAT126_20250609_0001.dcm", true, "Radiology Pipeline")
-            };
-
-            var random = new Random();
-            foreach (var (message, success, pipeline) in activities)
-            {
-                RecentActivities.Add(new RecentActivityViewModel
+                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    IsSuccess = success,
-                    Message = message,
-                    Timestamp = DateTime.Now.AddMinutes(-random.Next(1, 30)),
-                    PipelineName = pipeline
+                    foreach (var pipelineData in status.Pipelines)
+                    {
+                        var localPipeline = PipelineStatuses.FirstOrDefault(p =>
+                            p.PipelineId.ToString() == pipelineData.Id);
+
+                        if (localPipeline != null)
+                        {
+                            localPipeline.QueueLength = pipelineData.QueueLength;
+                            localPipeline.ProcessedToday = pipelineData.TotalProcessed;
+                            localPipeline.ErrorsToday = pipelineData.TotalFailed;
+                            localPipeline.SuccessRate = pipelineData.TotalProcessed > 0
+                                ? ((double)pipelineData.TotalSuccessful / pipelineData.TotalProcessed) * 100
+                                : 0;
+                            localPipeline.Status = pipelineData.IsActive ? "Active" : "Inactive";
+                        }
+                    }
                 });
             }
+        }
+
+        private void UpdateRecentActivities()
+        {
+            // Only update if we don't have activities yet
+            if (RecentActivities.Count == 0)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    RecentActivities.Add(new RecentActivityViewModel
+                    {
+                        IsSuccess = true,
+                        Message = "Waiting for processing activity...",
+                        Timestamp = DateTime.Now,
+                        PipelineName = PipelineStatuses.FirstOrDefault()?.PipelineName ?? "Unknown"
+                    });
+                });
+            }
+        }
+
+        private void ShowConfigPath()
+        {
+            var info = $"Config Path: {ConfigPath}\n" +
+                      $"Config Exists: {System.IO.File.Exists(ConfigPath)}\n\n" +
+                      ConfigurationPaths.GetDiagnosticInfo();
+
+            MessageBox.Show(info, "Configuration Information",
+                           MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         public void Cleanup()

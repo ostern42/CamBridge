@@ -1,6 +1,6 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.6.0
-// Description: Windows service entry point with pipeline architecture support
+// Version: 0.7.1
+// Description: Windows service entry point with centralized config management
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
@@ -38,7 +38,7 @@ try
 
     serviceEventLog = new EventLog("Application");
     serviceEventLog.Source = "CamBridgeService";
-    serviceEventLog.WriteEntry("CamBridge Service v0.6.0 starting...", EventLogEntryType.Information, 1000);
+    serviceEventLog.WriteEntry("CamBridge Service v0.7.1 starting...", EventLogEntryType.Information, 1000);
 }
 catch (Exception ex)
 {
@@ -73,18 +73,13 @@ catch (Exception ex)
     serviceEventLog?.WriteEntry($"Error detecting service mode: {ex.Message}", EventLogEntryType.Error, 1004);
 }
 
-// Configure Serilog with better Windows Service support
+// Configure Serilog with centralized log path
 try
 {
     var logPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-        "CamBridge",
-        "Logs",
+        ConfigurationPaths.GetLogsDirectory(),
         "service-.log"
     );
-
-    // Ensure log directory exists
-    Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
 
     Log.Logger = new LoggerConfiguration()
         .MinimumLevel.Debug()
@@ -108,11 +103,22 @@ catch (Exception ex)
 
 try
 {
-    Log.Information("Starting CamBridge Service v0.6.0 with Pipeline Architecture...");
+    Log.Information("Starting CamBridge Service v0.7.1 with Centralized Config...");
     Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
     Log.Information("Command line args: {Args}", string.Join(" ", args));
 
-    // CRITICAL FIX: Set working directory to service location
+    // Log configuration paths for diagnostics
+    Log.Information("Configuration Paths:\n{DiagnosticInfo}", ConfigurationPaths.GetDiagnosticInfo());
+
+    // CRITICAL: Initialize primary config if needed
+    var localConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+    if (ConfigurationPaths.InitializePrimaryConfig(localConfigPath))
+    {
+        Log.Information("Initialized primary config from local template");
+        serviceEventLog?.WriteEntry("Copied default config to ProgramData", EventLogEntryType.Information, 1007);
+    }
+
+    // CRITICAL FIX: Set working directory to service location (for relative paths like Tools\)
     if (isService)
     {
         var serviceDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
@@ -158,34 +164,35 @@ try
     {
         var env = context.HostingEnvironment;
 
-        // Use service directory as base path
-        var basePath = Directory.GetCurrentDirectory();
-        if (isService)
-        {
-            var serviceDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            if (!string.IsNullOrEmpty(serviceDirectory))
-            {
-                basePath = serviceDirectory;
-            }
-        }
+        // CRITICAL: Use centralized config path!
+        var primaryConfigPath = ConfigurationPaths.GetPrimaryConfigPath();
 
-        config.SetBasePath(basePath)
-              .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-              .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
-              .AddEnvironmentVariables("CAMBRIDGE_")
-              .AddCommandLine(args);
+        Log.Information("Loading configuration from: {ConfigPath}", primaryConfigPath);
+        serviceEventLog?.WriteEntry($"Loading config from: {primaryConfigPath}", EventLogEntryType.Information, 1012);
 
-        Log.Information("Configuration loaded from: {BasePath} for environment: {Environment}", basePath, env.EnvironmentName);
-        serviceEventLog?.WriteEntry($"Configuration loaded from {basePath}: {env.EnvironmentName}", EventLogEntryType.Information, 1012);
+        // Clear default sources and add our specific order
+        config.Sources.Clear();
+
+        // 1. Primary config (from ProgramData)
+        config.AddJsonFile(primaryConfigPath, optional: false, reloadOnChange: true);
+
+        // 2. Local override for development (if exists)
+        config.AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true);
+
+        // 3. Environment variables
+        config.AddEnvironmentVariables("CAMBRIDGE_");
+
+        // 4. Command line (highest priority)
+        config.AddCommandLine(args);
+
+        Log.Information("Configuration loaded for environment: {Environment}", env.EnvironmentName);
     });
 
     // Configure Serilog from configuration
     builder.UseSerilog((context, services, loggerConfiguration) =>
     {
         var logPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "CamBridge",
-            "Logs",
+            ConfigurationPaths.GetLogsDirectory(),
             "service-.log"
         );
 
@@ -276,7 +283,8 @@ try
 
             // Show active features
             Log.Information("=========================================");
-            Log.Information("AKTIVE FEATURES v0.6.0:");
+            Log.Information("ACTIVE FEATURES v0.7.1:");
+            Log.Information("✓ Centralized Configuration");
             Log.Information("✓ Pipeline Architecture");
             Log.Information("✓ Multi-Pipeline Support");
             Log.Information("✓ Basic Pipeline (ExifTool → DICOM)");
@@ -363,9 +371,11 @@ public class Startup
                 var status = new
                 {
                     ServiceStatus = "Running",
-                    Version = "0.6.0",
+                    Version = "0.7.1",
                     Mode = Environment.UserInteractive ? "Console" : "Service",
                     Uptime = DateTime.UtcNow - Program.ServiceStartTime,
+                    ConfigPath = ConfigurationPaths.GetPrimaryConfigPath(),
+                    ConfigExists = ConfigurationPaths.PrimaryConfigExists(),
                     PipelineCount = pipelineStatuses.Count,
                     ActivePipelines = pipelineStatuses.Count(p => p.Value.IsActive),
                     QueueLength = totalQueued,
@@ -375,7 +385,7 @@ public class Startup
                     SuccessRate = successRate,
                     Pipelines = pipelineStatuses.Select(p => new
                     {
-                        Id = p.Key, // Key is already the string ID
+                        Id = p.Key,
                         Name = p.Value.Name,
                         IsActive = p.Value.IsActive,
                         QueueLength = p.Value.QueueLength,
@@ -437,10 +447,10 @@ public class Startup
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync(@"
                         <html>
-                        <head><title>CamBridge Service v0.6.0</title></head>
+                        <head><title>CamBridge Service v0.7.1</title></head>
                         <body>
-                            <h1>CamBridge Service - Pipeline Architecture</h1>
-                            <p>Service läuft mit Multi-Pipeline Support!</p>
+                            <h1>CamBridge Service - Centralized Configuration</h1>
+                            <p>Service läuft mit zentraler Config!</p>
                             <ul>
                                 <li>Health: <a href='/health'>/health</a></li>
                                 <li>Status: <a href='/api/status'>/api/status</a></li>

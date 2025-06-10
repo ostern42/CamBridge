@@ -1,49 +1,66 @@
-// src/CamBridge.Config/Models/ServiceStatusModel.cs
+// src\CamBridge.Config\Models\ServiceStatusModel.cs
+// Version: 0.7.1
+// Description: Service status model with config path information
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
 using System;
 using System.Collections.Generic;
 
 namespace CamBridge.Config.Models
 {
+    /// <summary>
+    /// Service status information from API
+    /// </summary>
     public class ServiceStatusModel
     {
-        public string ServiceStatus { get; set; } = string.Empty;
-        public DateTime Timestamp { get; set; }
+        public string ServiceStatus { get; set; } = "Unknown";
+        public string Version { get; set; } = "Unknown";
+        public string Mode { get; set; } = "Unknown";
+        public TimeSpan Uptime { get; set; }
+
+        // Config information (new in v0.7.1)
+        public string? ConfigPath { get; set; }
+        public bool ConfigExists { get; set; }
+
+        // Pipeline statistics
+        public int PipelineCount { get; set; }
+        public int ActivePipelines { get; set; }
+        public int QueueLength { get; set; }
+        public int ActiveProcessing { get; set; }
+        public int TotalSuccessful { get; set; }
+        public int TotalFailed { get; set; }
+        public double SuccessRate { get; set; }
+
+        // Individual pipeline data
+        public List<PipelineStatusData>? Pipelines { get; set; }
+
+        // Configuration info
+        public ServiceConfigurationInfo? Configuration { get; set; }
+    }
+
+    /// <summary>
+    /// Individual pipeline status from service
+    /// </summary>
+    public class PipelineStatusData
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
         public int QueueLength { get; set; }
         public int ActiveProcessing { get; set; }
         public int TotalProcessed { get; set; }
         public int TotalSuccessful { get; set; }
         public int TotalFailed { get; set; }
-        public double SuccessRate { get; set; }
-        public double ProcessingRate { get; set; }
-        public TimeSpan Uptime { get; set; }
-        public int DeadLetterCount { get; set; }
-        public List<ActiveItemModel> ActiveItems { get; set; } = new();
+        public List<string>? WatchedFolders { get; set; }
     }
 
-    public class ActiveItemModel
+    /// <summary>
+    /// Service configuration information
+    /// </summary>
+    public class ServiceConfigurationInfo
     {
-        public string FilePath { get; set; } = string.Empty;
-        public string FileName { get; set; } = string.Empty;
-        public DateTime? StartTime { get; set; }
-        public int AttemptCount { get; set; }
-        public TimeSpan Duration { get; set; }
-    }
-
-    public class DeadLetterItemModel
-    {
-        public Guid Id { get; set; }
-        public string FileName { get; set; } = string.Empty;
-        public string FilePath { get; set; } = string.Empty;
-        public string ErrorMessage { get; set; } = string.Empty;  // Changed from Error
-        public DateTime FirstAttempt { get; set; }  // Changed from FailedAt
-        public DateTime LastAttempt { get; set; }   // Added
-        public int AttemptCount { get; set; }
-        public long FileSize { get; set; }
-    }
-
-    public class DetailedStatisticsModel
-    {
-        public Dictionary<string, int> TopErrors { get; set; } = new();
-        public Dictionary<string, int> ErrorCategories { get; set; } = new();
+        public string? DefaultOutputFolder { get; set; }
+        public string? ExifToolPath { get; set; }
+        public string? Version { get; set; }
     }
 }
