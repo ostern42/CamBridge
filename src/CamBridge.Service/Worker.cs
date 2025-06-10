@@ -1,5 +1,5 @@
 // src/CamBridge.Service/Worker.cs
-// Version: 0.6.0
+// Version: 0.7.5+tools
 // Description: Main worker service that orchestrates pipeline processing
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
@@ -43,8 +43,8 @@ namespace CamBridge.Service
         {
             try
             {
-                _logger.LogInformation("CamBridge Service v{Version} starting",
-                    FileVersionInfo.GetVersionInfo(typeof(Worker).Assembly.Location).ProductVersion);
+                _logger.LogInformation("{ServiceName} starting",
+                    ServiceInfo.GetFullVersionString());
 
                 var settings = _settingsMonitor.CurrentValue;
 

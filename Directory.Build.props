@@ -1,0 +1,89 @@
+<!-- Directory.Build.props -->
+<!-- Location: Root directory (neben CamBridge.sln) -->
+<!-- Description: Central version and metadata for ALL projects -->
+<!-- This file is automatically imported by ALL .csproj files! -->
+
+<Project>
+  <!-- Import the version from Version.props -->
+  <Import Project="Version.props" />
+  
+  <PropertyGroup>
+    <!-- Assembly versions that Windows shows in file properties -->
+    <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
+    <FileVersion>$(VersionPrefix).0</FileVersion>
+    <InformationalVersion>$(VersionPrefix)$(VersionSuffix)</InformationalVersion>
+    
+    <!-- Product information shown in Windows file properties -->
+    <Product>CamBridge Medical Image Converter</Product>
+    <AssemblyProduct>$(Product)</AssemblyProduct>
+    <ProductName>$(Product)</ProductName>
+    
+    <!-- Company information -->
+    <Company>Claude's Improbably Reliable Software Solutions</Company>
+    <AssemblyCompany>$(Company)</AssemblyCompany>
+    <CompanyName>$(Company)</CompanyName>
+    
+    <!-- Copyright - will show in file properties -->
+    <Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
+    <AssemblyCopyright>$(Copyright)</AssemblyCopyright>
+    
+    <!-- Description for each assembly -->
+    <AssemblyDescription>JPEG to DICOM medical imaging converter</AssemblyDescription>
+    
+    <!-- Configuration -->
+    <AssemblyConfiguration Condition="'$(Configuration)' == 'Debug'">Debug Build</AssemblyConfiguration>
+    <AssemblyConfiguration Condition="'$(Configuration)' == 'Release'">Release Build</AssemblyConfiguration>
+    
+    <!-- Generate assembly info automatically -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateAssemblyVersionAttribute>true</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>true</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>true</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyConfigurationAttribute>true</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>true</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>true</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyCopyrightAttribute>true</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyDescriptionAttribute>true</GenerateAssemblyDescriptionAttribute>
+    
+    <!-- Embed source information -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    
+    <!-- Strong naming (optional, for medical compliance) -->
+    <SignAssembly>false</SignAssembly>
+    
+    <!-- Deterministic builds for reproducibility -->
+    <Deterministic>true</Deterministic>
+    
+    <!-- Language -->
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- Debug information for all configurations -->
+  <PropertyGroup>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <!-- NuGet properties (if we ever publish packages) -->
+  <PropertyGroup>
+    <Authors>Claude's Improbably Reliable Software Solutions</Authors>
+    <PackageProjectUrl>https://github.com/yourusername/CamBridge</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageTags>medical;imaging;dicom;jpeg;converter;ricoh</PackageTags>
+  </PropertyGroup>
+
+  <!-- Common project settings -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors>CS8600;CS8602;CS8603</WarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- Output paths to keep builds organized -->
+  <PropertyGroup>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)build\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

@@ -1,5 +1,5 @@
 // src/CamBridge.Infrastructure/Services/PipelineManager.cs
-// Version: 0.6.0
+// Version: 0.7.5
 // Description: Orchestrates multiple processing pipelines with independent queues and watchers
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 

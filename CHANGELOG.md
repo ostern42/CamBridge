@@ -8,6 +8,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.7.6] - 2025-06-10
+
+### 🎯 Version Consistency & Professional Standards
+
+### Added
+- **ServiceInfo.cs** - Central service version and metadata class
+- **Directory.Build.props** - Automatic version injection for all projects
+- **/api/status/version** endpoint with detailed version information
+- Version consistency documentation and implementation guide
+
+### Changed
+- **Program.cs** - Replaced 7 hardcoded version strings with `ServiceInfo.Version`
+- **Worker.cs** - Updated header from v0.6.0 to current version
+- **StatusController.cs** - COMPLETELY REWRITTEN without DeadLetterQueue dependencies
+- **PipelineManager.cs** - Updated header version
+- All copyright strings now use consistent encoding (© instead of Â©)
+
+### Fixed
+- Hardcoded version strings throughout the service (was showing v0.7.1)
+- StatusController using outdated code with DeadLetterQueue
+- Version inconsistency in API responses
+- Encoding issues in copyright notices
+
+### Discovered
+- Old AssemblyInfo.cs files still present (should be removed with Directory.Build.props)
+- Need for version consistency in Windows file properties, DLLs, Event Logs
+- Professional software requires version consistency EVERYWHERE
+
+### Developer Notes
+- Session 56: Oliver's insight - "versions must be consistent EVERYWHERE!"
+- Implemented central version management through ServiceInfo class
+- Created Directory.Build.props for automatic version injection
+- Professional standards: Version consistency is a quality marker
+
+### Next Steps
+- Remove old AssemblyInfo.cs files
+- Implement Directory.Build.props
+- Dead Letter Queue removal (-650 LOC expected)
+
+---
+
+*"God is in the details - especially version numbers!"*  
+© 2025 Claude's Improbably Reliable Software Solutions
+
 ## [0.7.5+tools] - 2025-06-10 18:20
 
 ### 🧪 Testing Tools Added

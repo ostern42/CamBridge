@@ -1,5 +1,5 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.7.1
+// Version: 0.7.5+tools
 // Description: Windows service entry point with centralized config management
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
@@ -31,14 +31,14 @@ EventLog? serviceEventLog = null;
 try
 {
     // Try to create event source if not exists
-    if (!EventLog.SourceExists("CamBridgeService"))
+    if (!EventLog.SourceExists(ServiceInfo.ServiceName))
     {
-        EventLog.CreateEventSource("CamBridgeService", "Application");
+        EventLog.CreateEventSource(ServiceInfo.ServiceName, "Application");
     }
 
     serviceEventLog = new EventLog("Application");
-    serviceEventLog.Source = "CamBridgeService";
-    serviceEventLog.WriteEntry("CamBridge Service v0.7.1 starting...", EventLogEntryType.Information, 1000);
+    serviceEventLog.Source = ServiceInfo.ServiceName;
+    serviceEventLog.WriteEntry($"{ServiceInfo.GetFullVersionString()} starting...", EventLogEntryType.Information, 1000);
 }
 catch (Exception ex)
 {
@@ -88,7 +88,7 @@ try
             rollingInterval: RollingInterval.Day,
             retainedFileCountLimit: 30,
             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}")
-        .WriteTo.EventLog("CamBridgeService", "Application", manageEventSource: false)
+        .WriteTo.EventLog(ServiceInfo.ServiceName, "Application", manageEventSource: false)
         .WriteTo.Conditional(
             _ => !isService,
             wt => wt.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
@@ -103,7 +103,7 @@ catch (Exception ex)
 
 try
 {
-    Log.Information("Starting CamBridge Service v0.7.1 with Centralized Config...");
+    Log.Information("Starting {ServiceName} with Centralized Config...", ServiceInfo.GetFullVersionString());
     Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
     Log.Information("Command line args: {Args}", string.Join(" ", args));
 
@@ -142,7 +142,7 @@ try
 
         builder.UseWindowsService(options =>
         {
-            options.ServiceName = "CamBridgeService";
+            options.ServiceName = ServiceInfo.ServiceName;
         });
 
         // Don't start web host immediately for service
@@ -206,7 +206,7 @@ try
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 30,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}")
-            .WriteTo.EventLog("CamBridgeService", "Application", manageEventSource: false);
+            .WriteTo.EventLog(ServiceInfo.ServiceName, "Application", manageEventSource: false);
 
         if (!isService)
         {
@@ -256,7 +256,7 @@ try
     builder.ConfigureWebHostDefaults(webBuilder =>
     {
         webBuilder.UseStartup<Startup>();
-        webBuilder.UseUrls("http://localhost:5050");
+        webBuilder.UseUrls($"http://localhost:{ServiceInfo.ApiPort}");
 
         // For Windows Service, configure Kestrel to not wait for requests
         if (isService)
@@ -283,7 +283,7 @@ try
 
             // Show active features
             Log.Information("=========================================");
-            Log.Information("ACTIVE FEATURES v0.7.1:");
+            Log.Information("ACTIVE FEATURES v{Version}:", ServiceInfo.Version);
             Log.Information("✓ Centralized Configuration");
             Log.Information("✓ Pipeline Architecture");
             Log.Information("✓ Multi-Pipeline Support");
@@ -291,6 +291,7 @@ try
             Log.Information("✓ Health Checks");
             Log.Information("✓ Web API");
             Log.Information(isService ? "✓ Windows Service" : "✓ Console Mode");
+            Log.Information("✓ Tab-Complete Testing Tools");
             Log.Information("=========================================");
         }
         catch (Exception ex)
@@ -371,7 +372,7 @@ public class Startup
                 var status = new
                 {
                     ServiceStatus = "Running",
-                    Version = "0.7.1",
+                    Version = ServiceInfo.Version,
                     Mode = Environment.UserInteractive ? "Console" : "Service",
                     Uptime = DateTime.UtcNow - Program.ServiceStartTime,
                     ConfigPath = ConfigurationPaths.GetPrimaryConfigPath(),
@@ -445,17 +446,20 @@ public class Startup
                 endpoints.MapGet("/", async context =>
                 {
                     context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync(@"
+                    await context.Response.WriteAsync($@"
                         <html>
-                        <head><title>CamBridge Service v0.7.1</title></head>
+                        <head><title>{ServiceInfo.GetFullVersionString()}</title></head>
                         <body>
                             <h1>CamBridge Service - Centralized Configuration</h1>
+                            <p>Version: {ServiceInfo.Version}</p>
                             <p>Service läuft mit zentraler Config!</p>
                             <ul>
                                 <li>Health: <a href='/health'>/health</a></li>
                                 <li>Status: <a href='/api/status'>/api/status</a></li>
                                 <li>Pipelines: <a href='/api/pipelines'>/api/pipelines</a></li>
                             </ul>
+                            <hr/>
+                            <small>{ServiceInfo.Copyright}</small>
                         </body>
                         </html>");
                 });
