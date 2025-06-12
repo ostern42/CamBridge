@@ -1,6 +1,6 @@
 // src\CamBridge.Config\Services\ConfigurationService.cs
-// Version: 0.7.1
-// Description: Simplified configuration service with centralized config path
+// Version: 0.7.10
+// Description: Simplified configuration service - V2 format ONLY!
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -16,7 +16,7 @@ namespace CamBridge.Config.Services
 {
     /// <summary>
     /// Configuration service using centralized config management
-    /// KISS: One config path for all!
+    /// KISS: One config path, one format (V2 with CamBridge wrapper)!
     /// </summary>
     public class ConfigurationService : IConfigurationService
     {
@@ -49,52 +49,48 @@ namespace CamBridge.Config.Services
             {
                 if (!File.Exists(_configPath))
                 {
-                    Debug.WriteLine("Config file not found!");
-
-                    // For CamBridgeSettingsV2, create minimal default (NO DEMO!)
-                    if (typeof(T) == typeof(CamBridgeSettingsV2))
-                    {
-                        var defaultConfig = CreateMinimalDefaultSettings();
-                        await SaveConfigurationAsync(defaultConfig);
-                        Debug.WriteLine("Created minimal default config");
-                        return defaultConfig as T;
-                    }
-
+                    Debug.WriteLine("Config file not found - will be created by InitializePrimaryConfig");
                     return null;
                 }
 
                 var json = await File.ReadAllTextAsync(_configPath);
                 Debug.WriteLine($"Read {json.Length} characters");
 
-                // Special handling for CamBridgeSettingsV2
+                // Special handling for CamBridgeSettingsV2 - ALWAYS load from "CamBridge" section
                 if (typeof(T) == typeof(CamBridgeSettingsV2))
                 {
-                    // Try direct deserialization first
-                    try
-                    {
-                        var settings = JsonSerializer.Deserialize<T>(json, _jsonOptions);
-                        if (settings != null)
-                        {
-                            Debug.WriteLine("✅ Loaded settings successfully");
-                            return settings;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Direct deserialization failed: {ex.Message}");
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
 
-                        // Try parsing service format
-                        var serviceSettings = ParseServiceFormat(json);
-                        if (serviceSettings != null)
-                        {
-                            Debug.WriteLine("✅ Parsed service format successfully");
-                            return serviceSettings as T;
-                        }
+                    // We REQUIRE a "CamBridge" section - no fallbacks!
+                    if (!root.TryGetProperty("CamBridge", out var cambridgeSection))
+                    {
+                        throw new InvalidOperationException(
+                            "Configuration file is missing required 'CamBridge' section! " +
+                            "This is not a valid V2 configuration file.");
                     }
+
+                    // Deserialize from the CamBridge section
+                    var settings = JsonSerializer.Deserialize<CamBridgeSettingsV2>(
+                        cambridgeSection.GetRawText(),
+                        _jsonOptions);
+
+                    if (settings == null)
+                    {
+                        throw new InvalidOperationException(
+                            "Failed to deserialize CamBridge section to CamBridgeSettingsV2");
+                    }
+
+                    Debug.WriteLine($"✅ Loaded settings from CamBridge section");
+                    Debug.WriteLine($"   Version: {settings.Version}");
+                    Debug.WriteLine($"   Pipelines: {settings.Pipelines.Count}");
+                    Debug.WriteLine($"   MappingSets: {settings.MappingSets.Count}");
+
+                    return settings as T;
                 }
                 else
                 {
-                    // Generic deserialization
+                    // Generic deserialization (for other types if needed)
                     var config = JsonSerializer.Deserialize<T>(json, _jsonOptions);
                     if (config != null)
                     {
@@ -110,9 +106,7 @@ namespace CamBridge.Config.Services
             {
                 Debug.WriteLine($"ERROR loading config: {ex.Message}");
                 Debug.WriteLine($"Stack: {ex.StackTrace}");
-
-                // Don't hide errors - let them bubble up!
-                throw new InvalidOperationException($"Failed to load configuration from {_configPath}", ex);
+                throw;
             }
         }
 
@@ -131,7 +125,7 @@ namespace CamBridge.Config.Services
                 {
                     try
                     {
-                        var backupPath = ConfigurationPaths.BackupConfig(ConfigurationPaths.GetPrimaryConfigPath());
+                        var backupPath = ConfigurationPaths.BackupConfig(_configPath);
                         Debug.WriteLine($"Created backup: {backupPath}");
                     }
                     catch (Exception backupEx)
@@ -140,10 +134,37 @@ namespace CamBridge.Config.Services
                     }
                 }
 
-                var json = JsonSerializer.Serialize(configuration, _jsonOptions);
-                await File.WriteAllTextAsync(_configPath, json);
+                // For CamBridgeSettingsV2, we ALWAYS wrap it in the CamBridge section
+                if (configuration is CamBridgeSettingsV2 v2Settings)
+                {
+                    // Create wrapper object with proper V2 format
+                    var wrapper = new Dictionary<string, object>
+                    {
+                        ["CamBridge"] = v2Settings,
+                        ["Logging"] = new
+                        {
+                            LogLevel = new
+                            {
+                                Default = "Information",
+                                Microsoft = "Warning",
+                                CamBridge = "Information"
+                            }
+                        }
+                    };
 
-                Debug.WriteLine($"✅ Config saved successfully ({json.Length} characters)");
+                    var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
+                    await File.WriteAllTextAsync(_configPath, json);
+
+                    Debug.WriteLine($"✅ Config saved with CamBridge wrapper ({json.Length} characters)");
+                    Debug.WriteLine($"   Pipelines saved: {v2Settings.Pipelines.Count}");
+                }
+                else
+                {
+                    // Generic save (shouldn't happen in normal use)
+                    var json = JsonSerializer.Serialize(configuration, _jsonOptions);
+                    await File.WriteAllTextAsync(_configPath, json);
+                    Debug.WriteLine($"✅ Config saved successfully ({json.Length} characters)");
+                }
             }
             catch (Exception ex)
             {
@@ -151,104 +172,5 @@ namespace CamBridge.Config.Services
                 throw new InvalidOperationException($"Failed to save configuration to {_configPath}", ex);
             }
         }
-
-        /// <summary>
-        /// Parse service format (for compatibility)
-        /// </summary>
-        private CamBridgeSettingsV2? ParseServiceFormat(string json)
-        {
-            try
-            {
-                Debug.WriteLine("Attempting to parse service format...");
-
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                var settings = new CamBridgeSettingsV2();
-
-                // Parse pipelines from service format
-                if (root.TryGetProperty("Pipelines", out var pipelines))
-                {
-                    foreach (var pipelineElement in pipelines.EnumerateArray())
-                    {
-                        var pipeline = new PipelineConfiguration
-                        {
-                            Id = Guid.TryParse(pipelineElement.GetProperty("Id").GetString(), out var id)
-                                ? id : Guid.NewGuid(),
-                            Name = pipelineElement.GetProperty("Name").GetString() ?? "Unknown",
-                            Enabled = pipelineElement.TryGetProperty("Enabled", out var enabled)
-                                && enabled.GetBoolean()
-                        };
-
-                        // Parse WatchSettings
-                        if (pipelineElement.TryGetProperty("WatchSettings", out var watch))
-                        {
-                            pipeline.WatchSettings.Path = watch.TryGetProperty("Path", out var path)
-                                ? path.GetString() ?? "" : "";
-                            pipeline.WatchSettings.FilePattern = watch.TryGetProperty("Filter", out var filter)
-                                ? filter.GetString() ?? "*.jpg" : "*.jpg";
-                            pipeline.WatchSettings.IncludeSubdirectories = watch.TryGetProperty("IncludeSubdirectories", out var includeSubDirs)
-                                && includeSubDirs.GetBoolean();
-                        }
-
-                        // Parse OutputSettings
-                        if (pipelineElement.TryGetProperty("OutputSettings", out var output))
-                        {
-                            if (output.TryGetProperty("Path", out var outputPath))
-                            {
-                                pipeline.ProcessingOptions.ArchiveFolder = outputPath.GetString() ?? "";
-                            }
-                        }
-
-                        settings.Pipelines.Add(pipeline);
-                        Debug.WriteLine($"Parsed pipeline: {pipeline.Name}");
-                    }
-                }
-
-                // Initialize other required properties
-                settings.GlobalDicomSettings = new DicomSettings();
-                settings.DefaultProcessingOptions = new ProcessingOptions();
-                settings.Logging = new LoggingSettings();
-                settings.Service = new ServiceSettings();
-                settings.Notifications = new NotificationSettings();
-
-                Debug.WriteLine($"✅ Parsed {settings.Pipelines.Count} pipelines from service format");
-                return settings;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Failed to parse service format: {ex.Message}");
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Create minimal default settings (NO DEMO PIPELINES!)
-        /// </summary>
-        private CamBridgeSettingsV2 CreateMinimalDefaultSettings()
-        {
-            Debug.WriteLine("Creating minimal default settings (no demo pipelines)");
-
-            var settings = new CamBridgeSettingsV2
-            {
-                Version = "2.0",
-                Pipelines = new List<PipelineConfiguration>(), // EMPTY!
-                GlobalDicomSettings = new DicomSettings(),
-                DefaultProcessingOptions = new ProcessingOptions
-                {
-                    ArchiveFolder = @"C:\CamBridge\Output",
-                    ErrorFolder = @"C:\CamBridge\Error",
-                    BackupFolder = @"C:\CamBridge\Archive"
-                },
-                Logging = new LoggingSettings
-                {
-                    LogFolder = ConfigurationPaths.GetLogsDirectory()
-                },
-                Service = new ServiceSettings(),
-                Notifications = new NotificationSettings()
-            };
-
-            return settings;
-        }
-
     }
 }

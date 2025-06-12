@@ -1,4 +1,4 @@
-// src\CamBridge.Core\CamBridgeSettings.cs
+﻿// src\CamBridge.Core\CamBridgeSettings.cs
 // Version: 0.6.2
 // Description: Main configuration model for CamBridge application
 
@@ -212,5 +212,10 @@ namespace CamBridge.Core
         /// File processing delay in milliseconds
         /// </summary>
         public int FileProcessingDelayMs { get; set; } = 500;
+
+        /// <summary>
+        /// API port for web interface
+        /// </summary>
+        public int ApiPort { get; set; } = 5111;
     }
 }

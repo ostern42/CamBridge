@@ -1,10 +1,35 @@
 # WISDOM ARCHITECTURE - CamBridge Architektur-Dokumentation
-**Letzte Aktualisierung:** 2025-06-10, 17:00  
+**Letzte Aktualisierung:** 2025-06-13, 01:30  
 **Von:** Claude (für meine eigene Wartbarkeit)  
-**Version:** 0.7.4
-**Status:** Testing Complete, Ready for Dead Letter Surgery
+**Version:** 0.7.10
+**Status:** Configuration Unity Implementation
 
 ## 🏗️ ARCHITEKTUR-EVOLUTION
+
+### Version 0.7.10: Die Config Unity Phase 🔧
+```
+┌─────────────────────────────────────────────┐
+│         UNIFIED CONFIGURATION               │
+│         One JSON Format for All             │
+├─────────────────────────────────────────────┤
+│ ConfigurationPaths.GetPrimaryConfigPath()   │
+│         ↙                    ↘              │
+┌──────────────┐         ┌──────────────┐    │
+│ Config Tool  │         │   Service    │    │
+└──────────────┘         └──────────────┘    │
+     ↓                          ↓            │
+┌─────────────────────────────────────────────┤
+│            appsettings.json                 │
+│         { "CamBridge": { ... } }            │
+└─────────────────────────────────────────────┘
+```
+
+**Key Changes:**
+- Config UI MUSS ConfigurationPaths nutzen!
+- Alles in "CamBridge" wrapper section
+- Einheitliche Property Names
+- ParseServiceFormat kann weg!
+- Debug = Release durch gleiche Config
 
 ### Version 0.1-0.5: Die Naive Phase
 ```
@@ -33,7 +58,7 @@
 - 5000+ LOC
 - **Learning:** KISS vergessen!
 
-### Version 0.7.0-0.7.2: Die Aufräum-Phase
+### Version 0.7.0-0.7.9: Die Simplification Phase
 ```
 ┌──────────────┐     ┌──────────────┐
 │ Config Tool  │────▶│   Service    │
@@ -45,31 +70,9 @@
 └──────────────┘     └──────────────┘
 ```
 - Interface Removal begonnen
-- Config Path vereinheitlicht
-- DailySummaryService entfernt
-- **Progress:** 2/3 Interfaces weg!
-
-### Version 0.7.3-0.7.4: Die Foundation & Testing Phase (CURRENT)
-```
-┌─────────────────────────────────────┐
-│         Settings Architecture        │
-├─────────────────────────────────────┤
-│ SystemSettings │ Pipeline │ UserPref│
-├─────────────────────────────────────┤
-│        ConfigurationPaths           │
-│        (ProgramData ONLY!)          │
-└─────────────────────────────────────┘
-        ▲               ▲
-        │               │
-┌──────────────┐ ┌──────────────┐
-│ Config Tool  │ │   Service    │
-└──────────────┘ └──────────────┘
-```
-- 3-Layer Settings implementiert
-- Foundation stabilisiert
-- Legacy Support sichergestellt
-- Config Path Bugs gefixt
-- **Achievement:** Tested & Working!
+- Dead Letter Queue entfernt (-650 LOC!)
+- Settings Architecture implementiert
+- **Progress:** Foundation stabilisiert!
 
 ### Version 0.8.0: Das Ziel
 ```
@@ -90,87 +93,137 @@
         └────────────────┘
 ```
 
-## 📐 AKTUELLE ARCHITEKTUR (v0.7.4)
+## 🔧 CONFIGURATION ARCHITECTURE (v0.7.10)
+
+### Configuration Flow:
+```
+1. ConfigurationPaths.InitializePrimaryConfig()
+   ↓
+2. Creates default config if missing
+   ↓
+3. Loads from %ProgramData%\CamBridge\appsettings.json
+   ↓
+4. Everything wrapped in "CamBridge" section
+   ↓
+5. Same structure for Service & Config UI
+```
+
+### Unified JSON Structure:
+```json
+{
+  "CamBridge": {                              // WRAPPER SECTION!
+    "Version": "2.0",                         // Schema version
+    "Service": { ... },                       // Service settings
+    "Pipelines": [ ... ],                     // Pipeline configs
+    "MappingSets": [ ... ],                   // Mapping rules
+    "GlobalDicomSettings": { ... },           // DICOM defaults
+    "DefaultProcessingOptions": { ... },      // Processing defaults
+    "Logging": { ... },                       // Log settings
+    "Notifications": { ... },                 // Notification config
+    "ExifToolPath": "Tools\\exiftool.exe"    // Tool paths
+  }
+}
+```
+
+### Configuration Rules:
+1. **ALWAYS use ConfigurationPaths**
+   - No hardcoded paths!
+   - No fallback searches!
+   - One source of truth!
+
+2. **ALWAYS wrap in "CamBridge" section**
+   - Clear namespace
+   - Avoid conflicts
+   - Future extensibility
+
+3. **ALWAYS use consistent property names**
+   - FilePattern not Filter
+   - ProcessingOptions not ProcessingOptions
+   - Same names everywhere!
+
+4. **NEVER mix config formats**
+   - No V1 in Service
+   - No custom JSON
+   - V2 format only!
+
+## 📐 AKTUELLE ARCHITEKTUR (v0.7.10)
 
 ### Core Layer
 ```
 CamBridge.Core/
+├── Configuration/
+│   ├── ConfigurationPaths.cs     [CRITICAL! Use everywhere!] 🔧
+│   ├── CamBridgeSettingsV2.cs    [Primary settings model] ✅
+│   ├── PipelineConfiguration.cs  [Pipeline model] ✅
+│   └── ProcessingOptions.cs      [Processing config] ✅
+├── Settings/                     [3-Layer Architecture]
+│   ├── SystemSettings.cs         [Future: System-wide] 📋
+│   ├── UserPreferences.cs        [Future: Per-User] 📋
+│   └── NotificationSettings.cs   [Notifications] ✅
 ├── Entities/
-│   ├── ImageMetadata.cs      - EXIF/Meta Daten
-│   ├── PatientInfo.cs        - Patient Daten
-│   ├── StudyInfo.cs          - Study Daten
-│   └── ProcessingResult.cs   - Ergebnis-Typ
-├── Settings/                  [STABLE!]
-│   ├── SystemSettings.cs      - System-wide ✅
-│   ├── UserPreferences.cs     - Per-User ✅
-│   └── NotificationSettings.cs- Notifications ✅
+│   ├── ImageMetadata.cs          
+│   ├── PatientInfo.cs            
+│   └── StudyInfo.cs              
 ├── Interfaces/
-│   ├── IDicomConverter.cs     [REMOVED] ✅
-│   ├── IDicomTagMapper.cs     [NEXT TO REMOVE]
-│   └── IMappingConfiguration.cs
-├── ValueObjects/
-│   ├── DicomTag.cs
-│   ├── ExifTag.cs
-│   └── PatientId.cs
-└── Configuration/
-    ├── ConfigurationPaths.cs  [TESTED & WORKING!] ✅
-    ├── PipelineConfiguration.cs
-    └── ProcessingOptions.cs   [TO UPDATE for Dead Letter]
+│   ├── IDicomTagMapper.cs        [NEXT TO REMOVE]
+│   └── IMappingConfiguration.cs  [NEXT TO REMOVE]
+└── ValueObjects/
+    ├── DicomTag.cs
+    └── PatientId.cs
 ```
 
 ### Infrastructure Layer
 ```
 CamBridge.Infrastructure/
 ├── Services/
-│   ├── DicomConverter.cs      - Direkt (no interface) ✅
-│   ├── DicomTagMapper.cs      [TO SIMPLIFY]
-│   ├── ExifToolReader.cs      - Direkt implementiert ✅
-│   ├── FileProcessor.cs       - Orchestrierung
-│   ├── ProcessingQueue.cs     - File Queue ✅
-│   ├── DeadLetterQueue.cs     [TO REMOVE - 300+ LOC] 🎯
-│   ├── PipelineManager.cs     - Pipeline Logic
-│   ├── FolderWatcherService.cs- Folder Monitoring
-│   └── NotificationService.cs - Email/EventLog
-└── ServiceCollectionExtensions.cs
+│   ├── DicomConverter.cs         [Direct, no interface] ✅
+│   ├── DicomTagMapper.cs         [TO SIMPLIFY]
+│   ├── ExifToolReader.cs         [Direct implementation] ✅
+│   ├── FileProcessor.cs          [Orchestration] ✅
+│   ├── ProcessingQueue.cs        [Per-Pipeline] ✅
+│   ├── PipelineManager.cs        [Pipeline orchestrator] ✅
+│   └── NotificationService.cs    [Simple logging] ✅
+└── ServiceCollectionExtensions.cs [CONFIG FROM "CamBridge"!] 🔧
 ```
 
 ### Service Layer
 ```
 CamBridge.Service/
-├── Program.cs                 - Host & DI Setup
-├── Worker.cs                  - Background Service
+├── Program.cs                    [Uses ConfigurationPaths] ✅
+├── Worker.cs                     [Background Service]
 ├── Controllers/
-│   └── StatusController.cs    - REST API [TO UPDATE]
-├── Tools/
-│   └── exiftool.exe          - External Tool
-└── appsettings.json          - In ProgramData! ✅
+│   └── StatusController.cs       [REST API]
+├── appsettings.json             [NEEDS V2 FORMAT!] 🔧
+└── appsettings.Development.json [NEEDS V2 FORMAT!] 🔧
 ```
 
 ### Config Tool Layer
 ```
 CamBridge.Config/
+├── App.xaml.cs                  [NEEDS ConfigurationPaths!] 🔧
+├── Services/
+│   └── ConfigurationService.cs  [REMOVE ParseServiceFormat!] 🔧
 ├── ViewModels/
-│   ├── MainViewModel.cs
-│   ├── DashboardViewModel.cs  [TESTED & WORKING!] ✅
-│   ├── SettingsViewModel.cs
-│   ├── DeadLettersViewModel.cs [TO SIMPLIFY] 🎯
-│   └── PipelineConfigViewModel.cs [TESTED & WORKING!] ✅
-├── Views/
-│   ├── MainWindow.xaml
-│   ├── DashboardPage.xaml     [TESTED & WORKING!] ✅
-│   ├── SettingsPage.xaml
-│   ├── DeadLettersPage.xaml   [TO SIMPLIFY] 🎯
-│   ├── AboutPage.xaml         [v0.7.4 + Debug/Release] ✅
-│   └── PipelineConfigPage.xaml [TESTED & WORKING!] ✅
-└── Services/
-    ├── ISettingsService.cs     [READY FOR IMPL]
-    ├── ConfigurationService.cs [TESTED & WORKING!] ✅
-    └── HttpApiService.cs
+│   ├── DashboardViewModel.cs    [Shows pipelines]
+│   └── PipelineConfigViewModel.cs [Pipeline management]
+└── Views/
+    ├── DashboardPage.xaml       [Must show pipelines!]
+    └── PipelineConfigPage.xaml  [Pipeline editor]
 ```
 
 ## 🔄 DATENFLUSS
 
-### Aktueller Flow (v0.7.4) - TESTED & VERIFIED:
+### Configuration Flow (v0.7.10):
+```
+1. App Start → ConfigurationPaths.InitializePrimaryConfig()
+2. Load from %ProgramData%\CamBridge\appsettings.json
+3. Deserialize "CamBridge" section to CamBridgeSettingsV2
+4. Service & Config UI use SAME config structure
+5. Changes saved back to SAME location
+6. Debug/Release use SAME config (with env overrides)
+```
+
+### Processing Flow (unchanged):
 ```
 1. JPEG File → FolderWatcher
 2. FolderWatcher → ProcessingQueue
@@ -179,55 +232,43 @@ CamBridge.Config/
 5. FileProcessor → DicomTagMapper (mapping)
 6. FileProcessor → DicomConverter (DICOM create)
 7. Success → Archive Folder
-8. Failure → DeadLetterQueue [TO CHANGE TO ERROR FOLDER]
-```
-
-### Config Flow (FIXED!):
-```
-1. ConfigurationPaths → ProgramData ONLY! ✅
-2. No more AppData fallback! ✅
-3. Service & Config Tool → Same config! ✅
-```
-
-### Ziel-Flow (v0.8.0):
-```
-1. JPEG File → FolderWatcher
-2. FolderWatcher → ProcessingQueue
-3. ProcessingQueue → CamBridgeProcessor (unified)
-4. Success → Archive/Output
-5. Failure → Error Folder (simple!)
+8. Failure → Error Folder (simple!)
 ```
 
 ## 🏛️ ARCHITEKTUR-PRINZIPIEN
 
-### Was wir gelernt haben:
+### Configuration Unity Principles:
+1. **One Config Path**
+   - ConfigurationPaths.GetPrimaryConfigPath()
+   - No alternatives!
+   - No fallbacks!
+
+2. **One Config Format**
+   - CamBridgeSettingsV2 only
+   - "CamBridge" wrapper section
+   - Consistent property names
+
+3. **One Loading Strategy**
+   - ConfigurationPaths.InitializePrimaryConfig()
+   - Both apps use same method
+   - Debug = Release behavior
+
+4. **Clear Separation**
+   - System settings (ProgramData)
+   - User preferences (AppData) - future
+   - Pipeline configs (ProgramData/Pipelines) - future
+
+5. **No Workarounds**
+   - No ParseServiceFormat
+   - No format detection
+   - No migration hacks
+
+### General Principles:
 1. **KISS > Clean Architecture**
-   - Nicht jedes Pattern ist nötig
-   - Direkte Implementierung oft besser
-   - Weniger Abstraktionen = weniger Bugs
-
 2. **Foundation First**
-   - Settings müssen stimmen ✅
-   - Config Paths müssen klar sein ✅
-   - Error Handling von Anfang an
-   - **Testing reveals truth!** ✅
-
 3. **Incremental Refactoring**
-   - Kleine Schritte
-   - Immer lauffähig bleiben
-   - User Feedback einbeziehen
-   - **Test after each change!** ✅
-
 4. **Type Safety nutzen**
-   - Compiler ist dein Freund
-   - Explizite Conversions OK
-   - Nullable References helfen
-
 5. **Legacy Support wichtig**
-   - Alte APIs beibehalten
-   - Migration ermöglichen
-   - Breaking Changes vermeiden
-   - **But delete old configs!** ✅
 
 ## 🎯 ARCHITEKTUR-ZIELE
 
@@ -235,7 +276,8 @@ CamBridge.Config/
 - [x] Config vereinheitlichen ✅
 - [x] Settings Architecture ✅
 - [x] Test & Fix Bugs ✅
-- [ ] Dead Letter entfernen 🎯
+- [x] Dead Letter entfernen ✅
+- [🔧] Config Unity implementieren
 - [ ] Interfaces reduzieren
 - [ ] Services konsolidieren
 
@@ -254,155 +296,126 @@ CamBridge.Config/
 ## 🔧 TECHNISCHE SCHULDEN
 
 ### Identifiziert:
-1. **Over-Engineering** (wird behoben)
+1. **Config Chaos** (fixing now!)
+   - Multiple formats ✓ (fixing)
+   - Missing ConfigurationPaths ✓ (fixing)
+   - ParseServiceFormat workaround ✓ (removing)
+
+2. **Over-Engineering** (wird behoben)
    - Zu viele Interfaces ✓ (fixing)
    - Zu viele Services ✓ (fixing)
-   - Dead Letter Queue ✓ (removing next)
 
-2. **Missing Tests**
+3. **Missing Tests**
    - Unit Tests fehlen
    - Integration Tests fehlen
    - → Nach Simplification
 
-3. **Documentation**
-   - Code Comments OK
-   - API Docs fehlen
-   - User Manual fehlt
-
-### Behoben in v0.7.3-0.7.4:
-- ✅ Config Path Chaos (TESTED!)
+### Behoben:
+- ✅ Dead Letter Queue (-650 LOC!)
+- ✅ Config Path Chaos
 - ✅ Settings Structure
-- ✅ Legacy Compatibility
-- ✅ Naming Conflicts
-- ✅ Pipeline Persistence
-- ✅ Version Display
-- ✅ Old Config Ghosts!
+- ✅ Version Consistency
 
 ## 📊 METRIKEN
 
 ### Code-Volumen:
 - **v0.6.0:** ~15,000 LOC
-- **v0.7.2:** ~14,940 LOC (-60)
-- **v0.7.3:** ~15,940 LOC (+1000 Foundation)
-- **v0.7.4:** ~15,940 LOC (Bug fixes only)
-- **v0.7.5 (geplant):** ~15,290 LOC (-650 Dead Letter!)
+- **v0.7.9:** ~14,350 LOC (-650!)
+- **v0.7.10:** ~14,350 LOC (config only)
 - **Ziel v0.8.0:** <12,000 LOC
 
 ### Komplexität:
 - **Interfaces:** 15 → 12 → 10 (Ziel: 0-3)
 - **Services:** 15+ → 12 → ? (Ziel: 5-6)
+- **Config Systems:** 3+ → 1 (fixing!)
 - **Abstraction Layers:** 4 → 3 (Ziel: 2)
 
-### Build Performance:
-- **Clean Build:** 16.6s
-- **Incremental:** ~3s
-- **Ziel:** <10s clean
-
-### Testing Status:
-- **Pipeline Persistence:** ✅ WORKS!
-- **Version Display:** ✅ CORRECT!
-- **Service Communication:** ✅ WORKING!
-- **Config Loading:** ✅ FIXED!
+### Configuration Metrics:
+- **Config Formats:** 3+ → 1
+- **Config Paths:** Multiple → 1
+- **JSON Structures:** Inconsistent → Unified
+- **Debug vs Release:** Different → Same!
 
 ## 🚀 MIGRATION STRATEGY
 
-### Von v0.6 zu v0.7:
-1. ✅ Backup existing configs
-2. ✅ Install new version
-3. ✅ Run migration script
-4. ✅ Verify functionality
-5. ✅ **Delete old AppData configs!**
-
-### Von v0.7.4 zu v0.7.5:
-1. Dead Letter Daten sichern (falls nötig)
-2. Error Folder erstellen
-3. Update installieren
-4. Verify error handling
-5. Celebrate -650 LOC!
+### Config Unity Migration (v0.7.10):
+1. Backup existing configs
+2. Convert to V2 format with wrapper
+3. Add ConfigurationPaths to Config UI
+4. Remove ParseServiceFormat
+5. Test Debug vs Release
+6. Verify pipelines in UI
 
 ### Breaking Changes:
-- **v0.7.0:** IDicomConverter entfernt
-- **v0.7.1:** IFileProcessor entfernt
-- **v0.7.3:** Settings neu strukturiert (compatible!)
-- **v0.7.4:** Bugs gefixt (no breaking changes!)
-- **v0.7.5:** Dead Letter Queue entfernt (planned)
+- **v0.7.10:** Config format unified (auto-migration)
 
 ## 🎨 DESIGN DECISIONS
 
-### Warum keine Interfaces?
-- **Problem:** Interface für jeden Service
-- **Lösung:** Nur wo Polymorphie nötig
-- **Beispiel:** DicomConverter direkt statt IDicomConverter
-- **Vorteil:** -50% Code, gleiche Funktion
-- **Status:** Working great! ✅
+### Warum Config Unity?
+- **Problem:** 3+ Config systems, different behaviors
+- **Lösung:** One format, one path, one loader
+- **Vorteil:** Debug = Release, maintainable
+- **Trade-off:** Migration effort (but worth it!)
 
-### Warum Error Folder statt Queue?
-- **Problem:** 500+ LOC für Error Queue
-- **Lösung:** Simple Folder + .txt files
-- **Vorteil:** Explorer nutzbar, einfacher
-- **Trade-off:** Keine UI, aber KISS!
-- **Status:** Ready to implement! 🎯
+### Warum "CamBridge" wrapper?
+- **Problem:** Root-level config conflicts
+- **Lösung:** Clear namespace section
+- **Vorteil:** Future extensibility
+- **Example:** Can add "Plugins" section later
 
-### Warum 3-Layer Settings?
-- **System:** Service + Tool gemeinsam
-- **Pipeline:** Multiple Konfigurationen
-- **User:** UI Preferences pro User
-- **Vorteil:** Klare Trennung, Multi-User ready
-- **Status:** Tested & Working! ✅
-
-### Warum nur ProgramData?
-- **Problem:** Multiple config paths = confusion
-- **Lösung:** Single source of truth
-- **Vorteil:** No more mysteries!
-- **Status:** Fixed & Verified! ✅
+### Warum ConfigurationPaths überall?
+- **Problem:** Hardcoded paths, different locations
+- **Lösung:** Centralized path management
+- **Vorteil:** One source of truth
+- **Result:** No more config mysteries!
 
 ## 🔮 ZUKUNFTSVISION
 
-### CamBridge v1.0 (Q3 2025):
+### Configuration Future:
 ```
-┌─────────────────────────────────┐
-│      CamBridge Suite 1.0        │
-├─────────────────────────────────┤
-│ ✓ JPEG→DICOM    │ ✓ FTP Server │
-│ ✓ C-STORE SCP   │ ✓ Worklist   │
-│ ✓ C-FIND SCP    │ ✓ Auto-Route │
-├─────────────────────────────────┤
-│    Simple, Solid, Medical       │
-└─────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│         Multi-Layer Config              │
+├─────────────────────────────────────────┤
+│ System Settings (ProgramData)           │
+│ Pipeline Configs (ProgramData/Pipelines)│
+│ User Preferences (AppData)              │
+│ Mapping Rules (ProgramData/Mappings)    │
+├─────────────────────────────────────────┤
+│    All using ConfigurationPaths!        │
+└─────────────────────────────────────────┘
 ```
 
-### Aber immer mit KISS:
-- Keine unnötigen Abstraktionen
-- Direkte Lösungen bevorzugen
-- Foundation muss stimmen
-- User Experience first
-- **Test everything!**
+### But always KISS:
+- One loading strategy
+- Clear separation
+- No magic fallbacks
+- Predictable behavior
 
 ## 🏁 ARCHITEKTUR-STATUS
 
-**Session 54 Summary:**
-- Foundation implementiert ✅
-- 3-Layer Settings ✅
-- Legacy Support ✅
-- Bugs fixed ✅
-- Tested & Verified ✅
-- Ready für Dead Letter Surgery! 🎯
+**Session 60 Summary:**
+- Config Chaos identified ✅
+- Root cause found ✅
+- Solution designed ✅
+- Implementation ready 🔧
+- Testing planned 🧪
 
 **Next Architecture Steps:**
-1. Dead Letter → Error Folder (-650 LOC!)
-2. IDicomTagMapper entfernen
-3. Services konsolidieren
-4. Medical Features (SIMPLE!)
+1. Implement Config Unity
+2. Test Debug = Release
+3. Remove workarounds
+4. Continue Interface Removal
 
 **Architecture Health:**
 - Foundation: ████████████ 100% ✅
-- Simplification: ████████░░░░ 66%
+- Simplification: ████████░░░░ 70%
+- Config Unity: ██░░░░░░░░░░ 20% 🔧
 - Testing: ████████░░░░ 66%
 - Documentation: ██████░░░░░░ 50%
 
 ---
 
-*"Architecture is not about perfection, it's about purpose - and testing!"*
+*"Architecture is not about perfection, it's about consistency!"*
 
-**CamBridge Architecture - Built, Tested, Ready to Simplify!**
+**CamBridge Architecture - Making Debug = Release Reality!**
 © 2025 Claude's Improbably Reliable Software Solutions

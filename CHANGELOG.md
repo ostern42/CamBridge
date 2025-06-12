@@ -8,6 +8,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.7.10] - 2025-06-13
+
+### 🔧 Configuration Unity Mission
+
+### Analyzed
+- **3+ Configuration Systems** running in parallel
+  - Service: Custom JSON format without wrapper
+  - Core: Expects V2 format with "CamBridge" section
+  - Config UI: No ConfigurationPaths usage
+  - Settings: V1, V2, SystemSettings mix
+- **Property Name Inconsistencies**
+  - Service: Filter, ProcessingOptions, OutputSettings
+  - Core: FilePattern, ProcessingOptions, different structure
+- **Root Cause:** Config UI missing ConfigurationPaths.InitializePrimaryConfig()
+
+### Designed
+- **Unified V2 JSON Format** with "CamBridge" wrapper section
+- **ConfigurationPaths everywhere** - single source of truth
+- **Consistent property names** across all components
+- **Development overrides** that only change values, not structure
+- **ParseServiceFormat removal** - no more workarounds needed
+
+### Planned Implementation
+1. Add ConfigurationPaths to Config UI startup (App.xaml.cs)
+2. Migrate JSON files to unified V2 format
+3. Update Service to use "CamBridge" section
+4. Remove ParseServiceFormat workaround
+5. Test Debug vs Release consistency
+
+### Code Changes Prepared
+- **App.xaml.cs** - Added ConfigurationPaths.InitializePrimaryConfig()
+- **appsettings.json** - Unified V2 format with proper structure
+- **appsettings.Development.json** - Clean overrides only
+- **ServiceCollectionExtensions** - Ready for "CamBridge" section
+
+### Developer Notes
+- Session 60: Deep configuration analysis complete
+- Oliver: "ein nachvollziehbarer klarer, vernünftiger weg für die zukunft"
+- Solution: Unity through ConfigurationPaths and consistent format
+- KISS: One config format for all modes and components
+- Next: Implement and test with Tab-Complete system
+
+### Technical Debt Identified
+- Multiple incompatible config formats
+- Missing centralized path management
+- Workarounds (ParseServiceFormat) instead of fixes
+- Different behavior in Debug vs Release
+
+---
+*"Making the improbable reliably consistent through configuration unity!"*  
+© 2025 Claude's Improbably Reliable Software Solutions
+
+# Changelog Entry
+
+## [0.7.10] - 2025-06-13
+
+### 🔍 Settings Configuration Analysis
+
+### Discovered
+- **Config UI loads from different path** than Service
+- **3+ Settings systems** running in parallel (V1, V2, SystemSettings)
+- **Root cause:** Config UI missing ConfigurationPaths usage
+- **JSON format mismatch** - needs "CamBridge" wrapper section
+- Service uses correct path via ConfigurationPaths ✅
+- Config UI has no ConfigurationPaths integration ❌
+
+### Analyzed
+- ServiceCollectionExtensions registers from "CamBridge" section
+- Current JSON has no "CamBridge" section (explains empty UI)
+- appsettings.Development.json uses old V1 format
+- ParseServiceFormat exists as workaround for wrong format
+- Multiple incompatible Settings classes cause confusion
+
+### Planned (for v0.8.0)
+- Add ConfigurationPaths to Config UI startup
+- Migrate JSON to consistent V2 format
+- Wrap all settings in "CamBridge" section
+- Use real GUIDs instead of placeholder values
+- Development overrides for paths only, not structure
+- Remove V1 settings registration
+- Test Debug vs Release consistency
+
+### Documentation
+- Created WISDOM_SPRINT_CONFIG_CONSISTENCY.md
+- Detailed implementation plan
+- Test strategy for all build modes
+- Migration path defined
+
+### Developer Notes
+- Session 59: Deep configuration analysis
+- Oliver: "debug als auch release sollten identisch funktionieren"
+- Problem: Apps load configs from different locations
+- Solution: Unify through ConfigurationPaths usage
+- KISS: One config structure for all modes!
+
+### Next Steps
+1. Implement Config UI fix (ConfigurationPaths)
+2. Migrate JSON files to V2 format
+3. Test with Tab-Complete system (0[TAB] vs 00[TAB])
+4. Verify pipelines show in Config UI
+5. Continue Interface Removal (13 remaining)
+
+---
+*"Making the improbable reliably consistent through configuration unity!"*  
+© 2025 Claude's Improbably Reliable Software Solutions
+
 ## [0.7.9] - 2025-06-12
 
 ### 🔥 Dead Letter Surgery Complete!

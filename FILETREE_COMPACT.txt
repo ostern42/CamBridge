@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.7.7
+# // Version: 0.7.9
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 253
-# Generated: 2025-06-11 00:24
+# Total files: 258
+# Generated: 2025-06-13 00:13
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -134,7 +134,6 @@ src\CamBridge.Core\ValueTransform.cs
 src\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj
 src\CamBridge.Infrastructure\GlobalUsings.cs
 src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs
-src\CamBridge.Infrastructure\Services\DeadLetterQueue.cs
 src\CamBridge.Infrastructure\Services\DicomConverter.cs
 src\CamBridge.Infrastructure\Services\DicomTagMapper.cs
 src\CamBridge.Infrastructure\Services\ExifToolReader.cs
@@ -246,6 +245,7 @@ CamBridge.ServiceDebug\CamBridge.ServiceDebug.csproj
 CamBridge.ServiceDebug\Program.cs
 CamBridge.sln
 CHANGELOG.md
+Cleanup-DeadLetter.ps1
 COLLECTOR_README.md
 ConnectionTest\ConnectionTest.cs
 ConnectionTest\ConnectionTest.csproj
@@ -254,6 +254,8 @@ Create-DeploymentPackage - 250610.ps1
 Create-DeploymentPackage - Kopie.ps1
 Create-DeploymentPackage.ps1
 Create-NumberedTools.ps1
+current-build-error-files.txt
+dead-letter-surgery-files.txt
 Directory.Build.props
 ExifToolQuickTest\exif_output.json
 ExifToolQuickTest\ExifToolQuickTest.csproj
@@ -266,13 +268,16 @@ h-help.ps1
 Migrate-CamBridgeConfig.ps1
 Program.cs
 PROJECT_WISDOM.md
+qrbridge-constants.txt
 README.md
 README-Deployment.md
 service-manager.ps1
+ShowVersion.targets
 test-api.ps1
 Test-CompletePipeline.ps1
 Test-QRBridge.ps1
 Version.props
+version-deadletter-files.txt
 WISDOM_ARCHITECTURE.md
 WISDOM_CLAUDE.md
 WISDOM_PO.md
