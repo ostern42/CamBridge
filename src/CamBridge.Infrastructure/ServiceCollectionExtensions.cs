@@ -19,7 +19,7 @@ namespace CamBridge.Infrastructure
 {
     /// <summary>
     /// Extension methods for configuring infrastructure services
-    /// KISS UPDATE: Removing unnecessary interfaces and DeadLetterQueue
+    /// KISS UPDATE: Removed DeadLetterQueue completely!
     /// </summary>
     public static class ServiceCollectionExtensions
     {
@@ -49,7 +49,7 @@ namespace CamBridge.Infrastructure
             // Mapping Services
             services.AddSingleton<IDicomTagMapper, DicomTagMapper>();
 
-            // Notification Services (shared across pipelines)
+            // Notification Services (ultra-minimal implementation - just logging!)
             services.AddSingleton<INotificationService, NotificationService>();
 
             // Note: ProcessingQueue is now created per-pipeline by PipelineManager
@@ -60,7 +60,7 @@ namespace CamBridge.Infrastructure
             services.Configure<CamBridgeSettings>(configuration.GetSection("CamBridge")); // For backwards compatibility
             services.Configure<CamBridgeSettingsV2>(configuration.GetSection("CamBridge")); // New V2 settings
             services.Configure<ProcessingOptions>(configuration.GetSection("CamBridge:ProcessingOptions"));
-            services.Configure<NotificationSettings>(configuration.GetSection("CamBridge:NotificationSettings"));
+            // Note: NotificationSettings removed - we just log now (KISS!)
 
             // Settings migration helper
             services.AddSingleton<IPostConfigureOptions<CamBridgeSettingsV2>, CamBridgeSettingsV2PostConfigure>();
@@ -144,7 +144,7 @@ namespace CamBridge.Infrastructure
                     logger.LogInformation("Found {Count} configured pipelines", settingsV2.Value.Pipelines.Count);
                 }
 
-                logger.LogInformation("Infrastructure validation completed - KISS approach: 2 interfaces removed, DeadLetterQueue eliminated!");
+                logger.LogInformation("Infrastructure validation completed - KISS approach: DeadLetterQueue eliminated! -650 LOC removed!");
             }
             catch (Exception ex)
             {

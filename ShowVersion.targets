@@ -1,0 +1,8 @@
+﻿<Project>
+  <Target Name="ShowVersionInfo" BeforeTargets="Build">
+    <Message Text="VersionPrefix: $(VersionPrefix)" Importance="high" />
+    <Message Text="AssemblyVersion: $(AssemblyVersion)" Importance="high" />
+    <Message Text="Version: $(Version)" Importance="high" />
+    <Message Text="MSBuildProjectDirectory: $(MSBuildProjectDirectory)" Importance="high" />
+  </Target>
+</Project>

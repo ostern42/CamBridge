@@ -1,7 +1,7 @@
-﻿// src/CamBridge.Infrastructure/Services/PipelineManager.cs
+// src/CamBridge.Infrastructure/Services/PipelineManager.cs
 // Version: 0.7.8
-// Description: Orchestrates multiple processing pipelines with independent queues and watchers
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// Description: Orchestrates multiple processing pipelines - KISS without DeadLetterQueue!
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Concurrent;
@@ -19,6 +19,7 @@ namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
     /// Manages multiple processing pipelines with independent configurations, queues, and watchers
+    /// KISS UPDATE: No more DeadLetterQueue! Simple error folder approach!
     /// </summary>
     public class PipelineManager : IDisposable
     {
@@ -173,7 +174,6 @@ namespace CamBridge.Infrastructure.Services
                 return null;
 
             var queueStats = context.Queue?.GetStatistics();
-            var deadLetterStats = context.DeadLetterQueue?.GetStatistics();
 
             return new PipelineDetailedStatus
             {
@@ -183,7 +183,6 @@ namespace CamBridge.Infrastructure.Services
                 IsActive = context.IsActive,
                 Configuration = context.Configuration,
                 QueueStatistics = queueStats,
-                DeadLetterStatistics = deadLetterStats,
                 ActiveItems = context.Queue?.GetActiveItems() ?? new List<ProcessingItemStatus>()
             };
         }
@@ -201,7 +200,7 @@ namespace CamBridge.Infrastructure.Services
                 }
 
                 // Create pipeline context
-                var context = CreatePipelineContextAsync(config);
+                var context = CreatePipelineContext(config);
 
                 // Add to collection
                 _pipelines[config.Id.ToString()] = context;
@@ -218,45 +217,16 @@ namespace CamBridge.Infrastructure.Services
             }
         }
 
-        private PipelineContext CreatePipelineContextAsync(PipelineConfiguration config)
+        private PipelineContext CreatePipelineContext(PipelineConfiguration config)
         {
             // Create pipeline-specific services
             var scope = _serviceProvider.CreateScope();
 
-
-            var deadLetterQueue = new DeadLetterQueue(
-                scope.ServiceProvider.GetRequiredService<ILogger<DeadLetterQueue>>(),
-                deadLetterPath);
-
             // Create processing queue for this pipeline
-            // Clone ProcessingOptions and set DeadLetterFolder
-            var processingOptions = new ProcessingOptions
-            {
-                SuccessAction = config.ProcessingOptions.SuccessAction,
-                FailureAction = config.ProcessingOptions.FailureAction,
-                ArchiveFolder = config.ProcessingOptions.ArchiveFolder,
-                ErrorFolder = config.ProcessingOptions.ErrorFolder,
-                BackupFolder = config.ProcessingOptions.BackupFolder,
-                DeadLetterFolder = deadLetterPath, // Set the pipeline-specific dead letter path
-                CreateBackup = config.ProcessingOptions.CreateBackup,
-                MaxConcurrentProcessing = config.ProcessingOptions.MaxConcurrentProcessing,
-                RetryOnFailure = config.ProcessingOptions.RetryOnFailure,
-                MaxRetryAttempts = config.ProcessingOptions.MaxRetryAttempts,
-                OutputOrganization = config.ProcessingOptions.OutputOrganization,
-                ProcessExistingOnStartup = config.ProcessingOptions.ProcessExistingOnStartup,
-                MaxFileAge = config.ProcessingOptions.MaxFileAge,
-                MinimumFileSizeBytes = config.ProcessingOptions.MinimumFileSizeBytes,
-                MaximumFileSizeBytes = config.ProcessingOptions.MaximumFileSizeBytes,
-                OutputFilePattern = config.ProcessingOptions.OutputFilePattern,
-                RetryDelaySeconds = config.ProcessingOptions.RetryDelaySeconds
-            };
-
             var processingQueue = new ProcessingQueue(
                 scope.ServiceProvider.GetRequiredService<ILogger<ProcessingQueue>>(),
                 scope.ServiceProvider.GetRequiredService<IServiceScopeFactory>(),
-                Options.Create(processingOptions),
-                deadLetterQueue,
-                scope.ServiceProvider.GetService<INotificationService>());
+                Options.Create(config.ProcessingOptions));
 
             // Create context
             var context = new PipelineContext
@@ -569,7 +539,7 @@ namespace CamBridge.Infrastructure.Services
             public string Id { get; set; } = string.Empty;
             public PipelineConfiguration Configuration { get; set; } = new();
             public ProcessingQueue Queue { get; set; } = null!;
-                        public List<FileSystemWatcher> Watchers { get; set; } = new();
+            public List<FileSystemWatcher> Watchers { get; set; } = new();
             public Task? ProcessingTask { get; set; }
             public CancellationTokenSource? CancellationTokenSource { get; set; }
             public IServiceScope ServiceScope { get; set; } = null!;
@@ -604,8 +574,6 @@ namespace CamBridge.Infrastructure.Services
         public bool IsActive { get; set; }
         public PipelineConfiguration Configuration { get; set; } = new();
         public QueueStatistics? QueueStatistics { get; set; }
-        public object? DeadLetterStatistics { get; set; }
         public IReadOnlyList<ProcessingItemStatus> ActiveItems { get; set; } = new List<ProcessingItemStatus>();
     }
 }
-

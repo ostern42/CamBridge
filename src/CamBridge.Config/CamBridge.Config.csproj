@@ -8,7 +8,7 @@
 		<UseWPF>true</UseWPF>
 		<Platform>x64</Platform>
 		<Platforms>x64</Platforms>
-		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<ApplicationManifest>app.manifest</ApplicationManifest>

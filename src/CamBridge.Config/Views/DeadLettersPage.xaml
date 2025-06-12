@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\DeadLettersPage.xaml -->
-<!-- Version: 0.7.8 -->
-<!-- Description: Simple error folder viewer - KISS approach! -->
+<!-- Version: 0.7.9 -->
+<!-- Description: Simple error folder viewer - KISS approach! Fixed for WPF -->
 
 <Page x:Class="CamBridge.Config.Views.DeadLettersPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -30,18 +30,19 @@
         <!-- Main Content -->
         <Grid Grid.Row="1">
             <StackPanel VerticalAlignment="Center" 
-                        HorizontalAlignment="Center"
-                        Spacing="24">
+                        HorizontalAlignment="Center">
 
                 <!-- Folder Icon -->
                 <ui:SymbolIcon Symbol="Folder" 
                                Width="64" 
                                Height="64"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,24"/>
 
                 <!-- Status Text -->
                 <TextBlock HorizontalAlignment="Center"
-                           TextAlignment="Center">
+                           TextAlignment="Center"
+                           Margin="0,0,0,24">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Style.Triggers>
@@ -57,14 +58,14 @@
                 </TextBlock>
 
                 <!-- Open Folder Button -->
-                <ui:Button Command="{Binding OpenErrorFolderCommand}"
-                           HorizontalAlignment="Center"
-                           Margin="0,12,0,0">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <ui:SymbolIcon Symbol="OpenLocal"/>
+                <Button Command="{Binding OpenErrorFolderCommand}"
+                        HorizontalAlignment="Center"
+                        Margin="0,12,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="OpenLocal" Margin="0,0,8,0"/>
                         <TextBlock Text="Open Error Folder"/>
                     </StackPanel>
-                </ui:Button>
+                </Button>
 
                 <!-- Info Text -->
                 <TextBlock Text="Failed files are moved here with .error.txt details"
@@ -84,9 +85,9 @@
                     <Run Text="KISS" FontWeight="Bold" Foreground="{DynamicResource SystemControlHighlightAccentBrush}"/>
                 </TextBlock>
 
-                <ui:Button Content="Refresh" 
-                           Command="{Binding RefreshCommand}"
-                           HorizontalAlignment="Right"/>
+                <Button Content="Refresh" 
+                        Command="{Binding RefreshCommand}"
+                        HorizontalAlignment="Right"/>
             </Grid>
         </Border>
     </Grid>

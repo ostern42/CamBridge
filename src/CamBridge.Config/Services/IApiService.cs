@@ -1,4 +1,8 @@
 // src/CamBridge.Config/Services/IApiService.cs
+// Version: 0.7.8
+// Description: Interface for CamBridge Service API - KISS without DeadLetter!
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -8,6 +12,7 @@ namespace CamBridge.Config.Services
 {
     /// <summary>
     /// Interface for CamBridge Service API communication
+    /// KISS: Removed DeadLetter methods!
     /// </summary>
     public interface IApiService
     {
@@ -20,16 +25,6 @@ namespace CamBridge.Config.Services
         /// Gets detailed statistics
         /// </summary>
         Task<DetailedStatisticsModel?> GetStatisticsAsync();
-
-        /// <summary>
-        /// Gets dead letter items
-        /// </summary>
-        Task<List<DeadLetterItemModel>?> GetDeadLettersAsync();
-
-        /// <summary>
-        /// Reprocesses a dead letter item
-        /// </summary>
-        Task<bool> ReprocessDeadLetterAsync(Guid id);
 
         /// <summary>
         /// Checks if the service is reachable

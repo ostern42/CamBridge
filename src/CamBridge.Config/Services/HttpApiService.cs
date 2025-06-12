@@ -1,6 +1,6 @@
-// src\CamBridge.Config\Services\HttpApiService.cs
-// Version: 0.6.12
-// Description: KISS Edition - Removed over-engineering, dead code eliminated
+// src/CamBridge.Config/Services/HttpApiService.cs
+// Version: 0.7.8
+// Description: KISS Edition - Dead Letter methods removed!
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -14,7 +14,7 @@ using CamBridge.Config.Models;
 namespace CamBridge.Config.Services
 {
     /// <summary>
-    /// KISS implementation of IApiService - no over-engineering!
+    /// KISS implementation of IApiService - no dead letters!
     /// </summary>
     public class HttpApiService : IApiService
     {
@@ -34,17 +34,6 @@ namespace CamBridge.Config.Services
             return await TryGetAsync<ServiceStatusModel>("api/status");
         }
 
-        public async Task<List<DeadLetterItemModel>?> GetDeadLettersAsync()
-        {
-            return await TryGetAsync<List<DeadLetterItemModel>>("api/deadletters")
-                   ?? new List<DeadLetterItemModel>();
-        }
-
-        public async Task<bool> ReprocessDeadLetterAsync(Guid id)
-        {
-            return await TryPostAsync($"api/deadletters/{id}/reprocess");
-        }
-
         public async Task<bool> IsServiceAvailableAsync()
         {
             return await TryGetAsync<object>("health") != null;
@@ -52,7 +41,7 @@ namespace CamBridge.Config.Services
 
         public async Task<DetailedStatisticsModel?> GetStatisticsAsync()
         {
-            // KISS: Not implemented, return empty (interface compatibility)
+            // KISS: Not implemented yet, return null
             await Task.CompletedTask;
             return null;
         }
@@ -74,23 +63,6 @@ namespace CamBridge.Config.Services
             {
                 Debug.WriteLine($"API call failed ({endpoint}): {ex.Message}");
                 return null;
-            }
-        }
-
-        /// <summary>
-        /// KISS Helper: Simple POST
-        /// </summary>
-        private async Task<bool> TryPostAsync(string endpoint)
-        {
-            try
-            {
-                var response = await _httpClient.PostAsync(endpoint, null);
-                return response.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"API POST failed ({endpoint}): {ex.Message}");
-                return false;
             }
         }
     }
