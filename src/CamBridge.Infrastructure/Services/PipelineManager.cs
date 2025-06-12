@@ -1,7 +1,7 @@
-// src/CamBridge.Infrastructure/Services/PipelineManager.cs
-// Version: 0.7.5
+﻿// src/CamBridge.Infrastructure/Services/PipelineManager.cs
+// Version: 0.7.8
 // Description: Orchestrates multiple processing pipelines with independent queues and watchers
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Concurrent;
@@ -223,25 +223,6 @@ namespace CamBridge.Infrastructure.Services
             // Create pipeline-specific services
             var scope = _serviceProvider.CreateScope();
 
-            // Create dead letter queue for this pipeline
-            // Use ErrorFolder from ProcessingOptions as DeadLetter location
-            var deadLetterPath = config.ProcessingOptions.ErrorFolder;
-            if (string.IsNullOrEmpty(deadLetterPath))
-            {
-                // Fallback to default location
-                deadLetterPath = Path.Combine(
-                    Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "",
-                    "DeadLetter",
-                    config.Id.ToString());
-            }
-            else
-            {
-                // Add pipeline ID to path
-                deadLetterPath = Path.Combine(deadLetterPath, "DeadLetter", config.Id.ToString());
-            }
-
-            // Ensure directory exists
-            Directory.CreateDirectory(deadLetterPath);
 
             var deadLetterQueue = new DeadLetterQueue(
                 scope.ServiceProvider.GetRequiredService<ILogger<DeadLetterQueue>>(),
@@ -284,7 +265,6 @@ namespace CamBridge.Infrastructure.Services
                 Configuration = config,
                 ServiceScope = scope,
                 Queue = processingQueue,
-                DeadLetterQueue = deadLetterQueue,
                 Watchers = new List<FileSystemWatcher>(),
                 ProcessingTask = null,
                 IsActive = false
@@ -589,8 +569,7 @@ namespace CamBridge.Infrastructure.Services
             public string Id { get; set; } = string.Empty;
             public PipelineConfiguration Configuration { get; set; } = new();
             public ProcessingQueue Queue { get; set; } = null!;
-            public DeadLetterQueue DeadLetterQueue { get; set; } = null!;
-            public List<FileSystemWatcher> Watchers { get; set; } = new();
+                        public List<FileSystemWatcher> Watchers { get; set; } = new();
             public Task? ProcessingTask { get; set; }
             public CancellationTokenSource? CancellationTokenSource { get; set; }
             public IServiceScope ServiceScope { get; set; } = null!;
@@ -625,7 +604,8 @@ namespace CamBridge.Infrastructure.Services
         public bool IsActive { get; set; }
         public PipelineConfiguration Configuration { get; set; } = new();
         public QueueStatistics? QueueStatistics { get; set; }
-        public DeadLetterStatistics? DeadLetterStatistics { get; set; }
+        public object? DeadLetterStatistics { get; set; }
         public IReadOnlyList<ProcessingItemStatus> ActiveItems { get; set; } = new List<ProcessingItemStatus>();
     }
 }
+

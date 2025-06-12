@@ -1,5 +1,5 @@
 // src/CamBridge.Infrastructure/ServiceCollectionExtensions.cs
-// Version: 0.7.0
+// Version: 0.7.8
 // Description: Extension methods for configuring infrastructure services - KISS approach
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
@@ -19,7 +19,7 @@ namespace CamBridge.Infrastructure
 {
     /// <summary>
     /// Extension methods for configuring infrastructure services
-    /// KISS UPDATE: Removing unnecessary interfaces step by step
+    /// KISS UPDATE: Removing unnecessary interfaces and DeadLetterQueue
     /// </summary>
     public static class ServiceCollectionExtensions
     {
@@ -29,8 +29,8 @@ namespace CamBridge.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             // Core Processing Services (shared across all pipelines)
-            services.AddSingleton<FileProcessor>(); // KISS: No interface needed! Step 1.2 done!
-            services.AddSingleton<DicomConverter>(); // KISS: No interface needed! Step 1.1 done!
+            services.AddSingleton<FileProcessor>(); // KISS: No interface needed!
+            services.AddSingleton<DicomConverter>(); // KISS: No interface needed!
             services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
 
             // ExifTool Reader - The ONLY solution! No interfaces, no fallbacks!
@@ -52,8 +52,9 @@ namespace CamBridge.Infrastructure
             // Notification Services (shared across pipelines)
             services.AddSingleton<INotificationService, NotificationService>();
 
-            // Note: ProcessingQueue and DeadLetterQueue are now created per-pipeline by PipelineManager
-            // Note: FolderWatcherService is replaced by per-pipeline watchers in PipelineManager
+            // Note: ProcessingQueue is now created per-pipeline by PipelineManager
+            // Note: DeadLetterQueue is REMOVED - Simple error folder approach!
+            // Note: FolderWatcherService is replaced by per-pipeline watchers
 
             // Configure Options
             services.Configure<CamBridgeSettings>(configuration.GetSection("CamBridge")); // For backwards compatibility
@@ -101,8 +102,8 @@ namespace CamBridge.Infrastructure
                 var criticalServices = new[]
                 {
                     typeof(ExifToolReader),  // Direct type, no interface!
-                    typeof(FileProcessor),   // KISS: Direct type! Step 1.2 done!
-                    typeof(DicomConverter),  // KISS: Direct type! Step 1.1 done!
+                    typeof(FileProcessor),   // KISS: Direct type!
+                    typeof(DicomConverter),  // KISS: Direct type!
                     typeof(PipelineManager)  // New orchestrator
                 };
 
@@ -126,7 +127,7 @@ namespace CamBridge.Infrastructure
 
                 // Validate FileProcessor (KISS: Direct reference!)
                 var fileProcessor = provider.GetRequiredService<FileProcessor>();
-                logger.LogInformation("FileProcessor validated - Step 1.2 complete!");
+                logger.LogInformation("FileProcessor validated - Simple error handling active!");
 
                 // Validate Pipeline Manager
                 var pipelineManager = provider.GetRequiredService<PipelineManager>();
@@ -143,7 +144,7 @@ namespace CamBridge.Infrastructure
                     logger.LogInformation("Found {Count} configured pipelines", settingsV2.Value.Pipelines.Count);
                 }
 
-                logger.LogInformation("Infrastructure validation completed successfully - KISS approach: 2 interfaces removed!");
+                logger.LogInformation("Infrastructure validation completed - KISS approach: 2 interfaces removed, DeadLetterQueue eliminated!");
             }
             catch (Exception ex)
             {

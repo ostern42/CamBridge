@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.7.6
+# // Version: 0.7.7
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -46,7 +46,7 @@
 #   - TOOLS
 #
 # Total files: 253
-# Generated: 2025-06-10 23:06
+# Generated: 2025-06-11 00:24
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]

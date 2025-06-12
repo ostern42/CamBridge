@@ -1,11 +1,12 @@
 // src\CamBridge.Config\Views\AboutPage.xaml.cs
-// Version: 0.7.3
+// Version: 0.7.8
 // Description: About page with enhanced Marvin quotes and version display
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -57,10 +58,33 @@ namespace CamBridge.Config.Views
         {
             try
             {
-                // Update version to current
+                // Try to get version from assembly first
+                var assembly = Assembly.GetExecutingAssembly();
+                var assemblyVersion = assembly.GetName().Version;
+                var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+
+                string displayVersion = "0.7.8"; // Default
+
+                // Prefer FileVersion if available
+                if (!string.IsNullOrEmpty(fileVersionInfo.FileVersion) && fileVersionInfo.FileVersion != "0.0.0.0")
+                {
+                    displayVersion = fileVersionInfo.FileVersion;
+                    // Remove trailing .0 if present
+                    if (displayVersion.EndsWith(".0"))
+                    {
+                        displayVersion = displayVersion.Substring(0, displayVersion.LastIndexOf(".0"));
+                    }
+                }
+                // Fall back to AssemblyVersion
+                else if (assemblyVersion != null && assemblyVersion.ToString() != "0.0.0.0")
+                {
+                    displayVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
+                }
+
+                // Update version text
                 if (FindName("VersionText") is TextBlock versionText)
                 {
-                    versionText.Text = "Version 0.7.3";
+                    versionText.Text = $"Version {displayVersion}";
                 }
 
                 // Show Debug/Release configuration
@@ -78,6 +102,11 @@ namespace CamBridge.Config.Views
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading version info: {ex.Message}");
+                // Fallback to hardcoded version
+                if (FindName("VersionText") is TextBlock versionText)
+                {
+                    versionText.Text = "Version 0.7.8";
+                }
             }
         }
 

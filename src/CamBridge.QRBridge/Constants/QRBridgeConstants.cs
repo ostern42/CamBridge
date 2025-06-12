@@ -1,5 +1,5 @@
 // src/CamBridge.QRBridge/Constants/QRBridgeConstants.cs
-// Version: 0.5.33
+// Version: 0.7.8
 // © 2025 Claude's Improbably Reliable Software Solutions
 
 namespace CamBridge.QRBridge.Constants;
@@ -15,7 +15,7 @@ public static class QRBridgeConstants
     public static class Application
     {
         public const string Name = "CamBridge QRBridge";
-        public const string Version = "2.0.0";
+        public const string Version = "0.7.8";
         public const string Description = "Modern QR Code Generator for Ricoh Cameras";
     }
 

@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/FileProcessor.cs
-// Version: 0.7.0
-// Description: Complete file processor without IFileProcessor interface - KISS approach complete!
+// Version: 0.7.8
+// Description: Complete file processor with SIMPLE error handling - KISS approach!
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -20,11 +20,11 @@ namespace CamBridge.Infrastructure.Services
     /// Orchestrates the complete JPEG to DICOM conversion process
     /// KISS UPDATE: No more IFileProcessor interface - direct dependency pattern!
     /// </summary>
-    public class FileProcessor // KISS: No interface inheritance! Step 1.2 complete!
+    public class FileProcessor // KISS: No interface inheritance!
     {
         private readonly ILogger<FileProcessor> _logger;
-        private readonly ExifToolReader _exifToolReader; // Direct dependency - no interface!
-        private readonly DicomConverter _dicomConverter; // KISS: Direct dependency like ExifToolReader!
+        private readonly ExifToolReader _exifToolReader;
+        private readonly DicomConverter _dicomConverter;
         private readonly ProcessingOptions _processingOptions;
         private readonly CamBridgeSettings _settings;
 
@@ -34,8 +34,8 @@ namespace CamBridge.Infrastructure.Services
 
         public FileProcessor(
             ILogger<FileProcessor> logger,
-            ExifToolReader exifToolReader,  // No interface!
-            DicomConverter dicomConverter,   // KISS: No interface here either!
+            ExifToolReader exifToolReader,
+            DicomConverter dicomConverter,
             IOptions<ProcessingOptions> processingOptions,
             IOptions<CamBridgeSettings> settings)
         {
@@ -124,17 +124,71 @@ namespace CamBridge.Infrastructure.Services
 
                 ProcessingError?.Invoke(this, new FileProcessingErrorEventArgs(filePath, ex));
 
-                // Handle source file based on failure
+                // KISS: Simple error handling - move to error folder!
                 try
                 {
-                    await HandleSourceFileAsync(filePath, _processingOptions.FailureAction);
+                    await HandleProcessingError(filePath, ex);
                 }
                 catch (Exception moveEx)
                 {
-                    _logger.LogError(moveEx, "Error handling failed file {FilePath}", filePath);
+                    _logger.LogError(moveEx, "Error moving failed file {FilePath}", filePath);
                 }
 
                 return FileProcessingResult.CreateFailure(filePath, ex.Message, stopwatch.Elapsed);
+            }
+        }
+
+        /// <summary>
+        /// SIMPLE error handling - move to error folder with details
+        /// </summary>
+        private async Task HandleProcessingError(string filePath, Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process file: {FilePath}", filePath);
+
+            // Simple error handling - move to error folder
+            try
+            {
+                var errorFolder = _processingOptions.ErrorFolder;
+                if (!Directory.Exists(errorFolder))
+                    Directory.CreateDirectory(errorFolder);
+
+                var fileName = Path.GetFileName(filePath);
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var errorFileName = $"{Path.GetFileNameWithoutExtension(fileName)}_{timestamp}{Path.GetExtension(fileName)}";
+                var errorPath = Path.Combine(errorFolder, errorFileName);
+
+                // Move file
+                File.Move(filePath, errorPath, overwrite: true);
+
+                // Write error details
+                var errorInfoPath = Path.ChangeExtension(errorPath, ".error.txt");
+                var errorInfo = $"""
+                    CamBridge Error Report
+                    ======================
+                    
+                    Original File: {fileName}
+                    Error Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}
+                    
+                    Error Message:
+                    {ex.Message}
+                    
+                    Error Type:
+                    {ex.GetType().FullName}
+                    
+                    Stack Trace:
+                    {ex.StackTrace}
+                    
+                    Inner Exception:
+                    {ex.InnerException?.ToString() ?? "None"}
+                    """;
+
+                await File.WriteAllTextAsync(errorInfoPath, errorInfo);
+
+                _logger.LogInformation("Moved failed file to error folder: {ErrorPath}", errorPath);
+            }
+            catch (Exception moveEx)
+            {
+                _logger.LogError(moveEx, "Failed to move file to error folder");
             }
         }
 
@@ -156,8 +210,10 @@ namespace CamBridge.Infrastructure.Services
                     return false;
 
                 // Check file size
-                if (fileInfo.Length < _processingOptions.MinimumFileSizeBytes ||
-                    fileInfo.Length > _processingOptions.MaximumFileSizeBytes)
+                var minSize = _processingOptions.MinimumFileSizeBytes ?? 1024; // Default 1KB
+                var maxSize = _processingOptions.MaximumFileSizeBytes ?? 100 * 1024 * 1024; // Default 100MB
+
+                if (fileInfo.Length < minSize || fileInfo.Length > maxSize)
                 {
                     _logger.LogDebug("File {FilePath} size {Size} outside configured range",
                         filePath, fileInfo.Length);
@@ -326,17 +382,7 @@ namespace CamBridge.Infrastructure.Services
                     break;
 
                 case PostProcessingAction.MoveToError:
-                    var errorPath = Path.Combine(
-                        _processingOptions.ErrorFolder,
-                        DateTime.UtcNow.ToString("yyyy-MM-dd"),
-                        Path.GetFileName(filePath));
-
-                    var errorDir = Path.GetDirectoryName(errorPath)!;
-                    Directory.CreateDirectory(errorDir);
-
-                    await MoveFileAsync(filePath, errorPath);
-                    _logger.LogWarning("Moved failed file {SourceFile} to {ErrorPath}",
-                        filePath, errorPath);
+                    // This is now handled by HandleProcessingError
                     break;
 
                 case PostProcessingAction.Leave:
@@ -348,16 +394,19 @@ namespace CamBridge.Infrastructure.Services
 
         private void ValidateFile(FileInfo fileInfo)
         {
-            if (fileInfo.Length < _processingOptions.MinimumFileSizeBytes)
+            var minSize = _processingOptions.MinimumFileSizeBytes ?? 1024;
+            var maxSize = _processingOptions.MaximumFileSizeBytes ?? 100 * 1024 * 1024;
+
+            if (fileInfo.Length < minSize)
             {
                 throw new InvalidOperationException(
-                    $"File too small: {fileInfo.Length} bytes (minimum: {_processingOptions.MinimumFileSizeBytes})");
+                    $"File too small: {fileInfo.Length} bytes (minimum: {minSize})");
             }
 
-            if (fileInfo.Length > _processingOptions.MaximumFileSizeBytes)
+            if (fileInfo.Length > maxSize)
             {
                 throw new InvalidOperationException(
-                    $"File too large: {fileInfo.Length} bytes (maximum: {_processingOptions.MaximumFileSizeBytes})");
+                    $"File too large: {fileInfo.Length} bytes (maximum: {maxSize})");
             }
         }
 
@@ -414,9 +463,6 @@ namespace CamBridge.Infrastructure.Services
     /// <summary>
     /// Result of file processing operation
     /// </summary>
-    /// <remarks>
-    /// CLAUDE-NOTE: Moved from IFileProcessor to here - these belong to the processor, not the interface!
-    /// </remarks>
     public class FileProcessingResult
     {
         public string SourceFile { get; init; } = string.Empty;

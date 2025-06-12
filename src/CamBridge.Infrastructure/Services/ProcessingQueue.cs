@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/ProcessingQueue.cs
-// Version: 0.7.0
-// Description: Thread-safe queue for managing file processing - KISS approach
+// Version: 0.7.8
+// Description: Thread-safe queue for managing file processing - SIMPLE without DeadLetterQueue!
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -10,7 +10,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CamBridge.Core;
-using CamBridge.Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,8 +17,8 @@ using Microsoft.Extensions.Options;
 namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
-    /// Thread-safe queue for managing file processing with retry logic and dead letter support
-    /// KISS UPDATE: Using direct FileProcessor dependency instead of interface
+    /// Thread-safe queue for managing file processing with retry logic
+    /// KISS UPDATE: No more DeadLetterQueue! Simple error folder approach!
     /// </summary>
     public class ProcessingQueue
     {
@@ -29,8 +28,6 @@ namespace CamBridge.Infrastructure.Services
         private readonly ConcurrentQueue<ProcessingItem> _queue = new();
         private readonly ConcurrentDictionary<string, ProcessingItem> _activeItems = new();
         private readonly SemaphoreSlim _processingSlots;
-        private readonly DeadLetterQueue _deadLetterQueue;
-        private readonly INotificationService? _notificationService;
         private readonly object _statsLock = new();
         private readonly Dictionary<string, int> _errorCounts = new();
 
@@ -49,22 +46,15 @@ namespace CamBridge.Infrastructure.Services
         public ProcessingQueue(
             ILogger<ProcessingQueue> logger,
             IServiceScopeFactory scopeFactory,
-            IOptions<ProcessingOptions> options,
-            DeadLetterQueue deadLetterQueue,
-            INotificationService? notificationService = null)
+            IOptions<ProcessingOptions> options)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-            _deadLetterQueue = deadLetterQueue ?? throw new ArgumentNullException(nameof(deadLetterQueue));
-            _notificationService = notificationService;
 
             _processingSlots = new SemaphoreSlim(
                 _options.MaxConcurrentProcessing,
                 _options.MaxConcurrentProcessing);
-
-            // Subscribe to dead letter events
-            _deadLetterQueue.ThresholdExceeded += OnDeadLetterThresholdExceeded;
         }
 
         /// <summary>
@@ -176,7 +166,6 @@ namespace CamBridge.Infrastructure.Services
         public ProcessingSummary GetDailySummary()
         {
             var stats = GetStatistics();
-            var deadLetterStats = _deadLetterQueue.GetStatistics();
 
             return new ProcessingSummary
             {
@@ -186,7 +175,6 @@ namespace CamBridge.Infrastructure.Services
                 Failed = stats.TotalFailed,
                 ProcessingTimeSeconds = stats.UpTime.TotalSeconds,
                 TopErrors = stats.TopErrors,
-                DeadLetterCount = deadLetterStats.TotalCount,
                 Uptime = stats.UpTime
             };
         }
@@ -253,20 +241,9 @@ namespace CamBridge.Infrastructure.Services
                 }
                 else if (!result.Success)
                 {
-                    // Add to dead letter queue
+                    // KISS: File already moved to error folder by FileProcessor!
                     _logger.LogError("Failed to process {FilePath} after {Attempts} attempts: {Error}",
                         item.FilePath, item.AttemptCount, result.ErrorMessage);
-
-                    await _deadLetterQueue.AddAsync(
-                        item.FilePath,
-                        result.ErrorMessage ?? "Processing failed",
-                        item.AttemptCount);
-
-                    // Send notification for critical errors
-                    if (IsCriticalError(result.ErrorMessage))
-                    {
-                        await NotifyCriticalErrorAsync(item.FilePath, result.ErrorMessage);
-                    }
                 }
             }
             catch (Exception ex)
@@ -286,14 +263,9 @@ namespace CamBridge.Infrastructure.Services
                 }
                 else
                 {
-                    // Add to dead letter queue
-                    await _deadLetterQueue.AddAsync(
-                        item.FilePath,
-                        $"Unexpected error: {ex.Message}",
-                        item.AttemptCount);
-
-                    // Notify about unexpected errors
-                    await NotifyCriticalErrorAsync(item.FilePath, ex.Message, ex);
+                    // Log final failure - file should already be in error folder
+                    _logger.LogError("Failed to process {FilePath} after {Attempts} attempts",
+                        item.FilePath, item.AttemptCount);
                 }
             }
             finally
@@ -349,47 +321,6 @@ namespace CamBridge.Infrastructure.Services
             if (error.Contains("Memory", StringComparison.OrdinalIgnoreCase))
                 return "Memory error";
             return "Other error";
-        }
-
-        private bool IsCriticalError(string? error)
-        {
-            if (string.IsNullOrEmpty(error)) return false;
-
-            var criticalKeywords = new[] { "OutOfMemory", "AccessDenied", "Unauthorized", "Fatal" };
-            return criticalKeywords.Any(keyword =>
-                error.Contains(keyword, StringComparison.OrdinalIgnoreCase));
-        }
-
-        private async Task NotifyCriticalErrorAsync(string filePath, string? error, Exception? ex = null)
-        {
-            if (_notificationService == null) return;
-
-            try
-            {
-                await _notificationService.NotifyCriticalErrorAsync(
-                    $"Processing failed for {Path.GetFileName(filePath)}",
-                    $"File: {filePath}\nError: {error}",
-                    ex);
-            }
-            catch (Exception notifyEx)
-            {
-                _logger.LogError(notifyEx, "Failed to send critical error notification");
-            }
-        }
-
-        private async void OnDeadLetterThresholdExceeded(object? sender, DeadLetterEventArgs e)
-        {
-            if (_notificationService == null) return;
-
-            try
-            {
-                var stats = _deadLetterQueue.GetStatistics();
-                await _notificationService.NotifyDeadLetterThresholdAsync(e.TotalCount, stats);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send dead letter threshold notification");
-            }
         }
 
         /// <summary>

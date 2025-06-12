@@ -1,5 +1,5 @@
 // src/CamBridge.QRBridge/Program.cs
-// Version: 0.5.33
+// Version: 0.7.8
 // © 2025 Claude's Improbably Reliable Software Solutions
 
 using System.Text;

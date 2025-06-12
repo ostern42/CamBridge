@@ -1,29 +1,29 @@
 <!-- Version.props -->
-<!-- Version: 0.7.7 -->
+<!-- Version: 0.7.8 -->
 <!-- Description: Central version management for CamBridge solution -->
 <Project>
-	<PropertyGroup>
-		<!-- Version info for PROJECT_WISDOM and documentation -->
-		<VersionPrefix>0.7.7</VersionPrefix>
-		<VersionSuffix></VersionSuffix>
+<PropertyGroup>
+<!-- Version info for PROJECT_WISDOM and documentation -->
+<VersionPrefix>0.7.8</VersionPrefix>
+<VersionSuffix></VersionSuffix>
 
-		<!-- IMPORTANT: DO NOT set AssemblyVersion or FileVersion! -->
-		<!-- Directory.Build.props handles all assembly versioning now -->
+<!-- IMPORTANT: DO NOT set AssemblyVersion or FileVersion! -->
+<!-- Directory.Build.props handles all assembly versioning now -->
 
-		<!-- Only metadata that won't cause conflicts -->
-		<InformationalVersion>0.7.7</InformationalVersion>
-		<PackageVersion>0.7.7</PackageVersion>
+<!-- Only metadata that won't cause conflicts -->
+<InformationalVersion>0.7.8</InformationalVersion>
+<PackageVersion>0.7.8</PackageVersion>
 
-		<!-- Company information -->
-		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
-		<Company>Claude's Improbably Reliable Software Solutions</Company>
-		<Product>CamBridge Medical Image Converter</Product>
-		<Description>Making the improbable reliably possible since 2025</Description>
-		<PackageDescription>JPEG to DICOM medical imaging converter - Making the improbable reliably simple since 2025</PackageDescription>
+<!-- Company information -->
+<Copyright> 2025 Claude's Improbably Reliable Software Solutions</Copyright>
+<Company>Claude's Improbably Reliable Software Solutions</Company>
+<Product>CamBridge Medical Image Converter</Product>
+<Description>Making the improbable reliably possible since 2025</Description>
+<PackageDescription>JPEG to DICOM medical imaging converter - Making the improbable reliably simple since 2025</PackageDescription>
 
-		<!-- Build metadata -->
-		<RepositoryUrl>https://github.com/yourusername/CamBridge</RepositoryUrl>
-		<RepositoryType>git</RepositoryType>
-		<NeutralLanguage>en-US</NeutralLanguage>
-	</PropertyGroup>
+<!-- Build metadata -->
+<RepositoryUrl>https://github.com/yourusername/CamBridge</RepositoryUrl>
+<RepositoryType>git</RepositoryType>
+<NeutralLanguage>en-US</NeutralLanguage>
+</PropertyGroup>
 </Project>

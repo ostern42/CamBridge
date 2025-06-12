@@ -1,5 +1,5 @@
 <!-- src\CamBridge.Config\Views\AboutPage.xaml -->
-<!-- Version: 0.7.3 -->
+<!-- Version: 0.7.8 -->
 <!-- Description: About page with Marvin easter eggs and version display -->
 
 <Page x:Class="CamBridge.Config.Views.AboutPage"
@@ -47,7 +47,7 @@
 
                 <!-- Version -->
                 <TextBlock x:Name="VersionText"
-                           Text="Version 0.7.3" 
+                           Text="Version 0.7.8" 
                            FontSize="20" 
                            Opacity="0.8"
                            HorizontalAlignment="Center"
