@@ -13,6 +13,7 @@
 # .\Get-WisdomSources.ps1              # Standard: 4 Haupt-Projekte
 # .\Get-WisdomSources.ps1 -IncludeTests # Mit Test-Projekten
 # .\Get-WisdomSources.ps1 -SingleFile   # Alles in eine Datei
+# .\Get-WisdomSources.ps1 -CompactFormat # Kleinere Header
 #
 # OUTPUT:
 # - SOURCES_CORE.txt         (~500KB)
@@ -68,9 +69,15 @@ $projects = @{
     }
     "Config" = @{
         Path = "src\CamBridge.Config"
-        Patterns = @("*.cs", "*.xaml", "*.json") 
-        Description = "WPF Configuration UI"
+        Patterns = @("*.cs")
+        Description = "WPF Configuration UI (C# only)"
     }
+}
+
+# Add XAML if requested
+if ($IncludeXaml) {
+    $projects["Config"].Patterns += "*.xaml"
+    $projects["Config"].Description = "WPF Configuration UI (C# and XAML)"
 }
 
 # Add test projects if requested
@@ -141,22 +148,21 @@ function Collect-ProjectSources {
         $totalSize += $file.Length
         
         if ($CompactFormat) {
-            # Compact format - less separators
-            $content += "// FILE: $relativePath"
+            # Compact format - minimal header
+            $content += ""
+            $content += "## FILE: $relativePath [$([math]::Round($file.Length / 1KB, 1))KB]"
             $content += $fileContent
             $content += ""
         } else {
-            # Full format with clear separators
+            # Full format with complete path information
             $content += ""
             $content += "# ============================================================================"
-            $content += "# FILE: $relativePath"
-            $content += "# SIZE: $([math]::Round($file.Length / 1KB, 1)) KB"
-            $content += "# MODIFIED: $($file.LastWriteTime.ToString('yyyy-MM-dd HH:mm'))"
+            $content += "# $($file.Name)"
+            $content += "# PATH: $relativePath"
+            $content += "# SIZE: $([math]::Round($file.Length / 1KB, 1)) KB | MODIFIED: $($file.LastWriteTime.ToString('yyyy-MM-dd HH:mm'))"
             $content += "# ============================================================================"
             $content += ""
             $content += $fileContent
-            $content += ""
-            $content += "# === END OF FILE: $relativePath ==="
             $content += ""
         }
     }
@@ -231,6 +237,10 @@ $indexContent += "Oliver hatte die geniale Idee (Session 61), alle Sources ins"
 $indexContent += "vorprozessierte Projektwissen zu packen. So hat Claude IMMER"
 $indexContent += "Zugriff auf den kompletten Code ohne File-Requests!"
 $indexContent += ""
+$indexContent += "## FORMAT OPTIONS:"
+$indexContent += "- Normal: Full headers with complete path info (default)"
+$indexContent += "- Compact: Minimal headers (-CompactFormat flag)"
+$indexContent += ""
 $indexContent += "## BENEFITS:"
 $indexContent += "- Token-efficient pattern matching"
 $indexContent += "- No more 'oh this file already exists'"
@@ -261,6 +271,7 @@ $indexContent += "## TOTALS:"
 $indexContent += "- Total Files: $totalFiles"
 $indexContent += "- Total Size: $([math]::Round($totalSize / 1MB, 2)) MB"
 $indexContent += "- Estimated Tokens: ~$([math]::Round($totalSize / 4, 0)) tokens"
+$indexContent += "- Percentage of 200k context: ~$([math]::Round(($totalSize / 4) / 200000 * 100, 1))%"
 $indexContent += ""
 $indexContent += "## USAGE:"
 $indexContent += "1. Upload these files to Projektwissen"
@@ -272,6 +283,10 @@ $indexContent += "## NEXT STEPS:"
 $indexContent += "- Test efficiency in next session"
 $indexContent += "- Measure token savings"
 $indexContent += "- Update collection process if needed"
+$indexContent += ""
+$indexContent += "---"
+$indexContent += "*Making the improbable reliably accessible since 0.7.11!*"
+$indexContent += "(c) 2025 Claude's Improbably Reliable Software Solutions"
 
 $indexPath = Join-Path $OutputFolder "SOURCES_INDEX.md"
 $indexContent | Out-File -FilePath $indexPath -Encoding UTF8
@@ -284,6 +299,7 @@ Write-Host "Total Projects: $($stats.Count)" -ForegroundColor Yellow
 Write-Host "Total Files: $totalFiles" -ForegroundColor Yellow
 Write-Host "Total Size: $([math]::Round($totalSize / 1MB, 2)) MB" -ForegroundColor Yellow
 Write-Host "Estimated Tokens: ~$([math]::Round($totalSize / 4, 0))" -ForegroundColor Yellow
+Write-Host "Context Usage: ~$([math]::Round(($totalSize / 4) / 200000 * 100, 1))%" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Output Folder: $OutputFolder" -ForegroundColor Cyan
 Write-Host "Index File: $indexPath" -ForegroundColor Cyan
@@ -293,4 +309,5 @@ Write-Host "1. Upload files from '$OutputFolder' to Projektwissen" -ForegroundCo
 Write-Host "2. Claude will have ALL code available instantly!" -ForegroundColor White
 Write-Host "3. No more 'let me check that file' requests!" -ForegroundColor White
 Write-Host ""
-Write-Host "This was Oliver's genius idea - thank you! 🚀" -ForegroundColor Magenta
+Write-Host "This was Oliver's genius idea - thank you! " -ForegroundColor Magenta -NoNewline
+Write-Host ([char]0x1F680) -ForegroundColor Magenta

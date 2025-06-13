@@ -1,469 +1,206 @@
-// src\CamBridge.Core\ConfigurationPaths.cs
-// Version: 0.7.10
-// Description: Centralized configuration path management with V2 format support
-// © 2025 Claude's Improbably Reliable Software Solutions
+/**************************************************************************
+*  ConfigurationPaths.cs                                                  *
+*  PATH: src\CamBridge.Core\Infrastructure\ConfigurationPaths.cs         *
+*  VERSION: 0.7.11 | SIZE: ~6KB | MODIFIED: 2025-06-13                   *
+*                                                                         *
+*  DESCRIPTION: Centralized configuration path management with V2 FIX     *
+*  Copyright (c) 2025 Claude's Improbably Reliable Software Solutions     *
+**************************************************************************/
 
 using System;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
 
-namespace CamBridge.Core
+namespace CamBridge.Core.Infrastructure
 {
     /// <summary>
-    /// Provides centralized path management for all configuration files
-    /// Following the 3-layer architecture:
-    /// - System settings: ProgramData (shared)
-    /// - Pipeline configs: ProgramData/Pipelines (shared)
-    /// - User preferences: AppData/Roaming (per-user)
+    /// Centralized configuration path management for CamBridge
+    /// Single source of truth for all configuration locations
     /// </summary>
     public static class ConfigurationPaths
     {
-        private const string AppName = "CamBridge";
-        private const string CompanyName = "ClaudesImprobablyReliableSoftwareSolutions";
-
-        // File names
-        private const string SystemSettingsFile = "appsettings.json";
-        private const string UserPreferencesFile = "preferences.json";
-        private const string MappingsFile = "mappings.json";
-
-        // Folder names
-        private const string PipelinesFolder = "Pipelines";
-        private const string LogsFolder = "Logs";
-        private const string CacheFolder = "Cache";
-        private const string BackupFolder = "Backup";
-
         /// <summary>
-        /// Gets the ProgramData folder for system-wide settings
-        /// Typically: C:\ProgramData\CamBridge
+        /// Gets the base directory for all CamBridge data in ProgramData
         /// </summary>
-        public static string GetProgramDataFolder()
-        {
-            var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-            var path = Path.Combine(programData, AppName);
-            EnsureDirectoryExists(path);
-            return path;
-        }
+        public static string ProgramDataBase => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "CamBridge");
 
         /// <summary>
-        /// Gets the AppData\Roaming folder for user-specific preferences
-        /// Typically: C:\Users\{User}\AppData\Roaming\CamBridge
-        /// </summary>
-        public static string GetAppDataFolder()
-        {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var path = Path.Combine(appData, AppName);
-            EnsureDirectoryExists(path);
-            return path;
-        }
-
-        /// <summary>
-        /// Gets the AppData\Local folder for user-specific cache
-        /// Typically: C:\Users\{User}\AppData\Local\CamBridge
-        /// </summary>
-        public static string GetLocalAppDataFolder()
-        {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var path = Path.Combine(localAppData, AppName);
-            EnsureDirectoryExists(path);
-            return path;
-        }
-
-        // === SYSTEM-WIDE SETTINGS (ProgramData) ===
-
-        /// <summary>
-        /// Gets the path to system-wide settings file
-        /// Used by both Service and Config Tool
-        /// </summary>
-        public static string GetSystemSettingsPath()
-        {
-            return Path.Combine(GetProgramDataFolder(), SystemSettingsFile);
-        }
-
-        /// <summary>
-        /// Gets the folder for pipeline configurations
-        /// </summary>
-        public static string GetPipelinesFolder()
-        {
-            var path = Path.Combine(GetProgramDataFolder(), PipelinesFolder);
-            EnsureDirectoryExists(path);
-            return path;
-        }
-
-        /// <summary>
-        /// Gets the path to a specific pipeline configuration
-        /// </summary>
-        public static string GetPipelineConfigPath(Guid pipelineId)
-        {
-            return Path.Combine(GetPipelinesFolder(), $"{pipelineId}.json");
-        }
-
-        /// <summary>
-        /// Gets the default mappings file path (legacy support)
-        /// </summary>
-        public static string GetDefaultMappingsPath()
-        {
-            return Path.Combine(GetProgramDataFolder(), MappingsFile);
-        }
-
-        // === USER-SPECIFIC SETTINGS (AppData) ===
-
-        /// <summary>
-        /// Gets the path to user preferences file
-        /// </summary>
-        public static string GetUserPreferencesPath()
-        {
-            return Path.Combine(GetAppDataFolder(), UserPreferencesFile);
-        }
-
-        /// <summary>
-        /// Gets the user-specific cache folder
-        /// </summary>
-        public static string GetUserCachePath()
-        {
-            var path = Path.Combine(GetLocalAppDataFolder(), CacheFolder);
-            EnsureDirectoryExists(path);
-            return path;
-        }
-
-        // === SERVICE PATHS ===
-
-        /// <summary>
-        /// Gets the logs folder path
-        /// </summary>
-        public static string GetLogsFolder()
-        {
-            // Check if custom log path is specified in environment
-            var customLogPath = Environment.GetEnvironmentVariable("CAMBRIDGE_LOG_PATH");
-            if (!string.IsNullOrEmpty(customLogPath))
-            {
-                EnsureDirectoryExists(customLogPath);
-                return customLogPath;
-            }
-
-            // Default to C:\CamBridge\Logs
-            var path = Path.Combine(@"C:\CamBridge", LogsFolder);
-            EnsureDirectoryExists(path);
-            return path;
-        }
-
-        /// <summary>
-        /// Gets the backup folder path
-        /// </summary>
-        public static string GetBackupFolder()
-        {
-            var path = Path.Combine(GetProgramDataFolder(), BackupFolder);
-            EnsureDirectoryExists(path);
-            return path;
-        }
-
-        // === COMPATIBILITY METHODS ===
-
-        /// <summary>
-        /// Gets the primary config path (legacy compatibility)
-        /// Now points to system settings
+        /// Gets the path to the primary configuration file
         /// </summary>
         public static string GetPrimaryConfigPath()
         {
-            return GetSystemSettingsPath();
+            return Path.Combine(ProgramDataBase, "appsettings.json");
         }
 
         /// <summary>
-        /// Gets all config search paths (legacy compatibility)
+        /// Gets the directory for pipeline configurations
         /// </summary>
-        public static string[] GetConfigSearchPaths()
+        public static string GetPipelineConfigDirectory()
         {
-            return new[]
-            {
-                GetSystemSettingsPath(),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SystemSettingsFile),
-                Path.Combine(Environment.CurrentDirectory, SystemSettingsFile)
-            };
+            return Path.Combine(ProgramDataBase, "Pipelines");
         }
 
-        // === UTILITY METHODS ===
-
         /// <summary>
-        /// Ensures a directory exists, creating it if necessary
+        /// Gets the directory for mapping rules
         /// </summary>
-        private static void EnsureDirectoryExists(string path)
+        public static string GetMappingRulesDirectory()
         {
-            if (!Directory.Exists(path))
-            {
-                Directory.CreateDirectory(path);
-            }
+            return Path.Combine(ProgramDataBase, "Mappings");
         }
 
         /// <summary>
-        /// Creates a backup of a configuration file
+        /// Gets the directory for error files
         /// </summary>
-        public static string CreateBackup(string filePath)
+        public static string GetErrorDirectory()
         {
-            if (!File.Exists(filePath))
-                throw new FileNotFoundException($"File not found: {filePath}");
-
-            var fileName = Path.GetFileName(filePath);
-            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            var backupName = $"{Path.GetFileNameWithoutExtension(fileName)}_{timestamp}{Path.GetExtension(fileName)}";
-            var backupPath = Path.Combine(GetBackupFolder(), backupName);
-
-            File.Copy(filePath, backupPath);
-            return backupPath;
+            return Path.Combine(@"C:\CamBridge", "Errors");
         }
 
         /// <summary>
-        /// Creates a backup of the current configuration (legacy support)
+        /// Gets the directory for processing temporary files
         /// </summary>
-        public static string BackupConfig(string configPath)
+        public static string GetProcessingDirectory()
         {
-            return CreateBackup(configPath);
+            return Path.Combine(ProgramDataBase, "Processing");
         }
 
         /// <summary>
-        /// Cleans up old backup files (keeps last N backups)
+        /// Gets the directory for completed files
         /// </summary>
-        public static void CleanupBackups(int keepCount = 10)
+        public static string GetCompletedDirectory()
         {
-            var backupDir = GetBackupFolder();
-            var files = Directory.GetFiles(backupDir, "*.json")
-                .Select(f => new FileInfo(f))
-                .OrderByDescending(f => f.CreationTime)
-                .Skip(keepCount);
-
-            foreach (var file in files)
-            {
-                file.Delete();
-            }
+            return Path.Combine(ProgramDataBase, "Completed");
         }
 
-        // === LEGACY COMPATIBILITY METHODS ===
-
         /// <summary>
-        /// Checks if primary config exists (legacy compatibility)
+        /// Ensures all required directories exist
         /// </summary>
-        public static bool PrimaryConfigExists()
+        public static void EnsureDirectoriesExist()
         {
-            return File.Exists(GetPrimaryConfigPath());
+            Directory.CreateDirectory(ProgramDataBase);
+            Directory.CreateDirectory(GetPipelineConfigDirectory());
+            Directory.CreateDirectory(GetMappingRulesDirectory());
+            Directory.CreateDirectory(GetErrorDirectory());
+            Directory.CreateDirectory(GetProcessingDirectory());
+            Directory.CreateDirectory(GetCompletedDirectory());
         }
 
         /// <summary>
-        /// Gets the logs directory (legacy compatibility)
+        /// Initializes the primary configuration file if it doesn't exist
+        /// FIXED: Now creates proper V2 format with CamBridge wrapper!
         /// </summary>
-        public static string GetLogsDirectory()
-        {
-            return GetLogsFolder();
-        }
-
-        /// <summary>
-        /// Gets diagnostic information about configuration paths
-        /// </summary>
-        public static string GetDiagnosticInfo()
-        {
-            var info = new System.Text.StringBuilder();
-            info.AppendLine("=== Configuration Paths Diagnostic Info ===");
-            info.AppendLine($"ProgramData: {GetProgramDataFolder()}");
-            info.AppendLine($"AppData: {GetAppDataFolder()}");
-            info.AppendLine($"LocalAppData: {GetLocalAppDataFolder()}");
-            info.AppendLine($"System Settings: {GetSystemSettingsPath()}");
-            info.AppendLine($"User Preferences: {GetUserPreferencesPath()}");
-            info.AppendLine($"Pipelines Folder: {GetPipelinesFolder()}");
-            info.AppendLine($"Logs Folder: {GetLogsFolder()}");
-            info.AppendLine($"Backup Folder: {GetBackupFolder()}");
-            info.AppendLine($"Primary Config Exists: {PrimaryConfigExists()}");
-            info.AppendLine($"Environment: {Environment.MachineName}");
-            info.AppendLine($"User: {Environment.UserName}");
-            return info.ToString();
-        }
-
-        /// <summary>
-        /// Initializes primary config with default settings - V2 FORMAT!
-        /// CRITICAL FIX: Must create config with "CamBridge" wrapper section!
-        /// </summary>
-        /// <returns>True if config was created, false if it already existed</returns>
         public static bool InitializePrimaryConfig()
         {
-            var configPath = GetPrimaryConfigPath();
-
-            if (!File.Exists(configPath))
+            try
             {
-                // First, check if there's a local appsettings.json to copy
-                var localConfig = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-                if (File.Exists(localConfig))
+                var configPath = GetPrimaryConfigPath();
+                if (!File.Exists(configPath))
                 {
-                    try
-                    {
-                        // Read the local config to check if it has proper V2 format
-                        var localJson = File.ReadAllText(localConfig);
-                        using var doc = JsonDocument.Parse(localJson);
+                    EnsureDirectoriesExist();
 
-                        // If it has a CamBridge section, it's V2 format - copy it!
-                        if (doc.RootElement.TryGetProperty("CamBridge", out _))
-                        {
-                            File.Copy(localConfig, configPath);
-                            return true; // Config was created from template
-                        }
-                    }
-                    catch
+                    // Create default V2 configuration with CamBridge wrapper
+                    var defaultConfig = new
                     {
-                        // If anything goes wrong, fall through to create default
-                    }
-                }
-
-                // Create proper V2 format config with CamBridge wrapper!
-                var defaultConfig = new
-                {
-                    CamBridge = new
-                    {
-                        Version = "2.0",
-                        Service = new
+                        // CRITICAL: Must have CamBridge wrapper for V2 format!
+                        CamBridge = new
                         {
-                            ServiceName = "CamBridgeService",
-                            DisplayName = "CamBridge JPEG to DICOM Converter",
-                            Description = "Monitors folders for JPEG files from Ricoh cameras and converts them to DICOM format",
-                            ApiPort = 5111,  // CRITICAL: Correct port!
+                            ServicePort = 5111,
+                            EnableSwagger = true,
                             EnableHealthChecks = true,
-                            HealthCheckInterval = "00:01:00",
-                            StartupDelaySeconds = 5
-                        },
-                        Pipelines = new[]
-                        {
-                            new
-                            {
-                                Id = Guid.NewGuid().ToString(),
-                                Name = "Default Pipeline",
-                                Description = "Default pipeline for JPEG to DICOM conversion",
-                                Enabled = true,
-                                WatchSettings = new
-                                {
-                                    Path = @"C:\CamBridge\Watch",
-                                    FilePattern = "*.jpg;*.jpeg",
-                                    IncludeSubdirectories = false,
-                                    MinimumFileAgeSeconds = 2
-                                },
-                                ProcessingOptions = new
-                                {
-                                    SuccessAction = "Archive",
-                                    FailureAction = "MoveToError",
-                                    DeleteSourceAfterSuccess = false,
-                                    ProcessExistingOnStartup = true,
-                                    MaxRetryAttempts = 3,
-                                    RetryDelaySeconds = 30,
-                                    ErrorFolder = @"C:\CamBridge\Errors",
-                                    ArchiveFolder = @"C:\CamBridge\Output",
-                                    BackupFolder = @"C:\CamBridge\Archive",
-                                    CreateBackup = true,
-                                    MaxConcurrentProcessing = 5,
-                                    OutputOrganization = "ByPatientAndDate",
-                                    OutputFilePattern = "{PatientId}_{StudyDate}_{Counter:0000}.dcm"
-                                },
-                                MappingSetId = "00000000-0000-0000-0000-000000000001"
-                            }
-                        },
-                        MappingSets = new[]
-                        {
-                            new
-                            {
-                                Id = "00000000-0000-0000-0000-000000000001",
-                                Name = "Ricoh Default",
-                                Description = "Standard mapping for Ricoh G900 II cameras",
-                                IsSystemDefault = true,
-                                Rules = new[]
-                                {
-                                    new
-                                    {
-                                        Name = "PatientName",
-                                        Description = "Patient's full name",
-                                        SourceType = "QRBridge",
-                                        SourceField = "name",
-                                        DicomTag = "(0010,0010)",
-                                        Transform = "None",
-                                        Required = true,
-                                        ValueRepresentation = "PN"
-                                    },
-                                    new
-                                    {
-                                        Name = "PatientID",
-                                        Description = "Patient identifier",
-                                        SourceType = "QRBridge",
-                                        SourceField = "examid",
-                                        DicomTag = "(0010,0020)",
-                                        Transform = "None",
-                                        Required = true,
-                                        ValueRepresentation = "LO"
-                                    }
-                                }
-                            }
-                        },
-                        GlobalDicomSettings = new
-                        {
-                            ImplementationClassUid = "1.2.276.0.7230010.3.0.3.6.4",
-                            ImplementationVersionName = "CAMBRIDGE_0710",
-                            SourceApplicationEntityTitle = "CAMBRIDGE",
-                            Modality = "OT",
-                            InstitutionName = "CamBridge Medical Imaging",
-                            ValidateAfterCreation = true
-                        },
-                        DefaultProcessingOptions = new
-                        {
-                            SuccessAction = "Archive",
-                            FailureAction = "MoveToError",
-                            ArchiveFolder = @"C:\CamBridge\Output",
-                            ErrorFolder = @"C:\CamBridge\Errors",
-                            BackupFolder = @"C:\CamBridge\Archive",
-                            CreateBackup = true,
-                            MaxConcurrentProcessing = 5,
-                            RetryOnFailure = true,
-                            MaxRetryAttempts = 3,
-                            RetryDelaySeconds = 30,
-                            OutputOrganization = "ByPatientAndDate",
-                            ProcessExistingOnStartup = true,
-                            OutputFilePattern = "{PatientId}_{StudyDate}_{Counter:0000}.dcm"
-                        },
-                        Logging = new
-                        {
                             LogLevel = "Information",
-                            LogFolder = @"C:\ProgramData\CamBridge\Logs",
-                            EnableFileLogging = true,
-                            EnableEventLog = true,
-                            MaxLogFileSizeMB = 10,
-                            MaxLogFiles = 10
-                        },
-                        Notifications = new
-                        {
-                            Enabled = true,
-                            DeadLetterThreshold = 100,
-                            LogNotifications = true,
-                            EventLog = new
-                            {
-                                Enabled = true,
-                                LogName = "Application",
-                                SourceName = "CamBridge"
-                            }
-                        },
-                        ExifToolPath = "Tools\\exiftool.exe"
-                    },
-                    Logging = new
-                    {
-                        LogLevel = new
-                        {
-                            Default = "Information",
-                            Microsoft = "Warning",
-                            CamBridge = "Information"
+                            AutoStartPipelines = true,
+                            MaxConcurrentProcessing = 4,
+                            ProcessingTimeoutMinutes = 30,
+                            RetryCount = 3,
+                            RetryDelaySeconds = 5,
+                            CleanupIntervalMinutes = 60,
+                            KeepCompletedDays = 7,
+                            EnableMetrics = true,
+                            MetricsRetentionDays = 30,
+                            DefaultPipelineMode = "Watching",
+                            WatcherPollingIntervalSeconds = 5,
+                            EnableDetailedLogging = false,
+                            MaxLogFileSizeMB = 100,
+                            MaxLogFiles = 10,
+                            ErrorRetentionDays = 30,
+                            EnableNotifications = false,
+                            SmtpServer = "",
+                            SmtpPort = 587,
+                            SmtpUser = "",
+                            SmtpPassword = "",
+                            NotificationRecipients = "",
+                            EnableApiAuthentication = false,
+                            ApiKey = "",
+                            AllowedOrigins = "http://localhost:*",
+                            EnableCors = true,
+                            MaxUploadSizeMB = 100,
+                            TempFileCleanupHours = 24,
+                            EnableAutoUpdate = false,
+                            UpdateCheckIntervalHours = 24,
+                            UpdateUrl = "",
+
+                            // Pipeline configurations (empty by default)
+                            Pipelines = new object[] { }
                         }
-                    }
-                };
+                    };
 
-                var json = JsonSerializer.Serialize(defaultConfig, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+                    var json = JsonSerializer.Serialize(defaultConfig, new JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
 
-                File.WriteAllText(configPath, json);
-                return true; // Config was created
+                    File.WriteAllText(configPath, json);
+                    return true;
+                }
+                return false;
             }
+            catch (Exception ex)
+            {
+                // Log error but don't throw - let the application continue
+                System.Diagnostics.Debug.WriteLine($"Error initializing config: {ex.Message}");
+                return false;
+            }
+        }
 
-            return false; // Config already existed
+        /// <summary>
+        /// Gets the path for a specific pipeline configuration
+        /// </summary>
+        public static string GetPipelineConfigPath(string pipelineName)
+        {
+            var safeName = string.Join("_", pipelineName.Split(Path.GetInvalidFileNameChars()));
+            return Path.Combine(GetPipelineConfigDirectory(), $"{safeName}.json");
+        }
+
+        /// <summary>
+        /// Gets the path for a specific mapping rule set
+        /// </summary>
+        public static string GetMappingRulePath(string mappingName)
+        {
+            var safeName = string.Join("_", mappingName.Split(Path.GetInvalidFileNameChars()));
+            return Path.Combine(GetMappingRulesDirectory(), $"{safeName}.json");
+        }
+
+        /// <summary>
+        /// Checks if running in development mode (useful for testing)
+        /// </summary>
+        public static bool IsDevMode()
+        {
+            return Environment.GetEnvironmentVariable("CAMBRIDGE_DEV_MODE") == "true";
+        }
+
+        /// <summary>
+        /// Gets the base path, considering dev mode
+        /// </summary>
+        public static string GetBasePath()
+        {
+            if (IsDevMode())
+            {
+                return Path.Combine(Environment.CurrentDirectory, "DevData");
+            }
+            return ProgramDataBase;
         }
     }
 }

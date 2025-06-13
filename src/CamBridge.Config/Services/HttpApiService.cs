@@ -1,7 +1,11 @@
-// src/CamBridge.Config/Services/HttpApiService.cs
-// Version: 0.7.10
-// Description: KISS Edition with CORRECT PORT!
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+/**************************************************************************
+*  HttpApiService.cs                                                      *
+*  PATH: src\CamBridge.Config\Services\HttpApiService.cs                  *
+*  VERSION: 0.7.11 | SIZE: ~7KB | MODIFIED: 2025-06-13                   *
+*                                                                         *
+*  DESCRIPTION: HTTP client for CamBridge Service API with PORT FIX      *
+*  Copyright (c) 2025 Claude's Improbably Reliable Software Solutions     *
+**************************************************************************/
 
 using System;
 using System.Collections.Generic;
@@ -26,8 +30,6 @@ namespace CamBridge.Config.Services
             // CRITICAL FIX: Use port 5111 to match Service configuration!
             _httpClient.BaseAddress = new Uri("http://localhost:5111/"); // FIX: Was 5050!
             _httpClient.Timeout = TimeSpan.FromSeconds(5);
-            // No custom JSON options - defaults work fine!
-            // Note: Second parameter kept for backward compatibility, but ignored (KISS!)
         }
 
         public async Task<ServiceStatusModel?> GetStatusAsync()
@@ -62,13 +64,11 @@ namespace CamBridge.Config.Services
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-
-                // Add debug output for troubleshooting
                 Debug.WriteLine($"API Response ({endpoint}): {json.Length} characters");
 
                 var options = new JsonSerializerOptions
                 {
-                    PropertyNameCaseInsensitive = true // Important for API compatibility
+                    PropertyNameCaseInsensitive = true
                 };
 
                 return JsonSerializer.Deserialize<T>(json, options);

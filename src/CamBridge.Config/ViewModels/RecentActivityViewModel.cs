@@ -1,14 +1,18 @@
-// src\CamBridge.Config\ViewModels\RecentActivityViewModel.cs
-// Version: 0.6.11
-// Description: ViewModel for recent activity display
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+/**************************************************************************
+*  RecentActivityViewModel.cs                                             *
+*  PATH: src\CamBridge.Config\ViewModels\RecentActivityViewModel.cs      *
+*  VERSION: 0.7.11 | SIZE: ~1.3KB | MODIFIED: 2025-06-13                 *
+*                                                                         *
+*  DESCRIPTION: ViewModel for recent activity display                     *
+*  Copyright (c) 2025 Claude's Improbably Reliable Software Solutions     *
+**************************************************************************/
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace CamBridge.Config.ViewModels
 {
-    public class RecentActivityViewModel : ObservableObject
+    public partial class RecentActivityViewModel : ObservableObject
     {
         private bool _isSuccess;
         private string _message = string.Empty;

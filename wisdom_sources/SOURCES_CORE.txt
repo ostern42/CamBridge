@@ -1,0 +1,3497 @@
+﻿# ============================================================================
+# WISDOM SOURCES - Core
+# ============================================================================
+# Project: CamBridge.Core
+# Version: 0.7.10
+# Generated: 2025-06-13 17:24
+# Description: Core domain models, entities, and interfaces
+# Total Files: 26
+# ============================================================================
+
+# TABLE OF CONTENTS:
+# ===================
+# - src\CamBridge.Core\CamBridgeSettings.cs
+# - src\CamBridge.Core\CamBridgeSettingsV2.cs
+# - src\CamBridge.Core\ConfigurationPaths.cs
+# - src\CamBridge.Core\CustomMappingConfiguration.cs
+# - src\CamBridge.Core\DeadLetterStatistics.cs
+# - src\CamBridge.Core\Entities\ImageMetadata.cs
+# - src\CamBridge.Core\Entities\ImageTechnicalData.cs
+# - src\CamBridge.Core\Entities\PatientInfo.cs
+# - src\CamBridge.Core\Entities\ProcessingResult.cs
+# - src\CamBridge.Core\Entities\QRCodeRequest.cs
+# - src\CamBridge.Core\Entities\StudyInfo.cs
+# - src\CamBridge.Core\Interfaces\IDicomConverter.cs
+# - src\CamBridge.Core\Interfaces\IDicomTagMapper.cs
+# - src\CamBridge.Core\Interfaces\IMappingConfiguration.cs
+# - src\CamBridge.Core\MappingRule.cs
+# - src\CamBridge.Core\NotificationSettings.cs
+# - src\CamBridge.Core\PipelineConfiguration.cs
+# - src\CamBridge.Core\ProcessingOptions.cs
+# - src\CamBridge.Core\ProcessingSummary.cs
+# - src\CamBridge.Core\SystemSettings.cs
+# - src\CamBridge.Core\UserPreferences.cs
+# - src\CamBridge.Core\ValueObjects\DicomTag.cs
+# - src\CamBridge.Core\ValueObjects\ExifTag.cs
+# - src\CamBridge.Core\ValueObjects\PatientId.cs
+# - src\CamBridge.Core\ValueObjects\StudyId.cs
+# - src\CamBridge.Core\ValueTransform.cs
+
+# ============================================================================
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\CamBridgeSettings.cs
+# SIZE: 6.6 KB
+# MODIFIED: 2025-06-13 01:23
+# ============================================================================
+
+// src\CamBridge.Core\CamBridgeSettings.cs
+// Version: 0.6.2
+// Description: Main configuration model for CamBridge application
+
+using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Main configuration settings for CamBridge
+    /// </summary>
+    public class CamBridgeSettings
+    {
+        /// <summary>
+        /// Default output folder for converted DICOM files
+        /// </summary>
+        public string DefaultOutputFolder { get; set; } = @"C:\CamBridge\Output";
+
+        /// <summary>
+        /// Path to mapping configuration file
+        /// </summary>
+        public string MappingConfigurationFile { get; set; } = "mappings.json";
+
+        /// <summary>
+        /// Use Ricoh-specific EXIF reader optimizations
+        /// </summary>
+        public bool UseRicohExifReader { get; set; } = true;
+
+        /// <summary>
+        /// Path to ExifTool executable
+        /// </summary>
+        public string ExifToolPath { get; set; } = "Tools\\exiftool.exe";
+
+        /// <summary>
+        /// List of folders to watch for incoming images
+        /// </summary>
+        public List<FolderConfiguration> WatchFolders { get; set; } = new();
+
+        /// <summary>
+        /// Processing options
+        /// </summary>
+        public ProcessingOptions Processing { get; set; } = new();
+
+        /// <summary>
+        /// DICOM-specific settings
+        /// </summary>
+        public DicomSettings Dicom { get; set; } = new();
+
+        /// <summary>
+        /// Logging configuration
+        /// </summary>
+        public LoggingSettings Logging { get; set; } = new();
+
+        /// <summary>
+        /// Service-specific settings
+        /// </summary>
+        public ServiceSettings Service { get; set; } = new();
+
+        /// <summary>
+        /// Notification settings
+        /// </summary>
+        public NotificationSettings Notifications { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Configuration for a watched folder
+    /// </summary>
+    public class FolderConfiguration
+    {
+        /// <summary>
+        /// Folder path to watch
+        /// </summary>
+        public string Path { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Custom output path for this folder (overrides default)
+        /// </summary>
+        public string? OutputPath { get; set; }
+
+        /// <summary>
+        /// Whether this folder is actively watched
+        /// </summary>
+        public bool Enabled { get; set; } = true;
+
+        /// <summary>
+        /// Include subdirectories in watch
+        /// </summary>
+        public bool IncludeSubdirectories { get; set; } = false;
+
+        /// <summary>
+        /// File pattern to match (e.g., "*.jpg;*.jpeg")
+        /// </summary>
+        public string FilePattern { get; set; } = "*.jpg;*.jpeg";
+
+        /// <summary>
+        /// Checks if this folder configuration is valid
+        /// </summary>
+        [JsonIgnore]
+        public bool IsValid => !string.IsNullOrWhiteSpace(Path) && System.IO.Directory.Exists(Path);
+    }
+
+    /// <summary>
+    /// DICOM-specific settings
+    /// </summary>
+    public class DicomSettings
+    {
+        /// <summary>
+        /// Implementation Class UID for this application
+        /// </summary>
+        public string ImplementationClassUid { get; set; } = "1.2.276.0.7230010.3.0.3.6.4";
+
+        /// <summary>
+        /// Implementation Version Name
+        /// </summary>
+        public string ImplementationVersionName { get; set; } = "CAMBRIDGE_001";
+
+        /// <summary>
+        /// Source Application Entity Title
+        /// </summary>
+        public string SourceApplicationEntityTitle { get; set; } = "CAMBRIDGE";
+
+        /// <summary>
+        /// Institution Name
+        /// </summary>
+        public string? InstitutionName { get; set; }
+
+        /// <summary>
+        /// Institution Department
+        /// </summary>
+        public string? InstitutionDepartment { get; set; }
+
+        /// <summary>
+        /// Station Name
+        /// </summary>
+        public string? StationName { get; set; }
+
+        /// <summary>
+        /// Modality for created images
+        /// </summary>
+        public string Modality { get; set; } = "OT"; // Other
+
+        /// <summary>
+        /// Validate DICOM files after creation
+        /// </summary>
+        public bool ValidateAfterCreation { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Logging configuration
+    /// </summary>
+    public class LoggingSettings
+    {
+        /// <summary>
+        /// Minimum log level (Trace, Debug, Information, Warning, Error, Critical)
+        /// </summary>
+        public string LogLevel { get; set; } = "Information";
+
+        /// <summary>
+        /// Log folder path
+        /// </summary>
+        public string LogFolder { get; set; } = @"C:\CamBridge\Logs";
+
+        /// <summary>
+        /// Enable file logging
+        /// </summary>
+        public bool EnableFileLogging { get; set; } = true;
+
+        /// <summary>
+        /// Enable Windows Event Log
+        /// </summary>
+        public bool EnableEventLog { get; set; } = true;
+
+        /// <summary>
+        /// Maximum log file size in MB
+        /// </summary>
+        public int MaxLogFileSizeMB { get; set; } = 10;
+
+        /// <summary>
+        /// Maximum number of log files to retain
+        /// </summary>
+        public int MaxLogFiles { get; set; } = 10;
+    }
+
+    /// <summary>
+    /// Windows Service specific settings
+    /// </summary>
+    public class ServiceSettings
+    {
+        /// <summary>
+        /// Service name (for sc.exe)
+        /// </summary>
+        public string ServiceName { get; set; } = "CamBridgeService";
+
+        /// <summary>
+        /// Service display name
+        /// </summary>
+        public string DisplayName { get; set; } = "CamBridge JPEG to DICOM Converter";
+
+        /// <summary>
+        /// Service description
+        /// </summary>
+        public string Description { get; set; } = "Monitors folders for JPEG files from Ricoh cameras and converts them to DICOM format";
+
+        /// <summary>
+        /// Startup delay in seconds
+        /// </summary>
+        public int StartupDelaySeconds { get; set; } = 5;
+
+        /// <summary>
+        /// File processing delay in milliseconds
+        /// </summary>
+        public int FileProcessingDelayMs { get; set; } = 500;
+
+        /// <summary>
+        /// API port for web interface
+        /// </summary>
+        public int ApiPort { get; set; } = 5111;
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\CamBridgeSettings.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\CamBridgeSettingsV2.cs
+# SIZE: 10.7 KB
+# MODIFIED: 2025-06-07 00:31
+# ============================================================================
+
+// src\CamBridge.Core\CamBridgeSettingsV2.cs
+// Version: 0.6.2
+// Description: Version 2 settings with pipeline architecture and migration support
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Serialization;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Version 2 configuration with pipeline-based architecture
+    /// </summary>
+    public class CamBridgeSettingsV2
+    {
+        /// <summary>
+        /// Settings version for migration support
+        /// </summary>
+        public string Version { get; set; } = "2.0";
+
+        /// <summary>
+        /// List of configured pipelines
+        /// </summary>
+        public List<PipelineConfiguration> Pipelines { get; set; } = new();
+
+        /// <summary>
+        /// Reusable mapping sets
+        /// </summary>
+        public List<MappingSet> MappingSets { get; set; } = new();
+
+        /// <summary>
+        /// Global DICOM settings (can be overridden per pipeline)
+        /// </summary>
+        public DicomSettings GlobalDicomSettings { get; set; } = new();
+
+        /// <summary>
+        /// Global defaults for new pipelines
+        /// </summary>
+        public ProcessingOptions DefaultProcessingOptions { get; set; } = new();
+
+        /// <summary>
+        /// Logging configuration (remains global)
+        /// </summary>
+        public LoggingSettings Logging { get; set; } = new();
+
+        /// <summary>
+        /// Service configuration (remains global)
+        /// </summary>
+        public ServiceSettings Service { get; set; } = new();
+
+        /// <summary>
+        /// Notification settings (remains global)
+        /// </summary>
+        public NotificationSettings Notifications { get; set; } = new();
+
+        /// <summary>
+        /// Migration timestamp
+        /// </summary>
+        public DateTime? MigratedFrom { get; set; }
+
+        /// <summary>
+        /// ExifTool executable path (global setting)
+        /// </summary>
+        public string ExifToolPath { get; set; } = "Tools\\exiftool.exe";
+
+        /// <summary>
+        /// Convenience property for backward compatibility - returns first pipeline's output folder
+        /// </summary>
+        [JsonIgnore]
+        public string DefaultOutputFolder
+        {
+            get => Pipelines.FirstOrDefault()?.ProcessingOptions?.ArchiveFolder
+                   ?? DefaultProcessingOptions?.ArchiveFolder
+                   ?? @"C:\CamBridge\Output";
+            set
+            {
+                if (DefaultProcessingOptions == null)
+                    DefaultProcessingOptions = new ProcessingOptions();
+                DefaultProcessingOptions.ArchiveFolder = value;
+            }
+        }
+
+        /// <summary>
+        /// Create V2 settings from V1 settings (migration)
+        /// </summary>
+        public static CamBridgeSettingsV2 MigrateFromV1(CamBridgeSettings v1Settings)
+        {
+            var v2Settings = new CamBridgeSettingsV2
+            {
+                MigratedFrom = DateTime.UtcNow,
+                GlobalDicomSettings = v1Settings.Dicom,
+                DefaultProcessingOptions = v1Settings.Processing,
+                Logging = v1Settings.Logging,
+                Service = v1Settings.Service,
+                Notifications = v1Settings.Notifications,
+                ExifToolPath = v1Settings.ExifToolPath ?? "Tools\\exiftool.exe"
+            };
+
+            // First, load existing mappings from file if available
+            var defaultMappingSet = new MappingSet
+            {
+                Id = Guid.NewGuid(),
+                Name = "Default Mapping Set",
+                Description = "Migrated from v1 mappings.json",
+                IsSystemDefault = false
+            };
+
+            // TODO: Load actual mapping rules from v1Settings.MappingConfigurationFile
+            // For now, we'll assume the mapping loader will handle this separately
+
+            v2Settings.MappingSets.Add(defaultMappingSet);
+
+            // Convert each watch folder to a pipeline
+            int pipelineIndex = 1;
+            foreach (var folder in v1Settings.WatchFolders)
+            {
+                var pipeline = new PipelineConfiguration
+                {
+                    Id = Guid.NewGuid(),
+                    Name = $"Legacy Pipeline {pipelineIndex}",
+                    Description = $"Migrated from watch folder: {folder.Path}",
+                    Enabled = folder.Enabled,
+                    WatchSettings = new PipelineWatchSettings
+                    {
+                        Path = folder.Path,
+                        FilePattern = folder.FilePattern,
+                        IncludeSubdirectories = folder.IncludeSubdirectories,
+                        OutputPath = folder.OutputPath
+                    },
+                    ProcessingOptions = CloneProcessingOptions(v1Settings.Processing),
+                    MappingSetId = defaultMappingSet.Id,
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["MigratedFrom"] = "v1",
+                        ["OriginalIndex"] = (pipelineIndex - 1).ToString()
+                    }
+                };
+
+                // If the folder had a custom output path, update the processing options
+                if (!string.IsNullOrEmpty(folder.OutputPath))
+                {
+                    pipeline.ProcessingOptions.ArchiveFolder = folder.OutputPath;
+                }
+
+                v2Settings.Pipelines.Add(pipeline);
+                pipelineIndex++;
+            }
+
+            // If no watch folders existed, create a default pipeline
+            if (v2Settings.Pipelines.Count == 0)
+            {
+                v2Settings.Pipelines.Add(new PipelineConfiguration
+                {
+                    Name = "Default Pipeline",
+                    Description = "Default pipeline created during migration",
+                    MappingSetId = defaultMappingSet.Id,
+                    ProcessingOptions = CloneProcessingOptions(v1Settings.Processing)
+                });
+            }
+
+            return v2Settings;
+        }
+
+        /// <summary>
+        /// Convert V2 settings back to V1 format (for backward compatibility)
+        /// </summary>
+        public CamBridgeSettings ToV1Format()
+        {
+            var v1Settings = new CamBridgeSettings
+            {
+                Dicom = GlobalDicomSettings,
+                Processing = DefaultProcessingOptions,
+                Logging = Logging,
+                Service = Service,
+                Notifications = Notifications,
+                DefaultOutputFolder = DefaultOutputFolder,
+                UseRicohExifReader = true,
+                MappingConfigurationFile = "mappings.json",
+                ExifToolPath = ExifToolPath
+            };
+
+            // If we have pipelines, use the first enabled pipeline's processing options
+            // (since v1 only supports global processing options)
+            var firstEnabledPipeline = Pipelines.FirstOrDefault(p => p.Enabled);
+            if (firstEnabledPipeline != null)
+            {
+                v1Settings.Processing = CloneProcessingOptions(firstEnabledPipeline.ProcessingOptions);
+            }
+
+            // Convert pipelines back to watch folders
+            foreach (var pipeline in Pipelines.Where(p => p.Enabled))
+            {
+                var folderConfig = new FolderConfiguration
+                {
+                    Path = pipeline.WatchSettings.Path,
+                    OutputPath = pipeline.WatchSettings.OutputPath,
+                    Enabled = pipeline.Enabled,
+                    IncludeSubdirectories = pipeline.WatchSettings.IncludeSubdirectories,
+                    FilePattern = pipeline.WatchSettings.FilePattern
+                };
+
+                v1Settings.WatchFolders.Add(folderConfig);
+            }
+
+            return v1Settings;
+        }
+
+        /// <summary>
+        /// Helper to clone processing options
+        /// </summary>
+        private static ProcessingOptions CloneProcessingOptions(ProcessingOptions source)
+        {
+            return new ProcessingOptions
+            {
+                SuccessAction = source.SuccessAction,
+                FailureAction = source.FailureAction,
+                ArchiveFolder = source.ArchiveFolder,
+                ErrorFolder = source.ErrorFolder,
+                BackupFolder = source.BackupFolder,
+                CreateBackup = source.CreateBackup,
+                MaxConcurrentProcessing = source.MaxConcurrentProcessing,
+                RetryOnFailure = source.RetryOnFailure,
+                MaxRetryAttempts = source.MaxRetryAttempts,
+                OutputOrganization = source.OutputOrganization,
+                ProcessExistingOnStartup = source.ProcessExistingOnStartup,
+                MaxFileAge = source.MaxFileAge,
+                MinimumFileSizeBytes = source.MinimumFileSizeBytes,
+                MaximumFileSizeBytes = source.MaximumFileSizeBytes,
+                OutputFilePattern = source.OutputFilePattern,
+                RetryDelaySeconds = source.RetryDelaySeconds,
+                DeadLetterFolder = source.DeadLetterFolder
+            };
+        }
+
+        /// <summary>
+        /// Validate the configuration
+        /// </summary>
+        [JsonIgnore]
+        public bool IsValid
+        {
+            get
+            {
+                // At least one pipeline must be configured
+                if (Pipelines.Count == 0)
+                    return false;
+
+                // All enabled pipelines must be valid
+                if (Pipelines.Any(p => p.Enabled && !p.IsValid))
+                    return false;
+
+                // All pipelines must have valid mapping sets
+                var mappingSetIds = MappingSets.Select(m => m.Id).ToHashSet();
+                if (Pipelines.Any(p => p.MappingSetId.HasValue && !mappingSetIds.Contains(p.MappingSetId.Value)))
+                    return false;
+
+                return true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Extension methods for settings migration
+    /// </summary>
+    public static class SettingsMigrationExtensions
+    {
+        /// <summary>
+        /// Detect settings version from JSON
+        /// </summary>
+        public static bool IsV2Settings(string json)
+        {
+            return json.Contains("\"version\"") && json.Contains("\"pipelines\"");
+        }
+
+        /// <summary>
+        /// Check if migration is needed
+        /// </summary>
+        public static bool NeedsMigration(CamBridgeSettings settings)
+        {
+            // If we have watch folders but no pipeline config, we need migration
+            return settings.WatchFolders.Count > 0;
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\CamBridgeSettingsV2.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\ConfigurationPaths.cs
+# SIZE: 19 KB
+# MODIFIED: 2025-06-13 16:46
+# ============================================================================
+
+// src\CamBridge.Core\ConfigurationPaths.cs
+// Version: 0.7.10
+// Description: Centralized configuration path management with V2 format support
+// © 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Provides centralized path management for all configuration files
+    /// Following the 3-layer architecture:
+    /// - System settings: ProgramData (shared)
+    /// - Pipeline configs: ProgramData/Pipelines (shared)
+    /// - User preferences: AppData/Roaming (per-user)
+    /// </summary>
+    public static class ConfigurationPaths
+    {
+        private const string AppName = "CamBridge";
+        private const string CompanyName = "ClaudesImprobablyReliableSoftwareSolutions";
+
+        // File names
+        private const string SystemSettingsFile = "appsettings.json";
+        private const string UserPreferencesFile = "preferences.json";
+        private const string MappingsFile = "mappings.json";
+
+        // Folder names
+        private const string PipelinesFolder = "Pipelines";
+        private const string LogsFolder = "Logs";
+        private const string CacheFolder = "Cache";
+        private const string BackupFolder = "Backup";
+
+        /// <summary>
+        /// Gets the ProgramData folder for system-wide settings
+        /// Typically: C:\ProgramData\CamBridge
+        /// </summary>
+        public static string GetProgramDataFolder()
+        {
+            var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+            var path = Path.Combine(programData, AppName);
+            EnsureDirectoryExists(path);
+            return path;
+        }
+
+        /// <summary>
+        /// Gets the AppData\Roaming folder for user-specific preferences
+        /// Typically: C:\Users\{User}\AppData\Roaming\CamBridge
+        /// </summary>
+        public static string GetAppDataFolder()
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var path = Path.Combine(appData, AppName);
+            EnsureDirectoryExists(path);
+            return path;
+        }
+
+        /// <summary>
+        /// Gets the AppData\Local folder for user-specific cache
+        /// Typically: C:\Users\{User}\AppData\Local\CamBridge
+        /// </summary>
+        public static string GetLocalAppDataFolder()
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var path = Path.Combine(localAppData, AppName);
+            EnsureDirectoryExists(path);
+            return path;
+        }
+
+        // === SYSTEM-WIDE SETTINGS (ProgramData) ===
+
+        /// <summary>
+        /// Gets the path to system-wide settings file
+        /// Used by both Service and Config Tool
+        /// </summary>
+        public static string GetSystemSettingsPath()
+        {
+            return Path.Combine(GetProgramDataFolder(), SystemSettingsFile);
+        }
+
+        /// <summary>
+        /// Gets the folder for pipeline configurations
+        /// </summary>
+        public static string GetPipelinesFolder()
+        {
+            var path = Path.Combine(GetProgramDataFolder(), PipelinesFolder);
+            EnsureDirectoryExists(path);
+            return path;
+        }
+
+        /// <summary>
+        /// Gets the path to a specific pipeline configuration
+        /// </summary>
+        public static string GetPipelineConfigPath(Guid pipelineId)
+        {
+            return Path.Combine(GetPipelinesFolder(), $"{pipelineId}.json");
+        }
+
+        /// <summary>
+        /// Gets the default mappings file path (legacy support)
+        /// </summary>
+        public static string GetDefaultMappingsPath()
+        {
+            return Path.Combine(GetProgramDataFolder(), MappingsFile);
+        }
+
+        // === USER-SPECIFIC SETTINGS (AppData) ===
+
+        /// <summary>
+        /// Gets the path to user preferences file
+        /// </summary>
+        public static string GetUserPreferencesPath()
+        {
+            return Path.Combine(GetAppDataFolder(), UserPreferencesFile);
+        }
+
+        /// <summary>
+        /// Gets the user-specific cache folder
+        /// </summary>
+        public static string GetUserCachePath()
+        {
+            var path = Path.Combine(GetLocalAppDataFolder(), CacheFolder);
+            EnsureDirectoryExists(path);
+            return path;
+        }
+
+        // === SERVICE PATHS ===
+
+        /// <summary>
+        /// Gets the logs folder path
+        /// </summary>
+        public static string GetLogsFolder()
+        {
+            // Check if custom log path is specified in environment
+            var customLogPath = Environment.GetEnvironmentVariable("CAMBRIDGE_LOG_PATH");
+            if (!string.IsNullOrEmpty(customLogPath))
+            {
+                EnsureDirectoryExists(customLogPath);
+                return customLogPath;
+            }
+
+            // Default to C:\CamBridge\Logs
+            var path = Path.Combine(@"C:\CamBridge", LogsFolder);
+            EnsureDirectoryExists(path);
+            return path;
+        }
+
+        /// <summary>
+        /// Gets the backup folder path
+        /// </summary>
+        public static string GetBackupFolder()
+        {
+            var path = Path.Combine(GetProgramDataFolder(), BackupFolder);
+            EnsureDirectoryExists(path);
+            return path;
+        }
+
+        // === COMPATIBILITY METHODS ===
+
+        /// <summary>
+        /// Gets the primary config path (legacy compatibility)
+        /// Now points to system settings
+        /// </summary>
+        public static string GetPrimaryConfigPath()
+        {
+            return GetSystemSettingsPath();
+        }
+
+        /// <summary>
+        /// Gets all config search paths (legacy compatibility)
+        /// </summary>
+        public static string[] GetConfigSearchPaths()
+        {
+            return new[]
+            {
+                GetSystemSettingsPath(),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SystemSettingsFile),
+                Path.Combine(Environment.CurrentDirectory, SystemSettingsFile)
+            };
+        }
+
+        // === UTILITY METHODS ===
+
+        /// <summary>
+        /// Ensures a directory exists, creating it if necessary
+        /// </summary>
+        private static void EnsureDirectoryExists(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+        }
+
+        /// <summary>
+        /// Creates a backup of a configuration file
+        /// </summary>
+        public static string CreateBackup(string filePath)
+        {
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException($"File not found: {filePath}");
+
+            var fileName = Path.GetFileName(filePath);
+            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var backupName = $"{Path.GetFileNameWithoutExtension(fileName)}_{timestamp}{Path.GetExtension(fileName)}";
+            var backupPath = Path.Combine(GetBackupFolder(), backupName);
+
+            File.Copy(filePath, backupPath);
+            return backupPath;
+        }
+
+        /// <summary>
+        /// Creates a backup of the current configuration (legacy support)
+        /// </summary>
+        public static string BackupConfig(string configPath)
+        {
+            return CreateBackup(configPath);
+        }
+
+        /// <summary>
+        /// Cleans up old backup files (keeps last N backups)
+        /// </summary>
+        public static void CleanupBackups(int keepCount = 10)
+        {
+            var backupDir = GetBackupFolder();
+            var files = Directory.GetFiles(backupDir, "*.json")
+                .Select(f => new FileInfo(f))
+                .OrderByDescending(f => f.CreationTime)
+                .Skip(keepCount);
+
+            foreach (var file in files)
+            {
+                file.Delete();
+            }
+        }
+
+        // === LEGACY COMPATIBILITY METHODS ===
+
+        /// <summary>
+        /// Checks if primary config exists (legacy compatibility)
+        /// </summary>
+        public static bool PrimaryConfigExists()
+        {
+            return File.Exists(GetPrimaryConfigPath());
+        }
+
+        /// <summary>
+        /// Gets the logs directory (legacy compatibility)
+        /// </summary>
+        public static string GetLogsDirectory()
+        {
+            return GetLogsFolder();
+        }
+
+        /// <summary>
+        /// Gets diagnostic information about configuration paths
+        /// </summary>
+        public static string GetDiagnosticInfo()
+        {
+            var info = new System.Text.StringBuilder();
+            info.AppendLine("=== Configuration Paths Diagnostic Info ===");
+            info.AppendLine($"ProgramData: {GetProgramDataFolder()}");
+            info.AppendLine($"AppData: {GetAppDataFolder()}");
+            info.AppendLine($"LocalAppData: {GetLocalAppDataFolder()}");
+            info.AppendLine($"System Settings: {GetSystemSettingsPath()}");
+            info.AppendLine($"User Preferences: {GetUserPreferencesPath()}");
+            info.AppendLine($"Pipelines Folder: {GetPipelinesFolder()}");
+            info.AppendLine($"Logs Folder: {GetLogsFolder()}");
+            info.AppendLine($"Backup Folder: {GetBackupFolder()}");
+            info.AppendLine($"Primary Config Exists: {PrimaryConfigExists()}");
+            info.AppendLine($"Environment: {Environment.MachineName}");
+            info.AppendLine($"User: {Environment.UserName}");
+            return info.ToString();
+        }
+
+        /// <summary>
+        /// Initializes primary config with default settings - V2 FORMAT!
+        /// CRITICAL FIX: Must create config with "CamBridge" wrapper section!
+        /// </summary>
+        /// <returns>True if config was created, false if it already existed</returns>
+        public static bool InitializePrimaryConfig()
+        {
+            var configPath = GetPrimaryConfigPath();
+
+            if (!File.Exists(configPath))
+            {
+                // First, check if there's a local appsettings.json to copy
+                var localConfig = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+                if (File.Exists(localConfig))
+                {
+                    try
+                    {
+                        // Read the local config to check if it has proper V2 format
+                        var localJson = File.ReadAllText(localConfig);
+                        using var doc = JsonDocument.Parse(localJson);
+
+                        // If it has a CamBridge section, it's V2 format - copy it!
+                        if (doc.RootElement.TryGetProperty("CamBridge", out _))
+                        {
+                            File.Copy(localConfig, configPath);
+                            return true; // Config was created from template
+                        }
+                    }
+                    catch
+                    {
+                        // If anything goes wrong, fall through to create default
+                    }
+                }
+
+                // Create proper V2 format config with CamBridge wrapper!
+                var defaultConfig = new
+                {
+                    CamBridge = new
+                    {
+                        Version = "2.0",
+                        Service = new
+                        {
+                            ServiceName = "CamBridgeService",
+                            DisplayName = "CamBridge JPEG to DICOM Converter",
+                            Description = "Monitors folders for JPEG files from Ricoh cameras and converts them to DICOM format",
+                            ApiPort = 5111,  // CRITICAL: Correct port!
+                            EnableHealthChecks = true,
+                            HealthCheckInterval = "00:01:00",
+                            StartupDelaySeconds = 5
+                        },
+                        Pipelines = new[]
+                        {
+                            new
+                            {
+                                Id = Guid.NewGuid().ToString(),
+                                Name = "Default Pipeline",
+                                Description = "Default pipeline for JPEG to DICOM conversion",
+                                Enabled = true,
+                                WatchSettings = new
+                                {
+                                    Path = @"C:\CamBridge\Watch",
+                                    FilePattern = "*.jpg;*.jpeg",
+                                    IncludeSubdirectories = false,
+                                    MinimumFileAgeSeconds = 2
+                                },
+                                ProcessingOptions = new
+                                {
+                                    SuccessAction = "Archive",
+                                    FailureAction = "MoveToError",
+                                    DeleteSourceAfterSuccess = false,
+                                    ProcessExistingOnStartup = true,
+                                    MaxRetryAttempts = 3,
+                                    RetryDelaySeconds = 30,
+                                    ErrorFolder = @"C:\CamBridge\Errors",
+                                    ArchiveFolder = @"C:\CamBridge\Output",
+                                    BackupFolder = @"C:\CamBridge\Archive",
+                                    CreateBackup = true,
+                                    MaxConcurrentProcessing = 5,
+                                    OutputOrganization = "ByPatientAndDate",
+                                    OutputFilePattern = "{PatientId}_{StudyDate}_{Counter:0000}.dcm"
+                                },
+                                MappingSetId = "00000000-0000-0000-0000-000000000001"
+                            }
+                        },
+                        MappingSets = new[]
+                        {
+                            new
+                            {
+                                Id = "00000000-0000-0000-0000-000000000001",
+                                Name = "Ricoh Default",
+                                Description = "Standard mapping for Ricoh G900 II cameras",
+                                IsSystemDefault = true,
+                                Rules = new[]
+                                {
+                                    new
+                                    {
+                                        Name = "PatientName",
+                                        Description = "Patient's full name",
+                                        SourceType = "QRBridge",
+                                        SourceField = "name",
+                                        DicomTag = "(0010,0010)",
+                                        Transform = "None",
+                                        Required = true,
+                                        ValueRepresentation = "PN"
+                                    },
+                                    new
+                                    {
+                                        Name = "PatientID",
+                                        Description = "Patient identifier",
+                                        SourceType = "QRBridge",
+                                        SourceField = "examid",
+                                        DicomTag = "(0010,0020)",
+                                        Transform = "None",
+                                        Required = true,
+                                        ValueRepresentation = "LO"
+                                    }
+                                }
+                            }
+                        },
+                        GlobalDicomSettings = new
+                        {
+                            ImplementationClassUid = "1.2.276.0.7230010.3.0.3.6.4",
+                            ImplementationVersionName = "CAMBRIDGE_0710",
+                            SourceApplicationEntityTitle = "CAMBRIDGE",
+                            Modality = "OT",
+                            InstitutionName = "CamBridge Medical Imaging",
+                            ValidateAfterCreation = true
+                        },
+                        DefaultProcessingOptions = new
+                        {
+                            SuccessAction = "Archive",
+                            FailureAction = "MoveToError",
+                            ArchiveFolder = @"C:\CamBridge\Output",
+                            ErrorFolder = @"C:\CamBridge\Errors",
+                            BackupFolder = @"C:\CamBridge\Archive",
+                            CreateBackup = true,
+                            MaxConcurrentProcessing = 5,
+                            RetryOnFailure = true,
+                            MaxRetryAttempts = 3,
+                            RetryDelaySeconds = 30,
+                            OutputOrganization = "ByPatientAndDate",
+                            ProcessExistingOnStartup = true,
+                            OutputFilePattern = "{PatientId}_{StudyDate}_{Counter:0000}.dcm"
+                        },
+                        Logging = new
+                        {
+                            LogLevel = "Information",
+                            LogFolder = @"C:\ProgramData\CamBridge\Logs",
+                            EnableFileLogging = true,
+                            EnableEventLog = true,
+                            MaxLogFileSizeMB = 10,
+                            MaxLogFiles = 10
+                        },
+                        Notifications = new
+                        {
+                            Enabled = true,
+                            DeadLetterThreshold = 100,
+                            LogNotifications = true,
+                            EventLog = new
+                            {
+                                Enabled = true,
+                                LogName = "Application",
+                                SourceName = "CamBridge"
+                            }
+                        },
+                        ExifToolPath = "Tools\\exiftool.exe"
+                    },
+                    Logging = new
+                    {
+                        LogLevel = new
+                        {
+                            Default = "Information",
+                            Microsoft = "Warning",
+                            CamBridge = "Information"
+                        }
+                    }
+                };
+
+                var json = JsonSerializer.Serialize(defaultConfig, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+                File.WriteAllText(configPath, json);
+                return true; // Config was created
+            }
+
+            return false; // Config already existed
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\ConfigurationPaths.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\CustomMappingConfiguration.cs
+# SIZE: 0.3 KB
+# MODIFIED: 2025-06-03 15:39
+# ============================================================================
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Custom mapping configuration (stub for compatibility)
+    /// </summary>
+    public class CustomMappingConfiguration
+    {
+        // This is a stub class for compatibility
+        // Can be removed or extended later
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\CustomMappingConfiguration.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\DeadLetterStatistics.cs
+# SIZE: 0.5 KB
+# MODIFIED: 2025-06-02 01:01
+# ============================================================================
+
+using System;
+using System.Collections.Generic;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Statistics about the dead letter queue
+    /// </summary>
+    public class DeadLetterStatistics
+    {
+        public int TotalItems { get; set; }
+        public int ItemsLastHour { get; set; }
+        public int ItemsLast24Hours { get; set; }
+        public DateTime OldestItem { get; set; }
+        public Dictionary<string, int> TopErrors { get; set; } = new();
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\DeadLetterStatistics.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\Entities\ImageMetadata.cs
+# SIZE: 2.1 KB
+# MODIFIED: 2025-06-03 23:36
+# ============================================================================
+
+using System;
+using System.Collections.Generic;
+
+namespace CamBridge.Core.Entities
+{
+    /// <summary>
+    /// Complete metadata extracted from a medical image file
+    /// </summary>
+    public class ImageMetadata
+    {
+        public string SourceFilePath { get; }
+        public DateTime CaptureDateTime { get; }
+        public PatientInfo Patient { get; }
+        public StudyInfo Study { get; }
+        public ImageTechnicalData TechnicalData { get; }
+        public string? UserComment { get; }
+        public string? BarcodeData { get; }
+        public int InstanceNumber { get; }
+        public string InstanceUid { get; }
+        public Dictionary<string, string> ExifData { get; }
+
+        public ImageMetadata(
+            string sourceFilePath,
+            DateTime captureDateTime,
+            PatientInfo patient,
+            StudyInfo study,
+            ImageTechnicalData technicalData,
+            string? userComment = null,
+            string? barcodeData = null,
+            int instanceNumber = 1,
+            string? instanceUid = null,
+            Dictionary<string, string>? exifData = null)
+        {
+            SourceFilePath = sourceFilePath ?? throw new ArgumentNullException(nameof(sourceFilePath));
+            CaptureDateTime = captureDateTime;
+            Patient = patient ?? throw new ArgumentNullException(nameof(patient));
+            Study = study ?? throw new ArgumentNullException(nameof(study));
+            TechnicalData = technicalData ?? throw new ArgumentNullException(nameof(technicalData));
+            UserComment = userComment;
+            BarcodeData = barcodeData;
+            InstanceNumber = instanceNumber;
+            InstanceUid = instanceUid ?? GenerateUid();
+            ExifData = exifData ?? new Dictionary<string, string>();
+        }
+
+        private static string GenerateUid()
+        {
+            // Generate a DICOM compliant UID
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var random = new Random().Next(1000, 9999);
+            return $"1.2.276.0.7230010.3.1.4.{timestamp}.{random}";
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\Entities\ImageMetadata.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\Entities\ImageTechnicalData.cs
+# SIZE: 2.2 KB
+# MODIFIED: 2025-06-03 23:21
+# ============================================================================
+
+using System;
+using System.Collections.Generic;
+
+namespace CamBridge.Core.Entities
+{
+    /// <summary>
+    /// Technical metadata extracted from image EXIF data
+    /// </summary>
+    public class ImageTechnicalData
+    {
+        public string? Manufacturer { get; init; }
+        public string? Model { get; init; }
+        public string? Software { get; init; }
+        public int? ImageWidth { get; init; }
+        public int? ImageHeight { get; init; }
+        public string? ColorSpace { get; init; }
+        public int? BitsPerSample { get; init; }
+        public string? Compression { get; init; }
+        public int? Orientation { get; init; }
+
+        /// <summary>
+        /// Creates ImageTechnicalData from raw EXIF dictionary
+        /// </summary>
+        public static ImageTechnicalData FromExifDictionary(Dictionary<string, string> exifData)
+        {
+            return new ImageTechnicalData
+            {
+                Manufacturer = GetValue(exifData, "Make", "Manufacturer"),
+                Model = GetValue(exifData, "Model", "CameraModel"),
+                Software = GetValue(exifData, "Software"),
+                ImageWidth = GetIntValue(exifData, "ImageWidth", "PixelXDimension"),
+                ImageHeight = GetIntValue(exifData, "ImageHeight", "PixelYDimension"),
+                ColorSpace = GetValue(exifData, "ColorSpace"),
+                BitsPerSample = GetIntValue(exifData, "BitsPerSample"),
+                Compression = GetValue(exifData, "Compression"),
+                Orientation = GetIntValue(exifData, "Orientation")
+            };
+        }
+
+        private static string? GetValue(Dictionary<string, string> data, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (data.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+                    return value;
+            }
+            return null;
+        }
+
+        private static int? GetIntValue(Dictionary<string, string> data, params string[] keys)
+        {
+            var value = GetValue(data, keys);
+            if (value != null && int.TryParse(value, out var result))
+                return result;
+            return null;
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\Entities\ImageTechnicalData.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\Entities\PatientInfo.cs
+# SIZE: 3.5 KB
+# MODIFIED: 2025-06-02 01:03
+# ============================================================================
+
+using System;
+using System.Collections.Generic;
+using CamBridge.Core.ValueObjects;
+
+namespace CamBridge.Core.Entities
+{
+    /// <summary>
+    /// Patient information extracted from image metadata
+    /// </summary>
+    public class PatientInfo
+    {
+        public PatientId Id { get; }
+        public string Name { get; }
+        public string PatientName => Name; // Alias for compatibility
+        public string PatientId => Id.Value; // Alias for compatibility
+        public string? StudyId { get; set; }
+        public DateTime? BirthDate { get; }
+        public Gender Gender { get; }
+
+        public PatientInfo(PatientId id, string name, DateTime? birthDate, Gender gender)
+        {
+            Id = id ?? throw new ArgumentNullException(nameof(id));
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            BirthDate = birthDate;
+            Gender = gender;
+        }
+
+        /// <summary>
+        /// Creates PatientInfo from EXIF/QRBridge data
+        /// </summary>
+        public static PatientInfo FromExifData(Dictionary<string, string> exifData)
+        {
+            // Extract patient ID - try multiple possible field names
+            var patientIdValue = exifData.GetValueOrDefault("patientid") ??
+                                exifData.GetValueOrDefault("id") ??
+                                exifData.GetValueOrDefault("examid") ??
+                                $"AUTO_{DateTime.UtcNow:yyyyMMddHHmmss}";
+
+            var patientId = new PatientId(patientIdValue);
+
+            // Extract name
+            var name = exifData.GetValueOrDefault("name") ??
+                      exifData.GetValueOrDefault("patientname") ??
+                      "Unknown";
+
+            // Extract birth date
+            DateTime? birthDate = null;
+            var birthDateStr = exifData.GetValueOrDefault("birthdate") ??
+                              exifData.GetValueOrDefault("dateofbirth");
+
+            if (!string.IsNullOrWhiteSpace(birthDateStr))
+            {
+                // Try various date formats
+                var formats = new[] {
+                    "yyyy-MM-dd",
+                    "yyyyMMdd",
+                    "dd.MM.yyyy",
+                    "dd/MM/yyyy",
+                    "MM/dd/yyyy"
+                };
+
+                foreach (var format in formats)
+                {
+                    if (DateTime.TryParseExact(birthDateStr, format, null,
+                        System.Globalization.DateTimeStyles.None, out var date))
+                    {
+                        birthDate = date;
+                        break;
+                    }
+                }
+            }
+
+            // Extract gender
+            var genderStr = exifData.GetValueOrDefault("gender") ??
+                           exifData.GetValueOrDefault("sex") ??
+                           "O";
+
+            var gender = ParseGender(genderStr);
+
+            return new PatientInfo(patientId, name, birthDate, gender);
+        }
+
+        private static Gender ParseGender(string? genderStr)
+        {
+            if (string.IsNullOrWhiteSpace(genderStr))
+                return Gender.Other;
+
+            return genderStr.ToUpperInvariant() switch
+            {
+                "M" or "MALE" or "MANN" or "MÄNNLICH" => Gender.Male,
+                "F" or "FEMALE" or "FRAU" or "WEIBLICH" => Gender.Female,
+                _ => Gender.Other
+            };
+        }
+    }
+
+    public enum Gender
+    {
+        Male,
+        Female,
+        Other
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\Entities\PatientInfo.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\Entities\ProcessingResult.cs
+# SIZE: 1.6 KB
+# MODIFIED: 2025-06-02 01:02
+# ============================================================================
+
+using System;
+
+namespace CamBridge.Core.Entities
+{
+    /// <summary>
+    /// Result of processing a single image file
+    /// </summary>
+    public class ProcessingResult
+    {
+        public string FilePath { get; private set; }
+        public string FileName => System.IO.Path.GetFileName(FilePath);
+        public bool Success { get; private set; }
+        public string? OutputFile { get; private set; }
+        public string? ErrorMessage { get; private set; }
+        public DateTime ProcessedAt { get; private set; }
+        public TimeSpan? ProcessingTime { get; private set; }
+        public PatientInfo? PatientInfo { get; set; }
+
+        private ProcessingResult(string filePath, bool success, string? outputFile, string? errorMessage, TimeSpan? processingTime)
+        {
+            FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+            Success = success;
+            OutputFile = outputFile;
+            ErrorMessage = errorMessage;
+            ProcessedAt = DateTime.UtcNow;
+            ProcessingTime = processingTime;
+        }
+
+        public static ProcessingResult CreateSuccess(string filePath, string outputFile, TimeSpan processingTime)
+        {
+            return new ProcessingResult(filePath, true, outputFile, null, processingTime);
+        }
+
+        public static ProcessingResult CreateFailure(string filePath, string errorMessage, TimeSpan? processingTime = null)
+        {
+            return new ProcessingResult(filePath, false, null, errorMessage, processingTime);
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\Entities\ProcessingResult.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\Entities\QRCodeRequest.cs
+# SIZE: 1.8 KB
+# MODIFIED: 2025-06-05 21:19
+# ============================================================================
+
+// src/CamBridge.Core/Entities/QRCodeRequest.cs
+// Version: 0.5.33
+// © 2025 Claude's Improbably Reliable Software Solutions
+
+using CamBridge.Core.ValueObjects;
+
+namespace CamBridge.Core.Entities;
+
+/// <summary>
+/// Request object for QR code generation containing patient and study information
+/// </summary>
+public record QRCodeRequest(
+    PatientInfo Patient,
+    StudyInfo Study,
+    string? Comment = null,
+    int TimeoutSeconds = 10
+)
+{
+    /// <summary>
+    /// Formats the QR code data in the expected format for Ricoh cameras
+    /// Format: ExamId|Name|BirthDate|Gender|Comment
+    /// </summary>
+    public string FormatForQRCode()
+    {
+        // Format exactly as legacy QRBridge expects
+        var parts = new[]
+        {
+            Study.ExamId ?? string.Empty,
+            Patient.Name ?? string.Empty,
+            Patient.BirthDate?.ToString("yyyy-MM-dd") ?? string.Empty,
+            Patient.Gender.ToString()[0].ToString(), // M/F/O
+            Comment ?? string.Empty
+        };
+
+        return string.Join("|", parts);
+    }
+
+    /// <summary>
+    /// Creates an empty request for initialization
+    /// </summary>
+    public static QRCodeRequest Empty => new(
+        new PatientInfo(
+            new PatientId("QR-EMPTY"),  // id - POSITIONAL, not named!
+            "Unknown",                   // name
+            null,                        // birthDate
+            Gender.Other                 // gender
+        ),
+        new StudyInfo(
+            StudyId.Generate(),          // studyId
+            "UNKNOWN",                   // examId
+            null,                        // description
+            "OT"                         // modality
+        ),
+        null,
+        10                              // default timeout seconds
+    );
+}
+
+
+# === END OF FILE: src\CamBridge.Core\Entities\QRCodeRequest.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\Entities\StudyInfo.cs
+# SIZE: 1.3 KB
+# MODIFIED: 2025-06-03 23:21
+# ============================================================================
+
+using System;
+using CamBridge.Core.ValueObjects;
+
+namespace CamBridge.Core.Entities
+{
+    /// <summary>
+    /// Information about a medical imaging study
+    /// </summary>
+    public class StudyInfo
+    {
+        public StudyId StudyId { get; }
+        public string? ExamId { get; }
+        public string? Description { get; }
+        public string? Modality { get; }
+        public DateTime StudyDate { get; }
+        public string? AccessionNumber { get; }
+        public string? ReferringPhysician { get; }
+        public string? Comment { get; }
+
+        public StudyInfo(
+            StudyId studyId,
+            string? examId = null,
+            string? description = null,
+            string? modality = null,
+            DateTime? studyDate = null,
+            string? accessionNumber = null,
+            string? referringPhysician = null,
+            string? comment = null)
+        {
+            StudyId = studyId ?? throw new ArgumentNullException(nameof(studyId));
+            ExamId = examId;
+            Description = description;
+            Modality = modality ?? "OT"; // Other modality as default
+            StudyDate = studyDate ?? DateTime.Now;
+            AccessionNumber = accessionNumber;
+            ReferringPhysician = referringPhysician;
+            Comment = comment;
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\Entities\StudyInfo.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\Interfaces\IDicomConverter.cs
+# SIZE: 2.1 KB
+# MODIFIED: 2025-05-30 20:53
+# ============================================================================
+
+using System.Threading.Tasks;
+using CamBridge.Core.Entities;
+
+namespace CamBridge.Core.Interfaces
+{
+    /// <summary>
+    /// Interface for converting JPEG images to DICOM format
+    /// </summary>
+    public interface IDicomConverter
+    {
+        /// <summary>
+        /// Converts a JPEG file to DICOM using the provided metadata
+        /// </summary>
+        Task<ConversionResult> ConvertToDicomAsync(
+            string sourceJpegPath,
+            string destinationDicomPath,
+            ImageMetadata metadata);
+
+        /// <summary>
+        /// Validates if the generated DICOM file is compliant
+        /// </summary>
+        Task<ValidationResult> ValidateDicomFileAsync(string dicomFilePath);
+
+        /// <summary>
+        /// Gets the SOP Class UID for photographic images
+        /// </summary>
+        string GetPhotographicSopClassUid();
+    }
+
+    public class ConversionResult
+    {
+        public bool Success { get; init; }
+        public string? DicomFilePath { get; init; }
+        public string? ErrorMessage { get; init; }
+        public string? SopInstanceUid { get; init; }
+        public long FileSizeBytes { get; init; }
+
+        public static ConversionResult CreateSuccess(string filePath, string sopInstanceUid, long fileSize)
+            => new()
+            {
+                Success = true,
+                DicomFilePath = filePath,
+                SopInstanceUid = sopInstanceUid,
+                FileSizeBytes = fileSize
+            };
+
+        public static ConversionResult CreateFailure(string error)
+            => new() { Success = false, ErrorMessage = error };
+    }
+
+    public class ValidationResult
+    {
+        public bool IsValid { get; init; }
+        public List<string> Errors { get; init; } = new();
+        public List<string> Warnings { get; init; } = new();
+
+        public static ValidationResult Valid()
+            => new() { IsValid = true };
+
+        public static ValidationResult Invalid(params string[] errors)
+            => new() { IsValid = false, Errors = errors.ToList() };
+    }
+}
+
+# === END OF FILE: src\CamBridge.Core\Interfaces\IDicomConverter.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\Interfaces\IDicomTagMapper.cs
+# SIZE: 1.1 KB
+# MODIFIED: 2025-06-03 15:48
+# ============================================================================
+
+using System.Collections.Generic;
+using FellowOakDicom;
+using CamBridge.Core;
+
+namespace CamBridge.Core.Interfaces
+{
+    /// <summary>
+    /// Interface for DICOM tag mapping services
+    /// </summary>
+    public interface IDicomTagMapper
+    {
+        /// <summary>
+        /// Applies a mapping rule to transform a value
+        /// </summary>
+        /// <param name="value">The value to transform</param>
+        /// <param name="transform">The transform to apply</param>
+        /// <returns>The transformed value</returns>
+        string? ApplyTransform(string? value, string? transform);
+
+        /// <summary>
+        /// Maps source data to a DICOM dataset using mapping rules
+        /// </summary>
+        /// <param name="dataset">The DICOM dataset to populate</param>
+        /// <param name="sourceData">The source data dictionary</param>
+        /// <param name="mappingRules">The mapping rules to apply</param>
+        void MapToDataset(DicomDataset dataset, Dictionary<string, string> sourceData, IEnumerable<MappingRule> mappingRules);
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\Interfaces\IDicomTagMapper.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\Interfaces\IMappingConfiguration.cs
+# SIZE: 1.9 KB
+# MODIFIED: 2025-06-03 11:59
+# ============================================================================
+
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace CamBridge.Core.Interfaces
+{
+    /// <summary>
+    /// Interface for managing DICOM mapping configurations
+    /// </summary>
+    public interface IMappingConfiguration
+    {
+        /// <summary>
+        /// Gets all configured mapping rules
+        /// </summary>
+        IReadOnlyList<MappingRule> GetMappingRules();
+
+        /// <summary>
+        /// Loads mapping configuration from a file
+        /// </summary>
+        /// <param name="filePath">Path to the configuration file (optional)</param>
+        /// <returns>True if loaded successfully, false otherwise</returns>
+        Task<bool> LoadConfigurationAsync(string? filePath = null);
+
+        /// <summary>
+        /// Saves mapping configuration to a file
+        /// </summary>
+        /// <param name="rules">The mapping rules to save</param>
+        /// <param name="filePath">Path to save the configuration (optional)</param>
+        /// <returns>True if saved successfully, false otherwise</returns>
+        Task<bool> SaveConfigurationAsync(IEnumerable<MappingRule> rules, string? filePath = null);
+
+        /// <summary>
+        /// Adds a new mapping rule
+        /// </summary>
+        void AddRule(MappingRule rule);
+
+        /// <summary>
+        /// Removes mapping rules for a specific source field
+        /// </summary>
+        void RemoveRule(string sourceField);
+
+        /// <summary>
+        /// Gets the mapping rule for a specific source field
+        /// </summary>
+        MappingRule? GetRuleForSource(string sourceField);
+
+        /// <summary>
+        /// Gets all mapping rules that target a specific DICOM tag
+        /// </summary>
+        IEnumerable<MappingRule> GetRulesForTag(string dicomTag);
+
+        /// <summary>
+        /// Validates all mapping rules
+        /// </summary>
+        void ValidateRules();
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\Interfaces\IMappingConfiguration.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\MappingRule.cs
+# SIZE: 6.4 KB
+# MODIFIED: 2025-06-07 00:49
+# ============================================================================
+
+// src\CamBridge.Core\MappingRule.cs
+// Version: 0.6.2
+// Description: DICOM mapping rule configuration
+
+using System;
+using System.Text.Json.Serialization;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Defines a mapping rule from source data to DICOM tag
+    /// </summary>
+    public class MappingRule
+    {
+        /// <summary>
+        /// Unique name for this mapping rule
+        /// </summary>
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        /// <summary>
+        /// Human-readable description of what this rule maps
+        /// </summary>
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+
+        /// <summary>
+        /// Source type: QRBridge, EXIF, Static, etc.
+        /// </summary>
+        [JsonPropertyName("sourceType")]
+        public string SourceType { get; set; } = "QRBridge";
+
+        /// <summary>
+        /// Field name in source data
+        /// </summary>
+        [JsonPropertyName("sourceField")]
+        public string SourceField { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Target DICOM tag in format (XXXX,XXXX)
+        /// </summary>
+        [JsonPropertyName("targetTag")]
+        public string DicomTag { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Alternative property name for compatibility
+        /// </summary>
+        [JsonPropertyName("dicomTag")]
+        public string? TargetTag
+        {
+            get => DicomTag;
+            set => DicomTag = value ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Value transformation to apply
+        /// </summary>
+        [JsonPropertyName("transform")]
+        public string Transform { get; set; } = "None";
+
+        /// <summary>
+        /// Whether this field is required
+        /// </summary>
+        [JsonPropertyName("required")]
+        public bool Required { get; set; }
+
+        /// <summary>
+        /// Default value if source is empty
+        /// </summary>
+        [JsonPropertyName("defaultValue")]
+        public string? DefaultValue { get; set; }
+
+        /// <summary>
+        /// DICOM Value Representation (e.g., PN, DA, TM, etc.)
+        /// </summary>
+        [JsonPropertyName("valueRepresentation")]
+        public string? ValueRepresentation { get; set; }
+
+        /// <summary>
+        /// Transform parameters (JSON serialized)
+        /// </summary>
+        [JsonPropertyName("transformParameters")]
+        public string? TransformParameters { get; set; }
+
+        /// <summary>
+        /// Transform as enum (computed property)
+        /// </summary>
+        [JsonIgnore]
+        public ValueTransform TransformEnum
+        {
+            get
+            {
+                if (Enum.TryParse<ValueTransform>(Transform, out var result))
+                    return result;
+                return ValueTransform.None;
+            }
+            set => Transform = value.ToString();
+        }
+
+        /// <summary>
+        /// Apply the configured transformation
+        /// </summary>
+        public string? ApplyTransform(string? input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return DefaultValue;
+
+            // Fix legacy transform names
+            var normalizedTransform = Transform switch
+            {
+                "GenderToDicom" => "MapGender",
+                "TruncateTo16" => "None", // Not implemented in current version
+                _ => Transform
+            };
+
+            if (!Enum.TryParse<ValueTransform>(normalizedTransform, out var transform))
+                transform = ValueTransform.None;
+
+            return transform switch
+            {
+                ValueTransform.None => input,
+                ValueTransform.DateToDicom => ConvertDateToDicom(input),
+                ValueTransform.TimeToDicom => ConvertTimeToDicom(input),
+                ValueTransform.DateTimeToDicom => ConvertDateTimeToDicom(input),
+                ValueTransform.MapGender => MapGenderValue(input),
+                ValueTransform.RemovePrefix => RemovePrefixTransform(input),
+                ValueTransform.ExtractDate => ExtractDateFromDateTime(input),
+                ValueTransform.ExtractTime => ExtractTimeFromDateTime(input),
+                ValueTransform.ToUpperCase => input.ToUpperInvariant(),
+                ValueTransform.ToLowerCase => input.ToLowerInvariant(),
+                ValueTransform.Trim => input.Trim(),
+                _ => input
+            };
+        }
+
+        #region Transform Methods
+
+        private string ConvertDateToDicom(string input)
+        {
+            if (DateTime.TryParse(input, out var date))
+            {
+                return date.ToString("yyyyMMdd");
+            }
+            return input;
+        }
+
+        private string ConvertTimeToDicom(string input)
+        {
+            if (DateTime.TryParse(input, out var time))
+            {
+                return time.ToString("HHmmss");
+            }
+            return input;
+        }
+
+        private string ConvertDateTimeToDicom(string input)
+        {
+            if (DateTime.TryParse(input, out var dateTime))
+            {
+                return dateTime.ToString("yyyyMMddHHmmss");
+            }
+            return input;
+        }
+
+        private string MapGenderValue(string input)
+        {
+            return input?.ToUpperInvariant() switch
+            {
+                "M" or "MALE" => "M",
+                "F" or "FEMALE" => "F",
+                "O" or "OTHER" => "O",
+                _ => DefaultValue ?? "O"
+            };
+        }
+
+        private string RemovePrefixTransform(string input)
+        {
+            if (input.StartsWith("IMG_", StringComparison.OrdinalIgnoreCase))
+            {
+                return input.Substring(4);
+            }
+            return input;
+        }
+
+        private string ExtractDateFromDateTime(string input)
+        {
+            if (DateTime.TryParse(input, out var dateTime))
+            {
+                return dateTime.ToString("yyyyMMdd");
+            }
+            return input;
+        }
+
+        private string ExtractTimeFromDateTime(string input)
+        {
+            if (DateTime.TryParse(input, out var dateTime))
+            {
+                return dateTime.ToString("HHmmss");
+            }
+            return input;
+        }
+
+        #endregion
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\MappingRule.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\NotificationSettings.cs
+# SIZE: 9.1 KB
+# MODIFIED: 2025-06-10 14:31
+# ============================================================================
+
+// src\CamBridge.Core\NotificationSettings.cs
+// Version: 0.7.3
+// Description: Notification configuration settings
+// © 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Configuration for the notification system
+    /// Part of SystemSettings - Compatible with legacy NotificationService
+    /// </summary>
+    public class NotificationSettings
+    {
+        /// <summary>
+        /// Enable or disable the notification system
+        /// </summary>
+        public bool Enabled { get; set; } = true;
+
+        // === LEGACY PROPERTIES FOR COMPATIBILITY ===
+
+        /// <summary>
+        /// Enable Windows Event Log notifications
+        /// </summary>
+        public bool EnableEventLog { get; set; } = true;
+
+        /// <summary>
+        /// Enable email notifications
+        /// </summary>
+        public bool EnableEmail { get; set; } = false;
+
+        /// <summary>
+        /// Minimum log level for email notifications (0=Trace, 1=Debug, 2=Info, 3=Warning, 4=Error, 5=Critical)
+        /// </summary>
+        public int MinimumEmailLevel { get; set; } = 4; // Error level
+
+        /// <summary>
+        /// Dead letter queue threshold for notifications
+        /// </summary>
+        public int DeadLetterThreshold { get; set; } = 100;
+
+        /// <summary>
+        /// Send daily summary emails
+        /// </summary>
+        public bool SendDailySummary { get; set; } = true;
+
+        /// <summary>
+        /// Hour to send daily summary (0-23)
+        /// </summary>
+        public int DailySummaryHour { get; set; } = 8;
+
+        // === NEW STRUCTURED PROPERTIES ===
+
+        /// <summary>
+        /// Email notification settings
+        /// </summary>
+        public EmailSettings Email { get; set; } = new();
+
+        /// <summary>
+        /// Windows Event Log settings
+        /// </summary>
+        public EventLogSettings EventLog { get; set; } = new();
+
+        /// <summary>
+        /// Webhook notification settings
+        /// </summary>
+        public WebhookSettings Webhook { get; set; } = new();
+
+        /// <summary>
+        /// Notification rules and filters
+        /// </summary>
+        public NotificationRules Rules { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Email notification configuration
+    /// </summary>
+    public class EmailSettings
+    {
+        public bool Enabled { get; set; } = false;
+
+        // Legacy properties for compatibility
+        public string SmtpHost { get; set; } = string.Empty;
+        public string From { get; set; } = string.Empty;
+        public string To { get; set; } = string.Empty;
+
+        // New structured properties
+        public string SmtpServer { get; set; } = string.Empty;
+        public int SmtpPort { get; set; } = 587;
+        public bool UseSsl { get; set; } = true;
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty; // Should be encrypted in production
+        public string FromAddress { get; set; } = string.Empty;
+        public string FromDisplayName { get; set; } = "CamBridge Service";
+        public List<string> ToAddresses { get; set; } = new();
+        public List<string> CcAddresses { get; set; } = new();
+        public string SubjectPrefix { get; set; } = "[CamBridge]";
+        public int TimeoutSeconds { get; set; } = 30;
+
+        /// <summary>
+        /// Legacy compatibility - returns first address from ToAddresses
+        /// </summary>
+        public string GetPrimaryToAddress() => ToAddresses?.FirstOrDefault() ?? To;
+
+        /// <summary>
+        /// Legacy compatibility - sets both To and ToAddresses
+        /// </summary>
+        public void SetToAddress(string address)
+        {
+            To = address;
+            if (!string.IsNullOrEmpty(address) && !ToAddresses.Contains(address))
+            {
+                ToAddresses.Add(address);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Windows Event Log configuration
+    /// </summary>
+    public class EventLogSettings
+    {
+        public bool Enabled { get; set; } = true;
+        public string LogName { get; set; } = "Application";
+        public string SourceName { get; set; } = "CamBridge";
+        public bool CreateSourceIfMissing { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Webhook notification configuration
+    /// </summary>
+    public class WebhookSettings
+    {
+        public bool Enabled { get; set; } = false;
+        public string Url { get; set; } = string.Empty;
+        public string Method { get; set; } = "POST";
+        public Dictionary<string, string> Headers { get; set; } = new();
+        public string ContentType { get; set; } = "application/json";
+        public int TimeoutSeconds { get; set; } = 30;
+        public int RetryCount { get; set; } = 3;
+        public int RetryDelaySeconds { get; set; } = 5;
+    }
+
+    /// <summary>
+    /// Notification rules and filtering
+    /// </summary>
+    public class NotificationRules
+    {
+        /// <summary>
+        /// Minimum time between notifications of the same type (anti-spam)
+        /// </summary>
+        public int MinimumIntervalMinutes { get; set; } = 5;
+
+        /// <summary>
+        /// Events that trigger notifications
+        /// </summary>
+        public NotificationTriggers Triggers { get; set; } = new();
+
+        /// <summary>
+        /// Daily summary settings
+        /// </summary>
+        public DailySummarySettings DailySummary { get; set; } = new();
+
+        /// <summary>
+        /// Batch notification settings
+        /// </summary>
+        public BatchNotificationSettings Batching { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Events that trigger notifications
+    /// </summary>
+    public class NotificationTriggers
+    {
+        public bool OnServiceStart { get; set; } = true;
+        public bool OnServiceStop { get; set; } = true;
+        public bool OnError { get; set; } = true;
+        public bool OnWarning { get; set; } = false;
+        public bool OnSuccess { get; set; } = false;
+        public bool OnPipelineComplete { get; set; } = true;
+        public bool OnFolderWatchError { get; set; } = true;
+        public bool OnConfigurationChange { get; set; } = true;
+        public bool OnHealthCheckFailure { get; set; } = true;
+
+        /// <summary>
+        /// Error count threshold before notification
+        /// </summary>
+        public int ErrorThreshold { get; set; } = 5;
+
+        /// <summary>
+        /// Time window for error threshold (minutes)
+        /// </summary>
+        public int ErrorThresholdWindowMinutes { get; set; } = 60;
+    }
+
+    /// <summary>
+    /// Daily summary configuration
+    /// </summary>
+    public class DailySummarySettings
+    {
+        public bool Enabled { get; set; } = true;
+        public TimeSpan SendTime { get; set; } = new TimeSpan(8, 0, 0); // 8:00 AM
+        public bool IncludeStatistics { get; set; } = true;
+        public bool IncludeErrors { get; set; } = true;
+        public bool IncludeWarnings { get; set; } = false;
+        public bool OnlyIfActivity { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Batch notification configuration
+    /// </summary>
+    public class BatchNotificationSettings
+    {
+        public bool Enabled { get; set; } = false;
+        public int BatchSize { get; set; } = 10;
+        public int BatchWindowMinutes { get; set; } = 15;
+        public bool GroupBySeverity { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Notification severity levels
+    /// </summary>
+    public enum NotificationSeverity
+    {
+        Information,
+        Success,
+        Warning,
+        Error,
+        Critical
+    }
+
+    /// <summary>
+    /// Notification level (for legacy compatibility)
+    /// </summary>
+    public enum NotificationLevel
+    {
+        None = 0,
+        Critical = 1,
+        Error = 2,
+        Warning = 3,
+        Information = 4,
+        Debug = 5,
+        All = 6
+    }
+
+    /// <summary>
+    /// Extension methods for NotificationLevel conversion
+    /// </summary>
+    public static class NotificationLevelExtensions
+    {
+        public static int ToInt(this NotificationLevel level)
+        {
+            return (int)level;
+        }
+
+        public static NotificationLevel ToNotificationLevel(this int value)
+        {
+            if (Enum.IsDefined(typeof(NotificationLevel), value))
+                return (NotificationLevel)value;
+            return NotificationLevel.Error; // Default
+        }
+    }
+
+    /// <summary>
+    /// Notification event types
+    /// </summary>
+    public enum NotificationEventType
+    {
+        ServiceStarted,
+        ServiceStopped,
+        ServiceError,
+        ProcessingStarted,
+        ProcessingCompleted,
+        ProcessingFailed,
+        ConfigurationChanged,
+        HealthCheckPassed,
+        HealthCheckFailed,
+        FolderWatchStarted,
+        FolderWatchStopped,
+        FolderWatchError,
+        DailySummary,
+        Custom
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\NotificationSettings.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\PipelineConfiguration.cs
+# SIZE: 9.7 KB
+# MODIFIED: 2025-06-08 01:51
+# ============================================================================
+
+// src\CamBridge.Core\PipelineConfiguration.cs
+// Version: 0.6.5
+// Description: Pipeline configuration model with INotifyPropertyChanged support
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Represents a complete processing pipeline from input to output
+    /// </summary>
+    public class PipelineConfiguration : INotifyPropertyChanged
+    {
+        private Guid _id = Guid.NewGuid();
+        private string _name = "New Pipeline";
+        private string? _description;
+        private bool _enabled = true;
+        private PipelineWatchSettings _watchSettings = new();
+        private ProcessingOptions _processingOptions = new();
+        private DicomOverrides? _dicomOverrides;
+        private Guid? _mappingSetId;
+
+        /// <summary>
+        /// Unique identifier for this pipeline
+        /// </summary>
+        public Guid Id
+        {
+            get => _id;
+            set { _id = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Display name for this pipeline
+        /// </summary>
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Optional description
+        /// </summary>
+        public string? Description
+        {
+            get => _description;
+            set { _description = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether this pipeline is active
+        /// </summary>
+        public bool Enabled
+        {
+            get => _enabled;
+            set { _enabled = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Watch folder configuration for this pipeline
+        /// </summary>
+        public PipelineWatchSettings WatchSettings
+        {
+            get => _watchSettings;
+            set { _watchSettings = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Processing options specific to this pipeline
+        /// </summary>
+        public ProcessingOptions ProcessingOptions
+        {
+            get => _processingOptions;
+            set { _processingOptions = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// DICOM overrides for this pipeline (optional)
+        /// </summary>
+        public DicomOverrides? DicomOverrides
+        {
+            get => _dicomOverrides;
+            set { _dicomOverrides = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// ID of the mapping set to use
+        /// </summary>
+        public Guid? MappingSetId
+        {
+            get => _mappingSetId;
+            set { _mappingSetId = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Pipeline-specific metadata
+        /// </summary>
+        public Dictionary<string, string> Metadata { get; set; } = new();
+
+        /// <summary>
+        /// Creation timestamp
+        /// </summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Last modification timestamp
+        /// </summary>
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Calculated property for UI display
+        /// </summary>
+        [JsonIgnore]
+        public string ProcessedToday => "0 files"; // TODO: Implement actual counting
+
+        [JsonIgnore]
+        public bool IsValid => WatchSettings?.IsValid ?? false;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Watch folder settings for a pipeline
+    /// </summary>
+    public class PipelineWatchSettings : INotifyPropertyChanged
+    {
+        private string _path = string.Empty;
+        private string _filePattern = "*.jpg;*.jpeg";
+        private bool _includeSubdirectories = false;
+        private string? _outputPath;
+        private int _minimumFileAgeSeconds = 2;
+
+        /// <summary>
+        /// Folder path to watch
+        /// </summary>
+        public string Path
+        {
+            get => _path;
+            set { _path = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsValid)); }
+        }
+
+        /// <summary>
+        /// File pattern to match (e.g., "*.jpg;*.jpeg")
+        /// </summary>
+        public string FilePattern
+        {
+            get => _filePattern;
+            set { _filePattern = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Include subdirectories in watch
+        /// </summary>
+        public bool IncludeSubdirectories
+        {
+            get => _includeSubdirectories;
+            set { _includeSubdirectories = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Custom output path (overrides processing options)
+        /// </summary>
+        public string? OutputPath
+        {
+            get => _outputPath;
+            set { _outputPath = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Minimum file age before processing (to ensure write completion)
+        /// </summary>
+        public int MinimumFileAgeSeconds
+        {
+            get => _minimumFileAgeSeconds;
+            set { _minimumFileAgeSeconds = value; OnPropertyChanged(); }
+        }
+
+        [JsonIgnore]
+        public bool IsValid => !string.IsNullOrWhiteSpace(Path) &&
+                              System.IO.Directory.Exists(Path);
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// DICOM settings that can be overridden per pipeline
+    /// </summary>
+    public class DicomOverrides : INotifyPropertyChanged
+    {
+        private string? _institutionName;
+        private string? _institutionDepartment;
+        private string? _stationName;
+
+        /// <summary>
+        /// Override institution name for this pipeline
+        /// </summary>
+        public string? InstitutionName
+        {
+            get => _institutionName;
+            set { _institutionName = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Override institution department for this pipeline
+        /// </summary>
+        public string? InstitutionDepartment
+        {
+            get => _institutionDepartment;
+            set { _institutionDepartment = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Override station name for this pipeline
+        /// </summary>
+        public string? StationName
+        {
+            get => _stationName;
+            set { _stationName = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Additional DICOM tags to set/override
+        /// </summary>
+        public Dictionary<string, string> AdditionalTags { get; set; } = new();
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Represents a reusable mapping configuration set
+    /// </summary>
+    public class MappingSet : INotifyPropertyChanged
+    {
+        private Guid _id = Guid.NewGuid();
+        private string _name = "New Mapping Set";
+        private string? _description;
+        private bool _isSystemDefault = false;
+
+        /// <summary>
+        /// Unique identifier
+        /// </summary>
+        public Guid Id
+        {
+            get => _id;
+            set { _id = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Display name
+        /// </summary>
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Optional description
+        /// </summary>
+        public string? Description
+        {
+            get => _description;
+            set { _description = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// The actual mapping rules
+        /// </summary>
+        public List<MappingRule> Rules { get; set; } = new();
+
+        /// <summary>
+        /// Whether this is a system default (read-only)
+        /// </summary>
+        public bool IsSystemDefault
+        {
+            get => _isSystemDefault;
+            set { _isSystemDefault = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Creation timestamp
+        /// </summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Last modification timestamp
+        /// </summary>
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Tags for categorization
+        /// </summary>
+        public List<string> Tags { get; set; } = new();
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\PipelineConfiguration.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\ProcessingOptions.cs
+# SIZE: 7.7 KB
+# MODIFIED: 2025-06-09 18:08
+# ============================================================================
+
+// src\CamBridge.Core\ProcessingOptions.cs
+// Version: 0.6.5
+// Description: Processing options with INotifyPropertyChanged support
+
+using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Options for processing JPEG files
+    /// </summary>
+    public class ProcessingOptions : INotifyPropertyChanged
+    {
+        private PostProcessingAction _successAction = PostProcessingAction.Archive;
+        private PostProcessingAction _failureAction = PostProcessingAction.MoveToError;
+        private string _archiveFolder = @"C:\CamBridge\Archive";
+        private string _errorFolder = @"C:\CamBridge\Errors";
+        private string _backupFolder = @"C:\CamBridge\Backup";
+        private string? _deadLetterFolder = @"C:\CamBridge\DeadLetters";
+        private bool _createBackup = true;
+        private int _maxConcurrentProcessing = 2;
+        private bool _retryOnFailure = true;
+        private int _maxRetryAttempts = 3;
+        private OutputOrganization _outputOrganization = OutputOrganization.ByPatientAndDate;
+        private bool _processExistingOnStartup = true;
+        private TimeSpan? _maxFileAge;
+        private long? _minimumFileSizeBytes;
+        private long? _maximumFileSizeBytes;
+        private string? _outputFilePattern;
+        private int _retryDelaySeconds = 5;
+
+        /// <summary>
+        /// Action to take on successful processing
+        /// </summary>
+        public PostProcessingAction SuccessAction
+        {
+            get => _successAction;
+            set { _successAction = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Action to take on failed processing
+        /// </summary>
+        public PostProcessingAction FailureAction
+        {
+            get => _failureAction;
+            set { _failureAction = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Archive folder for successfully processed files
+        /// </summary>
+        public string ArchiveFolder
+        {
+            get => _archiveFolder;
+            set { _archiveFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Error folder for failed files
+        /// </summary>
+        public string ErrorFolder
+        {
+            get => _errorFolder;
+            set { _errorFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Backup folder for original files
+        /// </summary>
+        public string BackupFolder
+        {
+            get => _backupFolder;
+            set { _backupFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Dead letter folder for unprocessable files
+        /// </summary>
+        public string? DeadLetterFolder
+        {
+            get => _deadLetterFolder;
+            set { _deadLetterFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether to create backup before processing
+        /// </summary>
+        public bool CreateBackup
+        {
+            get => _createBackup;
+            set { _createBackup = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum concurrent file processing
+        /// </summary>
+        public int MaxConcurrentProcessing
+        {
+            get => _maxConcurrentProcessing;
+            set { _maxConcurrentProcessing = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether to retry on failure
+        /// </summary>
+        public bool RetryOnFailure
+        {
+            get => _retryOnFailure;
+            set { _retryOnFailure = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum retry attempts
+        /// </summary>
+        public int MaxRetryAttempts
+        {
+            get => _maxRetryAttempts;
+            set { _maxRetryAttempts = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Output folder organization strategy
+        /// </summary>
+        public OutputOrganization OutputOrganization
+        {
+            get => _outputOrganization;
+            set { _outputOrganization = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether to process existing files on startup
+        /// </summary>
+        public bool ProcessExistingOnStartup
+        {
+            get => _processExistingOnStartup;
+            set { _processExistingOnStartup = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum age of files to process
+        /// </summary>
+        public TimeSpan? MaxFileAge
+        {
+            get => _maxFileAge;
+            set { _maxFileAge = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Minimum file size in bytes
+        /// </summary>
+        public long? MinimumFileSizeBytes
+        {
+            get => _minimumFileSizeBytes;
+            set { _minimumFileSizeBytes = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum file size in bytes
+        /// </summary>
+        public long? MaximumFileSizeBytes
+        {
+            get => _maximumFileSizeBytes;
+            set { _maximumFileSizeBytes = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Pattern for output file naming
+        /// </summary>
+        public string? OutputFilePattern
+        {
+            get => _outputFilePattern;
+            set { _outputFilePattern = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Delay between retry attempts in seconds
+        /// </summary>
+        public int RetryDelaySeconds
+        {
+            get => _retryDelaySeconds;
+            set { _retryDelaySeconds = value; OnPropertyChanged(); }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Actions to take after processing
+    /// </summary>
+    public enum PostProcessingAction
+    {
+        /// <summary>
+        /// Leave the file in place
+        /// </summary>
+        Leave,
+
+        /// <summary>
+        /// Move to archive folder
+        /// </summary>
+        Archive,
+
+        /// <summary>
+        /// Delete the file
+        /// </summary>
+        Delete,
+
+        /// <summary>
+        /// Move to error folder
+        /// </summary>
+        MoveToError
+    }
+
+    /// <summary>
+    /// File action types
+    /// </summary>
+    public enum FileActionType
+    {
+        Delete,
+        Move,
+        Keep
+    }
+
+    /// <summary>
+    /// Output organization types
+    /// </summary>
+    public enum OutputOrganizationType
+    {
+        Flat,           // All files in one folder
+        YearMonth,      // Year/Month subfolders
+        PatientStudy,   // Patient/Study subfolders
+        DatePatient     // Date/Patient subfolders
+    }
+
+
+    /// <summary>
+    /// Output folder organization strategies
+    /// </summary>
+    public enum OutputOrganization
+    {
+        /// <summary>
+        /// No organization
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// Organize by patient name
+        /// </summary>
+        ByPatient,
+
+        /// <summary>
+        /// Organize by date
+        /// </summary>
+        ByDate,
+
+        /// <summary>
+        /// Organize by patient and date
+        /// </summary>
+        ByPatientAndDate
+
+        
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\ProcessingOptions.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\ProcessingSummary.cs
+# SIZE: 0.9 KB
+# MODIFIED: 2025-06-01 22:37
+# ============================================================================
+
+using System;
+using System.Collections.Generic;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Summary of daily processing activities
+    /// </summary>
+    public class ProcessingSummary
+    {
+        public DateTime Date { get; set; }
+        public int TotalProcessed { get; set; }
+        public int Successful { get; set; }
+        public int Failed { get; set; }
+        public double ProcessingTimeSeconds { get; set; }
+        public Dictionary<string, int> TopErrors { get; set; } = new();
+        public int DeadLetterCount { get; set; }
+        public TimeSpan Uptime { get; set; }
+
+        // Berechnete Properties
+        public double SuccessRate => TotalProcessed > 0
+            ? (double)Successful / TotalProcessed * 100
+            : 0;
+
+        public double AverageProcessingTime => TotalProcessed > 0
+            ? ProcessingTimeSeconds / TotalProcessed
+            : 0;
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\ProcessingSummary.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\SystemSettings.cs
+# SIZE: 3.9 KB
+# MODIFIED: 2025-06-10 14:14
+# ============================================================================
+
+// src\CamBridge.Core\SystemSettings.cs
+// Version: 0.7.3
+// Description: System-wide settings (Service + Config Tool)
+// © 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Generic;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// System-wide settings shared by Service and Config Tool
+    /// Stored in: %ProgramData%\CamBridge\appsettings.json
+    /// </summary>
+    public class SystemSettings
+    {
+        public ServiceConfiguration Service { get; set; } = new();
+        public CoreConfiguration Core { get; set; } = new();
+        public LoggingConfiguration Logging { get; set; } = new();
+        public DicomDefaultSettings DicomDefaults { get; set; } = new();
+        public NotificationSettings Notifications { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Core system configuration
+    /// </summary>
+    public class CoreConfiguration
+    {
+        public string ExifToolPath { get; set; } = "Tools\\exiftool.exe";
+        public int MaxGlobalConcurrency { get; set; } = 4;
+        public string DefaultCulture { get; set; } = "de-DE";
+        public string InstanceName { get; set; } = "CamBridge";
+        public bool EnableDiagnostics { get; set; } = false;
+        public string TempFolder { get; set; } = @"C:\CamBridge\Temp";
+        public bool CleanupTempOnStartup { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Service-specific configuration (new structure)
+    /// </summary>
+    public class ServiceConfiguration
+    {
+        public string ServiceUrl { get; set; } = "http://localhost:5111";
+        public bool EnableHealthChecks { get; set; } = true;
+        public int HealthCheckIntervalSeconds { get; set; } = 30;
+        public string ServiceDisplayName { get; set; } = "CamBridge Service";
+        public string ServiceDescription { get; set; } = "JPEG to DICOM medical imaging converter";
+        public int StartupDelaySeconds { get; set; } = 5;
+        public int ShutdownTimeoutSeconds { get; set; } = 30;
+        public bool EnableApi { get; set; } = true;
+        public bool EnableSwagger { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Logging configuration (new structure)
+    /// </summary>
+    public class LoggingConfiguration
+    {
+        public string LogLevel { get; set; } = "Information";
+        public string LogPath { get; set; } = @"C:\CamBridge\Logs";
+        public int MaxLogFileSizeMB { get; set; } = 50;
+        public int MaxLogFileCount { get; set; } = 10;
+        public bool EnableConsoleLogging { get; set; } = true;
+        public bool EnableFileLogging { get; set; } = true;
+        public bool EnableEventLog { get; set; } = false;
+        public string LogFileNamePattern { get; set; } = "cambridge_{Date}.log";
+        public Dictionary<string, string> LogLevelOverrides { get; set; } = new()
+        {
+            { "Microsoft", "Warning" },
+            { "System", "Warning" },
+            { "Microsoft.Hosting.Lifetime", "Information" }
+        };
+    }
+
+    /// <summary>
+    /// DICOM default values for all conversions
+    /// </summary>
+    public class DicomDefaultSettings
+    {
+        public string ImplementationClassUID { get; set; } = "1.2.276.0.7230010.3.0.3.6.4";
+        public string ImplementationVersionName { get; set; } = "CAMBRIDGE_001";
+        public string DefaultModality { get; set; } = "OT";
+        public string DefaultManufacturer { get; set; } = "Ricoh";
+        public string DefaultManufacturerModelName { get; set; } = "G900 II";
+        public string SourceApplicationEntityTitle { get; set; } = "CAMBRIDGE";
+        public string DefaultInstitutionName { get; set; } = string.Empty;
+        public string DefaultInstitutionAddress { get; set; } = string.Empty;
+
+        // Character set configuration
+        public string SpecificCharacterSet { get; set; } = "ISO_IR 100"; // Latin-1
+        public bool UseUtf8 { get; set; } = false; // Future: UTF-8 support
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\SystemSettings.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\UserPreferences.cs
+# SIZE: 3.7 KB
+# MODIFIED: 2025-06-10 14:06
+# ============================================================================
+
+// src\CamBridge.Core\UserPreferences.cs
+// Version: 0.7.3
+// Description: Per-user UI preferences
+// © 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Generic;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// User-specific UI preferences
+    /// Stored in: %AppData%\CamBridge\preferences.json
+    /// </summary>
+    public class UserPreferences
+    {
+        // UI Theme and Appearance
+        public string Theme { get; set; } = "Dark";
+        public string Language { get; set; } = "de-DE";
+        public string AccentColor { get; set; } = "Blue";
+        public double UiScale { get; set; } = 1.0;
+
+        // Window Management
+        public string WindowState { get; set; } = "Maximized";
+        public WindowPosition? LastWindowPosition { get; set; }
+        public bool AlwaysOnTop { get; set; } = false;
+
+        // Navigation and Workflow
+        public string DefaultView { get; set; } = "Dashboard";
+        public bool ShowAdvancedOptions { get; set; } = false;
+        public bool ShowStatusBar { get; set; } = true;
+        public bool ShowNavigationPane { get; set; } = true;
+
+        // Recent Items
+        public List<Guid> RecentPipelines { get; set; } = new();
+        public List<string> RecentFolders { get; set; } = new();
+        public int MaxRecentItems { get; set; } = 10;
+
+        // Favorites and Shortcuts
+        public Dictionary<string, object> FavoriteSettings { get; set; } = new();
+        public List<string> PinnedViews { get; set; } = new() { "Dashboard", "ServiceControl" };
+
+        // Editor Preferences
+        public bool EnableSyntaxHighlighting { get; set; } = true;
+        public bool EnableAutoComplete { get; set; } = true;
+        public int EditorFontSize { get; set; } = 12;
+        public string EditorFontFamily { get; set; } = "Consolas";
+
+        // Notification Preferences
+        public bool EnableDesktopNotifications { get; set; } = true;
+        public bool PlaySoundOnError { get; set; } = true;
+        public bool PlaySoundOnSuccess { get; set; } = false;
+
+        // Last session state
+        public DateTime LastSessionTime { get; set; } = DateTime.UtcNow;
+        public string LastSelectedPipelineId { get; set; } = string.Empty;
+        public Dictionary<string, bool> CollapsedSections { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Window position and size
+    /// </summary>
+    public class WindowPosition
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+        public int Width { get; set; } = 1200;
+        public int Height { get; set; } = 800;
+
+        /// <summary>
+        /// Monitor identifier for multi-monitor setups
+        /// </summary>
+        public string MonitorId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Validates if position is reasonable (not off-screen)
+        /// </summary>
+        public bool IsValid()
+        {
+            return X >= -Width / 2 &&
+                   Y >= -Height / 2 &&
+                   Width >= 800 &&
+                   Height >= 600;
+        }
+    }
+
+    /// <summary>
+    /// Available UI themes
+    /// </summary>
+    public static class UiThemes
+    {
+        public const string Light = "Light";
+        public const string Dark = "Dark";
+        public const string HighContrast = "HighContrast";
+        public const string System = "System"; // Follow Windows theme
+    }
+
+    /// <summary>
+    /// Available UI languages
+    /// </summary>
+    public static class UiLanguages
+    {
+        public const string German = "de-DE";
+        public const string English = "en-US";
+        public const string French = "fr-FR";
+        public const string Spanish = "es-ES";
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\UserPreferences.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\ValueObjects\DicomTag.cs
+# SIZE: 4.7 KB
+# MODIFIED: 2025-06-02 13:23
+# ============================================================================
+
+namespace CamBridge.Core.ValueObjects
+{
+    /// <summary>
+    /// Represents a DICOM tag with group and element numbers
+    /// </summary>
+    public record DicomTag
+    {
+        public ushort Group { get; }
+        public ushort Element { get; }
+
+        public DicomTag(ushort group, ushort element)
+        {
+            Group = group;
+            Element = element;
+        }
+
+        /// <summary>
+        /// Creates a DicomTag from string format "(0010,0010)"
+        /// </summary>
+        public static DicomTag Parse(string tagString)
+        {
+            if (string.IsNullOrWhiteSpace(tagString))
+                throw new ArgumentException("Tag string cannot be empty");
+
+            // Remove parentheses and spaces
+            var cleaned = tagString.Trim().Trim('(', ')').Replace(" ", "");
+            var parts = cleaned.Split(',');
+
+            if (parts.Length != 2)
+                throw new ArgumentException($"Invalid tag format: {tagString}");
+
+            var group = Convert.ToUInt16(parts[0], 16);
+            var element = Convert.ToUInt16(parts[1], 16);
+
+            return new DicomTag(group, element);
+        }
+
+        public override string ToString() => $"({Group:X4},{Element:X4})";
+
+        // Common DICOM Tags as constants
+        public static class PatientModule
+        {
+            public static readonly DicomTag PatientName = new(0x0010, 0x0010);
+            public static readonly DicomTag PatientID = new(0x0010, 0x0020);
+            public static readonly DicomTag PatientBirthDate = new(0x0010, 0x0030);
+            public static readonly DicomTag PatientSex = new(0x0010, 0x0040);
+            public static readonly DicomTag OtherPatientIDs = new(0x0010, 0x1000);
+            public static readonly DicomTag PatientComments = new(0x0010, 0x4000);
+        }
+
+        public static class StudyModule
+        {
+            public static readonly DicomTag StudyInstanceUID = new(0x0020, 0x000D);
+            public static readonly DicomTag StudyDate = new(0x0008, 0x0020);
+            public static readonly DicomTag StudyTime = new(0x0008, 0x0030);
+            public static readonly DicomTag AccessionNumber = new(0x0008, 0x0050);
+            public static readonly DicomTag ReferringPhysicianName = new(0x0008, 0x0090);
+            public static readonly DicomTag StudyID = new(0x0020, 0x0010);
+            public static readonly DicomTag StudyDescription = new(0x0008, 0x1030);
+        }
+
+        public static class SeriesModule
+        {
+            public static readonly DicomTag Modality = new(0x0008, 0x0060);
+            public static readonly DicomTag SeriesInstanceUID = new(0x0020, 0x000E);
+            public static readonly DicomTag SeriesNumber = new(0x0020, 0x0011);
+            public static readonly DicomTag SeriesDate = new(0x0008, 0x0021);
+            public static readonly DicomTag SeriesTime = new(0x0008, 0x0031);
+            public static readonly DicomTag SeriesDescription = new(0x0008, 0x103E);
+            public static readonly DicomTag PerformingPhysicianName = new(0x0008, 0x1050);
+        }
+
+        public static class InstanceModule
+        {
+            public static readonly DicomTag SOPClassUID = new(0x0008, 0x0016);
+            public static readonly DicomTag SOPInstanceUID = new(0x0008, 0x0018);
+            public static readonly DicomTag InstanceNumber = new(0x0020, 0x0013);
+            public static readonly DicomTag ContentDate = new(0x0008, 0x0023);
+            public static readonly DicomTag ContentTime = new(0x0008, 0x0033);
+            public static readonly DicomTag AcquisitionDateTime = new(0x0008, 0x002A);
+        }
+
+        public static class EquipmentModule
+        {
+            public static readonly DicomTag Manufacturer = new(0x0008, 0x0070);
+            public static readonly DicomTag InstitutionName = new(0x0008, 0x0080);
+            public static readonly DicomTag ManufacturerModelName = new(0x0008, 0x1090);
+            public static readonly DicomTag StationName = new(0x0008, 0x1010);
+            public static readonly DicomTag SoftwareVersions = new(0x0018, 0x1020);
+        }
+
+        // Legacy alias for compatibility
+        public static class ImageModule
+        {
+            public static readonly DicomTag SOPInstanceUID = InstanceModule.SOPInstanceUID;
+            public static readonly DicomTag InstanceNumber = InstanceModule.InstanceNumber;
+            public static readonly DicomTag ContentDate = InstanceModule.ContentDate;
+            public static readonly DicomTag ContentTime = InstanceModule.ContentTime;
+            public static readonly DicomTag AcquisitionDateTime = InstanceModule.AcquisitionDateTime;
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\ValueObjects\DicomTag.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\ValueObjects\ExifTag.cs
+# SIZE: 2.9 KB
+# MODIFIED: 2025-05-30 20:51
+# ============================================================================
+
+namespace CamBridge.Core.ValueObjects
+{
+    /// <summary>
+    /// Represents an EXIF tag with its ID and name
+    /// </summary>
+    public record ExifTag
+    {
+        public int Id { get; }
+        public string Name { get; }
+        public string Category { get; }
+
+        public ExifTag(int id, string name, string category = "Unknown")
+        {
+            Id = id;
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            Category = category;
+        }
+
+        public override string ToString() => $"{Name} (0x{Id:X4})";
+
+        // Common EXIF Tags
+        public static class Image
+        {
+            public static readonly ExifTag Make = new(0x010F, "Make", "Image");
+            public static readonly ExifTag Model = new(0x0110, "Model", "Image");
+            public static readonly ExifTag Software = new(0x0131, "Software", "Image");
+            public static readonly ExifTag DateTime = new(0x0132, "DateTime", "Image");
+            public static readonly ExifTag ImageDescription = new(0x010E, "ImageDescription", "Image");
+            public static readonly ExifTag Orientation = new(0x0112, "Orientation", "Image");
+            public static readonly ExifTag XResolution = new(0x011A, "XResolution", "Image");
+            public static readonly ExifTag YResolution = new(0x011B, "YResolution", "Image");
+        }
+
+        public static class Photo
+        {
+            public static readonly ExifTag ExposureTime = new(0x829A, "ExposureTime", "Photo");
+            public static readonly ExifTag FNumber = new(0x829D, "FNumber", "Photo");
+            public static readonly ExifTag ISOSpeedRatings = new(0x8827, "ISOSpeedRatings", "Photo");
+            public static readonly ExifTag DateTimeOriginal = new(0x9003, "DateTimeOriginal", "Photo");
+            public static readonly ExifTag Flash = new(0x9209, "Flash", "Photo");
+            public static readonly ExifTag FocalLength = new(0x920A, "FocalLength", "Photo");
+            public static readonly ExifTag UserComment = new(0x9286, "UserComment", "Photo");
+            public static readonly ExifTag ExifVersion = new(0x9000, "ExifVersion", "Photo");
+        }
+
+        public static class GPS
+        {
+            public static readonly ExifTag GPSLatitudeRef = new(0x0001, "GPSLatitudeRef", "GPS");
+            public static readonly ExifTag GPSLatitude = new(0x0002, "GPSLatitude", "GPS");
+            public static readonly ExifTag GPSLongitudeRef = new(0x0003, "GPSLongitudeRef", "GPS");
+            public static readonly ExifTag GPSLongitude = new(0x0004, "GPSLongitude", "GPS");
+            public static readonly ExifTag GPSAltitude = new(0x0006, "GPSAltitude", "GPS");
+            public static readonly ExifTag GPSTimeStamp = new(0x0007, "GPSTimeStamp", "GPS");
+        }
+
+        // Ricoh specific
+        public static readonly ExifTag RicohUserComment = Photo.UserComment;
+    }
+}
+
+# === END OF FILE: src\CamBridge.Core\ValueObjects\ExifTag.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\ValueObjects\PatientId.cs
+# SIZE: 2.4 KB
+# MODIFIED: 2025-06-02 08:15
+# ============================================================================
+
+using System;
+
+namespace CamBridge.Core.ValueObjects
+{
+    /// <summary>
+    /// Represents a patient identifier as a value object
+    /// </summary>
+    public class PatientId : IEquatable<PatientId>
+    {
+        /// <summary>
+        /// Gets the patient identifier value
+        /// </summary>
+        public string Value { get; }
+
+        /// <summary>
+        /// Creates a new PatientId instance
+        /// </summary>
+        /// <param name="value">The patient identifier value</param>
+        /// <exception cref="ArgumentNullException">When value is null</exception>
+        /// <exception cref="ArgumentException">When value is empty or whitespace</exception>
+        public PatientId(string value)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            if (string.IsNullOrWhiteSpace(value))
+                throw new ArgumentException("Patient ID cannot be empty or whitespace", nameof(value));
+
+            Value = value.Trim();
+        }
+
+        /// <summary>
+        /// Creates a new random PatientId for testing purposes
+        /// </summary>
+        public static PatientId NewId() => new PatientId(Guid.NewGuid().ToString("N"));
+
+        public bool Equals(PatientId? other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Value == other.Value;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((PatientId)obj);
+        }
+
+        public override int GetHashCode() => Value.GetHashCode();
+
+        public static bool operator ==(PatientId? left, PatientId? right) => Equals(left, right);
+
+        public static bool operator !=(PatientId? left, PatientId? right) => !Equals(left, right);
+
+        public override string ToString() => Value;
+
+        /// <summary>
+        /// Implicit conversion from string
+        /// </summary>
+        public static implicit operator string(PatientId patientId) => patientId.Value;
+
+        /// <summary>
+        /// Explicit conversion to PatientId
+        /// </summary>
+        public static explicit operator PatientId(string value) => new PatientId(value);
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\ValueObjects\PatientId.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\ValueObjects\StudyId.cs
+# SIZE: 1.9 KB
+# MODIFIED: 2025-05-30 20:52
+# ============================================================================
+
+using System;
+
+namespace CamBridge.Core.ValueObjects
+{
+    /// <summary>
+    /// Strongly typed study identifier
+    /// </summary>
+    public record StudyId
+    {
+        public string Value { get; }
+
+        public StudyId(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                throw new ArgumentException("Study ID cannot be empty", nameof(value));
+
+            // Validate format (max 16 chars for DICOM Study ID)
+            if (value.Length > 16)
+                throw new ArgumentException($"Study ID too long (max 16 chars): {value}", nameof(value));
+
+            Value = value.Trim().ToUpper();
+        }
+
+        public override string ToString() => Value;
+
+        // Implicit conversion to string
+        public static implicit operator string(StudyId id) => id.Value;
+
+        // Factory methods
+        public static StudyId CreateFromExamId(string examId)
+        {
+            if (string.IsNullOrWhiteSpace(examId))
+                return Generate();
+
+            // Truncate if necessary and ensure uppercase
+            var cleanId = examId.Trim().ToUpper();
+            if (cleanId.Length > 16)
+                cleanId = cleanId.Substring(0, 16);
+
+            return new StudyId(cleanId);
+        }
+
+        public static StudyId Generate()
+        {
+            // Generate unique study ID
+            // Format: SYYYYMMDDHHMMSS (max 16 chars)
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            return new StudyId($"S{timestamp}");
+        }
+
+        public static StudyId GenerateForDate(DateTime date)
+        {
+            // Generate study ID for specific date
+            var dateStr = date.ToString("yyyyMMdd");
+            var random = new Random().Next(1000, 9999);
+            return new StudyId($"S{dateStr}{random}");
+        }
+    }
+}
+
+# === END OF FILE: src\CamBridge.Core\ValueObjects\StudyId.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Core\ValueTransform.cs
+# SIZE: 1.4 KB
+# MODIFIED: 2025-06-03 14:42
+# ============================================================================
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Enum for value transform types used in mapping rules
+    /// </summary>
+    public enum ValueTransform
+    {
+        /// <summary>
+        /// No transformation applied
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// Convert date to DICOM format (YYYYMMDD)
+        /// </summary>
+        DateToDicom,
+
+        /// <summary>
+        /// Convert time to DICOM format (HHMMSS)
+        /// </summary>
+        TimeToDicom,
+
+        /// <summary>
+        /// Convert datetime to DICOM format
+        /// </summary>
+        DateTimeToDicom,
+
+        /// <summary>
+        /// Map gender codes (M/F/O to Male/Female/Other)
+        /// </summary>
+        MapGender,
+
+        /// <summary>
+        /// Remove prefix from value
+        /// </summary>
+        RemovePrefix,
+
+        /// <summary>
+        /// Extract date part from datetime
+        /// </summary>
+        ExtractDate,
+
+        /// <summary>
+        /// Extract time part from datetime
+        /// </summary>
+        ExtractTime,
+
+        /// <summary>
+        /// Convert to uppercase
+        /// </summary>
+        ToUpperCase,
+
+        /// <summary>
+        /// Convert to lowercase
+        /// </summary>
+        ToLowerCase,
+
+        /// <summary>
+        /// Trim whitespace
+        /// </summary>
+        Trim
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Core\ValueTransform.cs ===
+
+
+# ============================================================================
+# END OF Core SOURCES
+# Total Size: 0.11 MB
+# Files Included: 26
+# ============================================================================

@@ -1,0 +1,3758 @@
+﻿# ============================================================================
+# WISDOM SOURCES - Infrastructure
+# ============================================================================
+# Project: CamBridge.Infrastructure
+# Version: 0.7.10
+# Generated: 2025-06-13 17:24
+# Description: Services, implementations, and infrastructure
+# Total Files: 12
+# ============================================================================
+
+# TABLE OF CONTENTS:
+# ===================
+# - src\CamBridge.Infrastructure\GlobalUsings.cs
+# - src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs
+# - src\CamBridge.Infrastructure\Services\DicomConverter.cs
+# - src\CamBridge.Infrastructure\Services\DicomTagMapper.cs
+# - src\CamBridge.Infrastructure\Services\ExifToolReader.cs
+# - src\CamBridge.Infrastructure\Services\FileProcessor.cs
+# - src\CamBridge.Infrastructure\Services\FolderWatcherService.cs
+# - src\CamBridge.Infrastructure\Services\INotificationService.cs
+# - src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs
+# - src\CamBridge.Infrastructure\Services\NotificationService.cs
+# - src\CamBridge.Infrastructure\Services\PipelineManager.cs
+# - src\CamBridge.Infrastructure\Services\ProcessingQueue.cs
+
+# ============================================================================
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\GlobalUsings.cs
+# SIZE: 0.2 KB
+# MODIFIED: 2025-06-01 22:37
+# ============================================================================
+
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Text;
+global using System.Threading.Tasks;
+global using Microsoft.Extensions.Logging;
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\GlobalUsings.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs
+# SIZE: 8.9 KB
+# MODIFIED: 2025-06-12 23:28
+# ============================================================================
+
+// src/CamBridge.Infrastructure/ServiceCollectionExtensions.cs
+// Version: 0.7.8
+// Description: Extension methods for configuring infrastructure services - KISS approach
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using CamBridge.Core;
+using CamBridge.Core.Interfaces;
+using CamBridge.Infrastructure.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CamBridge.Infrastructure
+{
+    /// <summary>
+    /// Extension methods for configuring infrastructure services
+    /// KISS UPDATE: Removed DeadLetterQueue completely!
+    /// </summary>
+    public static class ServiceCollectionExtensions
+    {
+        /// <summary>
+        /// Adds all infrastructure services to the dependency injection container
+        /// </summary>
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+        {
+            // Core Processing Services (shared across all pipelines)
+            services.AddSingleton<FileProcessor>(); // KISS: No interface needed!
+            services.AddSingleton<DicomConverter>(); // KISS: No interface needed!
+            services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
+
+            // ExifTool Reader - The ONLY solution! No interfaces, no fallbacks!
+            services.AddSingleton<ExifToolReader>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<ExifToolReader>>();
+                var timeoutMs = configuration.GetValue<int>("CamBridge:ExifToolTimeoutMs", 5000);
+
+                // ExifToolReader handles discovery internally
+                return new ExifToolReader(logger, timeoutMs);
+            });
+
+            // Pipeline Manager - The new orchestrator!
+            services.AddSingleton<PipelineManager>();
+
+            // Mapping Services
+            services.AddSingleton<IDicomTagMapper, DicomTagMapper>();
+
+            // Notification Services (ultra-minimal implementation - just logging!)
+            services.AddSingleton<INotificationService, NotificationService>();
+
+            // Note: ProcessingQueue is now created per-pipeline by PipelineManager
+            // Note: DeadLetterQueue is REMOVED - Simple error folder approach!
+            // Note: FolderWatcherService is replaced by per-pipeline watchers
+
+            // Configure Options
+            services.Configure<CamBridgeSettings>(configuration.GetSection("CamBridge")); // For backwards compatibility
+            services.Configure<CamBridgeSettingsV2>(configuration.GetSection("CamBridge")); // New V2 settings
+            services.Configure<ProcessingOptions>(configuration.GetSection("CamBridge:ProcessingOptions"));
+            // Note: NotificationSettings removed - we just log now (KISS!)
+
+            // Settings migration helper
+            services.AddSingleton<IPostConfigureOptions<CamBridgeSettingsV2>, CamBridgeSettingsV2PostConfigure>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds infrastructure services for the configuration tool
+        /// </summary>
+        public static IServiceCollection AddInfrastructureForConfig(this IServiceCollection services)
+        {
+            // Only add services needed by the configuration tool
+            services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
+            services.AddSingleton<DicomTagMapper>();
+
+            // Add ExifTool reader for config tool
+            services.AddSingleton<ExifToolReader>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<ExifToolReader>>();
+                return new ExifToolReader(logger);
+            });
+
+            return services;
+        }
+
+        /// <summary>
+        /// Validates that all required services are properly configured
+        /// </summary>
+        public static IServiceProvider ValidateInfrastructure(this IServiceProvider provider)
+        {
+            // Create a logger for validation
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("Infrastructure.Validation");
+
+            try
+            {
+                // Validate critical services
+                var criticalServices = new[]
+                {
+                    typeof(ExifToolReader),  // Direct type, no interface!
+                    typeof(FileProcessor),   // KISS: Direct type!
+                    typeof(DicomConverter),  // KISS: Direct type!
+                    typeof(PipelineManager)  // New orchestrator
+                };
+
+                foreach (var serviceType in criticalServices)
+                {
+                    var service = provider.GetService(serviceType);
+                    if (service == null)
+                    {
+                        logger.LogError("Critical service {ServiceType} is not registered", serviceType.Name);
+                        throw new InvalidOperationException($"Critical service {serviceType.Name} is not registered");
+                    }
+                }
+
+                // Validate ExifTool reader
+                var exifToolReader = provider.GetRequiredService<ExifToolReader>();
+                logger.LogInformation("ExifTool reader validated - the ONLY EXIF solution");
+
+                // Validate DicomConverter (KISS: Direct reference!)
+                var dicomConverter = provider.GetRequiredService<DicomConverter>();
+                logger.LogInformation("DicomConverter validated - KISS approach working!");
+
+                // Validate FileProcessor (KISS: Direct reference!)
+                var fileProcessor = provider.GetRequiredService<FileProcessor>();
+                logger.LogInformation("FileProcessor validated - Simple error handling active!");
+
+                // Validate Pipeline Manager
+                var pipelineManager = provider.GetRequiredService<PipelineManager>();
+                logger.LogInformation("Pipeline Manager validated - ready for multi-pipeline processing");
+
+                // Validate settings
+                var settingsV2 = provider.GetRequiredService<IOptions<CamBridgeSettingsV2>>();
+                if (settingsV2.Value.Pipelines.Count == 0)
+                {
+                    logger.LogWarning("No pipelines configured - using default pipeline from V1 settings");
+                }
+                else
+                {
+                    logger.LogInformation("Found {Count} configured pipelines", settingsV2.Value.Pipelines.Count);
+                }
+
+                logger.LogInformation("Infrastructure validation completed - KISS approach: DeadLetterQueue eliminated! -650 LOC removed!");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Infrastructure validation failed");
+                throw;
+            }
+
+            return provider;
+        }
+
+        /// <summary>
+        /// Post-configure options to handle V1 to V2 migration
+        /// </summary>
+        private class CamBridgeSettingsV2PostConfigure : IPostConfigureOptions<CamBridgeSettingsV2>
+        {
+            private readonly IOptions<CamBridgeSettings> _v1Settings;
+            private readonly ILogger<CamBridgeSettingsV2PostConfigure> _logger;
+
+            public CamBridgeSettingsV2PostConfigure(
+                IOptions<CamBridgeSettings> v1Settings,
+                ILogger<CamBridgeSettingsV2PostConfigure> logger)
+            {
+                _v1Settings = v1Settings;
+                _logger = logger;
+            }
+
+            public void PostConfigure(string? name, CamBridgeSettingsV2 options)
+            {
+                // If no pipelines configured, migrate from V1
+                if (options.Pipelines.Count == 0 && _v1Settings.Value != null)
+                {
+                    _logger.LogInformation("No pipelines configured, migrating from V1 settings");
+
+                    // Use the built-in migration method
+                    var migrated = CamBridgeSettingsV2.MigrateFromV1(_v1Settings.Value);
+
+                    // Copy all migrated values to options
+                    options.Version = migrated.Version;
+                    options.Pipelines = migrated.Pipelines;
+                    options.MappingSets = migrated.MappingSets;
+                    options.GlobalDicomSettings = migrated.GlobalDicomSettings;
+                    options.DefaultProcessingOptions = migrated.DefaultProcessingOptions;
+                    options.Logging = migrated.Logging;
+                    options.Service = migrated.Service;
+                    options.Notifications = migrated.Notifications;
+                    options.MigratedFrom = migrated.MigratedFrom;
+                }
+            }
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\Services\DicomConverter.cs
+# SIZE: 23.4 KB
+# MODIFIED: 2025-06-03 23:43
+# ============================================================================
+
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Linq;
+using System.Runtime.Versioning;
+using System.Threading.Tasks;
+using CamBridge.Core.Entities;
+using CamBridge.Core.Interfaces;
+using FellowOakDicom;
+using FellowOakDicom.Imaging;
+using FellowOakDicom.IO.Buffer;
+using Microsoft.Extensions.Logging;
+using DicomTag = FellowOakDicom.DicomTag;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Implementation of IDicomConverter using fo-dicom library
+    /// Converts JPEG images to DICOM format while preserving JPEG compression
+    /// </summary>
+    [SupportedOSPlatform("windows")]
+    public class DicomConverter : IDicomConverter
+    {
+        private readonly ILogger<DicomConverter> _logger;
+        private readonly IDicomTagMapper? _tagMapper;
+        private readonly IMappingConfiguration? _mappingConfiguration;
+
+        private const string PHOTOGRAPHIC_SOP_CLASS_UID = "1.2.840.10008.5.1.4.1.1.77.1.4";
+        private const string JPEG_BASELINE_TRANSFER_SYNTAX_UID = "1.2.840.10008.1.2.4.50";
+
+        // Implementation Class UID prefix for CamBridge
+        private const string IMPLEMENTATION_CLASS_UID = "1.2.276.0.7230010.3.0.3.6.4";
+        private const string IMPLEMENTATION_VERSION_NAME = "CAMBRIDGE_001";
+
+        // Constructor for backward compatibility
+        public DicomConverter(ILogger<DicomConverter> logger)
+            : this(logger, null, null)
+        {
+        }
+
+        // New constructor with dependency injection
+        public DicomConverter(
+            ILogger<DicomConverter> logger,
+            IDicomTagMapper? tagMapper,
+            IMappingConfiguration? mappingConfiguration)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _tagMapper = tagMapper;
+            _mappingConfiguration = mappingConfiguration;
+        }
+
+        /// <inheritdoc />
+        public async Task<ConversionResult> ConvertToDicomAsync(
+            string sourceJpegPath,
+            string destinationDicomPath,
+            ImageMetadata metadata)
+        {
+            if (string.IsNullOrWhiteSpace(sourceJpegPath))
+                throw new ArgumentException("Source JPEG path cannot be null or empty", nameof(sourceJpegPath));
+
+            if (string.IsNullOrWhiteSpace(destinationDicomPath))
+                throw new ArgumentException("Destination DICOM path cannot be null or empty", nameof(destinationDicomPath));
+
+            if (metadata == null)
+                throw new ArgumentNullException(nameof(metadata));
+
+            try
+            {
+                _logger.LogInformation("Starting DICOM conversion for {SourceFile}", sourceJpegPath);
+
+                // Read JPEG file
+                var jpegBytes = await File.ReadAllBytesAsync(sourceJpegPath);
+
+                // Get image dimensions from metadata or read from file
+                var (width, height) = await GetImageDimensionsAsync(sourceJpegPath, metadata);
+
+                // Create DICOM dataset
+                DicomDataset dataset;
+
+                if (_tagMapper != null && _mappingConfiguration != null)
+                {
+                    // Use dynamic mapping
+                    dataset = CreateDicomDatasetWithMapping(metadata, width, height);
+                }
+                else
+                {
+                    // Use legacy hardcoded mapping
+                    dataset = CreateDicomDatasetLegacy(metadata, width, height);
+                }
+
+                // Create DICOM file with JPEG encapsulated pixel data
+                var dicomFile = CreateDicomFileWithJpegData(dataset, jpegBytes);
+
+                // Ensure output directory exists
+                var outputDir = Path.GetDirectoryName(destinationDicomPath);
+                if (!string.IsNullOrEmpty(outputDir))
+                    Directory.CreateDirectory(outputDir);
+
+                // Save DICOM file
+                await dicomFile.SaveAsync(destinationDicomPath);
+
+                var fileInfo = new FileInfo(destinationDicomPath);
+                var sopInstanceUid = dataset.GetString(DicomTag.SOPInstanceUID);
+
+                _logger.LogInformation("Successfully converted {SourceFile} to DICOM: {DicomFile} ({FileSize} bytes)",
+                    sourceJpegPath, destinationDicomPath, fileInfo.Length);
+
+                return ConversionResult.CreateSuccess(destinationDicomPath, sopInstanceUid, fileInfo.Length);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error converting {SourceFile} to DICOM", sourceJpegPath);
+                return ConversionResult.CreateFailure($"Conversion failed: {ex.Message}");
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<ValidationResult> ValidateDicomFileAsync(string dicomFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(dicomFilePath))
+                throw new ArgumentException("DICOM file path cannot be null or empty", nameof(dicomFilePath));
+
+            try
+            {
+                var errors = new List<string>();
+                var warnings = new List<string>();
+
+                // Try to open the file
+                var dicomFile = await DicomFile.OpenAsync(dicomFilePath);
+                var dataset = dicomFile.Dataset;
+
+                // Check mandatory Patient Module tags
+                ValidateTag(dataset, DicomTag.PatientName, "Patient Name", errors, warnings);
+                ValidateTag(dataset, DicomTag.PatientID, "Patient ID", errors, warnings);
+                ValidateTag(dataset, DicomTag.PatientBirthDate, "Patient Birth Date", errors, warnings);
+                ValidateTag(dataset, DicomTag.PatientSex, "Patient Sex", errors, warnings);
+
+                // Check mandatory Study Module tags
+                ValidateTag(dataset, DicomTag.StudyInstanceUID, "Study Instance UID", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.StudyDate, "Study Date", errors, warnings);
+                ValidateTag(dataset, DicomTag.StudyTime, "Study Time", errors, warnings);
+
+                // Check mandatory Series Module tags
+                ValidateTag(dataset, DicomTag.SeriesInstanceUID, "Series Instance UID", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.Modality, "Modality", errors, warnings, true);
+
+                // Check mandatory Image Module tags
+                ValidateTag(dataset, DicomTag.SOPClassUID, "SOP Class UID", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.SOPInstanceUID, "SOP Instance UID", errors, warnings, true);
+
+                // Check Image Pixel Module
+                ValidateTag(dataset, DicomTag.SamplesPerPixel, "Samples Per Pixel", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.PhotometricInterpretation, "Photometric Interpretation", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.Rows, "Rows", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.Columns, "Columns", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.BitsAllocated, "Bits Allocated", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.BitsStored, "Bits Stored", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.HighBit, "High Bit", errors, warnings, true);
+                ValidateTag(dataset, DicomTag.PixelRepresentation, "Pixel Representation", errors, warnings, true);
+
+                // Check pixel data
+                if (!dataset.Contains(DicomTag.PixelData))
+                {
+                    errors.Add("Missing Pixel Data");
+                }
+
+                // Validate photometric interpretation for JPEG
+                var transferSyntax = dicomFile.FileMetaInfo.TransferSyntax;
+                if (transferSyntax.UID.UID == JPEG_BASELINE_TRANSFER_SYNTAX_UID)
+                {
+                    var photometric = dataset.GetString(DicomTag.PhotometricInterpretation);
+                    if (photometric != "YBR_FULL_422")
+                    {
+                        warnings.Add($"Photometric Interpretation '{photometric}' may not be optimal for JPEG compression (expected YBR_FULL_422)");
+                    }
+                }
+
+                if (errors.Count == 0)
+                {
+                    _logger.LogInformation("DICOM file validation passed for {FilePath}", dicomFilePath);
+                    return ValidationResult.Valid();
+                }
+                else
+                {
+                    _logger.LogWarning("DICOM file validation failed for {FilePath}: {Errors}",
+                        dicomFilePath, string.Join(", ", errors));
+                    return ValidationResult.Invalid(errors.ToArray());
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating DICOM file {FilePath}", dicomFilePath);
+                return ValidationResult.Invalid($"Validation error: {ex.Message}");
+            }
+        }
+
+        /// <inheritdoc />
+        public string GetPhotographicSopClassUid() => PHOTOGRAPHIC_SOP_CLASS_UID;
+
+        private DicomDataset CreateDicomDatasetWithMapping(ImageMetadata metadata, int width, int height)
+        {
+            var dataset = new DicomDataset();
+
+            // Add basic technical tags that aren't mapped
+            AddBasicTechnicalTags(dataset, metadata, width, height);
+
+            // Prepare source data for mapping
+            var sourceData = PrepareSourceData(metadata);
+
+            // Get mapping rules
+            var mappingRules = _mappingConfiguration!.GetMappingRules();
+
+            // Flatten the nested dictionary if needed
+            var flatSourceData = new Dictionary<string, string>();
+            if (sourceData.ContainsKey("QRBridge"))
+            {
+                foreach (var kvp in sourceData["QRBridge"])
+                {
+                    flatSourceData[kvp.Key] = kvp.Value;
+                }
+            }
+
+            // Apply mappings (void method, no return value)
+            _tagMapper!.MapToDataset(dataset, flatSourceData, mappingRules);
+
+            _logger.LogInformation("Mapping completed successfully");
+
+            // Add any essential tags that weren't mapped
+            EnsureEssentialTags(dataset, metadata);
+
+            return dataset;
+        }
+
+        private Dictionary<string, Dictionary<string, string>> PrepareSourceData(ImageMetadata metadata)
+        {
+            var sourceData = new Dictionary<string, Dictionary<string, string>>();
+
+            // Prepare QRBridge data
+            var qrBridgeData = new Dictionary<string, string>();
+
+            // Extract from parsed user comment if available
+            if (metadata.ExifData != null && metadata.ExifData.TryGetValue("QRBridgeData", out var qrData))
+            {
+                // Assume it's already parsed into key-value pairs
+                var parts = qrData.Split('|');
+                if (parts.Length >= 1) qrBridgeData["examid"] = parts[0];
+                if (parts.Length >= 2) qrBridgeData["name"] = parts[1];
+                if (parts.Length >= 3) qrBridgeData["birthdate"] = parts[2];
+                if (parts.Length >= 4) qrBridgeData["gender"] = parts[3];
+                if (parts.Length >= 5) qrBridgeData["comment"] = parts[4];
+            }
+
+            // Or use metadata directly
+            qrBridgeData["name"] = metadata.Patient.Name;
+            qrBridgeData["patientid"] = metadata.Patient.Id.Value;
+            if (metadata.Patient.BirthDate.HasValue)
+                qrBridgeData["birthdate"] = metadata.Patient.BirthDate.Value.ToString("yyyy-MM-dd");
+            qrBridgeData["gender"] = metadata.Patient.Gender.ToString()[0].ToString();
+            qrBridgeData["examid"] = metadata.Study.ExamId ?? metadata.Study.StudyId.Value;
+            if (!string.IsNullOrEmpty(metadata.Study.Comment))
+                qrBridgeData["comment"] = metadata.Study.Comment;
+
+            sourceData["QRBridge"] = qrBridgeData;
+
+            // Prepare EXIF data
+            if (metadata.ExifData != null)
+            {
+                sourceData["EXIF"] = new Dictionary<string, string>(metadata.ExifData);
+            }
+            else
+            {
+                sourceData["EXIF"] = new Dictionary<string, string>();
+            }
+
+            // Add technical data to EXIF if not already present
+            if (metadata.TechnicalData != null)
+            {
+                if (metadata.TechnicalData.Manufacturer != null)
+                    sourceData["EXIF"]["Make"] = metadata.TechnicalData.Manufacturer;
+                if (metadata.TechnicalData.Model != null)
+                    sourceData["EXIF"]["Model"] = metadata.TechnicalData.Model;
+                if (metadata.TechnicalData.Software != null)
+                    sourceData["EXIF"]["Software"] = metadata.TechnicalData.Software;
+            }
+
+            return sourceData;
+        }
+
+        private void AddBasicTechnicalTags(DicomDataset dataset, ImageMetadata metadata, int width, int height)
+        {
+            // File Meta Information
+            dataset.Add(DicomTag.SpecificCharacterSet, "ISO_IR 100"); // Latin-1 for Umlauts
+
+            // Essential Study/Series UIDs (generate if not mapped)
+            dataset.Add(DicomTag.StudyInstanceUID, DicomUID.Generate());
+            dataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate());
+
+            // Dates and times (will be overwritten if mapped)
+            dataset.Add(DicomTag.StudyDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.StudyTime, metadata.Study.StudyDate.ToString("HHmmss"));
+            dataset.Add(DicomTag.SeriesDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.SeriesTime, metadata.Study.StudyDate.ToString("HHmmss"));
+
+            // Series Module defaults
+            dataset.Add(DicomTag.Modality, metadata.Study.Modality);
+            dataset.Add(DicomTag.SeriesNumber, "1");
+            dataset.Add(DicomTag.SeriesDescription, "VL Photographic Image");
+
+            // General Equipment Module defaults
+            dataset.Add(DicomTag.StationName, Environment.MachineName);
+            dataset.Add(DicomTag.ConversionType, "DI"); // Digital Interface
+
+            // General Image Module
+            dataset.Add(DicomTag.InstanceNumber, metadata.InstanceNumber.ToString());
+            dataset.Add(DicomTag.ContentDate, metadata.CaptureDateTime.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.ContentTime, metadata.CaptureDateTime.ToString("HHmmss.ffffff"));
+            dataset.Add(DicomTag.ImageType, "DERIVED", "PRIMARY");
+
+            // Image Pixel Module (technical requirements)
+            dataset.Add(DicomTag.SamplesPerPixel, (ushort)3); // Color image
+            dataset.Add(DicomTag.PhotometricInterpretation, "YBR_FULL_422"); // Required for JPEG
+            dataset.Add(DicomTag.Rows, (ushort)height);
+            dataset.Add(DicomTag.Columns, (ushort)width);
+            dataset.Add(DicomTag.BitsAllocated, (ushort)8);
+            dataset.Add(DicomTag.BitsStored, (ushort)8);
+            dataset.Add(DicomTag.HighBit, (ushort)7);
+            dataset.Add(DicomTag.PixelRepresentation, (ushort)0); // Unsigned
+            dataset.Add(DicomTag.PlanarConfiguration, (ushort)0); // Color-by-pixel
+
+            // SOP Common Module
+            dataset.Add(DicomTag.SOPClassUID, PHOTOGRAPHIC_SOP_CLASS_UID);
+            dataset.Add(DicomTag.SOPInstanceUID, metadata.InstanceUid);
+        }
+
+        private void EnsureEssentialTags(DicomDataset dataset, ImageMetadata metadata)
+        {
+            // Ensure critical patient identifiers exist
+            if (!dataset.Contains(DicomTag.PatientName))
+            {
+                dataset.Add(DicomTag.PatientName, metadata.Patient.Name);
+                _logger.LogWarning("Patient Name was not mapped, using fallback");
+            }
+
+            if (!dataset.Contains(DicomTag.PatientID))
+            {
+                dataset.Add(DicomTag.PatientID, metadata.Patient.Id.Value);
+                _logger.LogWarning("Patient ID was not mapped, using fallback");
+            }
+
+            // Ensure Study ID exists
+            if (!dataset.Contains(DicomTag.StudyID))
+            {
+                dataset.Add(DicomTag.StudyID, metadata.Study.StudyId.Value);
+            }
+        }
+
+        // Legacy method for backward compatibility
+        private DicomDataset CreateDicomDatasetLegacy(ImageMetadata metadata, int width, int height)
+        {
+            var dataset = new DicomDataset();
+
+            // File Meta Information
+            dataset.Add(DicomTag.SpecificCharacterSet, "ISO_IR 100"); // Latin-1 for Umlauts
+
+            // Patient Module (Type 2 - must be present, may be empty)
+            dataset.Add(DicomTag.PatientName, metadata.Patient.Name);
+            dataset.Add(DicomTag.PatientID, metadata.Patient.Id.Value);
+            dataset.Add(DicomTag.PatientBirthDate, metadata.Patient.BirthDate?.ToString("yyyyMMdd") ?? "");
+            dataset.Add(DicomTag.PatientSex, GetDicomGender(metadata.Patient.Gender));
+
+            // General Study Module
+            dataset.Add(DicomTag.StudyInstanceUID, DicomUID.Generate());
+            dataset.Add(DicomTag.StudyDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.StudyTime, metadata.Study.StudyDate.ToString("HHmmss"));
+            dataset.Add(DicomTag.AccessionNumber, metadata.Study.AccessionNumber ?? "");
+            dataset.Add(DicomTag.ReferringPhysicianName, metadata.Study.ReferringPhysician ?? "");
+            dataset.Add(DicomTag.StudyID, metadata.Study.StudyId.Value);
+            dataset.Add(DicomTag.StudyDescription, metadata.Study.Description ?? "");
+
+            // General Series Module
+            dataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate());
+            dataset.Add(DicomTag.Modality, metadata.Study.Modality);
+            dataset.Add(DicomTag.SeriesNumber, "1");
+            dataset.Add(DicomTag.SeriesDate, metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.SeriesTime, metadata.Study.StudyDate.ToString("HHmmss"));
+            dataset.Add(DicomTag.SeriesDescription, "VL Photographic Image");
+            // PerformingPhysicianName removed - not part of StudyInfo
+
+            // General Equipment Module
+            dataset.Add(DicomTag.Manufacturer, metadata.TechnicalData?.Manufacturer ?? "Unknown");
+            dataset.Add(DicomTag.ManufacturerModelName, metadata.TechnicalData?.Model ?? "");
+            dataset.Add(DicomTag.SoftwareVersions, metadata.TechnicalData?.Software ?? "");
+            dataset.Add(DicomTag.StationName, Environment.MachineName);
+
+            // SC Equipment Module
+            dataset.Add(DicomTag.ConversionType, "DI"); // Digital Interface
+
+            // General Image Module
+            dataset.Add(DicomTag.InstanceNumber, metadata.InstanceNumber.ToString());
+            dataset.Add(DicomTag.ContentDate, metadata.CaptureDateTime.ToString("yyyyMMdd"));
+            dataset.Add(DicomTag.ContentTime, metadata.CaptureDateTime.ToString("HHmmss.ffffff"));
+            dataset.Add(DicomTag.ImageType, "DERIVED", "PRIMARY");
+
+            // Image Pixel Module
+            dataset.Add(DicomTag.SamplesPerPixel, (ushort)3); // Color image
+            dataset.Add(DicomTag.PhotometricInterpretation, "YBR_FULL_422"); // Required for JPEG
+            dataset.Add(DicomTag.Rows, (ushort)height);
+            dataset.Add(DicomTag.Columns, (ushort)width);
+            dataset.Add(DicomTag.BitsAllocated, (ushort)8);
+            dataset.Add(DicomTag.BitsStored, (ushort)8);
+            dataset.Add(DicomTag.HighBit, (ushort)7);
+            dataset.Add(DicomTag.PixelRepresentation, (ushort)0); // Unsigned
+            dataset.Add(DicomTag.PlanarConfiguration, (ushort)0); // Color-by-pixel
+
+            // SOP Common Module
+            dataset.Add(DicomTag.SOPClassUID, PHOTOGRAPHIC_SOP_CLASS_UID);
+            dataset.Add(DicomTag.SOPInstanceUID, metadata.InstanceUid);
+
+            // VL Photographic Image Module specific
+            dataset.Add(DicomTag.ImageComments, metadata.Study.Comment ?? "");
+
+            return dataset;
+        }
+
+        private DicomFile CreateDicomFileWithJpegData(DicomDataset dataset, byte[] jpegBytes)
+        {
+            // Create DICOM file with proper meta information
+            var file = new DicomFile(dataset);
+
+            // Set transfer syntax to JPEG Baseline
+            file.FileMetaInfo.TransferSyntax = DicomTransferSyntax.JPEGProcess1;
+            file.FileMetaInfo.MediaStorageSOPClassUID = DicomUID.Parse(PHOTOGRAPHIC_SOP_CLASS_UID);
+            file.FileMetaInfo.MediaStorageSOPInstanceUID = DicomUID.Parse(dataset.GetString(DicomTag.SOPInstanceUID));
+            file.FileMetaInfo.ImplementationClassUID = DicomUID.Parse(IMPLEMENTATION_CLASS_UID);
+            file.FileMetaInfo.ImplementationVersionName = IMPLEMENTATION_VERSION_NAME;
+
+            // Create encapsulated pixel data
+            // CRITICAL: Do NOT decompress JPEG - keep it compressed!
+            var pixelData = new DicomOtherByteFragment(DicomTag.PixelData);
+
+            // Add basic offset table (empty for single frame)
+            pixelData.Fragments.Add(new MemoryByteBuffer(new byte[0]));
+
+            // Add JPEG data as fragment
+            pixelData.Fragments.Add(new MemoryByteBuffer(jpegBytes));
+
+            // Add to dataset
+            dataset.AddOrUpdate(pixelData);
+
+            return file;
+        }
+
+        [SupportedOSPlatform("windows")]
+        private async Task<(int width, int height)> GetImageDimensionsAsync(string jpegPath, ImageMetadata metadata)
+        {
+            // First try to get from metadata
+            if (metadata.TechnicalData != null &&
+                metadata.TechnicalData.ImageWidth.HasValue &&
+                metadata.TechnicalData.ImageHeight.HasValue)
+            {
+                return (metadata.TechnicalData.ImageWidth.Value, metadata.TechnicalData.ImageHeight.Value);
+            }
+
+            // Otherwise read from file
+            return await Task.Run(() =>
+            {
+                using (var image = Image.FromFile(jpegPath))
+                {
+                    return (image.Width, image.Height);
+                }
+            });
+        }
+
+        private string GetDicomGender(Gender gender)
+        {
+            return gender switch
+            {
+                Gender.Male => "M",
+                Gender.Female => "F",
+                Gender.Other => "O",
+                _ => "O"
+            };
+        }
+
+        private void ValidateTag(DicomDataset dataset, FellowOakDicom.DicomTag tag, string tagName,
+            List<string> errors, List<string> warnings, bool isType1 = false)
+        {
+            if (!dataset.Contains(tag))
+            {
+                if (isType1)
+                    errors.Add($"Missing mandatory Type 1 tag: {tagName} {tag}");
+                else
+                    warnings.Add($"Missing Type 2 tag: {tagName} {tag}");
+            }
+            else if (isType1)
+            {
+                var value = dataset.GetString(tag);
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    errors.Add($"Empty Type 1 tag: {tagName} {tag}");
+                }
+            }
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\Services\DicomConverter.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\Services\DicomTagMapper.cs
+# SIZE: 8.4 KB
+# MODIFIED: 2025-06-03 15:48
+# ============================================================================
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Extensions.Logging;
+using CamBridge.Core;
+using CamBridge.Core.Interfaces;
+using FellowOakDicom;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Service responsible for mapping values to DICOM tags according to mapping rules
+    /// </summary>
+    public class DicomTagMapper : IDicomTagMapper
+    {
+        private readonly ILogger<DicomTagMapper> _logger;
+
+        public DicomTagMapper(ILogger<DicomTagMapper> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        /// <summary>
+        /// Applies a mapping rule to transform a value
+        /// </summary>
+        public string? ApplyTransform(string? value, string? transform)
+        {
+            if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(transform) || transform == "None")
+            {
+                return value;
+            }
+
+            // Parse transform string to enum
+            if (!Enum.TryParse<ValueTransform>(transform, out var transformEnum))
+            {
+                _logger.LogWarning("Unknown transform: {Transform}", transform);
+                return value;
+            }
+
+            try
+            {
+                return transformEnum switch
+                {
+                    ValueTransform.DateToDicom => ConvertDateToDicom(value),
+                    ValueTransform.TimeToDicom => ConvertTimeToDicom(value),
+                    ValueTransform.DateTimeToDicom => ConvertDateTimeToDicom(value),
+                    ValueTransform.MapGender => MapGenderCode(value),
+                    ValueTransform.RemovePrefix => RemovePrefix(value),
+                    ValueTransform.ExtractDate => ExtractDate(value),
+                    ValueTransform.ExtractTime => ExtractTime(value),
+                    ValueTransform.ToUpperCase => value.ToUpperInvariant(),
+                    ValueTransform.ToLowerCase => value.ToLowerInvariant(),
+                    ValueTransform.Trim => value.Trim(),
+                    _ => value
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to apply transform {Transform} to value '{Value}'", transform, value);
+                return value;
+            }
+        }
+
+        private string ConvertDateToDicom(string date)
+        {
+            // Convert various date formats to DICOM format (YYYYMMDD)
+            if (DateTime.TryParse(date, out var dt))
+            {
+                return dt.ToString("yyyyMMdd");
+            }
+
+            // Already in DICOM format?
+            if (date.Length == 8 && int.TryParse(date, out _))
+            {
+                return date;
+            }
+
+            _logger.LogWarning("Unable to convert date '{Date}' to DICOM format", date);
+            return date;
+        }
+
+        private string ConvertTimeToDicom(string time)
+        {
+            // Convert various time formats to DICOM format (HHMMSS)
+            if (DateTime.TryParse(time, out var dt))
+            {
+                return dt.ToString("HHmmss");
+            }
+
+            if (TimeSpan.TryParse(time, out var ts))
+            {
+                return $"{ts.Hours:D2}{ts.Minutes:D2}{ts.Seconds:D2}";
+            }
+
+            _logger.LogWarning("Unable to convert time '{Time}' to DICOM format", time);
+            return time;
+        }
+
+        private string ConvertDateTimeToDicom(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("yyyyMMddHHmmss");
+            }
+
+            _logger.LogWarning("Unable to convert datetime '{DateTime}' to DICOM format", dateTime);
+            return dateTime;
+        }
+
+        /// <summary>
+        /// Maps source data to a DICOM dataset using mapping rules
+        /// </summary>
+        public void MapToDataset(DicomDataset dataset, Dictionary<string, string> sourceData, IEnumerable<MappingRule> mappingRules)
+        {
+            if (dataset == null) throw new ArgumentNullException(nameof(dataset));
+            if (sourceData == null) throw new ArgumentNullException(nameof(sourceData));
+            if (mappingRules == null) throw new ArgumentNullException(nameof(mappingRules));
+
+            foreach (var rule in mappingRules)
+            {
+                try
+                {
+                    // Get source value
+                    if (!sourceData.TryGetValue(rule.SourceField, out var sourceValue))
+                    {
+                        if (rule.Required)
+                        {
+                            _logger.LogWarning("Required source field '{Field}' not found in data", rule.SourceField);
+                        }
+
+                        // Use default value if available
+                        sourceValue = rule.DefaultValue;
+
+                        if (string.IsNullOrEmpty(sourceValue))
+                        {
+                            continue;
+                        }
+                    }
+
+                    // Apply transform if specified
+                    var transformedValue = ApplyTransform(sourceValue, rule.Transform);
+
+                    if (string.IsNullOrEmpty(transformedValue) && rule.Required)
+                    {
+                        _logger.LogWarning("Required field '{Field}' resulted in empty value after transform", rule.SourceField);
+                    }
+
+                    // Parse DICOM tag
+                    if (!TryParseDicomTag(rule.DicomTag, out var group, out var element))
+                    {
+                        _logger.LogError("Invalid DICOM tag format: {Tag}", rule.DicomTag);
+                        continue;
+                    }
+
+                    // Add to dataset
+                    var tag = new DicomTag(group, element);
+
+                    if (!string.IsNullOrEmpty(transformedValue))
+                    {
+                        dataset.AddOrUpdate(tag, transformedValue);
+                        _logger.LogDebug("Mapped {Source} -> {Tag}: {Value}",
+                            rule.SourceField, rule.DicomTag, transformedValue);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error mapping rule {Source} -> {Tag}",
+                        rule.SourceField, rule.DicomTag);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Parses a DICOM tag string like "(0010,0010)" into group and element
+        /// </summary>
+        private bool TryParseDicomTag(string tagString, out ushort group, out ushort element)
+        {
+            group = 0;
+            element = 0;
+
+            if (string.IsNullOrEmpty(tagString))
+                return false;
+
+            // Remove parentheses and spaces
+            var cleaned = tagString.Trim('(', ')', ' ');
+            var parts = cleaned.Split(',');
+
+            if (parts.Length != 2)
+                return false;
+
+            try
+            {
+                group = Convert.ToUInt16(parts[0].Trim(), 16);
+                element = Convert.ToUInt16(parts[1].Trim(), 16);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private string MapGenderCode(string gender)
+        {
+            return gender?.ToUpperInvariant() switch
+            {
+                "M" or "MALE" => "M",
+                "F" or "FEMALE" => "F",
+                "O" or "OTHER" => "O",
+                _ => ""
+            };
+        }
+
+        private string RemovePrefix(string value)
+        {
+            // Remove common prefixes like "GCM_TAG"
+            if (value.StartsWith("GCM_TAG", StringComparison.OrdinalIgnoreCase))
+            {
+                return value.Substring(7).Trim();
+            }
+
+            return value;
+        }
+
+        private string ExtractDate(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("yyyyMMdd");
+            }
+
+            return dateTime;
+        }
+
+        private string ExtractTime(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("HHmmss");
+            }
+
+            return dateTime;
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\Services\DicomTagMapper.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\Services\ExifToolReader.cs
+# SIZE: 17.7 KB
+# MODIFIED: 2025-06-05 19:02
+# ============================================================================
+
+// src\CamBridge.Infrastructure\Services\ExifToolReader.cs
+// Version: 0.5.32 - Windows-1252 Encoding Fix
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using CamBridge.Core.Entities;
+using CamBridge.Core.ValueObjects;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Reads EXIF metadata from JPEG files using ExifTool
+    /// Specifically handles Ricoh G900SE II barcode field
+    /// </summary>
+    public class ExifToolReader
+    {
+        private readonly ILogger<ExifToolReader> _logger;
+        private readonly string _exifToolPath;
+        private readonly int _timeoutMs;
+
+        /// <summary>
+        /// Creates a new ExifToolReader instance
+        /// This constructor matches what ServiceCollectionExtensions expects
+        /// </summary>
+        /// <param name="logger">Logger for diagnostics</param>
+        /// <param name="timeoutMs">Timeout for ExifTool execution in milliseconds</param>
+        public ExifToolReader(ILogger<ExifToolReader> logger, int timeoutMs = 5000)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _timeoutMs = timeoutMs;
+
+            // Try to find ExifTool in various locations
+            var possiblePaths = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "exiftool.exe"),
+                Path.Combine(Directory.GetCurrentDirectory(), "Tools", "exiftool.exe"),
+                @"Tools\exiftool.exe",
+                @"C:\Tools\exiftool.exe"
+            };
+
+            foreach (var path in possiblePaths)
+            {
+                if (File.Exists(path))
+                {
+                    _exifToolPath = path;
+                    _logger.LogInformation("Found ExifTool at: {Path}", path);
+                    break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(_exifToolPath))
+            {
+                throw new FileNotFoundException("ExifTool not found in any expected location");
+            }
+        }
+
+        /// <summary>
+        /// Extracts complete metadata from a JPEG file
+        /// This method name matches what FileProcessor expects
+        /// </summary>
+        public async Task<ImageMetadata> ExtractMetadataAsync(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException($"File not found: {filePath}");
+            }
+
+            _logger.LogDebug("Extracting metadata from: {FilePath}", filePath);
+
+            try
+            {
+                // Run ExifTool and get all EXIF data
+                var output = await RunExifToolAsync(filePath);
+                var exifData = ParseExifToolOutput(output);
+
+                // Log what we found
+                if (exifData.TryGetValue("Barcode", out var barcode))
+                {
+                    _logger.LogInformation("Found Ricoh barcode data: '{Barcode}'", barcode);
+                }
+                if (exifData.TryGetValue("UserComment", out var userComment))
+                {
+                    _logger.LogDebug("UserComment field: '{UserComment}'", userComment);
+                }
+
+                // Look for QRBridge data in the Barcode field (Ricoh-specific)
+                string? barcodeData = null;
+                if (exifData.TryGetValue("Barcode", out var barcodeValue))
+                {
+                    barcodeData = barcodeValue;
+                    _logger.LogInformation("Found barcode data in Barcode field: '{BarcodeData}'", barcodeData);
+                }
+                else if (exifData.TryGetValue("UserComment", out var userCommentValue) &&
+                         userCommentValue != "GCM_TAG" &&
+                         userCommentValue.Contains("|"))
+                {
+                    // Fallback to UserComment if it contains pipe-delimited data
+                    barcodeData = userCommentValue;
+                    _logger.LogInformation("Found barcode data in UserComment field: '{BarcodeData}'", barcodeData);
+                }
+                else
+                {
+                    _logger.LogWarning("No barcode data found in EXIF");
+                }
+
+                // Parse patient and study info from barcode
+                PatientInfo patientInfo;
+                StudyInfo studyInfo;
+
+                if (!string.IsNullOrEmpty(barcodeData))
+                {
+                    (patientInfo, studyInfo) = ParseBarcodeData(barcodeData);
+                }
+                else
+                {
+                    (patientInfo, studyInfo) = CreateDefaultPatientAndStudy();
+                }
+
+                // Extract technical data
+                var technicalData = new ImageTechnicalData
+                {
+                    ImageWidth = GetIntValue(exifData, "ImageWidth", "ExifImageWidth"),
+                    ImageHeight = GetIntValue(exifData, "ImageHeight", "ExifImageHeight"),
+                    BitsPerSample = GetIntValue(exifData, "BitsPerSample") ?? 8,
+                    ColorSpace = exifData.GetValueOrDefault("ColorSpace", "RGB"),
+                    Manufacturer = exifData.GetValueOrDefault("Make", "Unknown"),
+                    Model = exifData.GetValueOrDefault("Model", "Unknown"),
+                    Software = exifData.GetValueOrDefault("Software", "Unknown"),
+                    Compression = exifData.GetValueOrDefault("Compression"),
+                    Orientation = GetIntValue(exifData, "Orientation")
+                };
+
+                // Get capture date/time
+                var captureDateTime = GetDateTime(exifData, "DateTimeOriginal", "CreateDate", "DateTime") ?? DateTime.Now;
+
+                // Generate instance UID
+                var instanceUid = GenerateUid();
+
+                // Create and return metadata using the proper constructor
+                return new ImageMetadata(
+                    sourceFilePath: filePath,
+                    captureDateTime: captureDateTime,
+                    patient: patientInfo,
+                    study: studyInfo,
+                    technicalData: technicalData,
+                    userComment: exifData.GetValueOrDefault("UserComment"),
+                    barcodeData: barcodeData,
+                    instanceNumber: 1,
+                    instanceUid: instanceUid,
+                    exifData: new Dictionary<string, string>(exifData) // Create a copy to ensure no issues
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to extract metadata from {FilePath}", filePath);
+                throw new InvalidOperationException($"Failed to extract metadata from {filePath}: {ex.Message}", ex);
+            }
+        }
+
+        private async Task<string> RunExifToolAsync(string filePath)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = _exifToolPath,
+                Arguments = $"-s -a -u \"{filePath}\"", // NO charset forcing - we handle it ourselves
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                // Let ExifTool output in its default encoding
+                StandardOutputEncoding = null
+            };
+
+            using var process = new Process { StartInfo = startInfo };
+            using var cts = new CancellationTokenSource(_timeoutMs);
+
+            // Read raw bytes instead of string to handle encoding properly
+            var outputStream = new MemoryStream();
+            var errorBuilder = new StringBuilder();
+
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                {
+                    // Get raw bytes in Windows-1252 encoding
+                    var bytes = Encoding.GetEncoding(1252).GetBytes(e.Data);
+                    outputStream.Write(bytes, 0, bytes.Length);
+                    outputStream.WriteByte((byte)'\n');
+                }
+            };
+
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                    errorBuilder.AppendLine(e.Data);
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            try
+            {
+                await process.WaitForExitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill();
+                throw new TimeoutException($"ExifTool timed out after {_timeoutMs}ms");
+            }
+
+            if (process.ExitCode != 0)
+            {
+                var error = errorBuilder.ToString();
+                _logger.LogWarning("ExifTool returned exit code {ExitCode}. Error: {Error}",
+                    process.ExitCode, error);
+            }
+
+            // Convert from Windows-1252 to UTF-8
+            outputStream.Position = 0;
+            using var reader = new StreamReader(outputStream, Encoding.GetEncoding(1252));
+            return reader.ReadToEnd();
+        }
+
+        private Dictionary<string, string> ParseExifToolOutput(string output)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            if (string.IsNullOrWhiteSpace(output))
+                return result;
+
+            var lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
+            {
+                var colonIndex = line.IndexOf(':');
+                if (colonIndex > 0 && colonIndex < line.Length - 1)
+                {
+                    var key = line.Substring(0, colonIndex).Trim();
+                    var value = line.Substring(colonIndex + 1).Trim();
+
+                    if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
+                    {
+                        // Skip keys that are just encoding artifacts
+                        if (key.Length == 1 && (key[0] == '�' || key[0] < 32 || key[0] > 126))
+                        {
+                            _logger.LogDebug("Skipping invalid key: {Key} (char code: {Code})", key, (int)key[0]);
+                            continue;
+                        }
+
+                        // Handle duplicate keys by making them unique
+                        var finalKey = key;
+                        var counter = 1;
+                        while (result.ContainsKey(finalKey))
+                        {
+                            finalKey = $"{key}_{counter}";
+                            counter++;
+                            _logger.LogDebug("Duplicate key found: {Key}, renamed to: {FinalKey}", key, finalKey);
+                        }
+
+                        result[finalKey] = value;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private (PatientInfo, StudyInfo) ParseBarcodeData(string barcodeData)
+        {
+            if (string.IsNullOrWhiteSpace(barcodeData))
+            {
+                _logger.LogWarning("Barcode data is empty or null");
+                return CreateDefaultPatientAndStudy();
+            }
+
+            // NO CLEANING! The data should now be properly encoded
+            _logger.LogDebug("Parsing barcode data: '{BarcodeData}'", barcodeData);
+
+            var parts = barcodeData.Split('|');
+
+            // QRBridge format validation
+            if (parts.Length < 3)
+            {
+                _logger.LogWarning("Invalid barcode format. Expected at least 3 fields, got {Count}", parts.Length);
+                return CreateDefaultPatientAndStudy();
+            }
+
+            // Log each field for debugging
+            for (int i = 0; i < parts.Length; i++)
+            {
+                _logger.LogDebug("Barcode field [{Index}]: '{Value}'", i, parts[i]);
+            }
+
+            try
+            {
+                // Parse patient info
+                var examId = parts[0].Trim();
+                var patientName = parts[1].Trim();
+
+                // Parse birth date - handle various formats
+                DateTime? birthDate = null;
+                if (parts.Length > 2 && !string.IsNullOrWhiteSpace(parts[2]))
+                {
+                    var dateStr = parts[2].Trim();
+                    if (DateTime.TryParseExact(dateStr, "yyyy-MM-dd", null, DateTimeStyles.None, out var date1))
+                        birthDate = date1;
+                    else if (DateTime.TryParseExact(dateStr, "dd.MM.yyyy", null, DateTimeStyles.None, out var date2))
+                        birthDate = date2;
+                    else if (DateTime.TryParse(dateStr, out var date3))
+                        birthDate = date3;
+                    else
+                        _logger.LogWarning("Could not parse birth date: '{DateStr}'", dateStr);
+                }
+
+                // Parse gender
+                Gender gender = Gender.Other;
+                if (parts.Length > 3 && !string.IsNullOrWhiteSpace(parts[3]))
+                {
+                    var genderStr = parts[3].Trim().ToUpperInvariant();
+                    gender = genderStr switch
+                    {
+                        "M" => Gender.Male,
+                        "F" => Gender.Female,
+                        "W" => Gender.Female, // German: Weiblich
+                        _ => Gender.Other
+                    };
+                }
+
+                // Parse study description
+                string? studyDescription = null;
+                if (parts.Length > 4 && !string.IsNullOrWhiteSpace(parts[4]))
+                {
+                    studyDescription = parts[4].Trim();
+                }
+
+                // Create patient info
+                var patientInfo = new PatientInfo(
+                    id: new PatientId(examId),
+                    name: patientName,
+                    birthDate: birthDate,
+                    gender: gender
+                );
+
+                // Create study info - FIX for 16 char limit!
+                var studyIdValue = examId.Length > 14 ? examId.Substring(0, 14) : examId;
+                var studyInfo = new StudyInfo(
+                    studyId: new StudyId($"S{studyIdValue}"), // Max 16 chars total
+                    examId: examId,
+                    description: studyDescription ?? "Clinical Photography",
+                    modality: "VL", // Visible Light photography
+                    studyDate: DateTime.Now
+                );
+
+                _logger.LogInformation("Successfully parsed barcode: ExamId={ExamId}, Patient={PatientName}, Study={StudyDescription}",
+                    examId, patientName, studyDescription);
+
+                return (patientInfo, studyInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing barcode data");
+                return CreateDefaultPatientAndStudy();
+            }
+        }
+
+        private (PatientInfo, StudyInfo) CreateDefaultPatientAndStudy()
+        {
+            var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+            var shortTimestamp = DateTime.Now.ToString("MMddHHmm"); // Shorter for StudyId
+
+            var patientInfo = new PatientInfo(
+                id: new PatientId($"AUTO_{timestamp}"),
+                name: "Unknown Patient",
+                birthDate: null,
+                gender: Gender.Other
+            );
+
+            var studyInfo = new StudyInfo(
+                studyId: new StudyId($"S{shortTimestamp}"), // Max 16 chars
+                examId: $"AUTO_{timestamp}",
+                description: "Unidentified Clinical Photography",
+                modality: "VL",
+                studyDate: DateTime.Now
+            );
+
+            _logger.LogWarning("Created default patient/study info with ID: AUTO_{Timestamp}", timestamp);
+
+            return (patientInfo, studyInfo);
+        }
+
+        private int? GetIntValue(Dictionary<string, string> exifData, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (exifData.TryGetValue(key, out var value))
+                {
+                    // Handle values like "8 8 8" for BitsPerSample
+                    var firstValue = value.Split(' ')[0];
+
+                    if (int.TryParse(firstValue, out var result))
+                        return result;
+                }
+            }
+            return null;
+        }
+
+        private DateTime? GetDateTime(Dictionary<string, string> exifData, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (exifData.TryGetValue(key, out var value))
+                {
+                    // EXIF datetime format: "yyyy:MM:dd HH:mm:ss"
+                    if (DateTime.TryParseExact(value, "yyyy:MM:dd HH:mm:ss",
+                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var result))
+                        return result;
+
+                    // Try standard parse as fallback
+                    if (DateTime.TryParse(value, out result))
+                        return result;
+                }
+            }
+            return null;
+        }
+
+        private string GenerateUid()
+        {
+            // Simple UID generation - in production use proper DICOM UID generation
+            return $"1.2.826.0.1.3680043.8.498.{DateTime.Now.Ticks}";
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\Services\ExifToolReader.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\Services\FileProcessor.cs
+# SIZE: 19.8 KB
+# MODIFIED: 2025-06-11 11:26
+# ============================================================================
+
+// src/CamBridge.Infrastructure/Services/FileProcessor.cs
+// Version: 0.7.8
+// Description: Complete file processor with SIMPLE error handling - KISS approach!
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using CamBridge.Core.Entities;
+using CamBridge.Core.Interfaces;
+using CamBridge.Core.ValueObjects;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Orchestrates the complete JPEG to DICOM conversion process
+    /// KISS UPDATE: No more IFileProcessor interface - direct dependency pattern!
+    /// </summary>
+    public class FileProcessor // KISS: No interface inheritance!
+    {
+        private readonly ILogger<FileProcessor> _logger;
+        private readonly ExifToolReader _exifToolReader;
+        private readonly DicomConverter _dicomConverter;
+        private readonly ProcessingOptions _processingOptions;
+        private readonly CamBridgeSettings _settings;
+
+        public event EventHandler<FileProcessingEventArgs>? ProcessingStarted;
+        public event EventHandler<FileProcessingEventArgs>? ProcessingCompleted;
+        public event EventHandler<FileProcessingErrorEventArgs>? ProcessingError;
+
+        public FileProcessor(
+            ILogger<FileProcessor> logger,
+            ExifToolReader exifToolReader,
+            DicomConverter dicomConverter,
+            IOptions<ProcessingOptions> processingOptions,
+            IOptions<CamBridgeSettings> settings)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _exifToolReader = exifToolReader ?? throw new ArgumentNullException(nameof(exifToolReader));
+            _dicomConverter = dicomConverter ?? throw new ArgumentNullException(nameof(dicomConverter));
+            _processingOptions = processingOptions?.Value ?? throw new ArgumentNullException(nameof(processingOptions));
+            _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
+        }
+
+        /// <summary>
+        /// Processes a single JPEG file
+        /// </summary>
+        public async Task<FileProcessingResult> ProcessFileAsync(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                _logger.LogInformation("Starting processing of {FilePath}", filePath);
+                ProcessingStarted?.Invoke(this, new FileProcessingEventArgs(filePath));
+
+                // Validate file
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException($"File not found: {filePath}");
+                }
+
+                var fileInfo = new FileInfo(filePath);
+                ValidateFile(fileInfo);
+
+                // Create backup if configured
+                if (_processingOptions.CreateBackup)
+                {
+                    await CreateBackupAsync(fileInfo);
+                }
+
+                // Extract metadata - simplified with new pipeline!
+                var metadata = await ExtractMetadataAsync(filePath);
+
+                // Determine output path
+                var outputPath = DetermineOutputPath(metadata, filePath);
+
+                // Convert to DICOM - KISS: Direct method call, no interface!
+                var conversionResult = await _dicomConverter.ConvertToDicomAsync(
+                    filePath,
+                    outputPath,
+                    metadata);
+
+                if (!conversionResult.Success)
+                {
+                    throw new InvalidOperationException(
+                        $"DICOM conversion failed: {conversionResult.ErrorMessage}");
+                }
+
+                // Validate DICOM if configured
+                if (_settings.Dicom.ValidateAfterCreation)
+                {
+                    var validationResult = await _dicomConverter.ValidateDicomFileAsync(outputPath);
+                    if (!validationResult.IsValid)
+                    {
+                        _logger.LogWarning("DICOM validation warnings: {Warnings}",
+                            string.Join("; ", validationResult.Warnings));
+                    }
+                }
+
+                // Handle source file based on success
+                await HandleSourceFileAsync(filePath, _processingOptions.SuccessAction);
+
+                stopwatch.Stop();
+                var result = FileProcessingResult.CreateSuccess(filePath, outputPath, stopwatch.Elapsed);
+
+                _logger.LogInformation("Successfully processed {FilePath} to {OutputPath} in {ElapsedMs}ms",
+                    filePath, outputPath, stopwatch.ElapsedMilliseconds);
+
+                ProcessingCompleted?.Invoke(this, new FileProcessingEventArgs(filePath));
+                return result;
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogError(ex, "Error processing file {FilePath}", filePath);
+
+                ProcessingError?.Invoke(this, new FileProcessingErrorEventArgs(filePath, ex));
+
+                // KISS: Simple error handling - move to error folder!
+                try
+                {
+                    await HandleProcessingError(filePath, ex);
+                }
+                catch (Exception moveEx)
+                {
+                    _logger.LogError(moveEx, "Error moving failed file {FilePath}", filePath);
+                }
+
+                return FileProcessingResult.CreateFailure(filePath, ex.Message, stopwatch.Elapsed);
+            }
+        }
+
+        /// <summary>
+        /// SIMPLE error handling - move to error folder with details
+        /// </summary>
+        private async Task HandleProcessingError(string filePath, Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process file: {FilePath}", filePath);
+
+            // Simple error handling - move to error folder
+            try
+            {
+                var errorFolder = _processingOptions.ErrorFolder;
+                if (!Directory.Exists(errorFolder))
+                    Directory.CreateDirectory(errorFolder);
+
+                var fileName = Path.GetFileName(filePath);
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var errorFileName = $"{Path.GetFileNameWithoutExtension(fileName)}_{timestamp}{Path.GetExtension(fileName)}";
+                var errorPath = Path.Combine(errorFolder, errorFileName);
+
+                // Move file
+                File.Move(filePath, errorPath, overwrite: true);
+
+                // Write error details
+                var errorInfoPath = Path.ChangeExtension(errorPath, ".error.txt");
+                var errorInfo = $"""
+                    CamBridge Error Report
+                    ======================
+                    
+                    Original File: {fileName}
+                    Error Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}
+                    
+                    Error Message:
+                    {ex.Message}
+                    
+                    Error Type:
+                    {ex.GetType().FullName}
+                    
+                    Stack Trace:
+                    {ex.StackTrace}
+                    
+                    Inner Exception:
+                    {ex.InnerException?.ToString() ?? "None"}
+                    """;
+
+                await File.WriteAllTextAsync(errorInfoPath, errorInfo);
+
+                _logger.LogInformation("Moved failed file to error folder: {ErrorPath}", errorPath);
+            }
+            catch (Exception moveEx)
+            {
+                _logger.LogError(moveEx, "Failed to move file to error folder");
+            }
+        }
+
+        /// <summary>
+        /// Checks if a file should be processed
+        /// </summary>
+        public bool ShouldProcessFile(string filePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                    return false;
+
+                var fileInfo = new FileInfo(filePath);
+
+                // Check file extension
+                var extension = fileInfo.Extension.ToLowerInvariant();
+                if (extension != ".jpg" && extension != ".jpeg")
+                    return false;
+
+                // Check file size
+                var minSize = _processingOptions.MinimumFileSizeBytes ?? 1024; // Default 1KB
+                var maxSize = _processingOptions.MaximumFileSizeBytes ?? 100 * 1024 * 1024; // Default 100MB
+
+                if (fileInfo.Length < minSize || fileInfo.Length > maxSize)
+                {
+                    _logger.LogDebug("File {FilePath} size {Size} outside configured range",
+                        filePath, fileInfo.Length);
+                    return false;
+                }
+
+                // Check file age
+                if (_processingOptions.MaxFileAge.HasValue)
+                {
+                    var fileAge = DateTime.UtcNow - fileInfo.CreationTimeUtc;
+                    if (fileAge > _processingOptions.MaxFileAge.Value)
+                    {
+                        _logger.LogDebug("File {FilePath} is too old ({Age} days)",
+                            filePath, fileAge.TotalDays);
+                        return false;
+                    }
+                }
+
+                // Check if file is still being written
+                if (!IsFileReady(filePath))
+                {
+                    _logger.LogDebug("File {FilePath} is not ready (still being written)",
+                        filePath);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking if file should be processed: {FilePath}", filePath);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Simplified metadata extraction using the new ExifToolReader
+        /// </summary>
+        private async Task<ImageMetadata> ExtractMetadataAsync(string filePath)
+        {
+            // ExifToolReader does all the heavy lifting now!
+            var metadata = await _exifToolReader.ExtractMetadataAsync(filePath);
+
+            _logger.LogInformation("Extracted metadata for {Patient} - {Study}",
+                metadata.Patient.Id.Value, metadata.Study.StudyId.Value);
+
+            return metadata;
+        }
+
+        private string DetermineOutputPath(ImageMetadata metadata, string sourcePath)
+        {
+            // Find the matching watch folder configuration
+            FolderConfiguration? folderConfig = null;
+            foreach (var watchFolder in _settings.WatchFolders)
+            {
+                if (sourcePath.StartsWith(watchFolder.Path, StringComparison.OrdinalIgnoreCase))
+                {
+                    folderConfig = watchFolder;
+                    break;
+                }
+            }
+
+            // Determine base output folder
+            var baseOutputFolder = folderConfig?.OutputPath ?? _settings.DefaultOutputFolder;
+
+            // Apply output organization
+            var organizedPath = ApplyOutputOrganization(baseOutputFolder, metadata);
+
+            // Generate filename
+            var fileName = GenerateOutputFileName(metadata);
+
+            return Path.Combine(organizedPath, fileName);
+        }
+
+        private string ApplyOutputOrganization(string baseFolder, ImageMetadata metadata)
+        {
+            var path = baseFolder;
+
+            switch (_processingOptions.OutputOrganization)
+            {
+                case OutputOrganization.ByPatient:
+                    path = Path.Combine(path, SanitizePathComponent(metadata.Patient.Id.Value));
+                    break;
+
+                case OutputOrganization.ByDate:
+                    path = Path.Combine(path, metadata.Study.StudyDate.ToString("yyyy-MM-dd"));
+                    break;
+
+                case OutputOrganization.ByPatientAndDate:
+                    path = Path.Combine(path,
+                        SanitizePathComponent(metadata.Patient.Id.Value),
+                        metadata.Study.StudyDate.ToString("yyyy-MM-dd"));
+                    break;
+            }
+
+            // Ensure directory exists
+            Directory.CreateDirectory(path);
+            return path;
+        }
+
+        private string GenerateOutputFileName(ImageMetadata metadata)
+        {
+            var pattern = _processingOptions.OutputFilePattern;
+
+            // Fix: Handle null pattern with default
+            if (string.IsNullOrEmpty(pattern))
+            {
+                pattern = "{PatientID}_{StudyDate}_{InstanceNumber}";
+            }
+
+            // Replace tokens - now pattern is guaranteed non-null
+            string fileName = pattern;
+            fileName = fileName.Replace("{PatientID}", SanitizeFileName(metadata.Patient.Id.Value));
+            fileName = fileName.Replace("{PatientName}", SanitizeFileName(metadata.Patient.Name));
+            fileName = fileName.Replace("{StudyDate}", metadata.Study.StudyDate.ToString("yyyyMMdd"));
+            fileName = fileName.Replace("{StudyID}", SanitizeFileName(metadata.Study.StudyId.Value));
+            fileName = fileName.Replace("{ExamID}", SanitizeFileName(metadata.Study.ExamId ?? ""));
+            fileName = fileName.Replace("{InstanceNumber}", metadata.InstanceNumber.ToString("D4"));
+            fileName = fileName.Replace("{Timestamp}", DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
+
+            // Ensure .dcm extension
+            if (!fileName.EndsWith(".dcm", StringComparison.OrdinalIgnoreCase))
+            {
+                fileName += ".dcm";
+            }
+
+            return fileName;
+        }
+
+        private async Task CreateBackupAsync(FileInfo fileInfo)
+        {
+            var backupPath = Path.Combine(
+                _processingOptions.BackupFolder,
+                DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                fileInfo.Name);
+
+            var backupDir = Path.GetDirectoryName(backupPath)!;
+            Directory.CreateDirectory(backupDir);
+
+            await CopyFileAsync(fileInfo.FullName, backupPath);
+            _logger.LogDebug("Created backup of {SourceFile} at {BackupPath}",
+                fileInfo.FullName, backupPath);
+        }
+
+        private async Task HandleSourceFileAsync(string filePath, PostProcessingAction action)
+        {
+            switch (action)
+            {
+                case PostProcessingAction.Archive:
+                    var archivePath = Path.Combine(
+                        _processingOptions.ArchiveFolder,
+                        DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                        Path.GetFileName(filePath));
+
+                    var archiveDir = Path.GetDirectoryName(archivePath)!;
+                    Directory.CreateDirectory(archiveDir);
+
+                    await MoveFileAsync(filePath, archivePath);
+                    _logger.LogInformation("Archived {SourceFile} to {ArchivePath}",
+                        filePath, archivePath);
+                    break;
+
+                case PostProcessingAction.Delete:
+                    File.Delete(filePath);
+                    _logger.LogInformation("Deleted source file {FilePath}", filePath);
+                    break;
+
+                case PostProcessingAction.MoveToError:
+                    // This is now handled by HandleProcessingError
+                    break;
+
+                case PostProcessingAction.Leave:
+                default:
+                    // Do nothing
+                    break;
+            }
+        }
+
+        private void ValidateFile(FileInfo fileInfo)
+        {
+            var minSize = _processingOptions.MinimumFileSizeBytes ?? 1024;
+            var maxSize = _processingOptions.MaximumFileSizeBytes ?? 100 * 1024 * 1024;
+
+            if (fileInfo.Length < minSize)
+            {
+                throw new InvalidOperationException(
+                    $"File too small: {fileInfo.Length} bytes (minimum: {minSize})");
+            }
+
+            if (fileInfo.Length > maxSize)
+            {
+                throw new InvalidOperationException(
+                    $"File too large: {fileInfo.Length} bytes (maximum: {maxSize})");
+            }
+        }
+
+        private bool IsFileReady(string filePath)
+        {
+            try
+            {
+                using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    return true;
+                }
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+        }
+
+        private async Task CopyFileAsync(string source, string destination)
+        {
+            using var sourceStream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var destStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None);
+            await sourceStream.CopyToAsync(destStream);
+        }
+
+        private async Task MoveFileAsync(string source, string destination)
+        {
+            // Try direct move first
+            try
+            {
+                File.Move(source, destination, true);
+            }
+            catch (IOException)
+            {
+                // Fall back to copy and delete
+                await CopyFileAsync(source, destination);
+                File.Delete(source);
+            }
+        }
+
+        private string SanitizeFileName(string fileName)
+        {
+            var invalid = Path.GetInvalidFileNameChars();
+            return string.Join("_", fileName.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private string SanitizePathComponent(string pathComponent)
+        {
+            var invalid = Path.GetInvalidPathChars();
+            return string.Join("_", pathComponent.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        }
+    }
+
+    /// <summary>
+    /// Result of file processing operation
+    /// </summary>
+    public class FileProcessingResult
+    {
+        public string SourceFile { get; init; } = string.Empty;
+        public string? OutputFile { get; init; }
+        public bool Success { get; init; }
+        public string? ErrorMessage { get; init; }
+        public DateTime ProcessedAt { get; init; } = DateTime.UtcNow;
+        public TimeSpan ProcessingTime { get; init; }
+
+        public static FileProcessingResult CreateSuccess(string source, string output, TimeSpan time)
+            => new()
+            {
+                SourceFile = source,
+                OutputFile = output,
+                Success = true,
+                ProcessingTime = time
+            };
+
+        public static FileProcessingResult CreateFailure(string source, string error, TimeSpan time)
+            => new()
+            {
+                SourceFile = source,
+                Success = false,
+                ErrorMessage = error,
+                ProcessingTime = time
+            };
+    }
+
+    public class FileProcessingEventArgs : EventArgs
+    {
+        public string FilePath { get; }
+        public DateTime Timestamp { get; }
+
+        public FileProcessingEventArgs(string filePath)
+        {
+            FilePath = filePath;
+            Timestamp = DateTime.UtcNow;
+        }
+    }
+
+    public class FileProcessingErrorEventArgs : FileProcessingEventArgs
+    {
+        public Exception Exception { get; }
+
+        public FileProcessingErrorEventArgs(string filePath, Exception exception)
+            : base(filePath)
+        {
+            Exception = exception;
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\Services\FileProcessor.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\Services\FolderWatcherService.cs
+# SIZE: 11.5 KB
+# MODIFIED: 2025-05-31 12:21
+# ============================================================================
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Background service that monitors multiple folders for new JPEG files
+    /// </summary>
+    public class FolderWatcherService : IHostedService, IDisposable
+    {
+        private readonly ILogger<FolderWatcherService> _logger;
+        private readonly ProcessingQueue _processingQueue;
+        private readonly CamBridgeSettings _settings;
+        private readonly List<FileSystemWatcher> _watchers = new();
+        private readonly Dictionary<string, DateTime> _fileDebounce = new();
+        private readonly object _debounceLock = new();
+        private readonly TimeSpan _debounceInterval = TimeSpan.FromSeconds(2);
+        private Timer? _debounceTimer;
+        private bool _disposed;
+
+        public FolderWatcherService(
+            ILogger<FolderWatcherService> logger,
+            ProcessingQueue processingQueue,
+            IOptions<CamBridgeSettings> settings)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _processingQueue = processingQueue ?? throw new ArgumentNullException(nameof(processingQueue));
+            _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
+        }
+
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Starting folder watcher service");
+
+            // Initialize watchers for each configured folder
+            foreach (var folderConfig in _settings.WatchFolders.Where(f => f.Enabled && f.IsValid))
+            {
+                try
+                {
+                    var watcher = CreateWatcher(folderConfig);
+                    _watchers.Add(watcher);
+
+                    _logger.LogInformation("Started watching folder: {Path} (Pattern: {Pattern}, Subdirectories: {IncludeSubdirs})",
+                        folderConfig.Path, folderConfig.FilePattern, folderConfig.IncludeSubdirectories);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to create watcher for folder: {Path}", folderConfig.Path);
+                }
+            }
+
+            if (_watchers.Count == 0)
+            {
+                _logger.LogWarning("No valid folders configured for watching");
+            }
+
+            // Start debounce timer
+            _debounceTimer = new Timer(
+                ProcessDebounceQueue,
+                null,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromSeconds(1));
+
+            // Process existing files if configured
+            if (_settings.Processing.ProcessExistingOnStartup)
+            {
+                await ProcessExistingFilesAsync(cancellationToken);
+            }
+
+            await Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Stopping folder watcher service");
+
+            // Stop all watchers
+            foreach (var watcher in _watchers)
+            {
+                try
+                {
+                    watcher.EnableRaisingEvents = false;
+                    watcher.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error disposing watcher");
+                }
+            }
+
+            _watchers.Clear();
+
+            // Stop debounce timer
+            _debounceTimer?.Change(Timeout.Infinite, 0);
+
+            return Task.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+
+            _debounceTimer?.Dispose();
+
+            foreach (var watcher in _watchers)
+            {
+                try
+                {
+                    watcher.Dispose();
+                }
+                catch { }
+            }
+
+            _disposed = true;
+        }
+
+        private FileSystemWatcher CreateWatcher(FolderConfiguration folderConfig)
+        {
+            var watcher = new FileSystemWatcher(folderConfig.Path)
+            {
+                IncludeSubdirectories = folderConfig.IncludeSubdirectories,
+                NotifyFilter = NotifyFilters.FileName |
+                              NotifyFilters.LastWrite |
+                              NotifyFilters.Size
+            };
+
+            // Set up filters for multiple extensions
+            var patterns = folderConfig.FilePattern.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            if (patterns.Length == 1)
+            {
+                watcher.Filter = patterns[0].Trim();
+            }
+            else
+            {
+                // For multiple patterns, we'll filter in the event handler
+                watcher.Filter = "*.*";
+            }
+
+            // Wire up events
+            watcher.Created += (sender, e) => OnFileEvent(e.FullPath, folderConfig, patterns);
+            watcher.Changed += (sender, e) => OnFileEvent(e.FullPath, folderConfig, patterns);
+            watcher.Renamed += (sender, e) => OnFileEvent(e.FullPath, folderConfig, patterns);
+
+            // Error handling
+            watcher.Error += (sender, e) =>
+            {
+                var ex = e.GetException();
+                _logger.LogError(ex, "FileSystemWatcher error for path: {Path}", folderConfig.Path);
+
+                // Try to recreate the watcher
+                Task.Run(async () =>
+                {
+                    await Task.Delay(5000);
+                    try
+                    {
+                        var index = _watchers.IndexOf((FileSystemWatcher)sender);
+                        if (index >= 0)
+                        {
+                            _watchers[index].Dispose();
+                            _watchers[index] = CreateWatcher(folderConfig);
+                            _logger.LogInformation("Recreated watcher for path: {Path}", folderConfig.Path);
+                        }
+                    }
+                    catch (Exception recreateEx)
+                    {
+                        _logger.LogError(recreateEx, "Failed to recreate watcher for path: {Path}",
+                            folderConfig.Path);
+                    }
+                });
+            };
+
+            // Start watching
+            watcher.EnableRaisingEvents = true;
+
+            return watcher;
+        }
+
+        private void OnFileEvent(string filePath, FolderConfiguration folderConfig, string[] patterns)
+        {
+            try
+            {
+                // Check if file matches any pattern
+                if (patterns.Length > 1)
+                {
+                    var fileName = Path.GetFileName(filePath);
+                    var matchesPattern = patterns.Any(pattern =>
+                    {
+                        var cleanPattern = pattern.Trim();
+                        if (cleanPattern.StartsWith("*"))
+                        {
+                            return fileName.EndsWith(cleanPattern.Substring(1),
+                                StringComparison.OrdinalIgnoreCase);
+                        }
+                        return fileName.Equals(cleanPattern, StringComparison.OrdinalIgnoreCase);
+                    });
+
+                    if (!matchesPattern)
+                        return;
+                }
+
+                // Add to debounce queue
+                lock (_debounceLock)
+                {
+                    _fileDebounce[filePath] = DateTime.UtcNow;
+                }
+
+                _logger.LogDebug("File event detected: {FilePath}", filePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling file event for: {FilePath}", filePath);
+            }
+        }
+
+        private void ProcessDebounceQueue(object? state)
+        {
+            try
+            {
+                List<string> filesToProcess;
+
+                lock (_debounceLock)
+                {
+                    var cutoffTime = DateTime.UtcNow - _debounceInterval;
+
+                    filesToProcess = _fileDebounce
+                        .Where(kvp => kvp.Value < cutoffTime)
+                        .Select(kvp => kvp.Key)
+                        .ToList();
+
+                    foreach (var file in filesToProcess)
+                    {
+                        _fileDebounce.Remove(file);
+                    }
+                }
+
+                // Enqueue files for processing
+                foreach (var filePath in filesToProcess)
+                {
+                    if (File.Exists(filePath))
+                    {
+                        if (_processingQueue.TryEnqueue(filePath))
+                        {
+                            _logger.LogInformation("Enqueued new file: {FilePath}", filePath);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing debounce queue");
+            }
+        }
+
+        private async Task ProcessExistingFilesAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Processing existing files in watched folders");
+
+            var processedCount = 0;
+            var skippedCount = 0;
+
+            foreach (var folderConfig in _settings.WatchFolders.Where(f => f.Enabled && f.IsValid))
+            {
+                try
+                {
+                    var patterns = folderConfig.FilePattern
+                        .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(p => p.Trim())
+                        .ToArray();
+
+                    var searchOption = folderConfig.IncludeSubdirectories
+                        ? SearchOption.AllDirectories
+                        : SearchOption.TopDirectoryOnly;
+
+                    foreach (var pattern in patterns)
+                    {
+                        var files = Directory.GetFiles(folderConfig.Path, pattern, searchOption);
+
+                        foreach (var file in files)
+                        {
+                            if (cancellationToken.IsCancellationRequested)
+                                break;
+
+                            if (_processingQueue.TryEnqueue(file))
+                            {
+                                processedCount++;
+                            }
+                            else
+                            {
+                                skippedCount++;
+                            }
+
+                            // Small delay to avoid overwhelming the system
+                            if (processedCount % 10 == 0)
+                            {
+                                await Task.Delay(100, cancellationToken);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing existing files in folder: {Path}",
+                        folderConfig.Path);
+                }
+            }
+
+            _logger.LogInformation("Existing file scan complete. Enqueued: {ProcessedCount}, Skipped: {SkippedCount}",
+                processedCount, skippedCount);
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\Services\FolderWatcherService.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\Services\INotificationService.cs
+# SIZE: 0.8 KB
+# MODIFIED: 2025-06-12 23:33
+# ============================================================================
+
+// src/CamBridge.Infrastructure/Services/INotificationService.cs
+// Version: 0.7.9
+// Description: Minimal notification interface - KISS approach!
+// Copyright:  2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Threading.Tasks;
+using CamBridge.Core;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Minimal notification service interface - KISS!
+    /// Most notifications removed in favor of simple logging
+    /// </summary>
+    public interface INotificationService
+    {
+        /// <summary>
+        /// Send daily summary if configured
+        /// </summary>
+        Task SendDailySummaryAsync(ProcessingSummary summary);
+
+        /// <summary>
+        /// Send critical error notification
+        /// </summary>
+        Task NotifyErrorAsync(string message, Exception? exception = null);
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\Services\INotificationService.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs
+# SIZE: 11.3 KB
+# MODIFIED: 2025-06-04 21:01
+# ============================================================================
+
+// File: src/CamBridge.Infrastructure/Services/MappingConfigurationLoader.cs
+// Version: 0.5.25
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Modified: 2025-06-04
+// Status: Development/Local - FREEZE BUG FIXED
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using CamBridge.Core.Interfaces;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Loads and manages DICOM mapping configurations from JSON files
+    /// </summary>
+    public class MappingConfigurationLoader : IMappingConfiguration
+    {
+        private readonly ILogger<MappingConfigurationLoader> _logger;
+        private readonly string _configPath;
+        private List<MappingRule> _mappingRules;
+        private bool _isInitialized = false;
+
+        public MappingConfigurationLoader(ILogger<MappingConfigurationLoader> logger, string configPath = "mappings.json")
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _configPath = configPath;
+            _mappingRules = new List<MappingRule>();
+
+            // REMOVED: LoadConfigurationAsync().GetAwaiter().GetResult();
+            // This was causing the UI freeze!
+            // Configuration will be loaded lazily or explicitly via LoadConfigurationAsync
+        }
+
+        /// <inheritdoc />
+        public IReadOnlyList<MappingRule> GetMappingRules()
+        {
+            // Return default rules if not initialized
+            if (!_isInitialized)
+            {
+                LoadDefaultMappings();
+                _isInitialized = true;
+            }
+            return _mappingRules.AsReadOnly();
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> LoadConfigurationAsync(string? filePath = null)
+        {
+            var path = filePath ?? _configPath;
+
+            try
+            {
+                // Make path absolute if relative
+                if (!Path.IsPathRooted(path))
+                {
+                    // Try multiple locations for the config file
+                    var possiblePaths = new[]
+                    {
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path),
+                        Path.Combine(Environment.CurrentDirectory, path),
+                        Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, path),
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CamBridge", path)
+                    };
+
+                    path = possiblePaths.FirstOrDefault(File.Exists) ?? possiblePaths[0];
+                }
+
+                if (!File.Exists(path))
+                {
+                    _logger.LogWarning("Mapping configuration file not found: {Path}. Using default mappings.", path);
+                    LoadDefaultMappings();
+                    _isInitialized = true;
+                    return false;
+                }
+
+                var json = await File.ReadAllTextAsync(path);
+                var config = JsonSerializer.Deserialize<MappingConfiguration>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (config?.Rules != null && config.Rules.Count > 0)
+                {
+                    _mappingRules = config.Rules;
+                    _logger.LogInformation("Loaded {Count} mapping rules from {Path}", _mappingRules.Count, path);
+                    _isInitialized = true;
+                    return true;
+                }
+                else
+                {
+                    _logger.LogWarning("No mapping rules found in {Path}. Using default mappings.", path);
+                    LoadDefaultMappings();
+                    _isInitialized = true;
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading mapping configuration from {Path}", path);
+                LoadDefaultMappings();
+                _isInitialized = true;
+                return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> SaveConfigurationAsync(IEnumerable<MappingRule> rules, string? filePath = null)
+        {
+            var path = filePath ?? _configPath;
+
+            try
+            {
+                // Make path absolute if relative
+                if (!Path.IsPathRooted(path))
+                {
+                    path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
+                }
+
+                // Ensure directory exists
+                var directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                var config = new MappingConfiguration
+                {
+                    Version = "1.0",
+                    Rules = rules.ToList()
+                };
+
+                var json = JsonSerializer.Serialize(config, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNameCaseInsensitive = true
+                });
+
+                await File.WriteAllTextAsync(path, json);
+
+                _mappingRules = config.Rules;
+                _logger.LogInformation("Saved {Count} mapping rules to {Path}", _mappingRules.Count, path);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving mapping configuration to {Path}", path);
+                return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public void AddRule(MappingRule rule)
+        {
+            if (rule == null)
+                throw new ArgumentNullException(nameof(rule));
+
+            _mappingRules.Add(rule);
+            _logger.LogDebug("Added mapping rule: {Source} -> {Target}", rule.SourceField, rule.DicomTag);
+        }
+
+        /// <inheritdoc />
+        public void RemoveRule(string sourceField)
+        {
+            var removed = _mappingRules.RemoveAll(r => r.SourceField == sourceField);
+            if (removed > 0)
+            {
+                _logger.LogDebug("Removed {Count} mapping rule(s) for source field: {SourceField}", removed, sourceField);
+            }
+        }
+
+        /// <inheritdoc />
+        public MappingRule? GetRuleForSource(string sourceField)
+        {
+            // Ensure we have rules loaded
+            if (!_isInitialized)
+            {
+                LoadDefaultMappings();
+                _isInitialized = true;
+            }
+
+            return _mappingRules.FirstOrDefault(r =>
+                r.SourceField.Equals(sourceField, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<MappingRule> GetRulesForTag(string dicomTag)
+        {
+            // Ensure we have rules loaded
+            if (!_isInitialized)
+            {
+                LoadDefaultMappings();
+                _isInitialized = true;
+            }
+
+            return _mappingRules.Where(r =>
+                r.DicomTag.Equals(dicomTag, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <inheritdoc />
+        public void ValidateRules()
+        {
+            foreach (var rule in _mappingRules)
+            {
+                if (string.IsNullOrWhiteSpace(rule.SourceField))
+                    throw new InvalidOperationException($"Invalid rule: SourceField is empty");
+
+                if (string.IsNullOrWhiteSpace(rule.DicomTag))
+                    throw new InvalidOperationException($"Invalid rule: DicomTag is empty for source {rule.SourceField}");
+
+                // Additional validation can be added here
+            }
+        }
+
+        /// <summary>
+        /// Loads default mapping rules for Ricoh G900 II
+        /// </summary>
+        private void LoadDefaultMappings()
+        {
+            _mappingRules = new List<MappingRule>
+            {
+                // Patient Information
+                new MappingRule
+                {
+                    SourceField = "name",
+                    DicomTag = "(0010,0010)",
+                    Description = "Patient's Name",
+                    ValueRepresentation = "PN",
+                    Required = true
+                },
+                new MappingRule
+                {
+                    SourceField = "examid",
+                    DicomTag = "(0010,0020)",
+                    Description = "Patient ID",
+                    ValueRepresentation = "LO",
+                    Required = true
+                },
+                new MappingRule
+                {
+                    SourceField = "birthdate",
+                    DicomTag = "(0010,0030)",
+                    Description = "Patient's Birth Date",
+                    ValueRepresentation = "DA",
+                    Transform = "DateToDicom",
+                    Required = false
+                },
+                new MappingRule
+                {
+                    SourceField = "gender",
+                    DicomTag = "(0010,0040)",
+                    Description = "Patient's Sex",
+                    ValueRepresentation = "CS",
+                    Transform = "MapGender",
+                    Required = false
+                },
+                
+                // Study Information
+                new MappingRule
+                {
+                    SourceField = "examid",
+                    DicomTag = "(0020,0010)",
+                    Description = "Study ID",
+                    ValueRepresentation = "SH",
+                    Required = true
+                },
+                new MappingRule
+                {
+                    SourceField = "comment",
+                    DicomTag = "(0008,1030)",
+                    Description = "Study Description",
+                    ValueRepresentation = "LO",
+                    Required = false
+                },
+                
+                // Series Information
+                new MappingRule
+                {
+                    SourceField = "_datetime",
+                    DicomTag = "(0008,0021)",
+                    Description = "Series Date",
+                    ValueRepresentation = "DA",
+                    Transform = "ExtractDate",
+                    Required = true
+                },
+                new MappingRule
+                {
+                    SourceField = "_datetime",
+                    DicomTag = "(0008,0031)",
+                    Description = "Series Time",
+                    ValueRepresentation = "TM",
+                    Transform = "ExtractTime",
+                    Required = true
+                }
+            };
+
+            _logger.LogInformation("Loaded {Count} default mapping rules", _mappingRules.Count);
+        }
+
+        /// <summary>
+        /// Internal configuration class for JSON serialization
+        /// </summary>
+        private class MappingConfiguration
+        {
+            public string Version { get; set; } = "1.0";
+            public List<MappingRule> Rules { get; set; } = new();
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\Services\NotificationService.cs
+# SIZE: 2.1 KB
+# MODIFIED: 2025-06-12 23:33
+# ============================================================================
+
+// src/CamBridge.Infrastructure/Services/NotificationService.cs
+// Version: 0.7.9
+// Description: Ultra-minimal notification service - KISS approach!
+// Copyright:  2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Ultra-minimal notification service - just logs!
+    /// KISS: No email implementation at all
+    /// </summary>
+    public class NotificationService : INotificationService
+    {
+        private readonly ILogger<NotificationService> _logger;
+
+        public NotificationService(ILogger<NotificationService> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        /// <summary>
+        /// Send daily summary - KISS: just log!
+        /// </summary>
+        public async Task SendDailySummaryAsync(ProcessingSummary summary)
+        {
+            await Task.CompletedTask;
+
+            _logger.LogInformation(
+                "Daily Summary: Processed {Total}, Success {Success}, Failed {Failed}, Uptime {Uptime}",
+                summary.TotalProcessed,
+                summary.Successful,
+                summary.Failed,
+                summary.Uptime);
+
+            if (summary.TopErrors != null && summary.TopErrors.Count > 0)
+            {
+                _logger.LogInformation("Top Errors: {Errors}", 
+                    string.Join(", ", summary.TopErrors.Select(e => $"{e.Key}: {e.Value}")));
+            }
+        }
+
+        /// <summary>
+        /// Notify critical error - KISS: just log!
+        /// </summary>
+        public async Task NotifyErrorAsync(string message, Exception? exception = null)
+        {
+            await Task.CompletedTask;
+
+            if (exception != null)
+            {
+                _logger.LogError(exception, "Critical Error: {Message}", message);
+            }
+            else
+            {
+                _logger.LogError("Critical Error: {Message}", message);
+            }
+        }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\Services\NotificationService.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\Services\PipelineManager.cs
+# SIZE: 22.4 KB
+# MODIFIED: 2025-06-12 23:18
+# ============================================================================
+
+// src/CamBridge.Infrastructure/Services/PipelineManager.cs
+// Version: 0.7.8
+// Description: Orchestrates multiple processing pipelines - KISS without DeadLetterQueue!
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Manages multiple processing pipelines with independent configurations, queues, and watchers
+    /// KISS UPDATE: No more DeadLetterQueue! Simple error folder approach!
+    /// </summary>
+    public class PipelineManager : IDisposable
+    {
+        private readonly ILogger<PipelineManager> _logger;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IOptionsMonitor<CamBridgeSettingsV2> _settingsMonitor;
+        private readonly ConcurrentDictionary<string, PipelineContext> _pipelines = new();
+        private readonly SemaphoreSlim _pipelineLock = new(1, 1);
+        private bool _disposed;
+
+        public PipelineManager(
+            ILogger<PipelineManager> logger,
+            IServiceProvider serviceProvider,
+            IOptionsMonitor<CamBridgeSettingsV2> settingsMonitor)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            _settingsMonitor = settingsMonitor ?? throw new ArgumentNullException(nameof(settingsMonitor));
+
+            // React to settings changes
+            _settingsMonitor.OnChange(async settings =>
+            {
+                _logger.LogInformation("Settings changed, reconfiguring pipelines");
+                await ReconfigurePipelinesAsync(settings);
+            });
+        }
+
+        /// <summary>
+        /// Initializes and starts all configured pipelines
+        /// </summary>
+        public async Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Starting Pipeline Manager");
+
+            var settings = _settingsMonitor.CurrentValue;
+
+            // Initialize pipelines from configuration
+            foreach (var pipelineConfig in settings.Pipelines.Where(p => p.Enabled))
+            {
+                try
+                {
+                    await CreateAndStartPipelineAsync(pipelineConfig, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to start pipeline: {PipelineName}", pipelineConfig.Name);
+                }
+            }
+
+            _logger.LogInformation("Pipeline Manager started with {Count} active pipelines",
+                _pipelines.Count(p => p.Value.IsActive));
+        }
+
+        /// <summary>
+        /// Stops all pipelines gracefully
+        /// </summary>
+        public async Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Stopping Pipeline Manager");
+
+            var stopTasks = _pipelines.Values
+                .Where(p => p.IsActive)
+                .Select(p => StopPipelineAsync(p, cancellationToken))
+                .ToArray();
+
+            await Task.WhenAll(stopTasks);
+
+            _logger.LogInformation("Pipeline Manager stopped");
+        }
+
+        /// <summary>
+        /// Enables a specific pipeline at runtime
+        /// </summary>
+        public async Task EnablePipelineAsync(string pipelineId, CancellationToken cancellationToken = default)
+        {
+            await _pipelineLock.WaitAsync(cancellationToken);
+            try
+            {
+                if (_pipelines.TryGetValue(pipelineId, out var context))
+                {
+                    if (!context.IsActive)
+                    {
+                        await StartPipelineAsync(context, cancellationToken);
+                        _logger.LogInformation("Pipeline {PipelineId} enabled", pipelineId);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Pipeline {PipelineId} not found", pipelineId);
+                }
+            }
+            finally
+            {
+                _pipelineLock.Release();
+            }
+        }
+
+        /// <summary>
+        /// Disables a specific pipeline at runtime
+        /// </summary>
+        public async Task DisablePipelineAsync(string pipelineId, CancellationToken cancellationToken = default)
+        {
+            await _pipelineLock.WaitAsync(cancellationToken);
+            try
+            {
+                if (_pipelines.TryGetValue(pipelineId, out var context))
+                {
+                    if (context.IsActive)
+                    {
+                        await StopPipelineAsync(context, cancellationToken);
+                        _logger.LogInformation("Pipeline {PipelineId} disabled", pipelineId);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Pipeline {PipelineId} not found", pipelineId);
+                }
+            }
+            finally
+            {
+                _pipelineLock.Release();
+            }
+        }
+
+        /// <summary>
+        /// Gets the status of all pipelines
+        /// </summary>
+        public Dictionary<string, PipelineStatus> GetPipelineStatuses()
+        {
+            return _pipelines.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new PipelineStatus
+                {
+                    Id = kvp.Value.Configuration.Id.ToString(),
+                    Name = kvp.Value.Configuration.Name,
+                    IsActive = kvp.Value.IsActive,
+                    QueueLength = kvp.Value.Queue?.QueueLength ?? 0,
+                    ActiveProcessing = kvp.Value.Queue?.ActiveProcessing ?? 0,
+                    TotalProcessed = kvp.Value.Queue?.TotalProcessed ?? 0,
+                    TotalSuccessful = kvp.Value.Queue?.TotalSuccessful ?? 0,
+                    TotalFailed = kvp.Value.Queue?.TotalFailed ?? 0,
+                    WatchedFolders = new List<string> { kvp.Value.Configuration.WatchSettings.Path }
+                });
+        }
+
+        /// <summary>
+        /// Gets detailed statistics for a specific pipeline
+        /// </summary>
+        public PipelineDetailedStatus? GetPipelineDetails(string pipelineId)
+        {
+            if (!_pipelines.TryGetValue(pipelineId, out var context))
+                return null;
+
+            var queueStats = context.Queue?.GetStatistics();
+
+            return new PipelineDetailedStatus
+            {
+                Id = context.Configuration.Id.ToString(),
+                Name = context.Configuration.Name,
+                Description = context.Configuration.Description,
+                IsActive = context.IsActive,
+                Configuration = context.Configuration,
+                QueueStatistics = queueStats,
+                ActiveItems = context.Queue?.GetActiveItems() ?? new List<ProcessingItemStatus>()
+            };
+        }
+
+        private async Task CreateAndStartPipelineAsync(PipelineConfiguration config, CancellationToken cancellationToken)
+        {
+            await _pipelineLock.WaitAsync(cancellationToken);
+            try
+            {
+                // Check if pipeline already exists
+                if (_pipelines.ContainsKey(config.Id.ToString()))
+                {
+                    _logger.LogWarning("Pipeline {PipelineId} already exists", config.Id);
+                    return;
+                }
+
+                // Create pipeline context
+                var context = CreatePipelineContext(config);
+
+                // Add to collection
+                _pipelines[config.Id.ToString()] = context;
+
+                // Start the pipeline
+                await StartPipelineAsync(context, cancellationToken);
+
+                _logger.LogInformation("Created and started pipeline: {PipelineName} ({PipelineId})",
+                    config.Name, config.Id);
+            }
+            finally
+            {
+                _pipelineLock.Release();
+            }
+        }
+
+        private PipelineContext CreatePipelineContext(PipelineConfiguration config)
+        {
+            // Create pipeline-specific services
+            var scope = _serviceProvider.CreateScope();
+
+            // Create processing queue for this pipeline
+            var processingQueue = new ProcessingQueue(
+                scope.ServiceProvider.GetRequiredService<ILogger<ProcessingQueue>>(),
+                scope.ServiceProvider.GetRequiredService<IServiceScopeFactory>(),
+                Options.Create(config.ProcessingOptions));
+
+            // Create context
+            var context = new PipelineContext
+            {
+                Id = config.Id.ToString(),
+                Configuration = config,
+                ServiceScope = scope,
+                Queue = processingQueue,
+                Watchers = new List<FileSystemWatcher>(),
+                ProcessingTask = null,
+                IsActive = false
+            };
+
+            return context;
+        }
+
+        private async Task StartPipelineAsync(PipelineContext context, CancellationToken cancellationToken)
+        {
+            if (context.IsActive)
+                return;
+
+            _logger.LogInformation("Starting pipeline: {PipelineName}", context.Configuration.Name);
+
+            // Start processing queue
+            context.CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            context.ProcessingTask = Task.Run(async () =>
+            {
+                try
+                {
+                    await context.Queue.ProcessQueueAsync(context.CancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during shutdown
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Fatal error in pipeline {PipelineId} processing queue", context.Id);
+                }
+            }, context.CancellationTokenSource.Token);
+
+            // Create watcher for the pipeline's watch folder
+            if (context.Configuration.WatchSettings.IsValid)
+            {
+                try
+                {
+                    var watcher = CreateWatcher(context.Configuration.WatchSettings, context);
+                    context.Watchers.Add(watcher);
+
+                    _logger.LogInformation("Started watching folder: {Path} for pipeline {PipelineName}",
+                        context.Configuration.WatchSettings.Path, context.Configuration.Name);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to create watcher for folder: {Path} in pipeline {PipelineId}",
+                        context.Configuration.WatchSettings.Path, context.Id);
+                }
+            }
+
+            // Process existing files if configured
+            if (context.Configuration.ProcessingOptions.ProcessExistingOnStartup)
+            {
+                await ProcessExistingFilesAsync(context, cancellationToken);
+            }
+
+            context.IsActive = true;
+        }
+
+        private async Task StopPipelineAsync(PipelineContext context, CancellationToken cancellationToken)
+        {
+            if (!context.IsActive)
+                return;
+
+            _logger.LogInformation("Stopping pipeline: {PipelineName}", context.Configuration.Name);
+
+            // Stop watchers
+            foreach (var watcher in context.Watchers)
+            {
+                try
+                {
+                    watcher.EnableRaisingEvents = false;
+                    watcher.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error disposing watcher in pipeline {PipelineId}", context.Id);
+                }
+            }
+            context.Watchers.Clear();
+
+            // Stop processing
+            context.CancellationTokenSource?.Cancel();
+
+            if (context.ProcessingTask != null)
+            {
+                try
+                {
+                    await context.ProcessingTask.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                }
+                catch (TimeoutException)
+                {
+                    _logger.LogWarning("Pipeline {PipelineId} processing did not complete within timeout", context.Id);
+                }
+            }
+
+            context.IsActive = false;
+        }
+
+        private FileSystemWatcher CreateWatcher(PipelineWatchSettings watchSettings, PipelineContext context)
+        {
+            var watcher = new FileSystemWatcher(watchSettings.Path)
+            {
+                IncludeSubdirectories = watchSettings.IncludeSubdirectories,
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size
+            };
+
+            var patterns = watchSettings.FilePattern.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            if (patterns.Length == 1)
+            {
+                watcher.Filter = patterns[0].Trim();
+            }
+            else
+            {
+                watcher.Filter = "*.*";
+            }
+
+            // Wire up events to enqueue in the pipeline's specific queue
+            watcher.Created += (sender, e) => OnFileEvent(e.FullPath, watchSettings, patterns, context);
+            watcher.Changed += (sender, e) => OnFileEvent(e.FullPath, watchSettings, patterns, context);
+            watcher.Renamed += (sender, e) => OnFileEvent(e.FullPath, watchSettings, patterns, context);
+
+            watcher.Error += (sender, e) =>
+            {
+                var ex = e.GetException();
+                _logger.LogError(ex, "FileSystemWatcher error for path: {Path} in pipeline {PipelineId}",
+                    watchSettings.Path, context.Id);
+            };
+
+            watcher.EnableRaisingEvents = true;
+            return watcher;
+        }
+
+        private void OnFileEvent(string filePath, PipelineWatchSettings watchSettings, string[] patterns, PipelineContext context)
+        {
+            try
+            {
+                // Check if file matches any pattern
+                if (patterns.Length > 1)
+                {
+                    var fileName = Path.GetFileName(filePath);
+                    var matchesPattern = patterns.Any(pattern =>
+                    {
+                        var cleanPattern = pattern.Trim();
+                        if (cleanPattern.StartsWith("*"))
+                        {
+                            return fileName.EndsWith(cleanPattern.Substring(1), StringComparison.OrdinalIgnoreCase);
+                        }
+                        return fileName.Equals(cleanPattern, StringComparison.OrdinalIgnoreCase);
+                    });
+
+                    if (!matchesPattern)
+                        return;
+                }
+
+                // Enqueue in the pipeline's specific queue
+                if (context.Queue.TryEnqueue(filePath))
+                {
+                    _logger.LogInformation("Enqueued {FilePath} in pipeline {PipelineName}",
+                        filePath, context.Configuration.Name);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling file event for: {FilePath} in pipeline {PipelineId}",
+                    filePath, context.Id);
+            }
+        }
+
+        private Task ProcessExistingFilesAsync(PipelineContext context, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Processing existing files for pipeline: {PipelineName}",
+                context.Configuration.Name);
+
+            var processedCount = 0;
+            var watchSettings = context.Configuration.WatchSettings;
+
+            if (watchSettings.IsValid)
+            {
+                try
+                {
+                    var patterns = watchSettings.FilePattern
+                        .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(p => p.Trim())
+                        .ToArray();
+
+                    var searchOption = watchSettings.IncludeSubdirectories
+                        ? SearchOption.AllDirectories
+                        : SearchOption.TopDirectoryOnly;
+
+                    foreach (var pattern in patterns)
+                    {
+                        var files = Directory.GetFiles(watchSettings.Path, pattern, searchOption);
+                        foreach (var file in files)
+                        {
+                            if (cancellationToken.IsCancellationRequested)
+                                break;
+
+                            if (context.Queue.TryEnqueue(file))
+                            {
+                                processedCount++;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing existing files in folder: {Path}", watchSettings.Path);
+                }
+            }
+
+            _logger.LogInformation("Enqueued {Count} existing files for pipeline {PipelineName}",
+                processedCount, context.Configuration.Name);
+
+            return Task.CompletedTask;
+        }
+
+        private async Task ReconfigurePipelinesAsync(CamBridgeSettingsV2 newSettings)
+        {
+            await _pipelineLock.WaitAsync();
+            try
+            {
+                // Find pipelines to remove
+                var toRemove = _pipelines.Keys
+                    .Where(id => !newSettings.Pipelines.Any(p => p.Id.ToString() == id))
+                    .ToList();
+
+                // Remove deleted pipelines
+                foreach (var id in toRemove)
+                {
+                    if (_pipelines.TryRemove(id, out var context))
+                    {
+                        await StopPipelineAsync(context, CancellationToken.None);
+                        context.ServiceScope?.Dispose();
+                        _logger.LogInformation("Removed pipeline: {PipelineId}", id);
+                    }
+                }
+
+                // Update or add pipelines
+                foreach (var pipelineConfig in newSettings.Pipelines)
+                {
+                    if (_pipelines.TryGetValue(pipelineConfig.Id.ToString(), out var existingContext))
+                    {
+                        // Update existing pipeline
+                        if (pipelineConfig.Enabled && !existingContext.IsActive)
+                        {
+                            existingContext.Configuration = pipelineConfig;
+                            await StartPipelineAsync(existingContext, CancellationToken.None);
+                        }
+                        else if (!pipelineConfig.Enabled && existingContext.IsActive)
+                        {
+                            await StopPipelineAsync(existingContext, CancellationToken.None);
+                        }
+                        else
+                        {
+                            // Update configuration
+                            existingContext.Configuration = pipelineConfig;
+                        }
+                    }
+                    else if (pipelineConfig.Enabled)
+                    {
+                        // Add new pipeline
+                        await CreateAndStartPipelineAsync(pipelineConfig, CancellationToken.None);
+                    }
+                }
+            }
+            finally
+            {
+                _pipelineLock.Release();
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+
+            _pipelineLock?.Wait();
+            try
+            {
+                foreach (var context in _pipelines.Values)
+                {
+                    StopPipelineAsync(context, CancellationToken.None).GetAwaiter().GetResult();
+                    context.ServiceScope?.Dispose();
+                }
+                _pipelines.Clear();
+            }
+            finally
+            {
+                _pipelineLock?.Release();
+                _pipelineLock?.Dispose();
+            }
+
+            _disposed = true;
+        }
+
+        /// <summary>
+        /// Internal context for managing a single pipeline
+        /// </summary>
+        private class PipelineContext
+        {
+            public string Id { get; set; } = string.Empty;
+            public PipelineConfiguration Configuration { get; set; } = new();
+            public ProcessingQueue Queue { get; set; } = null!;
+            public List<FileSystemWatcher> Watchers { get; set; } = new();
+            public Task? ProcessingTask { get; set; }
+            public CancellationTokenSource? CancellationTokenSource { get; set; }
+            public IServiceScope ServiceScope { get; set; } = null!;
+            public bool IsActive { get; set; }
+        }
+    }
+
+    /// <summary>
+    /// Pipeline status summary
+    /// </summary>
+    public class PipelineStatus
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public int QueueLength { get; set; }
+        public int ActiveProcessing { get; set; }
+        public int TotalProcessed { get; set; }
+        public int TotalSuccessful { get; set; }
+        public int TotalFailed { get; set; }
+        public List<string> WatchedFolders { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Detailed pipeline status including configuration and statistics
+    /// </summary>
+    public class PipelineDetailedStatus
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public bool IsActive { get; set; }
+        public PipelineConfiguration Configuration { get; set; } = new();
+        public QueueStatistics? QueueStatistics { get; set; }
+        public IReadOnlyList<ProcessingItemStatus> ActiveItems { get; set; } = new List<ProcessingItemStatus>();
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\Services\PipelineManager.cs ===
+
+
+# ============================================================================
+# FILE: src\CamBridge.Infrastructure\Services\ProcessingQueue.cs
+# SIZE: 13.8 KB
+# MODIFIED: 2025-06-11 11:27
+# ============================================================================
+
+// src/CamBridge.Infrastructure/Services/ProcessingQueue.cs
+// Version: 0.7.8
+// Description: Thread-safe queue for managing file processing - SIMPLE without DeadLetterQueue!
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Thread-safe queue for managing file processing with retry logic
+    /// KISS UPDATE: No more DeadLetterQueue! Simple error folder approach!
+    /// </summary>
+    public class ProcessingQueue
+    {
+        private readonly ILogger<ProcessingQueue> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ProcessingOptions _options;
+        private readonly ConcurrentQueue<ProcessingItem> _queue = new();
+        private readonly ConcurrentDictionary<string, ProcessingItem> _activeItems = new();
+        private readonly SemaphoreSlim _processingSlots;
+        private readonly object _statsLock = new();
+        private readonly Dictionary<string, int> _errorCounts = new();
+
+        private int _totalProcessed;
+        private int _totalSuccessful;
+        private int _totalFailed;
+        private DateTime _startTime = DateTime.UtcNow;
+
+        public int QueueLength => _queue.Count;
+        public int ActiveProcessing => _activeItems.Count;
+        public int TotalProcessed => _totalProcessed;
+        public int TotalSuccessful => _totalSuccessful;
+        public int TotalFailed => _totalFailed;
+        public TimeSpan UpTime => DateTime.UtcNow - _startTime;
+
+        public ProcessingQueue(
+            ILogger<ProcessingQueue> logger,
+            IServiceScopeFactory scopeFactory,
+            IOptions<ProcessingOptions> options)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+
+            _processingSlots = new SemaphoreSlim(
+                _options.MaxConcurrentProcessing,
+                _options.MaxConcurrentProcessing);
+        }
+
+        /// <summary>
+        /// Enqueues a file for processing
+        /// </summary>
+        public bool TryEnqueue(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                return false;
+
+            // Check if already in queue or being processed
+            if (_activeItems.ContainsKey(filePath))
+            {
+                _logger.LogDebug("File {FilePath} is already being processed", filePath);
+                return false;
+            }
+
+            if (_queue.Any(item => item.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
+            {
+                _logger.LogDebug("File {FilePath} is already in queue", filePath);
+                return false;
+            }
+
+            // Check if file should be processed using a new scope
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                // KISS: Direct FileProcessor dependency, no interface!
+                var fileProcessor = scope.ServiceProvider.GetRequiredService<FileProcessor>();
+                if (!fileProcessor.ShouldProcessFile(filePath))
+                {
+                    _logger.LogDebug("File {FilePath} does not meet processing criteria", filePath);
+                    return false;
+                }
+            }
+
+            var item = new ProcessingItem(filePath);
+            _queue.Enqueue(item);
+
+            _logger.LogInformation("Enqueued {FilePath} for processing (queue length: {QueueLength})",
+                filePath, _queue.Count);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Processes items from the queue
+        /// </summary>
+        public async Task ProcessQueueAsync(CancellationToken cancellationToken)
+        {
+            var tasks = new List<Task>();
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                // Clean up completed tasks
+                tasks.RemoveAll(t => t.IsCompleted);
+
+                // Try to dequeue and process
+                if (_queue.TryDequeue(out var item))
+                {
+                    // Wait for available processing slot
+                    await _processingSlots.WaitAsync(cancellationToken);
+
+                    // Start processing task
+                    var task = ProcessItemAsync(item, cancellationToken);
+                    tasks.Add(task);
+                }
+                else
+                {
+                    // No items in queue, wait a bit
+                    await Task.Delay(100, cancellationToken);
+                }
+            }
+
+            // Wait for all remaining tasks to complete on shutdown
+            if (tasks.Count > 0)
+            {
+                _logger.LogInformation("Waiting for {Count} active processing tasks to complete", tasks.Count);
+                await Task.WhenAll(tasks);
+            }
+        }
+
+        /// <summary>
+        /// Gets current queue statistics
+        /// </summary>
+        public QueueStatistics GetStatistics()
+        {
+            lock (_statsLock)
+            {
+                return new QueueStatistics
+                {
+                    QueueLength = QueueLength,
+                    ActiveProcessing = ActiveProcessing,
+                    TotalProcessed = TotalProcessed,
+                    TotalSuccessful = TotalSuccessful,
+                    TotalFailed = TotalFailed,
+                    UpTime = UpTime,
+                    ProcessingRate = TotalProcessed > 0 ? TotalProcessed / UpTime.TotalMinutes : 0,
+                    TopErrors = _errorCounts
+                        .OrderByDescending(x => x.Value)
+                        .Take(5)
+                        .ToDictionary(x => x.Key, x => x.Value)
+                };
+            }
+        }
+
+        /// <summary>
+        /// Gets daily summary for notifications
+        /// </summary>
+        public ProcessingSummary GetDailySummary()
+        {
+            var stats = GetStatistics();
+
+            return new ProcessingSummary
+            {
+                Date = DateTime.Today,
+                TotalProcessed = stats.TotalProcessed,
+                Successful = stats.TotalSuccessful,
+                Failed = stats.TotalFailed,
+                ProcessingTimeSeconds = stats.UpTime.TotalSeconds,
+                TopErrors = stats.TopErrors,
+                Uptime = stats.UpTime
+            };
+        }
+
+        /// <summary>
+        /// Gets items currently being processed
+        /// </summary>
+        public IReadOnlyList<ProcessingItemStatus> GetActiveItems()
+        {
+            return _activeItems.Values
+                .Select(item => new ProcessingItemStatus
+                {
+                    FilePath = item.FilePath,
+                    StartTime = item.StartTime,
+                    AttemptCount = item.AttemptCount,
+                    Duration = item.StartTime.HasValue
+                        ? DateTime.UtcNow - item.StartTime.Value
+                        : TimeSpan.Zero
+                })
+                .ToList()
+                .AsReadOnly();
+        }
+
+        private async Task ProcessItemAsync(ProcessingItem item, CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Mark as active
+                _activeItems.TryAdd(item.FilePath, item);
+                item.StartTime = DateTime.UtcNow;
+                item.AttemptCount++;
+
+                _logger.LogInformation("Starting processing of {FilePath} (attempt {Attempt})",
+                    item.FilePath, item.AttemptCount);
+
+                // Process the file with a new scope
+                FileProcessingResult result;
+                using (var scope = _scopeFactory.CreateScope())
+                {
+                    // KISS: Direct FileProcessor dependency, no interface!
+                    var fileProcessor = scope.ServiceProvider.GetRequiredService<FileProcessor>();
+                    result = await fileProcessor.ProcessFileAsync(item.FilePath);
+                }
+
+                // Update statistics
+                lock (_statsLock)
+                {
+                    _totalProcessed++;
+                    if (result.Success)
+                    {
+                        _totalSuccessful++;
+                    }
+                    else
+                    {
+                        _totalFailed++;
+                        TrackError(result.ErrorMessage ?? "Unknown error");
+                    }
+                }
+
+                if (!result.Success && ShouldRetry(item))
+                {
+                    // Schedule retry
+                    await ScheduleRetryAsync(item, cancellationToken);
+                }
+                else if (!result.Success)
+                {
+                    // KISS: File already moved to error folder by FileProcessor!
+                    _logger.LogError("Failed to process {FilePath} after {Attempts} attempts: {Error}",
+                        item.FilePath, item.AttemptCount, result.ErrorMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error processing {FilePath}", item.FilePath);
+
+                lock (_statsLock)
+                {
+                    _totalProcessed++;
+                    _totalFailed++;
+                    TrackError(ex.Message);
+                }
+
+                if (ShouldRetry(item))
+                {
+                    await ScheduleRetryAsync(item, cancellationToken);
+                }
+                else
+                {
+                    // Log final failure - file should already be in error folder
+                    _logger.LogError("Failed to process {FilePath} after {Attempts} attempts",
+                        item.FilePath, item.AttemptCount);
+                }
+            }
+            finally
+            {
+                // Remove from active items
+                _activeItems.TryRemove(item.FilePath, out _);
+
+                // Release processing slot
+                _processingSlots.Release();
+            }
+        }
+
+        private bool ShouldRetry(ProcessingItem item)
+        {
+            return _options.RetryOnFailure &&
+                   item.AttemptCount < _options.MaxRetryAttempts;
+        }
+
+        private async Task ScheduleRetryAsync(ProcessingItem item, CancellationToken cancellationToken)
+        {
+            var delay = TimeSpan.FromSeconds(_options.RetryDelaySeconds * item.AttemptCount);
+
+            _logger.LogInformation("Scheduling retry for {FilePath} in {Delay} seconds",
+                item.FilePath, delay.TotalSeconds);
+
+            // Wait before re-enqueueing
+            await Task.Delay(delay, cancellationToken);
+
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                item.StartTime = null; // Reset start time
+                _queue.Enqueue(item);
+            }
+        }
+
+        private void TrackError(string error)
+        {
+            var category = CategorizeError(error);
+            _errorCounts.TryGetValue(category, out var count);
+            _errorCounts[category] = count + 1;
+        }
+
+        private string CategorizeError(string error)
+        {
+            if (error.Contains("EXIF", StringComparison.OrdinalIgnoreCase))
+                return "EXIF extraction failed";
+            if (error.Contains("DICOM", StringComparison.OrdinalIgnoreCase))
+                return "DICOM conversion failed";
+            if (error.Contains("Patient", StringComparison.OrdinalIgnoreCase))
+                return "Patient data missing";
+            if (error.Contains("File", StringComparison.OrdinalIgnoreCase))
+                return "File access error";
+            if (error.Contains("Memory", StringComparison.OrdinalIgnoreCase))
+                return "Memory error";
+            return "Other error";
+        }
+
+        /// <summary>
+        /// Processing item with retry tracking
+        /// </summary>
+        private class ProcessingItem
+        {
+            public string FilePath { get; }
+            public int AttemptCount { get; set; }
+            public DateTime? StartTime { get; set; }
+            public DateTime EnqueuedTime { get; }
+
+            public ProcessingItem(string filePath)
+            {
+                FilePath = filePath;
+                EnqueuedTime = DateTime.UtcNow;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Queue statistics
+    /// </summary>
+    public class QueueStatistics
+    {
+        public int QueueLength { get; init; }
+        public int ActiveProcessing { get; init; }
+        public int TotalProcessed { get; init; }
+        public int TotalSuccessful { get; init; }
+        public int TotalFailed { get; init; }
+        public TimeSpan UpTime { get; init; }
+        public double ProcessingRate { get; init; }
+        public Dictionary<string, int> TopErrors { get; init; } = new();
+
+        public double SuccessRate => TotalProcessed > 0
+            ? (double)TotalSuccessful / TotalProcessed * 100
+            : 0;
+    }
+
+    /// <summary>
+    /// Status of an item being processed
+    /// </summary>
+    public class ProcessingItemStatus
+    {
+        public string FilePath { get; init; } = string.Empty;
+        public DateTime? StartTime { get; init; }
+        public int AttemptCount { get; init; }
+        public TimeSpan Duration { get; init; }
+    }
+}
+
+
+# === END OF FILE: src\CamBridge.Infrastructure\Services\ProcessingQueue.cs ===
+
+
+# ============================================================================
+# END OF Infrastructure SOURCES
+# Total Size: 0.14 MB
+# Files Included: 12
+# ============================================================================

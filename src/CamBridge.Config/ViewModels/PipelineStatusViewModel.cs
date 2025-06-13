@@ -1,13 +1,18 @@
-// src/CamBridge.Config/ViewModels/PipelineStatusViewModel.cs
-// Version: 0.6.8
-// Description: ViewModel for individual pipeline status display
+/**************************************************************************
+*  PipelineStatusViewModel.cs                                             *
+*  PATH: src\CamBridge.Config\ViewModels\PipelineStatusViewModel.cs      *
+*  VERSION: 0.7.11 | SIZE: ~2.5KB | MODIFIED: 2025-06-13                 *
+*                                                                         *
+*  DESCRIPTION: ViewModel for individual pipeline status display          *
+*  Copyright (c) 2025 Claude's Improbably Reliable Software Solutions     *
+**************************************************************************/
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace CamBridge.Config.ViewModels
 {
-    public class PipelineStatusViewModel : ObservableObject
+    public partial class PipelineStatusViewModel : ObservableObject
     {
         private Guid _pipelineId;
         private string _pipelineName = string.Empty;
