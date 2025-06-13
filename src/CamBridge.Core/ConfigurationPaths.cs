@@ -1,6 +1,6 @@
 // src\CamBridge.Core\ConfigurationPaths.cs
-// Version: 0.7.3
-// Description: Centralized configuration path management
+// Version: 0.7.10
+// Description: Centralized configuration path management with V2 format support
 // © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -277,29 +277,184 @@ namespace CamBridge.Core
         }
 
         /// <summary>
-        /// Initializes primary config with default settings
+        /// Initializes primary config with default settings - V2 FORMAT!
+        /// CRITICAL FIX: Must create config with "CamBridge" wrapper section!
         /// </summary>
         /// <returns>True if config was created, false if it already existed</returns>
         public static bool InitializePrimaryConfig()
         {
             var configPath = GetPrimaryConfigPath();
+
             if (!File.Exists(configPath))
             {
-                // Create default config
+                // First, check if there's a local appsettings.json to copy
+                var localConfig = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+                if (File.Exists(localConfig))
+                {
+                    try
+                    {
+                        // Read the local config to check if it has proper V2 format
+                        var localJson = File.ReadAllText(localConfig);
+                        using var doc = JsonDocument.Parse(localJson);
+
+                        // If it has a CamBridge section, it's V2 format - copy it!
+                        if (doc.RootElement.TryGetProperty("CamBridge", out _))
+                        {
+                            File.Copy(localConfig, configPath);
+                            return true; // Config was created from template
+                        }
+                    }
+                    catch
+                    {
+                        // If anything goes wrong, fall through to create default
+                    }
+                }
+
+                // Create proper V2 format config with CamBridge wrapper!
                 var defaultConfig = new
                 {
-                    version = "0.7.3",
-                    created = DateTime.UtcNow,
-                    defaultOutputFolder = @"C:\CamBridge\Output",
-                    service = new
+                    CamBridge = new
                     {
-                        serviceName = "CamBridgeService",
-                        displayName = "CamBridge Service",
-                        description = "JPEG to DICOM medical imaging converter"
+                        Version = "2.0",
+                        Service = new
+                        {
+                            ServiceName = "CamBridgeService",
+                            DisplayName = "CamBridge JPEG to DICOM Converter",
+                            Description = "Monitors folders for JPEG files from Ricoh cameras and converts them to DICOM format",
+                            ApiPort = 5111,  // CRITICAL: Correct port!
+                            EnableHealthChecks = true,
+                            HealthCheckInterval = "00:01:00",
+                            StartupDelaySeconds = 5
+                        },
+                        Pipelines = new[]
+                        {
+                            new
+                            {
+                                Id = Guid.NewGuid().ToString(),
+                                Name = "Default Pipeline",
+                                Description = "Default pipeline for JPEG to DICOM conversion",
+                                Enabled = true,
+                                WatchSettings = new
+                                {
+                                    Path = @"C:\CamBridge\Watch",
+                                    FilePattern = "*.jpg;*.jpeg",
+                                    IncludeSubdirectories = false,
+                                    MinimumFileAgeSeconds = 2
+                                },
+                                ProcessingOptions = new
+                                {
+                                    SuccessAction = "Archive",
+                                    FailureAction = "MoveToError",
+                                    DeleteSourceAfterSuccess = false,
+                                    ProcessExistingOnStartup = true,
+                                    MaxRetryAttempts = 3,
+                                    RetryDelaySeconds = 30,
+                                    ErrorFolder = @"C:\CamBridge\Errors",
+                                    ArchiveFolder = @"C:\CamBridge\Output",
+                                    BackupFolder = @"C:\CamBridge\Archive",
+                                    CreateBackup = true,
+                                    MaxConcurrentProcessing = 5,
+                                    OutputOrganization = "ByPatientAndDate",
+                                    OutputFilePattern = "{PatientId}_{StudyDate}_{Counter:0000}.dcm"
+                                },
+                                MappingSetId = "00000000-0000-0000-0000-000000000001"
+                            }
+                        },
+                        MappingSets = new[]
+                        {
+                            new
+                            {
+                                Id = "00000000-0000-0000-0000-000000000001",
+                                Name = "Ricoh Default",
+                                Description = "Standard mapping for Ricoh G900 II cameras",
+                                IsSystemDefault = true,
+                                Rules = new[]
+                                {
+                                    new
+                                    {
+                                        Name = "PatientName",
+                                        Description = "Patient's full name",
+                                        SourceType = "QRBridge",
+                                        SourceField = "name",
+                                        DicomTag = "(0010,0010)",
+                                        Transform = "None",
+                                        Required = true,
+                                        ValueRepresentation = "PN"
+                                    },
+                                    new
+                                    {
+                                        Name = "PatientID",
+                                        Description = "Patient identifier",
+                                        SourceType = "QRBridge",
+                                        SourceField = "examid",
+                                        DicomTag = "(0010,0020)",
+                                        Transform = "None",
+                                        Required = true,
+                                        ValueRepresentation = "LO"
+                                    }
+                                }
+                            }
+                        },
+                        GlobalDicomSettings = new
+                        {
+                            ImplementationClassUid = "1.2.276.0.7230010.3.0.3.6.4",
+                            ImplementationVersionName = "CAMBRIDGE_0710",
+                            SourceApplicationEntityTitle = "CAMBRIDGE",
+                            Modality = "OT",
+                            InstitutionName = "CamBridge Medical Imaging",
+                            ValidateAfterCreation = true
+                        },
+                        DefaultProcessingOptions = new
+                        {
+                            SuccessAction = "Archive",
+                            FailureAction = "MoveToError",
+                            ArchiveFolder = @"C:\CamBridge\Output",
+                            ErrorFolder = @"C:\CamBridge\Errors",
+                            BackupFolder = @"C:\CamBridge\Archive",
+                            CreateBackup = true,
+                            MaxConcurrentProcessing = 5,
+                            RetryOnFailure = true,
+                            MaxRetryAttempts = 3,
+                            RetryDelaySeconds = 30,
+                            OutputOrganization = "ByPatientAndDate",
+                            ProcessExistingOnStartup = true,
+                            OutputFilePattern = "{PatientId}_{StudyDate}_{Counter:0000}.dcm"
+                        },
+                        Logging = new
+                        {
+                            LogLevel = "Information",
+                            LogFolder = @"C:\ProgramData\CamBridge\Logs",
+                            EnableFileLogging = true,
+                            EnableEventLog = true,
+                            MaxLogFileSizeMB = 10,
+                            MaxLogFiles = 10
+                        },
+                        Notifications = new
+                        {
+                            Enabled = true,
+                            DeadLetterThreshold = 100,
+                            LogNotifications = true,
+                            EventLog = new
+                            {
+                                Enabled = true,
+                                LogName = "Application",
+                                SourceName = "CamBridge"
+                            }
+                        },
+                        ExifToolPath = "Tools\\exiftool.exe"
+                    },
+                    Logging = new
+                    {
+                        LogLevel = new
+                        {
+                            Default = "Information",
+                            Microsoft = "Warning",
+                            CamBridge = "Information"
+                        }
                     }
                 };
 
-                var json = System.Text.Json.JsonSerializer.Serialize(defaultConfig, new System.Text.Json.JsonSerializerOptions
+                var json = JsonSerializer.Serialize(defaultConfig, new JsonSerializerOptions
                 {
                     WriteIndented = true
                 });
@@ -307,6 +462,7 @@ namespace CamBridge.Core
                 File.WriteAllText(configPath, json);
                 return true; // Config was created
             }
+
             return false; // Config already existed
         }
     }

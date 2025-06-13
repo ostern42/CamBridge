@@ -1,6 +1,6 @@
 // src/CamBridge.Config/Services/HttpApiService.cs
-// Version: 0.7.8
-// Description: KISS Edition - Dead Letter methods removed!
+// Version: 0.7.10
+// Description: KISS Edition with CORRECT PORT!
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -14,7 +14,7 @@ using CamBridge.Config.Models;
 namespace CamBridge.Config.Services
 {
     /// <summary>
-    /// KISS implementation of IApiService - no dead letters!
+    /// KISS implementation of IApiService - now with correct port!
     /// </summary>
     public class HttpApiService : IApiService
     {
@@ -23,7 +23,8 @@ namespace CamBridge.Config.Services
         public HttpApiService(HttpClient httpClient, object? unused = null)
         {
             _httpClient = httpClient;
-            _httpClient.BaseAddress = new Uri("http://localhost:5050/");
+            // CRITICAL FIX: Use port 5111 to match Service configuration!
+            _httpClient.BaseAddress = new Uri("http://localhost:5111/"); // FIX: Was 5050!
             _httpClient.Timeout = TimeSpan.FromSeconds(5);
             // No custom JSON options - defaults work fine!
             // Note: Second parameter kept for backward compatibility, but ignored (KISS!)
@@ -54,10 +55,33 @@ namespace CamBridge.Config.Services
             try
             {
                 var response = await _httpClient.GetAsync(endpoint);
-                if (!response.IsSuccessStatusCode) return null;
+                if (!response.IsSuccessStatusCode)
+                {
+                    Debug.WriteLine($"API call failed ({endpoint}): {response.StatusCode}");
+                    return null;
+                }
 
                 var json = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<T>(json); // Default options work!
+
+                // Add debug output for troubleshooting
+                Debug.WriteLine($"API Response ({endpoint}): {json.Length} characters");
+
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true // Important for API compatibility
+                };
+
+                return JsonSerializer.Deserialize<T>(json, options);
+            }
+            catch (HttpRequestException httpEx)
+            {
+                Debug.WriteLine($"HTTP error ({endpoint}): {httpEx.Message}");
+                return null;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine($"API call timeout ({endpoint})");
+                return null;
             }
             catch (Exception ex)
             {

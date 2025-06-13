@@ -1,5 +1,12 @@
 # 99-testit-full.ps1
-# The FULL test cycle: Build + Update service + start config
-Write-Host "Full Test Cycle: Build + Update + Config" -ForegroundColor Cyan
+# Full test with build: Build + Update + Config
+# FIXED: Only builds if needed
+
+Write-Host "Full Test: Build + Update + Config" -ForegroundColor Cyan
 Write-Host ""
-& .\1-deploy-update.ps1 -StartConfig
+
+# First ensure we have a build (smart check)
+& .\0-build.ps1
+
+# Then deploy and start config (skip redundant build)
+& .\1-deploy-update.ps1 -StartConfig -SkipBuild
