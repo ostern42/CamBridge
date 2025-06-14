@@ -6,6 +6,33 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.13] - 2025-06-14 (Session 63)
+Fixed 🐛
+
+CRITICAL: Fixed JSON deserialization error in InitializePrimaryConfig
+Invalid OutputOrganization enum values in default config generation ("PatientName" → "ByPatientAndDate")
+Service port property name (ApiPort → ListenPort)
+Incomplete pipeline configuration in default settings
+InitializePrimaryConfig() was literally cut off mid-function!
+
+Changed
+
+Default OutputOrganization from invalid "PatientName" to valid "ByPatientAndDate"
+Mapping rules now include both targetTag and dicomTag properties for compatibility
+Complete rewrite of InitializePrimaryConfig() with all required fields
+
+Added
+
+Emergency fix scripts for JSON repair
+Debug tools for configuration validation
+VOGON EXIT documentation procedure
+
+Technical Details
+
+Valid OutputOrganization values: None, ByPatient, ByDate, ByPatientAndDate
+Config MUST have CamBridge wrapper: { "CamBridge": { ... } }
+Port MUST be 5111 everywhere
+
 ## [0.7.12] - 2025-06-14 Session 61
 
 ### 🚨 Sources First Implementation + Dashboard Fix!

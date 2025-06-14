@@ -1,39 +1,38 @@
-<!-- Version.props -->
-<!-- Version: 0.7.12 -->
-<!-- Description: Central version management for CamBridge solution -->
-<!-- Session: 62 - Host Property Fix! -->
+<!-- Version.props - Global version configuration -->
+<!-- Version: 0.7.13 -->
+<!-- Modified: 2025-06-14 -->
+<!-- © 2025 Claude's Improbably Reliable Software Solutions -->
 <Project>
 	<PropertyGroup>
-		<!-- Version info for PROJECT_WISDOM and documentation -->
-		<VersionPrefix>0.7.12</VersionPrefix>
+		<!-- SINGLE SOURCE OF TRUTH for version -->
+		<VersionPrefix>0.7.13</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
-		<!-- IMPORTANT: DO NOT set AssemblyVersion or FileVersion! -->
-		<!-- Directory.Build.props handles all assembly versioning now -->
+		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
+		<AssemblyVersion>0.7.0.0</AssemblyVersion>
 
-		<!-- Only metadata that won't cause conflicts -->
-		<InformationalVersion>0.7.12</InformationalVersion>
-		<PackageVersion>0.7.12</PackageVersion>
+		<!-- File version (major.minor.patch.0) for file properties -->
+		<FileVersion>0.7.13.0</FileVersion>
 
-		<!-- Company information -->
-		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
+		<!-- Informational version shown in logs and UI -->
+		<InformationalVersion>0.7.13 - JSON OutputOrganization Fix</InformationalVersion>
+
+		<!-- Package version for NuGet (if needed) -->
+		<PackageVersion>0.7.13</PackageVersion>
+
+		<!-- Product information -->
+		<Product>CamBridge</Product>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>
-		<Product>CamBridge Medical Image Converter</Product>
-		<Description>Making the improbable reliably simple since 2025</Description>
-		<PackageDescription>JPEG to DICOM medical imaging converter - Making the improbable reliably simple since 2025</PackageDescription>
+		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
 
 		<!-- Build metadata -->
 		<RepositoryUrl>https://github.com/yourusername/CamBridge</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-		<NeutralLanguage>en-US</NeutralLanguage>
 
-		<!-- Session 62 metadata -->
-		<BuildNote>Host Property Fix - Build Errors Resolved!</BuildNote>
-		<Philosophy>One property can save the entire build!</Philosophy>
-		<Achievement>CS1061 errors eliminated!</Achievement>
-		<CriticalFix>Added public Host property to App.xaml.cs</CriticalFix>
-		<SourcesFirst>Always check Projektwissen before coding!</SourcesFirst>
-		<NextStep>Fix namespace and model issues, then Interface Removal</NextStep>
-		<SimpleFix>3 lines of code = all build errors gone!</SimpleFix>
+		<!-- Generate assembly info from these properties -->
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<GenerateAssemblyFileVersionAttribute>true</GenerateAssemblyFileVersionAttribute>
+		<GenerateAssemblyInformationalVersionAttribute>true</GenerateAssemblyInformationalVersionAttribute>
+		<GenerateAssemblyConfigurationAttribute>true</GenerateAssemblyConfigurationAttribute>
 	</PropertyGroup>
 </Project>

@@ -1,7 +1,7 @@
 /**************************************************************************
 *  ConfigurationPaths.cs                                                  *
 *  PATH: src\CamBridge.Core\Infrastructure\ConfigurationPaths.cs         *
-*  VERSION: 0.7.12 | SIZE: ~10KB | MODIFIED: 2025-06-14                  *
+*  VERSION: 0.7.13 | SIZE: ~12KB | MODIFIED: 2025-06-14                  *
 *                                                                         *
 *  DESCRIPTION: Centralized configuration path management with V2 FIX     *
 *  Copyright (c) 2025 Claude's Improbably Reliable Software Solutions     *
@@ -115,7 +115,7 @@ namespace CamBridge.Core.Infrastructure
 
         /// <summary>
         /// Initializes the primary configuration file if it doesn't exist
-        /// FIXED: Now creates proper V2 format with CamBridge wrapper!
+        /// FIXED v0.7.13: Now creates COMPLETE V2 format with VALID enum values!
         /// </summary>
         public static bool InitializePrimaryConfig()
         {
@@ -126,7 +126,7 @@ namespace CamBridge.Core.Infrastructure
                 {
                     EnsureDirectoriesExist();
 
-                    // Create default V2 configuration with CamBridge wrapper
+                    // Create COMPLETE default V2 configuration with CamBridge wrapper
                     var defaultConfig = new
                     {
                         // CRITICAL: Must have CamBridge wrapper for V2 format!
@@ -138,141 +138,209 @@ namespace CamBridge.Core.Infrastructure
                                 ServiceName = "CamBridgeService",
                                 DisplayName = "CamBridge Image Processing Service",
                                 Description = "Monitors folders for JPEG images and converts them to DICOM format",
-                                ApiPort = 5111,  // CORRECT PORT!
+                                ListenPort = 5111,  // CRITICAL: Must be ListenPort, not ApiPort!
+                                EnableApi = true,
                                 EnableHealthChecks = true,
-                                LogLevel = "Information"
+                                MaxConcurrentPipelines = 4,
+                                StartupDelaySeconds = 5,
+                                ShutdownTimeoutSeconds = 30,
+                                HealthCheckIntervalSeconds = 30
                             },
+                            Core = new
+                            {
+                                ExifToolPath = "Tools\\exiftool.exe",
+                                MaxGlobalConcurrency = 4,
+                                DefaultCulture = "de-DE",
+                                InstanceName = "CamBridge",
+                                EnableDiagnostics = false,
+                                TempFolder = @"C:\CamBridge\Temp",
+                                CleanupTempOnStartup = true
+                            },
+                            Logging = new
+                            {
+                                LogLevel = new
+                                {
+                                    Default = "Information",
+                                    Microsoft = "Warning",
+                                    System = "Warning",
+                                    CamBridge = "Information"
+                                },
+                                Console = new
+                                {
+                                    Enabled = true,
+                                    IncludeScopes = false
+                                },
+                                File = new
+                                {
+                                    Enabled = true,
+                                    Path = "logs/cambridge_{Date}.log",
+                                    RetainedFileCountLimit = 30,
+                                    FileSizeLimitBytes = 10485760,
+                                    RollOnFileSizeLimit = true
+                                }
+                            },
+                            DicomDefaults = new
+                            {
+                                InstitutionName = "CamBridge Medical Center",
+                                InstitutionDepartment = "Radiology",
+                                StationName = "CAMB001",
+                                Manufacturer = "Claude's Improbably Reliable Software Solutions",
+                                ManufacturerModelName = "CamBridge",
+                                ImplementationClassUID = "1.2.276.0.7230010.3.0.3.6.4",
+                                ImplementationVersionName = "CAMBRIDGE_001"
+                            },
+                            // CRITICAL: Must have at least one pipeline with VALID OutputOrganization!
                             Pipelines = new[]
                             {
                                 new
                                 {
                                     Id = Guid.NewGuid().ToString(),
                                     Name = "Default Pipeline",
-                                    Description = "Default image processing pipeline",
+                                    Description = "Default processing pipeline",
                                     Enabled = true,
+                                    Priority = 0,
                                     WatchSettings = new
                                     {
-                                        Path = "C:\\CamBridge\\Input",
-                                        FilePattern = "*.jpg",
+                                        Path = @"C:\CamBridge\Watch",
+                                        FilePattern = "*.jpg;*.jpeg",
                                         IncludeSubdirectories = false,
-                                        OutputPath = "C:\\CamBridge\\Output"
+                                        OutputPath = @"C:\CamBridge\Output",
+                                        MinimumFileAgeSeconds = 5
                                     },
                                     ProcessingOptions = new
                                     {
-                                        OutputOrganization = "PatientName",
-                                        OutputFilePattern = "{PatientName}_{StudyDate}_{Modality}_{Counter:D4}.dcm",
-                                        CreateBackup = true,
-                                        BackupFolder = "C:\\CamBridge\\Backup",
-                                        ArchiveFolder = "C:\\CamBridge\\Archive",
-                                        ArchiveProcessedFiles = true,
-                                        DeleteAfterProcessing = false,
-                                        MinimumFileAgeSeconds = 5,
+                                        SuccessAction = "Archive",
+                                        FailureAction = "MoveToError",
+                                        ArchiveFolder = @"C:\CamBridge\Archive",
+                                        ErrorFolder = @"C:\CamBridge\Errors",
+                                        BackupFolder = @"C:\CamBridge\Backup",
+                                        CreateBackup = false,
+                                        MaxConcurrentProcessing = 2,
+                                        RetryOnFailure = true,
                                         MaxRetryAttempts = 3,
-                                        RetryDelaySeconds = 30
+                                        // FIX: MUST use valid enum value as string!
+                                        // Valid values: None, ByPatient, ByDate, ByPatientAndDate
+                                        OutputOrganization = "ByPatientAndDate",  // NOT "PatientName"!
+                                        ProcessExistingOnStartup = true,
+                                        RetryDelaySeconds = 5,
+                                        DeadLetterFolder = @"C:\CamBridge\DeadLetter",
+                                        OutputFilePattern = "{PatientID}_{StudyDate}_{InstanceNumber}"
                                     },
                                     DicomOverrides = new
                                     {
-                                        InstitutionName = "CamBridge Medical Center",
-                                        StationName = "CAMBRIDGE01",
-                                        AdditionalTags = new { }
+                                        InstitutionName = (string?)null,
+                                        InstitutionDepartment = (string?)null,
+                                        StationName = (string?)null
                                     },
-                                    MappingSetId = (string?)null,
-                                    ErrorHandling = new
-                                    {
-                                        ErrorFolder = "C:\\CamBridge\\Errors",
-                                        MoveFailedFiles = true
-                                    }
+                                    MappingSetId = "default",
+                                    CreatedAt = DateTime.UtcNow.ToString("O"),
+                                    UpdatedAt = DateTime.UtcNow.ToString("O")
                                 }
                             },
+                            // Default mapping set matching the expected structure
                             MappingSets = new[]
                             {
                                 new
                                 {
-                                    Id = Guid.NewGuid().ToString(),
-                                    Name = "[System] Ricoh G900 II Default",
-                                    Description = "Default mapping for Ricoh G900 II camera with QRBridge",
+                                    Id = "default",
+                                    Name = "Default Mappings",
+                                    Description = "Standard QRBridge to DICOM mappings",
                                     IsSystemDefault = true,
-                                    Rules = new object[]
+                                    Rules = new[]
                                     {
                                         new
                                         {
-                                            SourceField = "PatientId",
-                                            TargetTag = "(0010,0020)",
-                                            Description = "Patient ID",
-                                            IsRequired = true,
-                                            ValueRepresentation = "LO"
+                                            name = "PatientID",
+                                            description = "Patient ID from QRBridge",
+                                            sourceType = "QRBridge",
+                                            sourceField = "patientid",
+                                            targetTag = "(0010,0020)",  // Use targetTag, not dicomTag
+                                            dicomTag = "(0010,0020)",    // Keep both for compatibility
+                                            transform = "None",
+                                            required = true,
+                                            defaultValue = (string?)null,
+                                            valueRepresentation = "LO"
                                         },
                                         new
                                         {
-                                            SourceField = "PatientName",
-                                            TargetTag = "(0010,0010)",
-                                            Description = "Patient's Name",
-                                            IsRequired = true,
-                                            ValueRepresentation = "PN"
+                                            name = "PatientName",
+                                            description = "Patient's Name from QRBridge",
+                                            sourceType = "QRBridge",
+                                            sourceField = "name",
+                                            targetTag = "(0010,0010)",
+                                            dicomTag = "(0010,0010)",
+                                            transform = "None",
+                                            required = true,
+                                            defaultValue = (string?)null,
+                                            valueRepresentation = "PN"
                                         },
                                         new
                                         {
-                                            SourceField = "PatientBirthDate",
-                                            TargetTag = "(0010,0030)",
-                                            Description = "Patient's Birth Date",
-                                            Transform = "DateFormat",
-                                            IsRequired = false,
-                                            ValueRepresentation = "DA"
+                                            name = "StudyID",
+                                            description = "Study ID from exam ID",
+                                            sourceType = "QRBridge",
+                                            sourceField = "examid",
+                                            targetTag = "(0020,0010)",
+                                            dicomTag = "(0020,0010)",
+                                            transform = "None",
+                                            required = false,
+                                            defaultValue = (string?)null,
+                                            valueRepresentation = "SH"
                                         },
                                         new
                                         {
-                                            SourceField = "PatientSex",
-                                            TargetTag = "(0010,0040)",
-                                            Description = "Patient's Sex",
-                                            IsRequired = false,
-                                            ValueRepresentation = "CS"
+                                            name = "PatientBirthDate",
+                                            description = "Patient's Birth Date",
+                                            sourceType = "QRBridge",
+                                            sourceField = "birthdate",
+                                            targetTag = "(0010,0030)",
+                                            dicomTag = "(0010,0030)",
+                                            transform = "DateFormat",
+                                            required = false,
+                                            defaultValue = (string?)null,
+                                            valueRepresentation = "DA"
                                         },
                                         new
                                         {
-                                            SourceField = "StudyDescription",
-                                            TargetTag = "(0008,1030)",
-                                            Description = "Study Description",
-                                            IsRequired = false,
-                                            ValueRepresentation = "LO"
+                                            name = "PatientSex",
+                                            description = "Patient's Sex",
+                                            sourceType = "QRBridge",
+                                            sourceField = "gender",
+                                            targetTag = "(0010,0040)",
+                                            dicomTag = "(0010,0040)",
+                                            transform = "None",
+                                            required = false,
+                                            defaultValue = (string?)null,
+                                            valueRepresentation = "CS"
                                         }
-                                    }
+                                    },
+                                    CreatedAt = DateTime.UtcNow.ToString("O"),
+                                    UpdatedAt = DateTime.UtcNow.ToString("O")
                                 }
-                            },
-                            Logging = new
-                            {
-                                LogLevel = "Information",
-                                LogFolder = GetLogsDirectory(),
-                                MaxLogFiles = 30,
-                                EnableFileLogging = true,
-                                EnableConsoleLogging = true,
-                                EnableDebugLogging = false
-                            },
-                            ExifToolPath = "Tools\\exiftool.exe",
-                            GlobalDicomSettings = new
-                            {
-                                ImplementationClassUID = "1.2.276.0.7230010.3.0.3.6.4",
-                                ImplementationVersionName = "CAMBRIDGE_001"
-                            },
-                            DefaultProcessingOptions = new
-                            {
-                                OutputOrganization = "PatientName",
-                                OutputFilePattern = "{PatientName}_{StudyDate}_{Modality}_{Counter:D4}.dcm",
-                                CreateBackup = true,
-                                BackupFolder = "C:\\CamBridge\\Backup",
-                                ArchiveFolder = "C:\\CamBridge\\Archive",
-                                ArchiveProcessedFiles = true,
-                                DeleteAfterProcessing = false,
-                                MinimumFileAgeSeconds = 5,
-                                MaxRetryAttempts = 3,
-                                RetryDelaySeconds = 30
                             },
                             Notifications = new
                             {
-                                EnableNotifications = false,
-                                EnableEmailNotifications = false,
-                                EnableDailySummary = false,
-                                DailySummaryTime = "18:00"
-                            }
+                                Enabled = false,
+                                SmtpServer = "smtp.example.com",
+                                SmtpPort = 587,
+                                UseSsl = true,
+                                RequiresAuthentication = true,
+                                SenderEmail = "cambridge@example.com",
+                                SenderName = "CamBridge Service",
+                                RecipientEmails = new[] { "admin@example.com" },
+                                NotificationLevel = 2,  // Error level
+                                DailySummary = new
+                                {
+                                    Enabled = false,
+                                    SendTime = "08:00:00",
+                                    IncludeStatistics = true,
+                                    IncludeErrors = true
+                                }
+                            },
+                            // V2 format should NOT have these at root level
+                            // They belong in Pipelines[].ProcessingOptions
+                            DefaultOutputFolder = @"C:\CamBridge\Output",
+                            ExifToolPath = "Tools\\exiftool.exe"
                         }
                     };
 
@@ -283,7 +351,7 @@ namespace CamBridge.Core.Infrastructure
                     });
 
                     File.WriteAllText(configPath, json);
-                    System.Diagnostics.Debug.WriteLine($"Created default config at: {configPath}");
+                    System.Diagnostics.Debug.WriteLine($"Created COMPLETE V2 config at: {configPath}");
                     return true;
                 }
                 return false;
