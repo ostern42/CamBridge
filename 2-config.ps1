@@ -20,7 +20,7 @@ if (-not $latestDeploy) {
 }
 
 # FIX: ConfigUI not Config!
-$configExe = Join-Path $latestDeploy.FullName "ConfigUI\CamBridge.Config.exe"
+$configExe = Join-Path $latestDeploy.FullName "Config\CamBridge.Config.exe"
 if (Test-Path $configExe) {
     Write-Host "Starting Config UI from: $($latestDeploy.Name)" -ForegroundColor Cyan
     Start-Process $configExe

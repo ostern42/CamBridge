@@ -5,12 +5,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using CamBridge.Core;
+using CamBridge.Core;                    // Für alle Core-Klassen
+using CamBridge.Core.Infrastructure;     // Für ConfigurationPaths
+using System.Diagnostics;  // Für Debug.WriteLine
 
 namespace CamBridge.Config.Services
 {
@@ -121,11 +123,14 @@ namespace CamBridge.Config.Services
                 Debug.WriteLine($"To: {_configPath}");
 
                 // Create backup before saving
+                // Create backup before saving
                 if (File.Exists(_configPath))
                 {
                     try
                     {
-                        var backupPath = ConfigurationPaths.BackupConfig(_configPath);
+                        // Simple inline backup implementation
+                        var backupPath = $"{_configPath}.backup_{DateTime.Now:yyyyMMdd_HHmmss}";
+                        File.Copy(_configPath, backupPath, true);
                         Debug.WriteLine($"Created backup: {backupPath}");
                     }
                     catch (Exception backupEx)

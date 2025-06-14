@@ -201,15 +201,17 @@ namespace CamBridge.Config.ViewModels
                 {
                     foreach (var pipelineData in status.Pipelines)
                     {
-                        var existing = PipelineStatuses.FirstOrDefault(p => p.Name == pipelineData.Name);
+                        // FIX: Use PipelineName instead of Name
+                        var existing = PipelineStatuses.FirstOrDefault(p => p.PipelineName == pipelineData.Name);
                         if (existing != null)
                         {
                             existing.IsEnabled = pipelineData.IsActive;
                             existing.Status = pipelineData.IsActive ? "Active" : "Inactive";
                             existing.QueueLength = pipelineData.QueueLength;
-                            existing.ActiveProcessing = pipelineData.ActiveProcessing;
-                            existing.SuccessCount = pipelineData.TotalSuccessful;
-                            existing.ErrorCount = pipelineData.TotalFailed;
+
+                            // Map to existing properties in PipelineStatusViewModel
+                            existing.ProcessedToday = pipelineData.TotalSuccessful + pipelineData.TotalFailed;
+                            existing.ErrorsToday = pipelineData.TotalFailed;
 
                             var total = pipelineData.TotalSuccessful + pipelineData.TotalFailed;
                             existing.SuccessRate = total > 0 ?
@@ -220,7 +222,7 @@ namespace CamBridge.Config.ViewModels
             }
         }
 
-        private void UpdatePipelinesFromConfig(List<PipelineConfigModel> pipelines)
+        private void UpdatePipelinesFromConfig(List<PipelineConfiguration> pipelines)
         {
             Application.Current.Dispatcher.InvokeAsync(() =>
             {
@@ -229,32 +231,26 @@ namespace CamBridge.Config.ViewModels
                     // Update existing or add new
                     foreach (var pipeline in pipelines)
                     {
-                        var existing = PipelineStatuses.FirstOrDefault(p => p.Name == pipeline.Name);
+                        // FIX 1: Use PipelineName instead of Name
+                        var existing = PipelineStatuses.FirstOrDefault(p => p.PipelineName == pipeline.Name);
                         if (existing == null)
                         {
                             PipelineStatuses.Add(new PipelineStatusViewModel
                             {
-                                Name = pipeline.Name,
+                                // FIX 2: Use correct property names
+                                PipelineName = pipeline.Name,
                                 IsEnabled = pipeline.Enabled,
-                                Mode = pipeline.Mode.ToString(),
-                                Status = pipeline.Enabled ? "Ready" : "Disabled",
-                                QueueLength = 0,
-                                ActiveProcessing = 0,
-                                SuccessCount = 0,
-                                ErrorCount = 0,
-                                SuccessRate = 0
+                                Status = pipeline.Enabled ? "Ready" : "Disabled",  // FIX 3: Complete ternary operator!
+                                PipelineId = pipeline.Id,
+                                WatchFolder = pipeline.WatchSettings?.Path ?? ""   // FIX 4: Use Path not WatchFolder
                             });
                         }
-                    }
-
-                    // Remove pipelines that no longer exist
-                    var toRemove = PipelineStatuses
-                        .Where(p => !pipelines.Any(cfg => cfg.Name == p.Name))
-                        .ToList();
-
-                    foreach (var item in toRemove)
-                    {
-                        PipelineStatuses.Remove(item);
+                        else
+                        {
+                            existing.IsEnabled = pipeline.Enabled;
+                            existing.Status = pipeline.Enabled ? "Ready" : "Disabled";
+                            existing.WatchFolder = pipeline.WatchSettings?.Path ?? "";  // FIX 5: Use Path
+                        }
                     }
                 }
                 catch (Exception ex)

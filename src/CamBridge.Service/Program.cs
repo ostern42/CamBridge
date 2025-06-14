@@ -4,6 +4,7 @@
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
+using CamBridge.Core.Infrastructure;
 using CamBridge.Infrastructure;
 using CamBridge.Infrastructure.Services;
 using CamBridge.Service;
@@ -22,6 +23,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 
 // Set service start time
 Program.ServiceStartTime = DateTime.UtcNow;

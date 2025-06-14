@@ -7,6 +7,7 @@ using CamBridge.Core;
 using CamBridge.Infrastructure.Services;
 using Microsoft.Extensions.Options;
 using System.Reflection;
+using CamBridge.Core.Infrastructure;  // for ConfigurationPaths
 
 namespace CamBridge.Service.Controllers
 {

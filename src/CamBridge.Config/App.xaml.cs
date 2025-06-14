@@ -1,20 +1,14 @@
-/**************************************************************************
-*  App.xaml.cs                                                            *
-*  PATH: src\CamBridge.Config\App.xaml.cs                                *
-*  VERSION: 0.7.11 | SIZE: ~6KB | MODIFIED: 2025-06-13                   *
-*                                                                         *
-*  DESCRIPTION: WPF Application entry point with PORT FIX                 *
-*  Copyright (c) 2025 Claude's Improbably Reliable Software Solutions     *
-**************************************************************************/
+// src\CamBridge.Config\App.xaml.cs
+// Version: 0.7.12
+// Description: Application entry point with WPF host
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
-using System.IO;
+using System.Diagnostics;
 using System.Windows;
+using System.Windows.Threading;
 using CamBridge.Config.Services;
 using CamBridge.Config.ViewModels;
-using CamBridge.Config.Views;
-using CamBridge.Core.Services;
-using CamBridge.Core.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -22,11 +16,21 @@ using Microsoft.Extensions.Logging;
 namespace CamBridge.Config
 {
     /// <summary>
-    /// WPF Application class - Entry point for CamBridge Configuration UI
+    /// Main application class
     /// </summary>
     public partial class App : Application
     {
         private IHost? _host;
+
+        /// <summary>
+        /// Gets the current host instance
+        /// </summary>
+        public IHost? Host => _host;
+
+        /// <summary>
+        /// Gets the current service provider
+        /// </summary>
+        public static IServiceProvider Services { get; private set; } = null!;
 
         /// <summary>
         /// Application startup
@@ -35,23 +39,55 @@ namespace CamBridge.Config
         {
             base.OnStartup(e);
 
-            // Set up unhandled exception handling
+            // Setup global exception handlers
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
             DispatcherUnhandledException += OnDispatcherUnhandledException;
 
-            // Initialize configuration paths
             try
             {
-                ConfigurationPaths.EnsureDirectoriesExist();
-                ConfigurationPaths.InitializePrimaryConfig();
+                ConfigureHost();
             }
             catch (Exception ex)
             {
+                LogException("Host configuration failed", ex);
                 MessageBox.Show(
-                    $"Failed to initialize configuration:\n{ex.Message}\n\nThe application will continue but some features may not work correctly.",
-                    "Configuration Error",
+                    $"Failed to start application: {ex.Message}",
+                    "Startup Error",
                     MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    MessageBoxImage.Error);
+                Shutdown(1);
+            }
+        }
+
+        /// <summary>
+        /// Configure the dependency injection host
+        /// </summary>
+        private void ConfigureHost()
+        {
+            // Verify config file exists - Added in v0.5.32
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var configPath = System.IO.Path.Combine(appDataPath, "CamBridge", "appsettings.json");
+
+            if (!System.IO.File.Exists(configPath))
+            {
+                // Also check ProgramData (where Service saves config)
+                var programDataPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "CamBridge",
+                    "appsettings.json");
+
+                if (System.IO.File.Exists(programDataPath))
+                {
+                    configPath = programDataPath;
+                }
+                else
+                {
+                    MessageBox.Show(
+                        $"Configuration file not found.\nExpected at: {configPath}\n\nPlease run the service first to create initial configuration.",
+                        "Configuration Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
             }
 
             _host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
@@ -98,12 +134,7 @@ namespace CamBridge.Config
         }
 
         /// <summary>
-        /// Gets the current service provider
-        /// </summary>
-        public static IServiceProvider Services { get; private set; } = null!;
-
-        /// <summary>
-        /// Application exit
+        /// Application exit cleanup
         /// </summary>
         protected override void OnExit(ExitEventArgs e)
         {
@@ -112,36 +143,29 @@ namespace CamBridge.Config
         }
 
         /// <summary>
-        /// Handles unhandled exceptions from background threads
+        /// Handle unhandled exceptions
         /// </summary>
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            var exception = e.ExceptionObject as Exception;
-            LogException("Unhandled exception", exception);
+            LogException("Unhandled exception", e.ExceptionObject as Exception);
 
-            if (e.IsTerminating)
-            {
-                MessageBox.Show(
-                    "A critical error has occurred and the application must close.\n\n" +
-                    $"Error: {exception?.Message}\n\n" +
-                    "Please check the logs for more information.",
-                    "Critical Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
+            MessageBox.Show(
+                "An unexpected error occurred. The application will now close.",
+                "Fatal Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
 
         /// <summary>
-        /// Handles unhandled exceptions from the UI thread
+        /// Handle dispatcher unhandled exceptions
         /// </summary>
-        private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            LogException("UI exception", e.Exception);
+            LogException("Dispatcher exception", e.Exception);
 
             // Show error to user
             MessageBox.Show(
-                $"An error occurred:\n\n{e.Exception.Message}\n\n" +
-                "The application will try to continue, but you may experience issues.",
+                $"An error occurred: {e.Exception.Message}",
                 "Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
