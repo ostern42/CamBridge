@@ -1,5 +1,5 @@
 ﻿# CamBridge Sources - INFRASTRUCTURE
-# Generated: 2025-06-14 17:15:01
+# Generated: 2025-06-14 23:36:20
 # Version: 0.7.11
 # Purpose: Complete source code for project knowledge
 # Token-efficient access to all implementations
@@ -253,12 +253,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Claude\'s Improbably Reliable Software Solutions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Â© 2025 Claude\'s Improbably Reliable Software Solutions")]
-[assembly: System.Reflection.AssemblyDescriptionAttribute("Making the improbable reliably simple since 2025")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.11.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.11+d9da90b5cedc659639f0b09ae3adb4fdf36a2ec2")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.13.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.13+bd6c551932659d66de143f36c1a1a04233329e68")]
 [assembly: System.Reflection.AssemblyProductAttribute("CamBridge Medical Image Converter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CamBridge.Infrastructure")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.7.11.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.7.13.0")]
 [assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/yourusername/CamBridge")]
 [assembly: System.Resources.NeutralResourcesLanguageAttribute("en-US")]
 
@@ -296,12 +295,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Claude\'s Improbably Reliable Software Solutions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Â© 2025 Claude\'s Improbably Reliable Software Solutions")]
-[assembly: System.Reflection.AssemblyDescriptionAttribute("Making the improbable reliably simple since 2025")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.11.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.11+d9da90b5cedc659639f0b09ae3adb4fdf36a2ec2")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.13.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.13+bd6c551932659d66de143f36c1a1a04233329e68")]
 [assembly: System.Reflection.AssemblyProductAttribute("CamBridge Medical Image Converter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CamBridge.Infrastructure")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.7.11.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.7.13.0")]
 [assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/yourusername/CamBridge")]
 [assembly: System.Resources.NeutralResourcesLanguageAttribute("en-US")]
 
@@ -340,12 +338,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Claude\'s Improbably Reliable Software Solutions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Â© 2025 Claude\'s Improbably Reliable Software Solutions")]
-[assembly: System.Reflection.AssemblyDescriptionAttribute("Making the improbable reliably simple since 2025")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.11.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.11+d9da90b5cedc659639f0b09ae3adb4fdf36a2ec2")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.13.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.13+bd6c551932659d66de143f36c1a1a04233329e68")]
 [assembly: System.Reflection.AssemblyProductAttribute("CamBridge Medical Image Converter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CamBridge.Infrastructure")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.7.11.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.7.13.0")]
 [assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/yourusername/CamBridge")]
 [assembly: System.Resources.NeutralResourcesLanguageAttribute("en-US")]
 

@@ -1,24 +1,24 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.7.13 -->
+<!-- Version: 0.7.14 -->
 <!-- Modified: 2025-06-14 -->
 <!-- © 2025 Claude's Improbably Reliable Software Solutions -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.7.13</VersionPrefix>
+		<VersionPrefix>0.7.14</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
 		<AssemblyVersion>0.7.0.0</AssemblyVersion>
 
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.7.13.0</FileVersion>
+		<FileVersion>0.7.14.0</FileVersion>
 
 		<!-- Informational version shown in logs and UI -->
-		<InformationalVersion>0.7.13 - JSON OutputOrganization Fix</InformationalVersion>
+		<InformationalVersion>0.7.14 - WISDOM Documentation Consolidation</InformationalVersion>
 
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.7.13</PackageVersion>
+		<PackageVersion>0.7.14</PackageVersion>
 
 		<!-- Product information -->
 		<Product>CamBridge</Product>

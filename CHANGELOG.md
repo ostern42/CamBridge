@@ -6,6 +6,36 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.14] - 2025-06-14
+
+### Added
+- WISDOM_META.md - Consolidated master reference with complete code map
+- WISDOM_SPRINT_CONFIG.md - Focused documentation for config redesign sprint
+- Complete Code Map v2.0 documenting all files and major methods
+- Kontinuitäts-Protokoll in WISDOM_CLAUDE for better session continuity
+
+### Changed
+- Consolidated WISDOM documentation from ~2000 to ~1300 lines
+- Enhanced WISDOM_TECHNICAL with complete VOGON protocol and sprint planning
+- Restructured WISDOM_CLAUDE with clearer personality patterns and triggers
+- Updated all WISDOM docs to be more concise while preserving critical information
+
+### Removed
+- Redundant content from CAMBRIDGE_OVERVIEW.md (moved to WISDOM_META)
+- Redundant content from WISDOM_ARCHITECTURE.md (moved to WISDOM_META)
+
+### Documentation
+- Created comprehensive Code Map listing all .cs files with their key methods
+- Added WISDOM_SPRINT pattern documentation for focused work phases
+- Improved continuity instructions for future Claude instances
+- Documented all 8 remaining interfaces (target: 4)
+
+### Notes
+- Focus on config chaos resolution in upcoming sessions
+- Three config redesign options identified: Minimal/Medium/Full
+- All protected medical features clearly marked in documentation
+- Token efficiency improved by ~60% with new WISDOM structure
+
 ## [0.7.13] - 2025-06-14 (Session 63)
 Fixed 🐛
 
