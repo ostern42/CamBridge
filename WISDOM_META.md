@@ -811,9 +811,9 @@ Documentation: Wisdom files + code comments
 - [x] Multiple pipeline support
 - [x] Config tool works
 - [x] Service runs stable
+- [x] Core conversion tested & working
 - [ ] All enums validate properly
 - [ ] Config errors are clear
-- [ ] API fully implemented
 
 ### Production Ready When:
 - [ ] Zero crashes on bad input

@@ -1,17 +1,31 @@
 # service-manager.ps1
 # Service Control Menu for CamBridge Testing
 # Works with deployed Release version
-# Version: 0.7.5 (FIXED SYNTAX)
+# Version: 0.7.16 (FIXED VERSION SORTING)
 # © 2025 Claude's Improbably Reliable Software Solutions
 
 param(
     [string]$DeployPath = ".\Deploy"
 )
 
-# Find latest deployment
-$latestDeploy = Get-ChildItem -Path $DeployPath -Filter "CamBridge-Deploy-v*" -Directory | 
-                Sort-Object Name -Descending | 
-                Select-Object -First 1
+# Find latest deployment with PROPER VERSION SORTING
+$deployments = Get-ChildItem -Path $DeployPath -Filter "CamBridge-Deploy-v*" -Directory | 
+               ForEach-Object {
+                   $versionString = $_.Name -replace "CamBridge-Deploy-v", ""
+                   $versionParts = $versionString.Split('.')
+                   
+                   # Create sortable version object
+                   [PSCustomObject]@{
+                       Directory = $_
+                       VersionString = $versionString
+                       Major = [int]$versionParts[0]
+                       Minor = [int]$versionParts[1]
+                       Patch = [int]$versionParts[2]
+                   }
+               } |
+               Sort-Object -Property Major, Minor, Patch -Descending
+
+$latestDeploy = $deployments | Select-Object -First 1
 
 if (-not $latestDeploy) {
     Write-Host "ERROR: No deployment found in $DeployPath" -ForegroundColor Red
@@ -20,9 +34,23 @@ if (-not $latestDeploy) {
     exit 1
 }
 
-$serviceDir = Join-Path $latestDeploy.FullName "Service"
+# Show all found versions for debugging
+if ($deployments.Count -gt 1) {
+    Write-Host "Found deployments:" -ForegroundColor DarkGray
+    $deployments | ForEach-Object {
+        if ($_ -eq $latestDeploy) {
+            Write-Host "  v$($_.VersionString) [LATEST]" -ForegroundColor Green
+        } else {
+            Write-Host "  v$($_.VersionString)" -ForegroundColor DarkGray
+        }
+    }
+    Write-Host ""
+    Start-Sleep -Seconds 2
+}
+
+$serviceDir = Join-Path $latestDeploy.Directory.FullName "Service"
 $serviceExe = Join-Path $serviceDir "CamBridge.Service.exe"
-$version = $latestDeploy.Name -replace "CamBridge-Deploy-v", ""
+$version = $latestDeploy.VersionString
 
 # Check if running as admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
@@ -67,7 +95,7 @@ function Show-Menu {
     }
     
     Write-Host ""
-    Write-Host "Using: $($latestDeploy.FullName)" -ForegroundColor DarkGray
+    Write-Host "Using: $($latestDeploy.Directory.FullName)" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "------------------------------------------------" -ForegroundColor Gray
     Write-Host ""

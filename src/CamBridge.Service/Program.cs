@@ -1,5 +1,5 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.7.5+tools
+// Version: 0.7.16
 // Description: Windows service entry point with centralized config management
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
@@ -24,6 +24,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
+// Register encoding provider for Windows-1252 support (needed for Ricoh EXIF data)
+System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
 // Set service start time
 Program.ServiceStartTime = DateTime.UtcNow;
@@ -157,37 +159,37 @@ try
             });
         });
     }
-    else
-    {
-        builder.UseEnvironment("Development");
-    }
+
+    // NO ENVIRONMENT SETTING! Always use Production behavior
+    // This prevents loading of appsettings.Development.json
 
     builder.ConfigureAppConfiguration((context, config) =>
     {
-        var env = context.HostingEnvironment;
-
-        // CRITICAL: Use centralized config path!
-        var primaryConfigPath = ConfigurationPaths.GetPrimaryConfigPath();
-
-        Log.Information("Loading configuration from: {ConfigPath}", primaryConfigPath);
-        serviceEventLog?.WriteEntry($"Loading config from: {primaryConfigPath}", EventLogEntryType.Information, 1012);
-
-        // Clear default sources and add our specific order
+        // Clear all default sources
         config.Sources.Clear();
 
-        // 1. Primary config (from ProgramData)
-        config.AddJsonFile(primaryConfigPath, optional: false, reloadOnChange: true);
+        // Add ONLY the centralized config
+        var centralConfigPath = ConfigurationPaths.GetPrimaryConfigPath();
 
-        // 2. Local override for development (if exists)
-        config.AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true);
+        if (File.Exists(centralConfigPath))
+        {
+            config.AddJsonFile(centralConfigPath, optional: false, reloadOnChange: true);
+            Log.Information("Loading configuration from: {Path}", centralConfigPath);
+        }
+        else
+        {
+            // Create default config if missing
+            ConfigurationPaths.InitializePrimaryConfig();
+            config.AddJsonFile(centralConfigPath, optional: false, reloadOnChange: true);
+            Log.Warning("Created new configuration at: {Path}", centralConfigPath);
+        }
 
-        // 3. Environment variables
-        config.AddEnvironmentVariables("CAMBRIDGE_");
+        // NO environment-specific configs!
+        // NO appsettings.Development.json!
+        // Just ONE config to rule them all!
 
-        // 4. Command line (highest priority)
+        // Optional: Add command line args for overrides
         config.AddCommandLine(args);
-
-        Log.Information("Configuration loaded for environment: {Environment}", env.EnvironmentName);
     });
 
     // Configure Serilog from configuration
@@ -340,10 +342,8 @@ public class Startup
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
-        if (env.IsDevelopment())
-        {
-            app.UseDeveloperExceptionPage();
-        }
+        // NO ENVIRONMENT-SPECIFIC BEHAVIOR!
+        // Always use production-like settings
 
         app.UseRouting();
         app.UseCors("ConfigUI");
@@ -400,7 +400,7 @@ public class Startup
                     }),
                     Configuration = new
                     {
-                        DefaultOutputFolder = settingsV2?.Value?.DefaultOutputFolder,
+                        DefaultOutputFolder = settingsV2?.Value?.DefaultProcessingOptions?.ArchiveFolder,
                         ExifToolPath = settingsV2?.Value?.ExifToolPath,
                         Version = settingsV2?.Value?.Version
                     }
@@ -442,30 +442,29 @@ public class Startup
                 await context.Response.WriteAsJsonAsync(details);
             });
 
-            // Development endpoints
-            if (env.IsDevelopment())
+            // Basic index page (always available)
+            endpoints.MapGet("/", async context =>
             {
-                endpoints.MapGet("/", async context =>
-                {
-                    context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync($@"
-                        <html>
-                        <head><title>{ServiceInfo.GetFullVersionString()}</title></head>
-                        <body>
-                            <h1>CamBridge Service - Centralized Configuration</h1>
-                            <p>Version: {ServiceInfo.Version}</p>
-                            <p>Service läuft mit zentraler Config!</p>
-                            <ul>
-                                <li>Health: <a href='/health'>/health</a></li>
-                                <li>Status: <a href='/api/status'>/api/status</a></li>
-                                <li>Pipelines: <a href='/api/pipelines'>/api/pipelines</a></li>
-                            </ul>
-                            <hr/>
-                            <small>{ServiceInfo.Copyright}</small>
-                        </body>
-                        </html>");
-                });
-            }
+                context.Response.ContentType = "text/html";
+                await context.Response.WriteAsync($@"
+                    <html>
+                    <head><title>{ServiceInfo.GetFullVersionString()}</title></head>
+                    <body style='font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px;'>
+                        <h1>CamBridge Service - Centralized Configuration</h1>
+                        <p><strong>Version:</strong> {ServiceInfo.Version}</p>
+                        <p><strong>Status:</strong> Service running with centralized config!</p>
+                        <p><strong>Config Path:</strong> {ConfigurationPaths.GetPrimaryConfigPath()}</p>
+                        <h2>API Endpoints</h2>
+                        <ul>
+                            <li>Health Check: <a href='/health'>/health</a></li>
+                            <li>Service Status: <a href='/api/status'>/api/status</a></li>
+                            <li>Pipeline Status: <a href='/api/pipelines'>/api/pipelines</a></li>
+                        </ul>
+                        <hr/>
+                        <small>{ServiceInfo.Copyright}</small>
+                    </body>
+                    </html>");
+            });
         });
     }
 }

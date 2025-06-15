@@ -1,5 +1,7 @@
 // src\CamBridge.Infrastructure\Services\ExifToolReader.cs
-// Version: 0.5.32 - Windows-1252 Encoding Fix
+// Version: 0.7.16 - Process Deadlock Fix
+// Description: EXIF metadata reader using ExifTool for Ricoh G900SE II
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;
@@ -32,10 +34,13 @@ namespace CamBridge.Infrastructure.Services
         /// </summary>
         /// <param name="logger">Logger for diagnostics</param>
         /// <param name="timeoutMs">Timeout for ExifTool execution in milliseconds</param>
-        public ExifToolReader(ILogger<ExifToolReader> logger, int timeoutMs = 5000)
+        public ExifToolReader(ILogger<ExifToolReader> logger, int timeoutMs = 15000) // Increased default timeout
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _timeoutMs = timeoutMs;
+
+            // Ensure Windows-1252 encoding is available (for Ricoh cameras)
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
             // Try to find ExifTool in various locations
             var possiblePaths = new[]
@@ -170,31 +175,26 @@ namespace CamBridge.Infrastructure.Services
             var startInfo = new ProcessStartInfo
             {
                 FileName = _exifToolPath,
-                Arguments = $"-s -a -u \"{filePath}\"", // NO charset forcing - we handle it ourselves
+                Arguments = $"-s -a -u \"{filePath}\"", // Simple arguments
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true,
-                // Let ExifTool output in its default encoding
-                StandardOutputEncoding = null
+                StandardOutputEncoding = Encoding.GetEncoding(1252) // Windows-1252 for Ricoh
             };
 
             using var process = new Process { StartInfo = startInfo };
             using var cts = new CancellationTokenSource(_timeoutMs);
 
-            // Read raw bytes instead of string to handle encoding properly
-            var outputStream = new MemoryStream();
+            // Use StringBuilder for simple collection
+            var outputBuilder = new StringBuilder();
             var errorBuilder = new StringBuilder();
 
+            // FIX: Proper event handlers for both output and error
             process.OutputDataReceived += (sender, e) =>
             {
                 if (e.Data != null)
-                {
-                    // Get raw bytes in Windows-1252 encoding
-                    var bytes = Encoding.GetEncoding(1252).GetBytes(e.Data);
-                    outputStream.Write(bytes, 0, bytes.Length);
-                    outputStream.WriteByte((byte)'\n');
-                }
+                    outputBuilder.AppendLine(e.Data);
             };
 
             process.ErrorDataReceived += (sender, e) =>
@@ -213,7 +213,11 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (OperationCanceledException)
             {
-                process.Kill();
+                try
+                {
+                    process.Kill();
+                }
+                catch { }
                 throw new TimeoutException($"ExifTool timed out after {_timeoutMs}ms");
             }
 
@@ -224,10 +228,7 @@ namespace CamBridge.Infrastructure.Services
                     process.ExitCode, error);
             }
 
-            // Convert from Windows-1252 to UTF-8
-            outputStream.Position = 0;
-            using var reader = new StreamReader(outputStream, Encoding.GetEncoding(1252));
-            return reader.ReadToEnd();
+            return outputBuilder.ToString();
         }
 
         private Dictionary<string, string> ParseExifToolOutput(string output)
@@ -282,7 +283,6 @@ namespace CamBridge.Infrastructure.Services
                 return CreateDefaultPatientAndStudy();
             }
 
-            // NO CLEANING! The data should now be properly encoded
             _logger.LogDebug("Parsing barcode data: '{BarcodeData}'", barcodeData);
 
             var parts = barcodeData.Split('|');
