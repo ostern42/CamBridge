@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.7.10
+# // Version: 0.7.15
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 258
-# Generated: 2025-06-13 01:47
+# Total files: 271
+# Generated: 2025-06-15 01:14
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -244,9 +244,11 @@ CamBridge.ServiceDebug.csproj
 CamBridge.ServiceDebug\CamBridge.ServiceDebug.csproj
 CamBridge.ServiceDebug\Program.cs
 CamBridge.sln
+CAMBRIDGE_OVERVIEW.md
 CHANGELOG.md
 Cleanup-DeadLetter.ps1
 COLLECTOR_README.md
+config-analysis.txt
 ConnectionTest\ConnectionTest.cs
 ConnectionTest\ConnectionTest.csproj
 Create-DeploymentPackage - 250609.ps1
@@ -257,6 +259,12 @@ Create-NumberedTools.ps1
 current-build-error-files.txt
 dead-letter-surgery-files.txt
 Directory.Build.props
+docs\sources\SOURCES_CONFIG.txt
+docs\sources\SOURCES_CORE.txt
+docs\sources\SOURCES_INDEX.md
+docs\sources\SOURCES_INFRASTRUCTURE.txt
+docs\sources\SOURCES_SERVICE.txt
+Emergency-Fix-CamBridge.ps1
 ExifToolQuickTest\exif_output.json
 ExifToolQuickTest\ExifToolQuickTest.csproj
 ExifToolQuickTest\Program.cs
@@ -264,6 +272,8 @@ ExifToolTest\ExifToolTest.csproj
 ExifToolTest\Program.cs
 FILETREE_COMPACT.txt
 Get-WisdomProjectTree.ps1
+Get-WisdomSources - Kopie.ps1
+Get-WisdomSources.ps1
 h-help.ps1
 Migrate-CamBridgeConfig.ps1
 Program.cs
@@ -279,8 +289,11 @@ Test-QRBridge.ps1
 Version.props
 version-deadletter-files.txt
 WISDOM_ARCHITECTURE.md
+WISDOM_CLAUDE - 250614.md
 WISDOM_CLAUDE.md
+WISDOM_META.md
 WISDOM_PO.md
+WISDOM_TECHNICAL - 250614.md
 WISDOM_TECHNICAL.md
 
 ## [TOOLS]

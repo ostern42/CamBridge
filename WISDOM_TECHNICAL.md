@@ -1,7 +1,8 @@
-# WISDOM_TECHNICAL.md (Compressed)
-**Version**: 0.7.13  
-**Purpose**: Technical implementation wisdom  
-**Focus**: Patterns, Tools, Solutions, VOGON Protocol
+# WISDOM_TECHNICAL.md - Complete Technical Reference
+**Version**: 0.7.16  
+**Last Update**: 2025-06-15 01:42  
+**Purpose**: Technical implementation wisdom, patterns, solutions  
+**Philosophy**: KISS, Tab-Complete, Sources First
 
 ## 🎭 V.O.G.O.N. PROTOCOL
 
@@ -27,7 +28,7 @@ N - Next: Clear next actions
 ```
 "VOGON INIT für Dashboard Fix"
 "Mini-VOGON für Config check"
-"VOGON EXIT mit v0.7.13 release"
+"VOGON EXIT mit v0.7.16 release"
 ```
 
 ## 🔧 TECHNICAL STACK
@@ -41,23 +42,26 @@ DICOM: fo-dicom 5.2.2
 EXIF: ExifTool 13.30
 Testing: Tab-Complete PowerShell
 IDE: Visual Studio 2022
+Build: MSBuild with Version.props
+Deployment: PowerShell Scripts
 ```
 
 ## 💻 ESSENTIAL COMMANDS
 
-### Tab-Complete Build System
+### Tab-Complete Build System (MEMORIZE!)
 ```powershell
-# Core commands (memorize these!)
+# Core commands - your daily drivers
 0[TAB]  # Build only (no ZIP) - 20 seconds
 1[TAB]  # Deploy & Start Service
 2[TAB]  # Open Config Tool  
 9[TAB]  # Test without build
 h[TAB]  # Show help
 
-# Advanced
-00[TAB] # Build WITH ZIP
+# Advanced operations
+00[TAB] # Build WITH ZIP (for releases)
 11[TAB] # Deploy with backup
 99[TAB] # Full test with build
+4[TAB]  # Start console mode (debugging)
 ```
 
 ### Service Management
@@ -68,28 +72,31 @@ Stop-Service CamBridgeService -Force
 Start-Service CamBridgeService
 Restart-Service CamBridgeService
 
+# Console Mode (for debugging)
+.\4-console.ps1  # Runs as console app
+
 # Logs & Debugging
 Get-EventLog -LogName Application -Source CamBridge* -Newest 20
 Get-Content "$env:ProgramData\CamBridge\logs\*.log" -Tail 50 -Wait
 ```
 
-### API Testing
+### API Testing (v0.7.16 endpoints)
 ```powershell
-# Quick health check
-Invoke-RestMethod "http://localhost:5111/api/status/version"
+# Working endpoints
+Invoke-RestMethod "http://localhost:5111/api/status"    # Full status
+Invoke-RestMethod "http://localhost:5111/api/pipelines" # All pipelines
 
-# Pipeline status
-Invoke-RestMethod "http://localhost:5111/api/pipelines"
-
-# Statistics
-Invoke-RestMethod "http://localhost:5111/api/statistics"
+# Not implemented yet (404)
+# /api/status/version
+# /api/status/health  
+# /api/statistics
 ```
 
 ## 🎯 PROVEN PATTERNS
 
 ### Configuration Management
 ```csharp
-// SINGLE SOURCE OF TRUTH
+// SINGLE SOURCE OF TRUTH - ConfigurationPaths
 public static class ConfigurationPaths
 {
     public static string GetPrimaryConfigPath() =>
@@ -97,19 +104,45 @@ public static class ConfigurationPaths
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "CamBridge", 
             "appsettings.json");
+    
+    // All paths derive from this!
+}
+```
+
+### Dynamic Version Reading (NEW in v0.7.16!)
+```csharp
+// No more hardcoded versions!
+public static string Version
+{
+    get
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+        
+        // Try FileVersion first (from Version.props)
+        if (!string.IsNullOrEmpty(fileVersionInfo.FileVersion))
+        {
+            var version = fileVersionInfo.FileVersion;
+            if (version.EndsWith(".0"))
+                version = version.Substring(0, version.LastIndexOf(".0"));
+            return version;
+        }
+        
+        return "0.7.16"; // Emergency fallback only
+    }
 }
 ```
 
 ### Service Registration (KISS)
 ```csharp
-// NO MORE INTERFACES!
+// NO MORE INTERFACES! Direct registration
 services.AddSingleton<ExifToolReader>();
 services.AddSingleton<DicomConverter>();
 services.AddSingleton<FileProcessor>();
 services.AddSingleton<PipelineManager>();
 ```
 
-### Error Handling
+### Error Handling Pattern
 ```csharp
 try 
 {
@@ -118,18 +151,19 @@ try
 catch (Exception ex) when (ex is not OperationCanceledException)
 {
     _logger.LogError(ex, "Failed: {File}", file);
-    MoveToErrorFolder(file);  // Simple!
+    MoveToErrorFolder(file);  // Simple! No complex queues
 }
 ```
 
-### Pipeline Pattern
+### Pipeline Architecture
 ```csharp
-// Each pipeline gets its own watcher & queue
+// Each pipeline is independent
 foreach (var pipeline in EnabledPipelines)
 {
     var watcher = new FileWatcher(pipeline.WatchFolder);
     var queue = new Channel<string>(100);
-    // Independent processing
+    var processor = new FileProcessor(pipeline.Config);
+    // Independent processing loop
 }
 ```
 
@@ -140,6 +174,7 @@ foreach (var pipeline in EnabledPipelines)
 Problem: Service on 5050, Config expects 5111
 Fix: Global replace 5050 → 5111
 Files: Program.cs, appsettings.json, ViewModels
+Status: FIXED ✅
 ```
 
 ### Fix #2: Config Wrapper
@@ -177,48 +212,62 @@ public partial class App : Application
 }
 ```
 
+### Fix #5: Dynamic Version (NEW!)
+```yaml
+Problem: Version hardcoded in ServiceInfo.cs
+Old: public const string Version = "0.7.9";
+New: Dynamic reading from assembly
+Status: FIXED in v0.7.16 ✅
+```
+
 ## 🔨 ESSENTIAL TOOLS
 
-### Development
+### Development Tools
 - Visual Studio 2022 (v17.8+)
 - .NET 8 SDK
 - PowerShell 7+
 - Git for Windows
+- Notepad++ (for quick edits)
 
-### Debugging
+### Debugging Tools
 - Event Viewer (eventvwr.msc)
 - Services Manager (services.msc)
 - Process Monitor (ProcMon)
-- Postman/Insomnia (API testing)
+- PowerShell ISE (for script debugging)
 
-### Scripts
+### Project Scripts
 ```
 Build-CamBridge.ps1      # Tab-complete builder
 Test-CamBridge.ps1       # Quick tester
 Get-WisdomSources.ps1    # Source extractor
 Debug-CamBridgeJson.ps1  # Config validator
+Test-QRBridge.ps1        # QR code generator
+Create-DeploymentPackage.ps1  # Release builder
 ```
 
 ## 🏗️ BUILD & DEPLOY
 
-### Quick Build
+### Quick Development Cycle
 ```powershell
-# Development cycle
+# The holy trinity
 0[TAB]  # Build (20 sec)
-1[TAB]  # Deploy
+1[TAB]  # Deploy & Start
 9[TAB]  # Test
 
-# Full release
+# Full release cycle
 00[TAB] # Build with ZIP
+git tag v0.7.16
+git push --tags
 ```
 
-### Version Management
+### Version Management (Version.props)
 ```xml
-<!-- Version.props -->
+<!-- Single source of truth for versions -->
 <PropertyGroup>
-  <Version>0.7.13</Version>
-  <FileVersion>0.7.13.0</FileVersion>
-  <AssemblyVersion>0.7.13.0</AssemblyVersion>
+  <VersionPrefix>0.7.16</VersionPrefix>
+  <FileVersion>0.7.16.0</FileVersion>
+  <AssemblyVersion>0.7.0.0</AssemblyVersion>
+  <InformationalVersion>0.7.16 - Dynamic Version Reading</InformationalVersion>
 </PropertyGroup>
 ```
 
@@ -231,163 +280,133 @@ C:\CamBridge\
 └── Logs\            # Service logs
 
 %ProgramData%\CamBridge\
-├── appsettings.json  # Primary config
+├── appsettings.json  # Primary config (V2 format)
 ├── Pipelines\        # Pipeline configs
+├── Mappings\         # DICOM mappings
 └── Logs\            # Runtime logs
+
+C:\CamBridge\Watch\   # Input folders
+├── Radiology\
+└── Emergency\
+
+C:\CamBridge\Output\  # DICOM output
+├── Radiology\
+└── Emergency\
 ```
 
-## 📅 SESSION HISTORY (Distilled Learnings)
+## 📅 SESSION HISTORY (Key Learnings)
 
 ### Sessions 1-20: Architecture Explosion
 - Started with Clean Architecture → 12+ interfaces
 - **Learning**: SOLID ≠ Simple, overengineering kills
+- **Impact**: Complexity debt we're still paying
 
 ### Sessions 21-40: Config Chaos
 - 3 config versions, multiple loaders, migration hell
 - **Learning**: One format, one path, one truth
+- **Status**: Still cleaning up (V1 remnants exist)
 
 ### Sessions 41-50: GUI Implementation  
 - WPF + MVVM, Dashboard wouldn't load
 - **Learning**: Check ports, check dependencies, check obvious
+- **Fix**: Port 5111 everywhere
 
 ### Sessions 51-55: Tab-Complete Revolution
 - Build times 3min → 20sec with simple PowerShell
 - **Learning**: User ideas > complex solutions
+- **Impact**: Development speed 10x
 
 ### Sessions 56-58: The Great Deletion
 - Removed Dead Letter Queue (-650 LOC)
 - **Learning**: Deleting code is progress
+- **Philosophy**: KISS wins every time
 
 ### Sessions 59-61: Dashboard Victory
 - Fixed port mismatch (5050 → 5111)
 - **Learning**: Small details break everything
+- **The Enlightenment**: "I wrote ALL this code!"
 
 ### Sessions 62-63: Final Fixes
 - Host property, enum values, config completion
 - **Learning**: One line can fix 144 errors
+- **Status**: Core functionality working
+
+### Session 64: Dynamic Version (TODAY!)
+- ServiceInfo.cs hardcoded version
+- **Fix**: Read from assembly attributes
+- **Learning**: Automate everything possible
 
 ## 📊 METRICS THAT MATTER
 
 ```yaml
-Total LOC: 14,350 (all by Claude!)
+Total LOC: 14,350+ (all by Claude!)
 Interfaces: Started 12+ → Current 8 → Target 4
 Build Time: 3min → 20sec (without ZIP)
-Config Formats: 3 → 1 (unified)
-Warnings: 144 (target <50)
-Deleted: 650 LOC (Dead Letter)
-Fixed: Port 5111 everywhere
+Config Formats: 3 → 1 (V2 unified)
+Warnings: 144 (needs cleanup)
+Deleted: 650+ LOC (Dead Letter + more)
+Fixed: Port 5111 everywhere ✅
+Version: 0.7.16 (dynamic now!)
+Pipelines: 2 configured & working
+API Endpoints: 2/5 implemented
 ```
 
-## 📈 SPRINT PLANNING & ROADMAP
+## 📈 CURRENT STATUS & ROADMAP
 
-### Current: Sprint 7 - THE GREAT SIMPLIFICATION
+### Current: v0.7.16 - Dynamic Version
 ```yaml
-Phase 1: Foundation (v0.7.1-v0.7.4)      ✅ DONE
-Phase 2: Testing Tools (v0.7.5)          ✅ DONE  
-Phase 3: Version Fix (v0.7.6)            ✅ DONE
-Phase 4: Build Fixes (v0.7.7)            ✅ DONE
-Phase 5: Dead Letter (v0.7.8-v0.7.9)     ✅ DONE
-Phase 6: Config Unity (v0.7.10)          ✅ DONE
-Phase 7: Dashboard Fix (v0.7.11)         ✅ DONE
-Phase 8: JSON Fix (v0.7.13)              ✅ DONE
-Phase 9: Interface Removal (v0.8.0)      🚀 NEXT
-Phase 10: Service Consolidation          📋 PLANNED
+Done:
+✅ Dynamic version from assembly
+✅ Service running stable
+✅ Pipelines configured correctly
+✅ API endpoints working (2/5)
+✅ Test environment ready
+
+Issues:
+- 144 build warnings
+- Missing API endpoints (3)
+- "Ermergency" typo
+- Config complexity remains
 ```
 
-### Sprint 8: Interface Removal (v0.8.x)
+### Next: Sprint 8 - Interface Removal (v0.8.x)
 ```yaml
 Goals:
 - Remove 4+ interfaces (8 → 4)
 - Direct dependencies everywhere
 - Update all references
-- Test each removal
+- Reduce warnings to <50
 
 Targets:
-- IExifReader → ExifToolReader
+- IExifReader → ExifToolReader ✅
 - IDicomConverter → DicomConverter  
 - IFolderWatcher → FileWatcher
 - INotificationService → Remove entirely
 ```
 
-### Sprint 9: Config Redesign (v0.9.x)
+### Future Sprints
 ```yaml
-Goals:
-- Simplify to single config class?
-- Remove legacy V1 support
-- Better defaults
-- Self-documenting structure
+Sprint 9: Config Redesign (v0.9.x)
+- Simplify to single config class
+- Remove V1 support completely
+- Better defaults & validation
 
-Ideas:
-- Embedded schema
-- Config wizard
-- Auto-discovery
+Sprint 10: Medical Features Part 1 (v1.0)
+- FTP Server (basic only!)
+- Protected features begin
+
+Sprint 11+: Protected Medical Features
+- C-STORE SCP
+- Modality Worklist  
+- C-FIND SCP
+[DO NOT START THESE YET!]
 ```
-
-### Sprint 10: Medical Features Part 1 (v1.0)
-```yaml
-Protected Features - DO NOT START YET:
-- FTP Server for legacy devices
-- Basic implementation only
-- No overengineering!
-```
-
-### Future Sprints (Protected)
-```yaml
-Sprint 11: C-STORE SCP (v1.1)
-- DICOM storage service
-- Accept from modalities
-
-Sprint 12: Modality Worklist (v1.2)
-- Query patient schedules
-- Auto-populate data
-
-Sprint 13: C-FIND SCP (v1.3)
-- Query/retrieve functionality
-- Complete PACS integration
-```
-
-## 📝 WISDOM_SPRINT PATTERN
-
-### Purpose
-Focused documentation for specific work phases:
-```yaml
-WISDOM_SPRINT_CONFIG.md     # During config work
-WISDOM_SPRINT_INTERFACE.md  # During interface removal
-WISDOM_SPRINT_MEDICAL.md    # During medical features
-```
-
-### Structure
-```markdown
-# WISDOM_SPRINT_{TOPIC}
-**Sprint**: X
-**Goal**: Specific objective
-**Sessions**: Y-Z
-
-## Current State
-- What works
-- What's broken
-- Decisions made
-
-## Next Actions
-- [ ] Task 1
-- [ ] Task 2
-
-## Learnings
-- What we discovered
-- What to avoid
-```
-
-### Benefits
-- Survives chat boundaries
-- Focused on current work
-- Quick status updates
-- Preserves context
 
 ## 🎯 DEVELOPMENT PRINCIPLES
 
 ### The KISS Ladder
 ```yaml
-Level 1: It works (current)
+Level 1: It works (current) ✅
 Level 2: It's simple (goal)
 Level 3: It's elegant (dream)
 Level 4: It's invisible (nirvana)
@@ -403,11 +422,76 @@ Question: "Should we add this feature?"
 → If any "No": Don't do it
 ```
 
-### Protected Patterns [KEEP!]
+### Protected Patterns
 ```yaml
 Tab-Complete: Sacred, never change
-Port 5111: Carved in stone
+Port 5111: Carved in stone  
 Config Path: Single source of truth
 VOGON: For complex work only
-Sources First: Always
+Sources First: Always check existing
+Dynamic Version: Never hardcode again
 ```
+
+## 🔧 QUICK REFERENCE CARD
+
+### Daily Commands
+```powershell
+0[TAB]   # Build
+1[TAB]   # Deploy  
+2[TAB]   # Config Tool
+9[TAB]   # Test
+4[TAB]   # Console Mode
+```
+
+### Check Status
+```powershell
+# Service status
+Invoke-RestMethod "http://localhost:5111/api/status" | ConvertTo-Json -Depth 5
+
+# Version only
+(Invoke-RestMethod "http://localhost:5111/api/status").version
+
+# Pipeline status
+Invoke-RestMethod "http://localhost:5111/api/pipelines"
+```
+
+### Common Fixes
+```powershell
+# Service won't start
+Get-EventLog -LogName Application -Source CamBridge* -Newest 10
+
+# Config corrupted
+Remove-Item "$env:ProgramData\CamBridge\appsettings.json"
+Start-Service CamBridgeService  # Creates fresh config
+
+# Version mismatch
+# Check Version.props → Build → Deploy
+```
+
+## 📝 WISDOM NOTES
+
+### What Works Well
+- Tab-complete system (Oliver's idea!)
+- Single config path
+- Simple error folders
+- Pipeline independence
+- Dynamic version reading
+
+### What Needs Work
+- Too many interfaces still
+- Config complexity (3 versions)
+- Build warnings (144)
+- Missing API endpoints
+- Documentation gaps
+
+### Lessons Learned
+1. **KISS beats SOLID** every single time
+2. **Delete first**, add features second
+3. **User knows best** - listen to Oliver
+4. **Automate everything** - versions, builds, tests
+5. **Details matter** - one wrong port = hours of debugging
+
+---
+
+*"Making the improbable reliably simple - one tab-complete at a time!"*
+*Version 0.7.16 - Now with dynamic versioning!*

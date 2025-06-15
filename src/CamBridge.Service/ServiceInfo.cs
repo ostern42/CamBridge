@@ -1,5 +1,5 @@
 // src/CamBridge.Service/ServiceInfo.cs
-// Version: 0.7.9
+// Version: 0.7.15
 // Description: Central service version and metadata information
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
@@ -10,14 +10,57 @@ namespace CamBridge.Service
 {
     /// <summary>
     /// Central location for all service version and metadata information
-    /// This is the SINGLE SOURCE OF TRUTH for version numbers!
+    /// Version is now dynamically read from assembly attributes!
     /// </summary>
     public static class ServiceInfo
     {
         /// <summary>
-        /// Current version of the service - UPDATE THIS for new releases!
+        /// Current version of the service - dynamically read from assembly
+        /// This now automatically uses Version.props values!
         /// </summary>
-        public const string Version = "0.7.9";
+        public static string Version
+        {
+            get
+            {
+                try
+                {
+                    var assembly = Assembly.GetExecutingAssembly();
+                    var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+
+                    // Try FileVersion first (from Version.props FileVersion)
+                    if (!string.IsNullOrEmpty(fileVersionInfo.FileVersion))
+                    {
+                        // Remove trailing .0 if present (e.g., 0.7.15.0 -> 0.7.15)
+                        var version = fileVersionInfo.FileVersion;
+                        if (version.EndsWith(".0"))
+                            version = version.Substring(0, version.LastIndexOf(".0"));
+                        return version;
+                    }
+
+                    // Fallback to ProductVersion
+                    if (!string.IsNullOrEmpty(fileVersionInfo.ProductVersion))
+                    {
+                        // Handle versions with commit hash (e.g., "0.7.15+abc123")
+                        var productVersion = fileVersionInfo.ProductVersion;
+                        var plusIndex = productVersion.IndexOf('+');
+                        if (plusIndex > 0)
+                            return productVersion.Substring(0, plusIndex);
+                        return productVersion;
+                    }
+
+                    // Last fallback to assembly version
+                    var assemblyVersion = assembly.GetName().Version;
+                    if (assemblyVersion != null)
+                        return $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
+
+                    return "0.7.15"; // Emergency fallback
+                }
+                catch
+                {
+                    return "0.7.15"; // Emergency fallback
+                }
+            }
+        }
 
         /// <summary>
         /// Service name as registered in Windows
@@ -62,7 +105,7 @@ namespace CamBridge.Service
         /// <summary>
         /// API Port for HTTP endpoints
         /// </summary>
-        public const int ApiPort = 5050;
+        public const int ApiPort = 5111;
 
         /// <summary>
         /// Gets the full version string with product name

@@ -1,5 +1,5 @@
 ﻿# CamBridge Sources - SERVICE
-# Generated: 2025-06-14 23:36:20
+# Generated: 2025-06-15 00:33:22
 # Version: 0.7.11
 # Purpose: Complete source code for project knowledge
 # Token-efficient access to all implementations
@@ -1390,11 +1390,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Claude\'s Improbably Reliable Software Solutions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Â© 2025 Claude\'s Improbably Reliable Software Solutions")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.13.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.13+bd6c551932659d66de143f36c1a1a04233329e68")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.14.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.14+b660b0fb034114c3d342ace1d3b915f5b2039aad")]
 [assembly: System.Reflection.AssemblyProductAttribute("CamBridge Medical Image Converter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CamBridge.Service")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.7.13.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.7.14.0")]
 [assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/yourusername/CamBridge")]
 [assembly: System.Resources.NeutralResourcesLanguageAttribute("en-US")]
 [assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows7.0")]
@@ -7120,7 +7120,7 @@ FILE: src\CamBridge.Service\obj\CamBridge.Service.csproj.nuget.dgspec.json
   },
   "projects": {
     "C:\\Users\\oliver.stern\\source\\repos\\CamBridge\\src\\CamBridge.Core\\CamBridge.Core.csproj": {
-      "version": "0.7.13",
+      "version": "0.7.14",
       "restore": {
         "projectUniqueName": "C:\\Users\\oliver.stern\\source\\repos\\CamBridge\\src\\CamBridge.Core\\CamBridge.Core.csproj",
         "projectName": "CamBridge.Core",
@@ -7181,20 +7181,6 @@ FILE: src\CamBridge.Service\obj\CamBridge.Service.csproj.nuget.dgspec.json
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
@@ -7202,15 +7188,10 @@ FILE: src\CamBridge.Service\obj\CamBridge.Service.csproj.nuget.dgspec.json
           },
           "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
         }
-      },
-      "runtimes": {
-        "win-x64": {
-          "#import": []
-        }
       }
     },
     "C:\\Users\\oliver.stern\\source\\repos\\CamBridge\\src\\CamBridge.Infrastructure\\CamBridge.Infrastructure.csproj": {
-      "version": "0.7.13",
+      "version": "0.7.14",
       "restore": {
         "projectUniqueName": "C:\\Users\\oliver.stern\\source\\repos\\CamBridge\\src\\CamBridge.Infrastructure\\CamBridge.Infrastructure.csproj",
         "projectName": "CamBridge.Infrastructure",
@@ -7311,20 +7292,6 @@ FILE: src\CamBridge.Service\obj\CamBridge.Service.csproj.nuget.dgspec.json
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
-              "version": "[8.0.16, 8.0.16]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
@@ -7332,15 +7299,10 @@ FILE: src\CamBridge.Service\obj\CamBridge.Service.csproj.nuget.dgspec.json
           },
           "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
         }
-      },
-      "runtimes": {
-        "win-x64": {
-          "#import": []
-        }
       }
     },
     "C:\\Users\\oliver.stern\\source\\repos\\CamBridge\\src\\CamBridge.Service\\CamBridge.Service.csproj": {
-      "version": "0.7.13",
+      "version": "0.7.14",
       "restore": {
         "projectUniqueName": "C:\\Users\\oliver.stern\\source\\repos\\CamBridge\\src\\CamBridge.Service\\CamBridge.Service.csproj",
         "projectName": "CamBridge.Service",
@@ -8551,7 +8513,7 @@ FILE: src\CamBridge.Service\obj\project.assets.json
           }
         }
       },
-      "CamBridge.Core/0.7.13": {
+      "CamBridge.Core/0.7.14": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
         "dependencies": {
@@ -8564,11 +8526,11 @@ FILE: src\CamBridge.Service\obj\project.assets.json
           "bin/placeholder/CamBridge.Core.dll": {}
         }
       },
-      "CamBridge.Infrastructure/0.7.13": {
+      "CamBridge.Infrastructure/0.7.14": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
         "dependencies": {
-          "CamBridge.Core": "0.7.13",
+          "CamBridge.Core": "0.7.14",
           "MetadataExtractor": "2.8.1",
           "Microsoft.Extensions.Configuration.Binder": "8.0.0",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.5",
@@ -9637,7 +9599,7 @@ FILE: src\CamBridge.Service\obj\project.assets.json
           }
         }
       },
-      "CamBridge.Core/0.7.13": {
+      "CamBridge.Core/0.7.14": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
         "dependencies": {
@@ -9650,11 +9612,11 @@ FILE: src\CamBridge.Service\obj\project.assets.json
           "bin/placeholder/CamBridge.Core.dll": {}
         }
       },
-      "CamBridge.Infrastructure/0.7.13": {
+      "CamBridge.Infrastructure/0.7.14": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
         "dependencies": {
-          "CamBridge.Core": "0.7.13",
+          "CamBridge.Core": "0.7.14",
           "MetadataExtractor": "2.8.1",
           "Microsoft.Extensions.Configuration.Binder": "8.0.0",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.5",
@@ -11371,12 +11333,12 @@ FILE: src\CamBridge.Service\obj\project.assets.json
         "xmpcore.nuspec"
       ]
     },
-    "CamBridge.Core/0.7.13": {
+    "CamBridge.Core/0.7.14": {
       "type": "project",
       "path": "../CamBridge.Core/CamBridge.Core.csproj",
       "msbuildProject": "../CamBridge.Core/CamBridge.Core.csproj"
     },
-    "CamBridge.Infrastructure/0.7.13": {
+    "CamBridge.Infrastructure/0.7.14": {
       "type": "project",
       "path": "../CamBridge.Infrastructure/CamBridge.Infrastructure.csproj",
       "msbuildProject": "../CamBridge.Infrastructure/CamBridge.Infrastructure.csproj"
@@ -11384,8 +11346,8 @@ FILE: src\CamBridge.Service\obj\project.assets.json
   },
   "projectFileDependencyGroups": {
     "net8.0-windows7.0": [
-      "CamBridge.Core >= 0.7.13",
-      "CamBridge.Infrastructure >= 0.7.13",
+      "CamBridge.Core >= 0.7.14",
+      "CamBridge.Infrastructure >= 0.7.14",
       "Microsoft.Extensions.Hosting.WindowsServices >= 8.0.0",
       "Serilog.AspNetCore >= 8.0.1",
       "Serilog.Sinks.Console >= 5.0.1",
@@ -11398,7 +11360,7 @@ FILE: src\CamBridge.Service\obj\project.assets.json
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
-    "version": "0.7.13",
+    "version": "0.7.14",
     "restore": {
       "projectUniqueName": "C:\\Users\\oliver.stern\\source\\repos\\CamBridge\\src\\CamBridge.Service\\CamBridge.Service.csproj",
       "projectName": "CamBridge.Service",

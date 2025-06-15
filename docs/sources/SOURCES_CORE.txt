@@ -1,5 +1,5 @@
 ﻿# CamBridge Sources - CORE
-# Generated: 2025-06-14 23:36:20
+# Generated: 2025-06-15 00:33:22
 # Version: 0.7.11
 # Purpose: Complete source code for project knowledge
 # Token-efficient access to all implementations
@@ -2981,11 +2981,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Claude\'s Improbably Reliable Software Solutions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Â© 2025 Claude\'s Improbably Reliable Software Solutions")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.13.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.13+bd6c551932659d66de143f36c1a1a04233329e68")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.14.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.14+b660b0fb034114c3d342ace1d3b915f5b2039aad")]
 [assembly: System.Reflection.AssemblyProductAttribute("CamBridge Medical Image Converter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CamBridge.Core")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.7.13.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.7.14.0")]
 [assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/yourusername/CamBridge")]
 [assembly: System.Resources.NeutralResourcesLanguageAttribute("en-US")]
 

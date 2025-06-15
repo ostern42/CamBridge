@@ -4,13 +4,13 @@
 # Version: 0.7.5 (PARAMETER BUG FIXED)
 
 param(
-    [string]$BaseUrl = "http://localhost:5050",
+    [string]$BaseUrl = "http://localhost:5111",
     [switch]$Continuous = $false
 )
 
 # Ensure BaseUrl is set (fallback)
 if ([string]::IsNullOrEmpty($BaseUrl)) {
-    $BaseUrl = "http://localhost:5050"
+    $BaseUrl = "http://localhost:5111"
     Write-Host "BaseUrl was empty, using default: $BaseUrl" -ForegroundColor Yellow
 }
 
@@ -85,11 +85,11 @@ Write-Host ""
 # Quick connectivity test first
 Write-Host "Pre-flight check..." -ForegroundColor Yellow
 try {
-    $testConnection = Test-NetConnection -ComputerName "localhost" -Port 5050 -WarningAction SilentlyContinue
+    $testConnection = Test-NetConnection -ComputerName "localhost" -Port 5111 -WarningAction SilentlyContinue
     if ($testConnection.TcpTestSucceeded) {
-        Write-Host "  Port 5050 is reachable" -ForegroundColor Green
+        Write-Host "  Port 5111 is reachable" -ForegroundColor Green
     } else {
-        Write-Host "  Port 5050 is NOT reachable!" -ForegroundColor Red
+        Write-Host "  Port 5111 is NOT reachable!" -ForegroundColor Red
         Write-Host "  Is the CamBridge service running?" -ForegroundColor Yellow
     }
 } catch {
@@ -153,11 +153,11 @@ if (-not $Continuous) {
     Write-Host ""
     Write-Host "Troubleshooting:" -ForegroundColor Yellow
     Write-Host "  1. Check service status: Get-Service CamBridgeService" -ForegroundColor Gray
-    Write-Host "  2. Test port manually: Test-NetConnection localhost -Port 5050" -ForegroundColor Gray
+    Write-Host "  2. Test port manually: Test-NetConnection localhost -Port 5111" -ForegroundColor Gray
     Write-Host "  3. Check service logs: 6[TAB] (or .\6-logs.ps1)" -ForegroundColor Gray
     Write-Host ""
     Write-Host "Quick Commands:" -ForegroundColor Yellow
-    Write-Host '  $status = Invoke-RestMethod "http://localhost:5050/api/status"' -ForegroundColor Gray
+    Write-Host '  $status = Invoke-RestMethod "http://localhost:5111/api/status"' -ForegroundColor Gray
     Write-Host '  $status | ConvertTo-Json -Depth 5' -ForegroundColor Gray
     Write-Host ""
     Write-Host "For continuous monitoring:" -ForegroundColor Yellow

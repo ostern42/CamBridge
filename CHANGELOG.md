@@ -6,6 +6,46 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Version 0.7.16 - Dynamic Version Reading
+**Date**: 2025-06-15  
+**Sessions**: 64-65  
+
+### 🎯 Key Changes
+
+- **FIXED**: Hardcoded version "0.7.9" → Now reads from assembly dynamically
+- **DEPLOYED**: v0.7.16 as Windows Service 
+- **CONFIGURED**: Separate pipeline folders (Radiology/Emergency)
+- **DOCUMENTED**: All 4 WISDOM files updated
+
+### 🔧 Technical Fix
+
+```csharp
+// OLD: public const string Version = "0.7.9";
+// NEW: Dynamic reading from FileVersionInfo (like Company property)
+public static string Version => FileVersionInfo.GetVersionInfo(
+    Assembly.GetExecutingAssembly().Location).FileVersion?.TrimEnd(".0") ?? "0.7.16";
+```
+
+### 📊 Status
+
+```yaml
+Working: /api/status, /api/pipelines
+Missing: /api/status/version, /api/status/health, /api/statistics  
+Known Issues: "Ermergency" typo, incomplete InitializePrimaryConfig()
+Build Warnings: 144 (unchanged)
+```
+
+### 🚀 Next: Sprint 9 - Config Cleanup
+
+1. Complete `InitializePrimaryConfig()`
+2. Add enum validation 
+3. Fix typos
+4. Implement missing endpoints
+
+---
+
+*"Version numbers that read themselves - KISS wins again!"*
+
 ## [0.7.14] - 2025-06-14
 
 ### Added
