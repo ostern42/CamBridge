@@ -16,7 +16,7 @@ param(
 # Read version from Version.props if not specified
 if ([string]::IsNullOrEmpty($Version)) {
     if (Test-Path ".\Version.props") {
-        [xml]$versionProps = Get-Content ".\Version.props"
+        [xml]$versionProps = Get-Content ".\Version.props" -Raw
         $Version = $versionProps.Project.PropertyGroup.VersionPrefix
         Write-Host "Auto-detected version from Version.props: $Version" -ForegroundColor DarkGray
     } else {

@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 271
-# Generated: 2025-06-15 11:32
+# Total files: 270
+# Generated: 2025-06-15 12:40
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -159,7 +159,6 @@ src\CamBridge.QRBridge\Services\ArgumentParser.cs
 src\CamBridge.QRBridge\Services\QRCodeService.cs
 
 ## [CamBridge.Service]
-src\CamBridge.Service\appsettings.Development.json
 src\CamBridge.Service\appsettings.json
 src\CamBridge.Service\CamBridge.Service.csproj
 src\CamBridge.Service\CamBridgeHealthCheck.cs

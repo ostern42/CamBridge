@@ -1,6 +1,6 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.7.16
-// Description: Windows service entry point with centralized config management
+// Version: 0.7.17
+// Description: Windows service entry point with centralized config management + validation
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
@@ -121,6 +121,9 @@ try
         Log.Information("Initialized primary config from local template");
         serviceEventLog?.WriteEntry("Copied default config to ProgramData", EventLogEntryType.Information, 1007);
     }
+
+    // NEW in v0.7.17: Validate config and warn about issues
+    ConfigValidator.ValidateAndWarn(ConfigurationPaths.GetPrimaryConfigPath(), Log.Logger);
 
     // CRITICAL FIX: Set working directory to service location (for relative paths like Tools\)
     if (isService)
@@ -410,6 +413,45 @@ public class Startup
                 await context.Response.WriteAsJsonAsync(status);
             });
 
+            // NEW in v0.7.17: Simple version endpoint
+            endpoints.MapGet("/api/status/version", async context =>
+            {
+                var response = new
+                {
+                    version = ServiceInfo.Version,
+                    company = ServiceInfo.Company
+                };
+
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(response);
+            });
+
+            // NEW in v0.7.17: Health status endpoint
+            endpoints.MapGet("/api/status/health", async context =>
+            {
+                var pipelineManager = context.RequestServices.GetService<PipelineManager>();
+                var pipelineStatuses = pipelineManager?.GetPipelineStatuses() ?? new Dictionary<string, PipelineStatus>();
+
+                // Service is healthy if at least one pipeline is active
+                var hasActivePipeline = pipelineStatuses.Any(p => p.Value.IsActive);
+                var uptime = DateTime.UtcNow - Program.ServiceStartTime;
+
+                var healthStatus = new
+                {
+                    status = hasActivePipeline ? "Healthy" : "Degraded",
+                    timestamp = DateTime.UtcNow,
+                    uptime = uptime,
+                    activePipelines = pipelineStatuses.Count(p => p.Value.IsActive),
+                    totalPipelines = pipelineStatuses.Count,
+                    details = hasActivePipeline
+                        ? "Service is running with active pipelines"
+                        : "Service is running but no pipelines are active"
+                };
+
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(healthStatus);
+            });
+
             // Pipeline-specific endpoints
             endpoints.MapGet("/api/pipelines", async context =>
             {
@@ -458,6 +500,8 @@ public class Startup
                         <ul>
                             <li>Health Check: <a href='/health'>/health</a></li>
                             <li>Service Status: <a href='/api/status'>/api/status</a></li>
+                            <li>API Version: <a href='/api/status/version'>/api/status/version</a></li>
+                            <li>Health Status: <a href='/api/status/health'>/api/status/health</a></li>
                             <li>Pipeline Status: <a href='/api/pipelines'>/api/pipelines</a></li>
                         </ul>
                         <hr/>

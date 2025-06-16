@@ -1,6 +1,6 @@
 # WISDOM_TECHNICAL.md - Complete Technical Reference
-**Version**: 0.7.16  
-**Last Update**: 2025-06-15 01:42  
+**Version**: 0.7.17  
+**Last Update**: 2025-06-15 12:30  
 **Purpose**: Technical implementation wisdom, patterns, solutions  
 **Philosophy**: KISS, Tab-Complete, Sources First
 
@@ -28,7 +28,7 @@ N - Next: Clear next actions
 ```
 "VOGON INIT für Dashboard Fix"
 "Mini-VOGON für Config check"
-"VOGON EXIT mit v0.7.16 release"
+"VOGON EXIT mit v0.7.17 release"
 ```
 
 ## 🔧 TECHNICAL STACK
@@ -80,15 +80,15 @@ Get-EventLog -LogName Application -Source CamBridge* -Newest 20
 Get-Content "$env:ProgramData\CamBridge\logs\*.log" -Tail 50 -Wait
 ```
 
-### API Testing (v0.7.16 endpoints)
+### API Testing (v0.7.17 endpoints)
 ```powershell
 # Working endpoints
-Invoke-RestMethod "http://localhost:5111/api/status"    # Full status
-Invoke-RestMethod "http://localhost:5111/api/pipelines" # All pipelines
+Invoke-RestMethod "http://localhost:5111/api/status"         # Full status
+Invoke-RestMethod "http://localhost:5111/api/pipelines"      # All pipelines
+Invoke-RestMethod "http://localhost:5111/api/status/version" # Version only ✅
+Invoke-RestMethod "http://localhost:5111/api/status/health"  # Health check ✅
 
 # Not implemented yet (404)
-# /api/status/version
-# /api/status/health  
 # /api/statistics
 ```
 
@@ -109,7 +109,7 @@ public static class ConfigurationPaths
 }
 ```
 
-### Dynamic Version Reading (NEW in v0.7.16!)
+### Dynamic Version Reading (Since v0.7.16!)
 ```csharp
 // No more hardcoded versions!
 public static string Version
@@ -128,7 +128,7 @@ public static string Version
             return version;
         }
         
-        return "0.7.16"; // Emergency fallback only
+        return "0.7.17"; // Emergency fallback only
     }
 }
 ```
@@ -212,12 +212,23 @@ public partial class App : Application
 }
 ```
 
-### Fix #5: Dynamic Version (NEW!)
+### Fix #5: Dynamic Version (v0.7.16)
 ```yaml
 Problem: Version hardcoded in ServiceInfo.cs
 Old: public const string Version = "0.7.9";
 New: Dynamic reading from assembly
 Status: FIXED in v0.7.16 ✅
+```
+
+### Fix #6: Enum Validation (NEW in v0.7.17!)
+```yaml
+Problem: Invalid OutputOrganization crashes service
+Solution: Added validation in ConfigurationService
+Implementation: 
+  - JsonStringEnumConverter for parsing
+  - ValidateEnumValues method
+  - Clear error messages
+Status: FIXED in v0.7.17 ✅
 ```
 
 ## 🔨 ESSENTIAL TOOLS
@@ -256,7 +267,7 @@ Create-DeploymentPackage.ps1  # Release builder
 
 # Full release cycle
 00[TAB] # Build with ZIP
-git tag v0.7.16
+git tag v0.7.17
 git push --tags
 ```
 
@@ -264,10 +275,10 @@ git push --tags
 ```xml
 <!-- Single source of truth for versions -->
 <PropertyGroup>
-  <VersionPrefix>0.7.16</VersionPrefix>
-  <FileVersion>0.7.16.0</FileVersion>
+  <VersionPrefix>0.7.17</VersionPrefix>
+  <FileVersion>0.7.17.0</FileVersion>
   <AssemblyVersion>0.7.0.0</AssemblyVersion>
-  <InformationalVersion>0.7.16 - Dynamic Version Reading</InformationalVersion>
+  <InformationalVersion>0.7.17 - Config Validation & Sprint 9 Complete</InformationalVersion>
 </PropertyGroup>
 ```
 
@@ -339,6 +350,13 @@ C:\CamBridge\Output\  # DICOM output
 - **Achievement**: JPEG→DICOM WORKING!
 - **Learning**: Check obvious first, KISS wins
 
+### Session 66: Sprint 9 Complete!
+- Discovered InitializePrimaryConfig was already complete
+- Added enum validation for OutputOrganization
+- Clear error messages for config issues
+- **Learning**: Always check sources first!
+- **Achievement**: Config system now robust
+
 ## 📊 METRICS THAT MATTER
 
 ```yaml
@@ -349,15 +367,16 @@ Config Formats: 3 → 1 (V2 unified)
 Warnings: 144 (needs cleanup)
 Deleted: 650+ LOC (Dead Letter + more)
 Fixed: Port 5111 everywhere ✅
-Version: 0.7.16 (dynamic now!)
+Version: 0.7.17 (dynamic now!)
 Pipelines: 2 configured & working
-API Endpoints: 2/5 implemented
+API Endpoints: 4/5 implemented
 CORE FEATURE: JPEG→DICOM WORKING! ✅
+CONFIG: Now validates all enums ✅
 ```
 
 ## 📈 CURRENT STATUS & ROADMAP
 
-### Current: v0.7.16 - Dynamic Version
+### Current: v0.7.17 - Config Validation Complete
 ```yaml
 Done:
 ✅ Dynamic version from assembly
@@ -365,15 +384,16 @@ Done:
 ✅ Pipelines configured correctly
 ✅ API endpoints working (2/5)
 ✅ Test environment ready
+✅ Enum validation added
+✅ Clear error messages
 
 Issues:
 - 144 build warnings
 - Missing API endpoints (3)
-- "Ermergency" typo
 - Config complexity remains
 ```
 
-### Next: Sprint 8 - Interface Removal (v0.8.x)
+### Next: Sprint 10 - Interface Removal (v0.8.x)
 ```yaml
 Goals:
 - Remove 4+ interfaces (8 → 4)
@@ -390,16 +410,16 @@ Targets:
 
 ### Future Sprints
 ```yaml
-Sprint 9: Config Redesign (v0.9.x)
+Sprint 11: Config Redesign (v0.9.x)
 - Simplify to single config class
 - Remove V1 support completely
 - Better defaults & validation
 
-Sprint 10: Medical Features Part 1 (v1.0)
+Sprint 12: Medical Features Part 1 (v1.0)
 - FTP Server (basic only!)
 - Protected features begin
 
-Sprint 11+: Protected Medical Features
+Sprint 13+: Protected Medical Features
 - C-STORE SCP
 - Modality Worklist  
 - C-FIND SCP
@@ -434,6 +454,7 @@ Config Path: Single source of truth
 VOGON: For complex work only
 Sources First: Always check existing
 Dynamic Version: Never hardcode again
+Enum Validation: Clear errors always
 ```
 
 ## 🔧 QUICK REFERENCE CARD
@@ -470,6 +491,9 @@ Start-Service CamBridgeService  # Creates fresh config
 
 # Version mismatch
 # Check Version.props → Build → Deploy
+
+# Bad enum value
+# Check error message - v0.7.17 shows valid values!
 ```
 
 ## 📝 WISDOM NOTES
@@ -480,6 +504,7 @@ Start-Service CamBridgeService  # Creates fresh config
 - Simple error folders
 - Pipeline independence
 - Dynamic version reading
+- Enum validation (new!)
 
 ### What Needs Work
 - Too many interfaces still
@@ -494,8 +519,9 @@ Start-Service CamBridgeService  # Creates fresh config
 3. **User knows best** - listen to Oliver
 4. **Automate everything** - versions, builds, tests
 5. **Details matter** - one wrong port = hours of debugging
+6. **Check sources first** - code might already exist!
 
 ---
 
 *"Making the improbable reliably simple - one tab-complete at a time!"*
-*Version 0.7.16 - Now with dynamic versioning!*
+*Version 0.7.17 - Config validation complete!*

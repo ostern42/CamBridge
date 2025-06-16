@@ -1,7 +1,7 @@
 # test-api.ps1
 # Quick API testing script for CamBridge
 # Tests the HTTP API endpoints when service is running
-# Version: 0.7.5 (PARAMETER BUG FIXED)
+# Version: 0.7.17 (REMOVED non-existent /api/configuration)
 
 param(
     [string]$BaseUrl = "http://localhost:5111",
@@ -57,15 +57,19 @@ function Show-ServiceStatus {
         Write-Host "Service Information:" -ForegroundColor Yellow
         Write-Host "  Version:         $($status.version)" -ForegroundColor Gray
         Write-Host "  Uptime:          $($status.uptime)" -ForegroundColor Gray
-        Write-Host "  Total Processed: $($status.totalProcessed)" -ForegroundColor Gray
+        Write-Host "  Total Processed: $($status.totalSuccessful)" -ForegroundColor Gray
         Write-Host "  Active Queue:    $($status.activeProcessing)" -ForegroundColor Gray
+        Write-Host "  Pipeline Count:  $($status.pipelineCount)" -ForegroundColor Gray
         
         if ($status.pipelines -and $status.pipelines.Count -gt 0) {
             Write-Host ""
             Write-Host "Active Pipelines:" -ForegroundColor Yellow
             foreach ($pipeline in $status.pipelines) {
-                Write-Host "  - $($pipeline.name) [$($pipeline.status)]" -ForegroundColor Gray
-                Write-Host "    Processed: $($pipeline.processedCount), Errors: $($pipeline.errorCount)" -ForegroundColor DarkGray
+                Write-Host "  - $($pipeline.name) [Active: $($pipeline.isActive)]" -ForegroundColor Gray
+                Write-Host "    Processed: $($pipeline.totalProcessed), Success: $($pipeline.totalSuccessful), Failed: $($pipeline.totalFailed)" -ForegroundColor DarkGray
+                if ($pipeline.watchedFolders) {
+                    Write-Host "    Watching: $($pipeline.watchedFolders -join ', ')" -ForegroundColor DarkGray
+                }
             }
         } else {
             Write-Host "  No pipelines configured" -ForegroundColor DarkYellow
@@ -76,7 +80,7 @@ function Show-ServiceStatus {
 # Main test sequence
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "    CamBridge API Test Suite" -ForegroundColor Cyan
+Write-Host "    CamBridge API Test Suite v0.7.17" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Base URL: $BaseUrl" -ForegroundColor Gray
@@ -117,14 +121,24 @@ do {
     Write-Host ""
     $pipelines = Test-Endpoint -Endpoint "/api/pipelines"
     if ($pipelines) {
-        Write-Host "  Found $($pipelines.Count) pipeline(s)" -ForegroundColor Gray
+        $pipelineCount = ($pipelines.PSObject.Properties | Measure-Object).Count
+        Write-Host "  Found $pipelineCount pipeline(s)" -ForegroundColor Gray
     }
     
-    # Test 4: Configuration
+    # Test 4: Version endpoint (NEW in v0.7.17)
     Write-Host ""
-    $config = Test-Endpoint -Endpoint "/api/configuration"
-    if ($config) {
-        Write-Host "  Configuration loaded successfully" -ForegroundColor Gray
+    $version = Test-Endpoint -Endpoint "/api/status/version"
+    if ($version) {
+        Write-Host "  API Version: $($version.version)" -ForegroundColor Gray
+        Write-Host "  Company: $($version.company)" -ForegroundColor Gray
+    }
+    
+    # Test 5: Health Status endpoint (NEW in v0.7.17)
+    Write-Host ""
+    $healthStatus = Test-Endpoint -Endpoint "/api/status/health"
+    if ($healthStatus) {
+        Write-Host "  Health: $($healthStatus.status) - $($healthStatus.details)" -ForegroundColor Gray
+        Write-Host "  Active Pipelines: $($healthStatus.activePipelines)/$($healthStatus.totalPipelines)" -ForegroundColor Gray
     }
     
     Write-Host ""
@@ -135,7 +149,7 @@ do {
         Start-Sleep -Seconds 5
         Clear-Host
         Write-Host "========================================" -ForegroundColor Cyan
-        Write-Host "    CamBridge API Test Suite" -ForegroundColor Cyan
+        Write-Host "    CamBridge API Test Suite v0.7.17" -ForegroundColor Cyan
         Write-Host "========================================" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "Base URL: $BaseUrl" -ForegroundColor Gray
@@ -151,10 +165,19 @@ do {
 # Summary
 if (-not $Continuous) {
     Write-Host ""
+    Write-Host "Available Endpoints:" -ForegroundColor Yellow
+    Write-Host "  /health                - Basic health check" -ForegroundColor Gray
+    Write-Host "  /api/status            - Full service status" -ForegroundColor Gray
+    Write-Host "  /api/status/version    - Version info only" -ForegroundColor Gray
+    Write-Host "  /api/status/health     - Health with pipeline info" -ForegroundColor Gray
+    Write-Host "  /api/pipelines         - All pipeline statuses" -ForegroundColor Gray
+    Write-Host "  /api/pipelines/{id}    - Specific pipeline details" -ForegroundColor Gray
+    Write-Host ""
     Write-Host "Troubleshooting:" -ForegroundColor Yellow
     Write-Host "  1. Check service status: Get-Service CamBridgeService" -ForegroundColor Gray
     Write-Host "  2. Test port manually: Test-NetConnection localhost -Port 5111" -ForegroundColor Gray
     Write-Host "  3. Check service logs: 6[TAB] (or .\6-logs.ps1)" -ForegroundColor Gray
+    Write-Host "  4. Run in console mode: 4[TAB] (or .\4-console.ps1)" -ForegroundColor Gray
     Write-Host ""
     Write-Host "Quick Commands:" -ForegroundColor Yellow
     Write-Host '  $status = Invoke-RestMethod "http://localhost:5111/api/status"' -ForegroundColor Gray

@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/ServiceCollectionExtensions.cs
-// Version: 0.7.8
-// Description: Extension methods for configuring infrastructure services - KISS approach
+// Version: 0.7.17
+// Description: Extension methods for configuring infrastructure services - WITH ENUM VALIDATION!
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -20,6 +20,7 @@ namespace CamBridge.Infrastructure
     /// <summary>
     /// Extension methods for configuring infrastructure services
     /// KISS UPDATE: Removed DeadLetterQueue completely!
+    /// v0.7.17: Added enum validation!
     /// </summary>
     public static class ServiceCollectionExtensions
     {
@@ -61,6 +62,9 @@ namespace CamBridge.Infrastructure
             services.Configure<CamBridgeSettingsV2>(configuration.GetSection("CamBridge")); // New V2 settings
             services.Configure<ProcessingOptions>(configuration.GetSection("CamBridge:ProcessingOptions"));
             // Note: NotificationSettings removed - we just log now (KISS!)
+
+            // NEW in v0.7.17: Add validation for the settings!
+            services.AddSingleton<IPostConfigureOptions<CamBridgeSettingsV2>, CamBridgeSettingsV2Validator>();
 
             // Settings migration helper
             services.AddSingleton<IPostConfigureOptions<CamBridgeSettingsV2>, CamBridgeSettingsV2PostConfigure>();
@@ -153,6 +157,68 @@ namespace CamBridge.Infrastructure
             }
 
             return provider;
+        }
+
+        /// <summary>
+        /// NEW in v0.7.17: Validates enum values in settings
+        /// </summary>
+        private class CamBridgeSettingsV2Validator : IPostConfigureOptions<CamBridgeSettingsV2>
+        {
+            private readonly ILogger<CamBridgeSettingsV2Validator> _logger;
+
+            public CamBridgeSettingsV2Validator(ILogger<CamBridgeSettingsV2Validator> logger)
+            {
+                _logger = logger;
+            }
+
+            public void PostConfigure(string? name, CamBridgeSettingsV2 options)
+            {
+                _logger.LogInformation("Validating CamBridge settings...");
+
+                // Validate each pipeline
+                foreach (var pipeline in options.Pipelines)
+                {
+                    if (pipeline.ProcessingOptions != null)
+                    {
+                        // Validate OutputOrganization
+                        if (!Enum.IsDefined(typeof(OutputOrganization), pipeline.ProcessingOptions.OutputOrganization))
+                        {
+                            var validValues = string.Join(", ", Enum.GetNames(typeof(OutputOrganization)));
+                            var error = $"Pipeline '{pipeline.Name}' has invalid OutputOrganization value. " +
+                                       $"Valid values are: {validValues}. " +
+                                       $"Check your configuration file!";
+
+                            _logger.LogError(error);
+                            throw new InvalidOperationException(error);
+                        }
+
+                        // Validate PostProcessingActions
+                        if (!Enum.IsDefined(typeof(PostProcessingAction), pipeline.ProcessingOptions.SuccessAction))
+                        {
+                            var validValues = string.Join(", ", Enum.GetNames(typeof(PostProcessingAction)));
+                            var error = $"Pipeline '{pipeline.Name}' has invalid SuccessAction value. " +
+                                       $"Valid values are: {validValues}";
+
+                            _logger.LogError(error);
+                            throw new InvalidOperationException(error);
+                        }
+
+                        if (!Enum.IsDefined(typeof(PostProcessingAction), pipeline.ProcessingOptions.FailureAction))
+                        {
+                            var validValues = string.Join(", ", Enum.GetNames(typeof(PostProcessingAction)));
+                            var error = $"Pipeline '{pipeline.Name}' has invalid FailureAction value. " +
+                                       $"Valid values are: {validValues}";
+
+                            _logger.LogError(error);
+                            throw new InvalidOperationException(error);
+                        }
+
+                        _logger.LogInformation("Pipeline '{Pipeline}' configuration validated successfully", pipeline.Name);
+                    }
+                }
+
+                _logger.LogInformation("All pipeline configurations validated successfully");
+            }
         }
 
         /// <summary>

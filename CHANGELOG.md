@@ -6,6 +6,177 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# CHANGELOG
+
+All notable changes to CamBridge will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.7.17] - 2025-06-15
+### Added
+- Enum validation for OutputOrganization in ConfigurationService
+- Clear error messages for invalid enum values
+- Better error message for missing CamBridge wrapper
+- ValidateEnumValues method for post-deserialization validation
+- API endpoint `/api/status/version` for simple version check
+- API endpoint `/api/status/health` for service health status
+
+### Fixed
+- Discovered InitializePrimaryConfig was already complete (not cut off as thought)
+- Wrapper validation was already implemented in ConfigurationService
+
+### Changed
+- Updated InformationalVersion to "0.7.17 - Config Validation & Sprint 9 Complete"
+- Improved config loading error handling with specific enum error messages
+- Added JsonStringEnumConverter to handle enum parsing
+- Program.cs now has 4 of 5 planned API endpoints
+
+### Technical
+- Session 66: Sprint 9 complete
+- All Priority 1 tasks from sprint backlog done
+- Config system now robust against invalid enum values
+- Prepared for Sprint 10 (Interface Removal)
+
+## [0.7.16] - 2025-06-15
+### Added
+- Dynamic version reading from assembly metadata
+- Console mode support for debugging (4[TAB])
+- Separate pipeline configurations for Radiology and Emergency
+- ExifTool timeout handling (30 seconds)
+
+### Fixed
+- ServiceInfo.cs no longer has hardcoded version
+- ExifTool process deadlock issue resolved
+- UTF-8 encoding for ExifTool output
+- Removed Development.json dependency
+
+### Changed
+- Version now reads from FileVersionInfo dynamically
+- Company name also reads from assembly metadata
+- Improved error handling in ExifToolReader
+
+### Technical
+- Session 64-65: Core functionality tested and working
+- JPEG to DICOM conversion confirmed functional
+- 3 test images successfully processed
+
+## [0.7.15] - 2025-06-14
+### Fixed
+- Pipeline configuration output paths
+- Service startup sequence
+- Config tool pipeline management
+
+### Added
+- Better error messages for pipeline failures
+- Pipeline status monitoring in dashboard
+
+## [0.7.14] - 2025-06-14
+### Fixed
+- Dashboard data loading (port mismatch 5050 → 5111)
+- InitializePrimaryConfig now creates complete V2 format config
+- OutputOrganization enum values in default config
+
+### Changed
+- All port references unified to 5111
+- Improved config initialization
+
+## [0.7.13] - 2025-06-14
+### Fixed
+- App.xaml.cs missing Host property (fixes 144 build errors)
+- ConfigurationService wrapper validation
+
+### Added
+- Clear error message when CamBridge wrapper is missing
+- Config backup before saving
+
+## [0.7.12] - 2025-06-13
+### Changed
+- Removed Dead Letter Queue system (-650 LOC)
+- Simplified to basic error folder approach
+- Removed IFileProcessor and IProcessingQueue interfaces
+
+### Technical
+- Major complexity reduction
+- KISS principle applied
+
+## [0.7.11] - 2025-06-13
+### Added
+- Dashboard page implementation
+- Service control buttons
+- Pipeline status display
+- Auto-refresh functionality (5 seconds)
+
+### Fixed
+- Navigation between pages
+- Service status API endpoint
+
+## [0.7.10] - 2025-06-12
+### Added
+- WPF Config Tool initial implementation
+- MVVM architecture with Toolkit
+- ModernWpfUI styling
+- Main navigation structure
+
+### Changed
+- Simplified configuration service
+- Removed V1 config support in GUI
+
+## [0.7.0] - 2025-06-10
+### Added
+- V2 configuration format with pipeline architecture
+- Multiple pipeline support
+- Mapping sets functionality
+- Pipeline-specific DICOM overrides
+
+### Changed
+- Complete configuration system overhaul
+- Migration from V1 to V2 format
+- Centralized configuration management
+
+### Breaking Changes
+- V1 configuration format deprecated
+- New CamBridge wrapper required in config
+
+## [0.6.5] - 2025-06-08
+### Added
+- Basic pipeline processing
+- EXIF to DICOM conversion
+- QRBridge integration
+- Folder watching service
+
+### Fixed
+- ExifTool path resolution
+- DICOM tag mapping
+
+## [0.6.0] - 2025-06-05
+### Added
+- Initial Windows Service implementation
+- Basic API endpoints
+- Channel-based file processing
+- Infrastructure foundation
+
+### Technical
+- fo-dicom integration
+- Serilog logging
+- ASP.NET Core Minimal API
+
+## [0.5.0] - 2025-06-01
+### Added
+- Project structure
+- Core domain models
+- Basic interfaces (pre-removal campaign)
+
+### Technical
+- Initial architecture (over-engineered)
+- 12+ interfaces created
+- Clean Architecture attempt
+
+---
+
+*For current version information, see Version.props*
+*For development history, see WISDOM_CLAUDE.md*
+
 ## Version 0.7.16 - Dynamic Version Reading
 **Date**: 2025-06-15  
 **Sessions**: 64-65  
