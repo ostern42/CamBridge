@@ -1,7 +1,7 @@
-﻿// src/CamBridge.Infrastructure/Services/NotificationService.cs
-// Version: 0.7.9
-// Description: Ultra-minimal notification service - KISS approach!
-// Copyright:  2025 Claude's Improbably Reliable Software Solutions
+// src/CamBridge.Infrastructure/Services/NotificationService.cs
+// Version: 0.7.18
+// Description: Ultra-minimal notification service - KISS approach without interface!
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Linq;
@@ -13,9 +13,10 @@ namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
     /// Ultra-minimal notification service - just logs!
-    /// KISS: No email implementation at all
+    /// KISS: No email implementation, no interface!
+    /// v0.7.18: Direct dependency pattern
     /// </summary>
-    public class NotificationService : INotificationService
+    public class NotificationService // No more interface!
     {
         private readonly ILogger<NotificationService> _logger;
 
@@ -40,7 +41,7 @@ namespace CamBridge.Infrastructure.Services
 
             if (summary.TopErrors != null && summary.TopErrors.Count > 0)
             {
-                _logger.LogInformation("Top Errors: {Errors}", 
+                _logger.LogInformation("Top Errors: {Errors}",
                     string.Join(", ", summary.TopErrors.Select(e => $"{e.Key}: {e.Value}")));
             }
         }

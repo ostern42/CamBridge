@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.7.16
+# // Version: 0.7.17
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 270
-# Generated: 2025-06-15 12:40
+# Total files: 276
+# Generated: 2025-06-16 12:39
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -162,6 +162,7 @@ src\CamBridge.QRBridge\Services\QRCodeService.cs
 src\CamBridge.Service\appsettings.json
 src\CamBridge.Service\CamBridge.Service.csproj
 src\CamBridge.Service\CamBridgeHealthCheck.cs
+src\CamBridge.Service\ConfigValidator.cs
 src\CamBridge.Service\Controllers\StatusController.cs
 src\CamBridge.Service\DailySummaryService.cs
 src\CamBridge.Service\mappings.json
@@ -225,6 +226,7 @@ _archive\old_docs\cambridge-entwicklungsplan-v2.md
 _archive\README_ARCHIVE.md
 00-build-zip.ps1
 0-build.ps1
+0-build-no-qr.ps1
 1-deploy-update.ps1
 2-config.ps1
 3-service.ps1
@@ -248,6 +250,7 @@ CHANGELOG.md
 Cleanup-DeadLetter.ps1
 COLLECTOR_README.md
 config-analysis.txt
+config-sprint-sources.txt
 ConnectionTest\ConnectionTest.cs
 ConnectionTest\ConnectionTest.csproj
 Create-DeploymentPackage - 250609.ps1
@@ -275,11 +278,14 @@ Get-WisdomSources - Kopie.ps1
 Get-WisdomSources.ps1
 h-help.ps1
 Migrate-CamBridgeConfig.ps1
+pipeline-config.txt
 Program.cs
+program-source.txt
 PROJECT_WISDOM.md
 qrbridge-constants.txt
 README.md
 README-Deployment.md
+service-extensions.txt
 service-manager.ps1
 ShowVersion.targets
 test-api.ps1

@@ -1,3 +1,8 @@
+// src/CamBridge.Service/DailySummaryService.cs
+// Version: 0.7.18
+// Description: Daily summary background service - using direct dependencies!
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,19 +16,20 @@ namespace CamBridge.Service
 {
     /// <summary>
     /// Background service that sends daily summaries
+    /// v0.7.18: Using NotificationService directly - no interface!
     /// </summary>
     public class DailySummaryService : BackgroundService
     {
         private readonly ILogger<DailySummaryService> _logger;
         private readonly ProcessingQueue _processingQueue;
-        private readonly INotificationService _notificationService;
+        private readonly NotificationService _notificationService; // Direct dependency!
         private readonly NotificationSettings _settings;
         private Timer? _timer;
 
         public DailySummaryService(
             ILogger<DailySummaryService> logger,
             ProcessingQueue processingQueue,
-            INotificationService notificationService,
+            NotificationService notificationService, // Changed from INotificationService
             IOptions<NotificationSettings> settings)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

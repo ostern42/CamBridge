@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/ServiceCollectionExtensions.cs
-// Version: 0.7.17
-// Description: Extension methods for configuring infrastructure services - WITH ENUM VALIDATION!
+// Version: 0.7.18
+// Description: Extension methods for configuring infrastructure services - NO MORE INTERFACES!
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -19,8 +19,8 @@ namespace CamBridge.Infrastructure
 {
     /// <summary>
     /// Extension methods for configuring infrastructure services
-    /// KISS UPDATE: Removed DeadLetterQueue completely!
-    /// v0.7.17: Added enum validation!
+    /// KISS UPDATE: Direct dependencies everywhere!
+    /// v0.7.18: Removed INotificationService interface!
     /// </summary>
     public static class ServiceCollectionExtensions
     {
@@ -50,8 +50,8 @@ namespace CamBridge.Infrastructure
             // Mapping Services
             services.AddSingleton<IDicomTagMapper, DicomTagMapper>();
 
-            // Notification Services (ultra-minimal implementation - just logging!)
-            services.AddSingleton<INotificationService, NotificationService>();
+            // Notification Services - Direct registration! No interface!
+            services.AddSingleton<NotificationService>(); // v0.7.18: KISS wins again!
 
             // Note: ProcessingQueue is now created per-pipeline by PipelineManager
             // Note: DeadLetterQueue is REMOVED - Simple error folder approach!
@@ -108,7 +108,8 @@ namespace CamBridge.Infrastructure
                     typeof(ExifToolReader),  // Direct type, no interface!
                     typeof(FileProcessor),   // KISS: Direct type!
                     typeof(DicomConverter),  // KISS: Direct type!
-                    typeof(PipelineManager)  // New orchestrator
+                    typeof(PipelineManager), // New orchestrator
+                    typeof(NotificationService) // v0.7.18: Direct type!
                 };
 
                 foreach (var serviceType in criticalServices)
@@ -137,6 +138,10 @@ namespace CamBridge.Infrastructure
                 var pipelineManager = provider.GetRequiredService<PipelineManager>();
                 logger.LogInformation("Pipeline Manager validated - ready for multi-pipeline processing");
 
+                // Validate NotificationService (v0.7.18: Direct reference!)
+                var notificationService = provider.GetRequiredService<NotificationService>();
+                logger.LogInformation("NotificationService validated - Direct dependency, no interface!");
+
                 // Validate settings
                 var settingsV2 = provider.GetRequiredService<IOptions<CamBridgeSettingsV2>>();
                 if (settingsV2.Value.Pipelines.Count == 0)
@@ -148,7 +153,7 @@ namespace CamBridge.Infrastructure
                     logger.LogInformation("Found {Count} configured pipelines", settingsV2.Value.Pipelines.Count);
                 }
 
-                logger.LogInformation("Infrastructure validation completed - KISS approach: DeadLetterQueue eliminated! -650 LOC removed!");
+                logger.LogInformation("Infrastructure validation completed - KISS approach: Direct dependencies everywhere!");
             }
             catch (Exception ex)
             {

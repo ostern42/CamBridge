@@ -1,8 +1,8 @@
 # WISDOM_META.md - CamBridge Master Reference
-**Version**: 0.7.17  
-**Last Update**: 2025-06-15 12:30  
+**Version**: 0.7.18  
+**Last Update**: 2025-06-16 18:42  
 **Purpose**: Consolidated technical & operational wisdom with complete code map  
-**Philosophy**: Sources First, KISS, Tab-Complete Everything
+**Philosophy**: Sources First, KISS, Tab-Complete Everything, Direct Dependencies
 
 ## 🚀 QUICK REFERENCE
 
@@ -13,7 +13,8 @@ Service Name: CamBridgeService (no space!)
 Config Path: %ProgramData%\CamBridge\appsettings.json
 Config Format: V2 with CamBridge wrapper (MANDATORY!)
 Output Org Values: [None, ByPatient, ByDate, ByPatientAndDate]
-Version: Now dynamic from assembly (never hardcode!)
+Version: 0.7.18 (dynamically read from assembly!)
+Interfaces: Only 2 remain! (was 8+)
 ```
 
 ### Essential Commands
@@ -30,18 +31,20 @@ Get-Service CamBridgeService
 Stop-Service CamBridgeService -Force
 Start-Service CamBridgeService
 
-# API Testing (v0.7.17)
+# API Testing (v0.7.18)
 Invoke-RestMethod "http://localhost:5111/api/status"
 Invoke-RestMethod "http://localhost:5111/api/pipelines"
+Invoke-RestMethod "http://localhost:5111/api/status/version"
+Invoke-RestMethod "http://localhost:5111/api/status/health"
 
 # Config Validation
 .\Debug-CamBridgeJson.ps1
 
-# Version Check (should show 0.7.17)
+# Version Check (should show 0.7.18)
 (Invoke-RestMethod "http://localhost:5111/api/status").version
 ```
 
-## 🗺️ COMPLETE CODE MAP v2.2
+## 🗺️ COMPLETE CODE MAP v2.3
 
 ### System Overview
 ```
@@ -108,18 +111,28 @@ ProcessingOptions.cs [v0.7.17 - With enum validation!]
 ```yaml
 PatientInfo.cs
   - Id: PatientId
-  - Name: PatientName
+  - Name: string
   - BirthDate: DateTime?
-  - Gender: Gender?
-  - AdditionalInfo: Dictionary<string,string>
+  - Gender: Gender (enum: Male, Female, Other)
+  - FromExifData(): Static factory method
 
 StudyInfo.cs  
-  - Id: StudyId
-  - PatientId: PatientId
+  - StudyId: StudyId
+  - ExamId: string?
+  - Description: string? [NOT StudyDescription!]
+  - StudyDate: DateTime
   - AccessionNumber: string?
-  - StudyDate: DateTime?
-  - StudyDescription: string?
   - ReferringPhysician: string?
+
+ImageMetadata.cs
+  - SourceFilePath: string
+  - CaptureDateTime: DateTime
+  - Patient: PatientInfo
+  - Study: StudyInfo
+  - TechnicalData: ImageTechnicalData
+  - ExifData: Dictionary<string,string>
+  - InstanceNumber: int
+  [NO CameraInfo or OriginalFilename properties!]
 
 ProcessedImage.cs
   - Id: Guid
@@ -136,20 +149,30 @@ PatientId.cs: string wrapper with validation
 StudyId.cs: string wrapper with validation
 DicomUid.cs: string wrapper with UID validation
 PatientName.cs: FirstName, LastName, MiddleName
-Gender.cs: enum [Male, Female, Other, Unknown]
+Gender.cs: DOES NOT EXIST - Gender is enum in PatientInfo!
 ImageDimensions.cs: Width, Height, BitsPerPixel
 ```
 
-#### Interfaces (8 remaining → target: 4)
+#### Interfaces (Only 2 remaining! 🎉)
 ```yaml
-IExifReader.cs [TARGET: Remove in v0.8.0]
-IDicomConverter.cs [TARGET: Remove in v0.8.0]
-IFileProcessor.cs [REMOVED in v0.7.8] ✅
-IFolderWatcher.cs [TARGET: Remove in v0.8.0]
 IMappingConfiguration.cs [KEEP - for now]
-INotificationService.cs [TARGET: Remove in v0.8.0]
+  - GetMappingRules(): IReadOnlyList<MappingRule> [NOT async!]
+  - LoadConfigurationAsync(string?): Task<bool>
+  - SaveConfigurationAsync(rules, path): Task<bool>
+
+IDicomTagMapper.cs [KEEP - for now]
+  - ApplyTransform(value, transform): string?
+  - MapToDataset(dataset, sourceData, rules): void [NOT MapMetadataToDicom!]
+
+REMOVED in v0.7.18:
+IDicomConverter.cs [REMOVED - direct DicomConverter] ✅
+
+REMOVED in earlier versions:
+IExifReader.cs [REMOVED - direct ExifToolReader] ✅
+IFolderWatcher.cs [REMOVED - direct FolderWatcherService] ✅
+IFileProcessor.cs [REMOVED in v0.7.8] ✅
 IProcessingQueue.cs [REMOVED in v0.7.8] ✅
-IQueueProcessor.cs [TARGET: Remove in v0.8.0]
+IQueueProcessor.cs [REMOVED] ✅
 ```
 
 ### 📁 CAMBRIDGE.INFRASTRUCTURE - Complete File List
@@ -163,17 +186,18 @@ ExifToolReader.cs ⭐ [NO INTERFACE - KISS!]
   - ParseQRBridgeData(barcodeData): Dictionary<string,string>
   - FindExifTool(): string?
 
-DicomConverter.cs ⭐ [NO INTERFACE - Direct use]
-  - ConvertJpegToDicomAsync(jpeg, patient, study, output): Task<ProcessedImage>
-  - CreateDicomDataset(jpeg, patient, study, exif): DicomDataset
-  - AddPatientModule(dataset, patient): void
-  - AddStudyModule(dataset, study): void
-  - AddImageModule(dataset, dimensions, exif): void
+DicomConverter.cs ⭐ [NO INTERFACE - Direct use - v0.7.18!]
+  - ConvertToDicomAsync(jpeg, dicom, metadata): Task<ConversionResult>
+  - ValidateDicomFileAsync(path): Task<ValidationResult>
+  - GetPhotographicSopClassUid(): string
+  - ConversionResult class (moved here in v0.7.18)
+  - ValidationResult class (moved here in v0.7.18)
 
 FileProcessor.cs [NO INTERFACE - Event-driven]
-  - ProcessFileAsync(inputPath, outputPath): Task<ProcessedImage>
+  - ProcessFileAsync(inputPath): Task<FileProcessingResult>
+  - ShouldProcessFile(path): bool
   - ValidateInputFile(path): void
-  - DetermineOutputPath(input, output, patient, study): string
+  - DetermineOutputPath(metadata, source): string
   - HandleProcessingSuccess(input, output, options): Task
   - HandleProcessingFailure(input, error, options): Task
   - Events: ProcessingStarted, ProcessingCompleted, ProcessingFailed
@@ -186,23 +210,19 @@ PipelineManager.cs ⭐⭐ [ORCHESTRATOR - Heart of the system]
   - UpdatePipelinesAsync(configs): Task
   - GetPipelineStatuses(): Dictionary<string, PipelineStatus>
   - GetPipelineDetails(id): PipelineDetailedStatus?
-  Private:
-  - CreatePipelineContext(config): PipelineContext
-  - StartPipelineAsync(context): Task
-  - StopPipelineAsync(context): Task
 ```
 
 #### Supporting Services
 ```yaml
-MappingConfigurationLoader.cs
+MappingConfigurationLoader.cs [Implements IMappingConfiguration]
   - GetMappingRules(): IReadOnlyList<MappingRule>
   - LoadConfigurationAsync(filePath?): Task<bool>
   - SaveConfigurationAsync(rules, filePath?): Task<bool>
   - LoadDefaultMappings(): void
 
-DicomTagMapper.cs
-  - MapExifToDicom(exifData, mappingRules): Dictionary<DicomTag, object>
-  - ApplyMapping(rule, value): object?
+DicomTagMapper.cs [Implements IDicomTagMapper]
+  - ApplyTransform(value, transform): string?
+  - MapToDataset(dataset, sourceData, rules): void
   - GetDicomTag(tagString): DicomTag?
 
 ProcessingQueue.cs [Channel-based processing]
@@ -211,20 +231,27 @@ ProcessingQueue.cs [Channel-based processing]
   - ActiveProcessing: int
   - GetStatistics(): QueueStatistics
   - GetActiveItems(): List<ProcessingItemStatus>
-  Private:
-  - ProcessQueueAsync(): Task
-  - ProcessItemAsync(item): Task
 
-FolderWatcherService.cs
+FolderWatcherService.cs [NO INTERFACE!]
   - WatchFolder: string
   - FileDetected: event EventHandler<string>
   - Start(): void
   - Stop(): void
 
-ServiceCollectionExtensions.cs
+NotificationService.cs [NO INTERFACE - v0.7.18!]
+  - SendDailySummaryAsync(summary): Task
+  - NotifyErrorAsync(message, exception?): Task
+  [Just logs - no email implementation!]
+
+ServiceCollectionExtensions.cs [Updated v0.7.18]
   - AddInfrastructure(services, config): IServiceCollection
-  - AddInfrastructureForConfig(services): IServiceCollection
-  - ValidateInfrastructure(provider): IServiceProvider
+  - Direct registrations: NotificationService, DicomConverter!
+  - No more interface registrations for removed interfaces
+```
+
+#### REMOVED Services
+```yaml
+INotificationService.cs [REMOVED in v0.7.18] ✅
 ```
 
 ### 📁 CAMBRIDGE.SERVICE - Complete File List
@@ -232,18 +259,18 @@ ServiceCollectionExtensions.cs
 ```yaml
 Program.cs ⭐ [Entry Point - Uses dynamic version]
   - Main(): creates WebApplication
-  - ConfigureServices(): DI setup (no interfaces!)
+  - ConfigureServices(): DI setup (direct dependencies!)
   - ConfigureEndpoints(): Minimal API
   - Port: 5111 (hardcoded - OK!)
-  API Endpoints (v0.7.17):
+  API Endpoints (v0.7.18):
     GET /api/status ✅
     GET /api/pipelines ✅
-    GET /api/status/version ✅ (NEW!)
-    GET /api/status/health ✅ (NEW!)
+    GET /api/status/version ✅
+    GET /api/status/health ✅
     GET /api/statistics ❌ (404)
 
 ServiceInfo.cs ⭐ [FIXED in v0.7.16!]
-  - Version: string (now dynamic from assembly!)
+  - Version: string (dynamic from assembly!)
   - ServiceName: "CamBridgeService"
   - DisplayName: "CamBridge Medical Image Converter"
   - ApiPort: 5111
@@ -256,6 +283,16 @@ Worker.cs [Background Service]
   Dependencies:
     - PipelineManager (direct, no interface)
     - IConfiguration
+
+CamBridgeHealthCheck.cs [v0.7.18 - Direct NotificationService!]
+  - CheckHealthAsync(): Task<HealthCheckResult>
+  - Uses PipelineManager for status
+  - Uses NotificationService directly (no interface)
+
+DailySummaryService.cs [v0.7.18 - Direct NotificationService!]
+  - Background service for daily summaries
+  - Uses NotificationService directly (no interface)
+  - Configurable schedule
 
 appsettings.json [Local config - not primary!]
   - Serilog configuration only
@@ -374,8 +411,21 @@ MappingRulePage.xaml [DICOM Mapping]
   - EXIF → DICOM mapping
   - Import/Export buttons
 
-ServiceSettingsPage.xaml [REMOVED in v0.7.x] ✅
-LogViewerPage.xaml [Future - not implemented]
+ServiceControlPage.xaml [Service Management]
+  - Service status display
+  - Start/Stop/Restart buttons
+  - Event log viewer
+  - Quick actions
+
+DeadLettersPage.xaml [Error Management]
+  - Simple error folder viewer
+  - No complex queue UI
+  - Windows Explorer integration
+
+AboutPage.xaml [Info & Easter Eggs]
+  - Version info
+  - Vogon Poetry easter egg
+  - Company info
 ```
 
 ### 📁 CAMBRIDGE.QRBRIDGE - Companion Tool
@@ -410,9 +460,7 @@ CamBridge.QRBridge.exe -name "Last, First" -birthdate "1990-01-01" -gender "M" -
 ```yaml
 Still Present but Unused:
 - V1 Config classes & migration
-- Some interface definitions in Core
-- DeadLetterQueue references (partial)
-- NotificationService (partial)
+- Some interface definitions in Core (2 remain)
 - Several [Obsolete] methods
 - 144 build warnings
 
@@ -423,17 +471,21 @@ Successfully Removed:
 - Settings page from Config Tool ✅
 - IFileProcessor interface ✅
 - IProcessingQueue interface ✅
+- IExifReader interface ✅ (v0.7.18)
+- IFolderWatcher interface ✅ (v0.7.18)
+- IDicomConverter interface ✅ (v0.7.18)
+- INotificationService interface ✅ (v0.7.18)
 ```
 
 ### 🔒 PROTECTED FEATURES [DO NOT IMPLEMENT YET!]
 
 ```yaml
 Protected for Future Sprints:
-- FTP Server (Sprint 10)
-- C-STORE SCP (Sprint 11)  
-- Modality Worklist (Sprint 12)
-- C-FIND SCP (Sprint 13)
-- HL7 Integration (Sprint 14)
+- FTP Server (Sprint 12)
+- C-STORE SCP (Sprint 13)  
+- Modality Worklist (Sprint 14)
+- C-FIND SCP (Sprint 15)
+- HL7 Integration (Sprint 16)
 
 WHY PROTECTED:
 - Avoid scope creep
@@ -503,7 +555,7 @@ public const string Version = "0.7.9";
 // NEW (dynamic - good!)
 public static string Version => 
     FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
-        .FileVersion?.TrimEnd(".0") ?? "0.7.17";
+        .FileVersion?.TrimEnd(".0") ?? "0.7.18";
 ```
 
 ### 6. InitializePrimaryConfig (Was never broken!)
@@ -512,6 +564,16 @@ Problem: Thought method was incomplete
 Reality: Method was complete all along
 Learning: Check sources thoroughly!
 Status: Working perfectly ✅
+```
+
+### 7. Direct Dependencies (NEW in v0.7.18!)
+```yaml
+Problem: Too many interfaces
+Solution: Direct class registration
+Impact: Simpler, clearer code
+Example:
+  OLD: services.AddSingleton<INotificationService, NotificationService>();
+  NEW: services.AddSingleton<NotificationService>();
 ```
 
 ## 🛠️ STANDARD WORKFLOWS
@@ -590,7 +652,7 @@ public class ExifToolReader : IExifReader { }
 public class MockExifReader : IExifReader { }  // Never used!
 services.AddSingleton<IExifReader, ExifToolReader>();
 
-// After (simple) - Session 50+
+// After (simple) - Session 50+, perfected in 67
 public class ExifToolReader { }
 services.AddSingleton<ExifToolReader>();
 // Mock? Just use the real thing or don't test it!
@@ -647,6 +709,18 @@ Result:
 - Users understand folders
 ```
 
+### Why Direct Dependencies? (v0.7.18)
+```yaml
+Original: 8+ interfaces
+Reality: Single implementations only
+Benefit:
+- Less code
+- Clearer dependencies
+- No mocking needed
+- Easier to understand
+Result: 2 interfaces remain (75% reduction!)
+```
+
 ## 📚 KEY LEARNINGS CRYSTALLIZED
 
 ### Technical Wisdoms
@@ -655,9 +729,10 @@ Result:
 3. **Constants everywhere** - One source of truth prevents hours of debugging
 4. **Tab-complete everything** - Developer efficiency matters
 5. **Working > Perfect** - Ship it, then improve it
+6. **Direct > Abstract** - Interfaces without multiple implementations = delete
 
 ### Process Wisdoms  
-1. **Sources First** - Always check what exists before coding
+1. **Sources First** - Always check what exists before coding (even if I forget)
 2. **User knows best** - Oliver's ideas consistently better than mine
 3. **Small fixes matter** - One line can fix 144 errors
 4. **Document decisively** - Future you will thank current you
@@ -679,23 +754,24 @@ Result:
 
 ## 🎯 CURRENT STATE & PRIORITIES
 
-### Complete (v0.7.17) ✅
+### Complete (v0.7.18) ✅
 ```yaml
-Sprint 9 Done:
-✅ InitializePrimaryConfig() - was already complete!
-✅ Enum validation for OutputOrganization
-✅ Clear error message for missing wrapper
-✅ "Ermergency" typo fixed (by you)
-✅ Config system now robust
+Sprint 10 Done:
+✅ Removed IDicomConverter interface (unused)
+✅ Removed INotificationService interface  
+✅ Direct dependency pattern everywhere
+✅ ConversionResult/ValidationResult moved to DicomConverter
+✅ All services updated to use direct dependencies
+✅ Interface count: 8 → 2 (75% reduction!)
 
-Session 66 Achievements:
-✅ Discovered much was already done
-✅ Added missing enum validation
-✅ Version updated to 0.7.17
-✅ Documentation current
+Session 67 Achievements:
+✅ KISS principle fully applied
+✅ Simpler, clearer code
+✅ Version updated to 0.7.18
+✅ Sprint completed (with Sources First lesson)
 ```
 
-### Immediate (v0.7.18)
+### Immediate (v0.7.19)
 ```yaml
 Nice to Have:
 1. Implement missing API endpoints
@@ -705,12 +781,11 @@ Nice to Have:
 
 ### Short Term (v0.8.0)
 ```yaml
-Interface Removal Sprint:
-1. Remove IExifReader
-2. Remove IDicomConverter
-3. Remove IFolderWatcher
-4. Remove INotificationService
-Target: 8 → 4 interfaces
+Remaining Interface Analysis:
+1. Evaluate IMappingConfiguration
+2. Evaluate IDicomTagMapper
+3. Consider direct dependencies?
+Target: 2 → 0 interfaces?
 ```
 
 ### Medium Term (v0.9.0)
@@ -809,16 +884,17 @@ Write-Host "Building version $($version.InnerText)"
 ## 📊 PROJECT METRICS
 
 ```yaml
-Current Version: 0.7.17
+Current Version: 0.7.18
 Total LOC: 14,350+
 Written By: Claude (100%)
 Deleted: 650+ LOC
-Interfaces: 8 (target: 4)
+Interfaces: 2 (from 8 → massive reduction!)
 Warnings: 144 (target: <50)
 Working Features: Core pipeline processing
 API Endpoints: 4/5 implemented
 Test Coverage: Manual only
 Documentation: Wisdom files + code comments
+Architecture: Direct dependencies everywhere!
 ```
 
 ## 🎉 SUCCESS CRITERIA
@@ -833,6 +909,7 @@ Documentation: Wisdom files + code comments
 - [x] Core conversion tested & working
 - [x] All enums validate properly
 - [x] Config errors are clear
+- [x] Direct dependencies implemented
 
 ### Production Ready When:
 - [x] Zero crashes on bad input (enum validation added!)
@@ -844,6 +921,6 @@ Documentation: Wisdom files + code comments
 
 ---
 
-*"Making the improbable reliably simple - one tab-complete at a time!"*
+*"Making the improbable reliably simple - one deleted interface at a time!"*
 
-*Master reference for CamBridge v0.7.17 - Config validation complete!*
+*Master reference for CamBridge v0.7.18 - Direct dependencies everywhere!*

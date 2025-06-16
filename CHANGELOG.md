@@ -6,12 +6,52 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# CHANGELOG
+[0.7.18] - 2025-06-16
+Removed
 
-All notable changes to CamBridge will be documented in this file.
+IDicomConverter interface - Not used anywhere, direct DicomConverter usage
+INotificationService interface - Direct NotificationService registration (KISS)
+IExifReader interface - Already removed in previous version (discovered)
+IFolderWatcher interface - Already removed in previous version (discovered)
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Changed
+
+ServiceCollectionExtensions now registers NotificationService directly
+NotificationService no longer implements interface
+DicomConverter no longer implements interface
+CamBridgeHealthCheck uses NotificationService directly
+DailySummaryService uses NotificationService directly
+Updated InformationalVersion to "0.7.18 - Sprint 10: Interface Removal Complete"
+Infrastructure validation updated to check direct types
+
+Added
+
+ConversionResult class moved to DicomConverter.cs
+ValidationResult class moved to DicomConverter.cs
+
+Fixed
+
+DicomConverter now uses real properties from ImageMetadata and StudyInfo
+Fixed interface method signatures based on actual sources
+Gender is correctly handled as non-nullable enum
+
+Technical
+
+Session 67: Sprint 10 complete (45 minutes including Sources First lesson)
+Interface count reduced from 8 claimed to actual 2 remaining
+Only IMappingConfiguration and IDicomTagMapper remain (for now)
+Direct dependency pattern proven successful
+Code is simpler and clearer without unnecessary abstractions
+Learned hard lesson about checking sources before creating artifacts
+
+Developer Notes
+
+Half the interface removal work was already done in previous sessions
+KISS principle wins again - direct dependencies are simpler
+NotificationService just logs anyway - perfect for direct use
+Made significant mistakes by not checking sources first
+Fixed DicomConverter with real properties after getting actual sources
+Next sprint: Consider removing remaining 2 interfaces
 
 ## [0.7.17] - 2025-06-15
 ### Added

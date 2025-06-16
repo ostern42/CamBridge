@@ -1,6 +1,6 @@
 // src/CamBridge.Service/CamBridgeHealthCheck.cs
-// Version: 0.7.0
-// Description: Health check implementation using PipelineManager instead of ProcessingQueue
+// Version: 0.7.18
+// Description: Health check implementation using PipelineManager and direct NotificationService
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using CamBridge.Core.Interfaces;
 using CamBridge.Infrastructure.Services;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -18,17 +17,18 @@ namespace CamBridge.Service
     /// <summary>
     /// Health check for CamBridge service
     /// KISS UPDATE: Now uses PipelineManager to aggregate health from all pipelines
+    /// v0.7.18: Direct NotificationService dependency
     /// </summary>
     public class CamBridgeHealthCheck : IHealthCheck
     {
         private readonly ILogger<CamBridgeHealthCheck> _logger;
         private readonly PipelineManager _pipelineManager;
-        private readonly INotificationService _notificationService;
+        private readonly NotificationService _notificationService; // Direct dependency!
 
         public CamBridgeHealthCheck(
             ILogger<CamBridgeHealthCheck> logger,
             PipelineManager pipelineManager,
-            INotificationService notificationService)
+            NotificationService notificationService) // Changed from INotificationService
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _pipelineManager = pipelineManager ?? throw new ArgumentNullException(nameof(pipelineManager));
