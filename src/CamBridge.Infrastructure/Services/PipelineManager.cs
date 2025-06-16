@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/PipelineManager.cs
-// Version: 0.7.8
-// Description: Orchestrates multiple processing pipelines - KISS without DeadLetterQueue!
+// Version: 0.7.20
+// Description: Orchestrates multiple processing pipelines - Each with own FileProcessor!
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -18,8 +18,8 @@ using Microsoft.Extensions.Options;
 namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
-    /// Manages multiple processing pipelines with independent configurations, queues, and watchers
-    /// KISS UPDATE: No more DeadLetterQueue! Simple error folder approach!
+    /// Manages multiple processing pipelines with independent configurations, queues, watchers, AND FileProcessors
+    /// PIPELINE UPDATE: Each pipeline gets its own FileProcessor instance!
     /// </summary>
     public class PipelineManager : IDisposable
     {
@@ -222,10 +222,29 @@ namespace CamBridge.Infrastructure.Services
             // Create pipeline-specific services
             var scope = _serviceProvider.CreateScope();
 
-            // Create processing queue for this pipeline
+            // Get shared services from DI
+            var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
+                .CreateLogger<FileProcessor>();
+            var exifToolReader = scope.ServiceProvider.GetRequiredService<ExifToolReader>();
+            var dicomConverter = scope.ServiceProvider.GetRequiredService<DicomConverter>();
+
+            // Get global DICOM settings
+            var settings = _settingsMonitor.CurrentValue;
+            var globalDicomSettings = settings.GlobalDicomSettings;
+
+            // Create pipeline-specific FileProcessor!
+            var fileProcessor = new FileProcessor(
+                logger,
+                exifToolReader,
+                dicomConverter,
+                config,
+                globalDicomSettings
+            );
+
+            // Create processing queue for this pipeline with its own FileProcessor
             var processingQueue = new ProcessingQueue(
                 scope.ServiceProvider.GetRequiredService<ILogger<ProcessingQueue>>(),
-                scope.ServiceProvider.GetRequiredService<IServiceScopeFactory>(),
+                fileProcessor,
                 Options.Create(config.ProcessingOptions));
 
             // Create context
@@ -234,6 +253,7 @@ namespace CamBridge.Infrastructure.Services
                 Id = config.Id.ToString(),
                 Configuration = config,
                 ServiceScope = scope,
+                FileProcessor = fileProcessor, // NEW: Pipeline-specific FileProcessor!
                 Queue = processingQueue,
                 Watchers = new List<FileSystemWatcher>(),
                 ProcessingTask = null,
@@ -533,11 +553,13 @@ namespace CamBridge.Infrastructure.Services
 
         /// <summary>
         /// Internal context for managing a single pipeline
+        /// NOW WITH ITS OWN FILEPROCESSOR!
         /// </summary>
         private class PipelineContext
         {
             public string Id { get; set; } = string.Empty;
             public PipelineConfiguration Configuration { get; set; } = new();
+            public FileProcessor FileProcessor { get; set; } = null!; // NEW: Pipeline-specific!
             public ProcessingQueue Queue { get; set; } = null!;
             public List<FileSystemWatcher> Watchers { get; set; } = new();
             public Task? ProcessingTask { get; set; }
@@ -547,9 +569,7 @@ namespace CamBridge.Infrastructure.Services
         }
     }
 
-    /// <summary>
-    /// Pipeline status summary
-    /// </summary>
+    // Status classes remain the same...
     public class PipelineStatus
     {
         public string Id { get; set; } = string.Empty;
@@ -563,9 +583,6 @@ namespace CamBridge.Infrastructure.Services
         public List<string> WatchedFolders { get; set; } = new();
     }
 
-    /// <summary>
-    /// Detailed pipeline status including configuration and statistics
-    /// </summary>
     public class PipelineDetailedStatus
     {
         public string Id { get; set; } = string.Empty;

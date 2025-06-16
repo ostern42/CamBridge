@@ -6,7 +6,40 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-[0.7.18] - 2025-06-16
+## [0.7.20] - 2025-06-16
+
+### 🔧 Fixed
+- **CRITICAL**: Fixed pipeline architecture - each pipeline now has its own FileProcessor
+- Build error in FileProcessor.cs (ValidationResult.ErrorMessage → Errors list)
+- FileProcessor was singleton but needed pipeline-specific configuration
+
+### 🏗️ Changed
+- **FileProcessor** - Now created per pipeline with specific configuration
+- **PipelineManager** - Creates FileProcessor instance for each pipeline
+- **ProcessingQueue** - Uses direct FileProcessor dependency instead of ServiceProvider
+- **ServiceCollectionExtensions** - FileProcessor no longer registered as singleton
+
+### 🧹 Removed
+- Legacy workarounds from CamBridgeSettingsV2 (WatchFolders, DefaultOutputFolder)
+- FolderConfiguration class (no longer needed)
+- IServiceScopeFactory dependency from ProcessingQueue
+
+### 💡 Technical Details
+- Each pipeline now has complete isolation
+- Pipeline-specific settings properly applied
+- No more shared state between pipelines
+- Medical data processing now truly separated
+
+### 📝 Developer Notes
+- Session 68: Pipeline architecture refactoring
+- Problem discovered during V1 cleanup
+- Option A from WISDOM_SPRINT_PIPELINE.md implemented
+- KISS principle: Direct dependencies win again!
+
+---
+*"Making pipelines reliably isolated - one FileProcessor at a time!"*
+
+## [0.7.18] - 2025-06-16
 Removed
 
 IDicomConverter interface - Not used anywhere, direct DicomConverter usage

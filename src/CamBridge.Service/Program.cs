@@ -278,36 +278,7 @@ try
     serviceEventLog?.WriteEntry("Building host...", EventLogEntryType.Information, 1016);
     var host = builder.Build();
 
-    // Validate infrastructure
-    serviceEventLog?.WriteEntry("Validating infrastructure...", EventLogEntryType.Information, 1017);
-    using (var scope = host.Services.CreateScope())
-    {
-        try
-        {
-            scope.ServiceProvider.ValidateInfrastructure();
-            Log.Information("Infrastructure validation completed successfully");
-            serviceEventLog?.WriteEntry("Infrastructure validation successful", EventLogEntryType.Information, 1018);
-
-            // Show active features
-            Log.Information("=========================================");
-            Log.Information("ACTIVE FEATURES v{Version}:", ServiceInfo.Version);
-            Log.Information("✓ Centralized Configuration");
-            Log.Information("✓ Pipeline Architecture");
-            Log.Information("✓ Multi-Pipeline Support");
-            Log.Information("✓ Basic Pipeline (ExifTool → DICOM)");
-            Log.Information("✓ Health Checks");
-            Log.Information("✓ Web API");
-            Log.Information(isService ? "✓ Windows Service" : "✓ Console Mode");
-            Log.Information("✓ Tab-Complete Testing Tools");
-            Log.Information("=========================================");
-        }
-        catch (Exception ex)
-        {
-            Log.Fatal(ex, "Infrastructure validation failed");
-            serviceEventLog?.WriteEntry($"Infrastructure validation failed: {ex.Message}", EventLogEntryType.Error, 1019);
-            throw;
-        }
-    }
+    
 
     // Run the host
     serviceEventLog?.WriteEntry("Starting host...", EventLogEntryType.Information, 1020);

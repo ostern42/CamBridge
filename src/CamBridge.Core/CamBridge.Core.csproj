@@ -10,6 +10,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Include="NotificationSettings.cs.bak" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <PackageReference Include="fo-dicom" Version="5.1.2" />
 	</ItemGroup>
 

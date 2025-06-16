@@ -1,8 +1,8 @@
 # WISDOM_TECHNICAL.md - Complete Technical Reference
-**Version**: 0.7.18  
-**Last Update**: 2025-06-16 18:42  
+**Version**: 0.7.20  
+**Last Update**: 2025-06-16 23:10  
 **Purpose**: Technical implementation wisdom, patterns, solutions  
-**Philosophy**: KISS, Tab-Complete, Sources First, Direct Dependencies
+**Philosophy**: KISS, Tab-Complete, Sources First, Direct Dependencies, Pipeline Isolation
 
 ## 🎭 V.O.G.O.N. PROTOCOL
 
@@ -28,7 +28,7 @@ N - Next: Clear next actions
 ```
 "VOGON INIT für Interface Removal"
 "Mini-VOGON für Config check"
-"VOGON EXIT mit v0.7.18 release"
+"VOGON EXIT mit v0.7.20 release"
 ```
 
 ## 🔧 TECHNICAL STACK
@@ -45,6 +45,7 @@ IDE: Visual Studio 2022
 Build: MSBuild with Version.props
 Deployment: PowerShell Scripts
 Dependencies: Direct (no interfaces!)
+Architecture: Pipeline-isolated processing
 ```
 
 ## 💻 ESSENTIAL COMMANDS
@@ -81,13 +82,13 @@ Get-EventLog -LogName Application -Source CamBridge* -Newest 20
 Get-Content "$env:ProgramData\CamBridge\logs\*.log" -Tail 50 -Wait
 ```
 
-### API Testing (v0.7.18 endpoints)
+### API Testing (v0.7.20 endpoints)
 ```powershell
 # Working endpoints
 Invoke-RestMethod "http://localhost:5111/api/status"         # Full status
 Invoke-RestMethod "http://localhost:5111/api/pipelines"      # All pipelines
-Invoke-RestMethod "http://localhost:5111/api/status/version" # Version only ✅
-Invoke-RestMethod "http://localhost:5111/api/status/health"  # Health check ✅
+Invoke-RestMethod "http://localhost:5111/api/status/version" # Version only
+Invoke-RestMethod "http://localhost:5111/api/status/health"  # Health check
 
 # Not implemented yet (404)
 # /api/statistics
@@ -129,23 +130,45 @@ public static string Version
             return version;
         }
         
-        return "0.7.18"; // Emergency fallback only
+        return "0.7.20"; // Emergency fallback only
     }
 }
 ```
 
-### Service Registration (KISS - v0.7.18!)
+### Service Registration (KISS - v0.7.20!)
 ```csharp
 // NO MORE INTERFACES! Direct registration
 services.AddSingleton<ExifToolReader>();
 services.AddSingleton<DicomConverter>();
-services.AddSingleton<FileProcessor>();
+// FileProcessor is NOT registered - created per pipeline!
 services.AddSingleton<PipelineManager>();
-services.AddSingleton<NotificationService>(); // v0.7.18: Direct!
+services.AddSingleton<NotificationService>();
 
 // Only 2 interfaces remain (for now):
 services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
 services.AddSingleton<IDicomTagMapper, DicomTagMapper>();
+```
+
+### Pipeline-Isolated FileProcessor (NEW v0.7.20!)
+```csharp
+// Each pipeline creates its own FileProcessor
+var fileProcessor = new FileProcessor(
+    logger,
+    exifToolReader,  // Shared is OK
+    dicomConverter,  // Shared is OK
+    pipelineConfig   // Pipeline-specific!
+);
+
+// ApplyDicomOverrides for pipeline-specific DICOM settings
+private DicomSettings ApplyDicomOverrides(DicomSettings global, DicomOverrides? overrides)
+{
+    if (overrides == null) return global;
+    // Apply only institution-specific overrides
+    return new DicomSettings { 
+        InstitutionName = overrides.InstitutionName ?? global.InstitutionName,
+        // ... etc
+    };
+}
 ```
 
 ### Error Handling Pattern
@@ -161,19 +184,19 @@ catch (Exception ex) when (ex is not OperationCanceledException)
 }
 ```
 
-### Pipeline Architecture
+### Pipeline Architecture (v0.7.20 FIXED!)
 ```csharp
-// Each pipeline is independent
+// Each pipeline is COMPLETELY independent
 foreach (var pipeline in EnabledPipelines)
 {
+    var fileProcessor = new FileProcessor(pipeline.Config);
+    var queue = new ProcessingQueue(fileProcessor);
     var watcher = new FileWatcher(pipeline.WatchFolder);
-    var queue = new Channel<string>(100);
-    var processor = new FileProcessor(pipeline.Config);
     // Independent processing loop
 }
 ```
 
-### Direct Dependency Pattern (NEW!)
+### Direct Dependency Pattern (v0.7.18+)
 ```csharp
 // OLD (with interface)
 public class FileProcessor
@@ -182,7 +205,7 @@ public class FileProcessor
     public FileProcessor(IExifReader exifReader) { }
 }
 
-// NEW (direct dependency - v0.7.18)
+// NEW (direct dependency)
 public class FileProcessor
 {
     private readonly ExifToolReader _exifReader;
@@ -266,6 +289,17 @@ Removed:
 Status: FIXED in v0.7.18 ✅
 ```
 
+### Fix #8: Pipeline Isolation (v0.7.20)
+```yaml
+Problem: FileProcessor was singleton but needs pipeline config
+Solution: Each pipeline creates own FileProcessor
+Implementation:
+  - PipelineManager creates FileProcessor per pipeline
+  - ProcessingQueue gets direct FileProcessor
+  - DicomOverrides properly applied
+Status: FIXED in v0.7.20 ✅
+```
+
 ## 🔨 ESSENTIAL TOOLS
 
 ### Development Tools
@@ -302,7 +336,7 @@ Create-DeploymentPackage.ps1  # Release builder
 
 # Full release cycle
 00[TAB] # Build with ZIP
-git tag v0.7.18
+git tag v0.7.20
 git push --tags
 ```
 
@@ -310,10 +344,10 @@ git push --tags
 ```xml
 <!-- Single source of truth for versions -->
 <PropertyGroup>
-  <VersionPrefix>0.7.18</VersionPrefix>
-  <FileVersion>0.7.18.0</FileVersion>
+  <VersionPrefix>0.7.20</VersionPrefix>
+  <FileVersion>0.7.20.0</FileVersion>
   <AssemblyVersion>0.7.0.0</AssemblyVersion>
-  <InformationalVersion>0.7.18 - Sprint 10: Interface Removal Complete</InformationalVersion>
+  <InformationalVersion>0.7.20 - Pipeline Architecture Fix Complete</InformationalVersion>
 </PropertyGroup>
 ```
 
@@ -399,6 +433,14 @@ C:\CamBridge\Output\  # DICOM output
 - **Learning**: Always check real interfaces/properties
 - **Achievement**: 8 → 2 interfaces (75% reduction!)
 
+### Session 68: Pipeline Architecture Fix!
+- Fixed FileProcessor singleton problem
+- Each pipeline now has own FileProcessor
+- DicomOverrides vs DicomSettings resolved
+- Legacy V1 references removed
+- **Achievement**: True pipeline isolation!
+- **Learning**: Architecture debt must be paid
+
 ## 📊 METRICS THAT MATTER
 
 ```yaml
@@ -406,61 +448,63 @@ Total LOC: 14,350+ (all by Claude!)
 Interfaces: Started 12+ → Current 2 → Target 0
 Build Time: 3min → 20sec (without ZIP)
 Config Formats: 3 → 1 (V2 unified)
-Warnings: 144 (needs cleanup)
+Warnings: ~140 (needs cleanup)
 Deleted: 650+ LOC (Dead Letter + more)
 Fixed: Port 5111 everywhere ✅
-Version: 0.7.18 (dynamic now!)
-Pipelines: 2 configured & working
+Version: 0.7.20 (dynamic now!)
+Pipelines: Truly isolated! ✅
 API Endpoints: 4/5 implemented
 CORE FEATURE: JPEG→DICOM WORKING! ✅
 CONFIG: Validates all enums ✅
-ARCHITECTURE: Direct dependencies! ✅
+ARCHITECTURE: Pipeline isolation! ✅
 ```
 
 ## 📈 CURRENT STATUS & ROADMAP
 
-### Current: v0.7.18 - Direct Dependencies Everywhere
+### Current: v0.7.20 - Pipeline Architecture Fixed
 ```yaml
 Done:
-✅ Removed 4 interfaces (2 already gone)
-✅ Direct dependency pattern implemented
+✅ FileProcessor per pipeline
+✅ True pipeline isolation
+✅ DicomOverrides working
+✅ All build errors fixed
+✅ V1 references removed
 ✅ Service running stable
-✅ Config validation robust
-✅ Build successful
-✅ KISS principle applied
 
 Issues:
-- 144 build warnings
+- ~140 build warnings
 - Missing API endpoint (/api/statistics)
 - 2 interfaces remain
+- ValidateInfrastructure removed
 ```
 
-### Next: Sprint 11 - Final Interface Analysis (v0.8.x)
+### Next: Sprint 15 - Warning Reduction (v0.8.x)
 ```yaml
 Goals:
-- Analyze IMappingConfiguration necessity
-- Analyze IDicomTagMapper necessity
-- Consider full direct dependency model
-- Reduce warnings to <100
+- Reduce warnings to <50
+- Fix nullable reference warnings
+- Clean up unused usings
+- Remove obsolete code
 
-Questions:
-- Do we need any interfaces at all?
-- What's the cost of removing the last 2?
+Scope:
+- No functional changes
+- Pure cleanup sprint
+- Documentation updates
 ```
 
 ### Future Sprints
 ```yaml
-Sprint 12: Config Simplification (v0.9.x)
-- Merge config classes
-- Remove V1 support completely
-- Single unified model
+Sprint 16: Final Interface Analysis (v0.8.x)
+- Analyze IMappingConfiguration necessity
+- Analyze IDicomTagMapper necessity
+- Consider full direct dependency model
 
-Sprint 13: Performance (v0.9.x)
+Sprint 17: Performance (v0.9.x)
 - Optimize file processing
 - Parallel pipeline execution
 - Memory usage optimization
 
-Sprint 14+: Protected Medical Features
+Sprint 18+: Protected Medical Features
 - FTP Server (basic only!)
 - C-STORE SCP
 - Modality Worklist  
@@ -471,7 +515,7 @@ Sprint 14+: Protected Medical Features
 
 ### The KISS Ladder
 ```yaml
-Level 1: It works (current) ✅
+Level 1: It works (achieved) ✅
 Level 2: It's simple (achieved) ✅
 Level 3: It's elegant (getting there)
 Level 4: It's invisible (nirvana)
@@ -493,10 +537,11 @@ Tab-Complete: Sacred, never change
 Port 5111: Carved in stone  
 Config Path: Single source of truth
 VOGON: For complex work only
-Sources First: Always check existing (even if I forget)
+Sources First: Always check existing
 Dynamic Version: Never hardcode again
 Enum Validation: Clear errors always
 Direct Dependencies: The new way
+Pipeline Isolation: Each pipeline independent!
 ```
 
 ## 🔧 QUICK REFERENCE CARD
@@ -515,7 +560,7 @@ Direct Dependencies: The new way
 # Service status
 Invoke-RestMethod "http://localhost:5111/api/status" | ConvertTo-Json -Depth 5
 
-# Version only (v0.7.18 adds this!)
+# Version only
 (Invoke-RestMethod "http://localhost:5111/api/status/version")
 
 # Pipeline status
@@ -535,10 +580,10 @@ Start-Service CamBridgeService  # Creates fresh config
 # Check Version.props → Build → Deploy
 
 # Bad enum value
-# Check error message - v0.7.17 shows valid values!
+# Check error message - shows valid values!
 
-# Missing interface
-# Just use the concrete class directly!
+# Pipeline not working
+# Check pipeline has own output folder configured
 ```
 
 ## 📝 WISDOM NOTES
@@ -547,16 +592,17 @@ Start-Service CamBridgeService  # Creates fresh config
 - Tab-complete system (Oliver's idea!)
 - Single config path
 - Simple error folders
-- Pipeline independence
+- Pipeline independence (FIXED in v0.7.20!)
 - Dynamic version reading
-- Enum validation (new!)
-- Direct dependencies (v0.7.18!)
+- Enum validation
+- Direct dependencies
+- Per-pipeline FileProcessor
 
 ### What Needs Work
-- Too many warnings (144)
+- Too many warnings (~140)
 - Missing API endpoint
 - Documentation gaps
-- Sources First compliance (I keep forgetting!)
+- Some architectural debt remains
 
 ### Lessons Learned
 1. **KISS beats SOLID** every single time
@@ -566,23 +612,19 @@ Start-Service CamBridgeService  # Creates fresh config
 5. **Details matter** - one wrong port = hours of debugging
 6. **Check sources first** - code might already exist!
 7. **Direct > Abstract** - interfaces without reason = delete!
+8. **Singletons + Config = Problems** - isolate pipelines!
 
-### Session 67 Special Learning
+### Session 68 Special Learning
 ```yaml
-Problem: Made up DicomConverter properties
-Examples:
-  - CameraInfo (doesn't exist)
-  - OriginalFilename (doesn't exist)
-  - GetMappingRulesAsync (it's GetMappingRules)
-  - MapMetadataToDicom (it's MapToDataset)
-  
-Impact: Had to remake entire artifact
-Learning: ALWAYS check real sources!
-Oliver's reaction: "du denkst dir wieder was aus"
-My reaction: He's absolutely right...
+Problem: FileProcessor singleton but needs pipeline config
+Discovery: During V1 cleanup
+Solution: Each pipeline creates own FileProcessor
+Impact: True pipeline isolation achieved
+Oliver's wisdom: "Die Pipeline ist zu wichtig"
+Result: Medical data properly isolated
 ```
 
 ---
 
-*"Making the improbable reliably simple - one deleted interface at a time!"*
-*Version 0.7.18 - Direct dependencies everywhere!*
+*"Making the improbable reliably simple - one pipeline at a time!"*
+*Version 0.7.20 - Pipeline isolation complete!*

@@ -32,6 +32,10 @@
   </ItemGroup>
   
   <ItemGroup>
+    <Compile Include="Services\FolderWatcherService.cs.bak" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
 

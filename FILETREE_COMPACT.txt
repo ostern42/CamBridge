@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.7.17
+# // Version: 0.7.18
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 276
-# Generated: 2025-06-16 12:39
+# Total files: 273
+# Generated: 2025-06-16 22:32
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -82,7 +82,6 @@ src\CamBridge.Config\ViewModels\PipelineStatusViewModel.cs
 src\CamBridge.Config\ViewModels\RecentActivityViewModel.cs
 src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs
 src\CamBridge.Config\ViewModels\ServiceControlViewModelExtension.cs
-src\CamBridge.Config\ViewModels\SettingsViewModel.cs
 src\CamBridge.Config\ViewModels\ViewModelBase.cs
 src\CamBridge.Config\Views\AboutPage.xaml
 src\CamBridge.Config\Views\AboutPage.xaml.cs
@@ -103,7 +102,6 @@ src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs
 
 ## [CamBridge.Core]
 src\CamBridge.Core\CamBridge.Core.csproj
-src\CamBridge.Core\CamBridgeSettings.cs
 src\CamBridge.Core\CamBridgeSettingsV2.cs
 src\CamBridge.Core\ConfigurationPaths.cs
 src\CamBridge.Core\CustomMappingConfiguration.cs
@@ -114,11 +112,9 @@ src\CamBridge.Core\Entities\PatientInfo.cs
 src\CamBridge.Core\Entities\ProcessingResult.cs
 src\CamBridge.Core\Entities\QRCodeRequest.cs
 src\CamBridge.Core\Entities\StudyInfo.cs
-src\CamBridge.Core\Interfaces\IDicomConverter.cs
 src\CamBridge.Core\Interfaces\IDicomTagMapper.cs
 src\CamBridge.Core\Interfaces\IMappingConfiguration.cs
 src\CamBridge.Core\MappingRule.cs
-src\CamBridge.Core\NotificationSettings.cs
 src\CamBridge.Core\PipelineConfiguration.cs
 src\CamBridge.Core\ProcessingOptions.cs
 src\CamBridge.Core\ProcessingSummary.cs
@@ -138,8 +134,6 @@ src\CamBridge.Infrastructure\Services\DicomConverter.cs
 src\CamBridge.Infrastructure\Services\DicomTagMapper.cs
 src\CamBridge.Infrastructure\Services\ExifToolReader.cs
 src\CamBridge.Infrastructure\Services\FileProcessor.cs
-src\CamBridge.Infrastructure\Services\FolderWatcherService.cs
-src\CamBridge.Infrastructure\Services\INotificationService.cs
 src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs
 src\CamBridge.Infrastructure\Services\NotificationService.cs
 src\CamBridge.Infrastructure\Services\PipelineManager.cs
@@ -277,6 +271,7 @@ Get-WisdomProjectTree.ps1
 Get-WisdomSources - Kopie.ps1
 Get-WisdomSources.ps1
 h-help.ps1
+mappingeditor-full.txt
 Migrate-CamBridgeConfig.ps1
 pipeline-config.txt
 Program.cs
@@ -291,8 +286,10 @@ ShowVersion.targets
 test-api.ps1
 Test-CompletePipeline.ps1
 Test-QRBridge.ps1
+v1-config-deep-dive.txt
 Version.props
 version-deadletter-files.txt
+warnings.txt
 WISDOM_ARCHITECTURE.md
 WISDOM_CLAUDE - 250614.md
 WISDOM_CLAUDE.md

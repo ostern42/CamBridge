@@ -22,6 +22,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
 
 // Alias to avoid ambiguity with FellowOakDicom.DicomTag
 using DicomTag = CamBridge.Core.ValueObjects.DicomTag;
@@ -57,6 +59,7 @@ namespace CamBridge.Config.ViewModels
         [ObservableProperty] private bool _isModified;
         [ObservableProperty] private string? _statusMessage;
         [ObservableProperty] private bool _isLoading;
+        [ObservableProperty] private bool _isError;
 
         // Available source fields
         public ObservableCollection<SourceFieldInfo> QRBridgeFields { get; } = new();
@@ -139,6 +142,7 @@ namespace CamBridge.Config.ViewModels
             try
             {
                 IsLoading = true;
+                IsError = false;
                 StatusMessage = "Loading mapping sets...";
 
                 // IMMER zuerst System Defaults laden - sie sind die Basis!
@@ -148,26 +152,17 @@ namespace CamBridge.Config.ViewModels
                 // Try to load v2 settings
                 var settingsV2 = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>();
 
-                bool hasUserSets = false;
-                bool needsMigration = true;
-
                 if (settingsV2 != null && settingsV2.MappingSets.Count > 0)
                 {
                     // Add user sets from v2 settings
                     foreach (var set in settingsV2.MappingSets.Where(s => !s.IsSystemDefault))
                     {
                         MappingSets.Add(set);
-                        hasUserSets = true;
                     }
-                    needsMigration = false;
                     _logger.LogInformation($"Loaded {settingsV2.MappingSets.Count(s => !s.IsSystemDefault)} user mapping sets from settings");
                 }
 
-                // If no user sets exist, try migration from v1
-                if (needsMigration && !hasUserSets)
-                {
-                    await MigrateFromV1Async();
-                }
+                // V1 MIGRATION REMOVED - No longer needed after Sprint 13
 
                 // Debug: Log all loaded sets
                 _logger.LogInformation($"Total mapping sets loaded: {MappingSets.Count}");
@@ -177,20 +172,19 @@ namespace CamBridge.Config.ViewModels
                 }
 
                 // Select appropriate set - prefer Ricoh for initial experience
-                SelectedMappingSet = MappingSets.FirstOrDefault(m => m.Name.Contains("Ricoh") && m.IsSystemDefault) ??
-                                    MappingSets.FirstOrDefault(m => !m.IsSystemDefault) ??
-                                    MappingSets.FirstOrDefault();
+                var ricohSet = MappingSets.FirstOrDefault(s => s.Name.Contains("Ricoh", StringComparison.OrdinalIgnoreCase));
+                SelectedMappingSet = ricohSet ?? MappingSets.FirstOrDefault();
 
-                IsModified = false;
                 StatusMessage = $"Loaded {MappingSets.Count} mapping sets";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to load mapping sets");
+                _logger.LogError(ex, "Error loading mapping sets");
                 StatusMessage = "Failed to load mapping sets";
+                IsError = true;
 
-                // Ensure we at least have system defaults
-                if (!MappingSets.Any(m => m.IsSystemDefault))
+                // Even on error, ensure system defaults are available
+                if (MappingSets.Count == 0)
                 {
                     LoadSystemDefaults();
                 }
@@ -202,94 +196,7 @@ namespace CamBridge.Config.ViewModels
             }
         }
 
-        private async Task MigrateFromV1Async()
-        {
-            try
-            {
-                _logger.LogInformation("Attempting to migrate from v1 mappings...");
-
-                // First try to load v1 settings
-                var v1Settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettings>();
-
-                string mappingFile = "mappings.json";
-
-                if (v1Settings != null && !string.IsNullOrEmpty(v1Settings.MappingConfigurationFile))
-                {
-                    mappingFile = v1Settings.MappingConfigurationFile;
-                }
-                else
-                {
-                    // No v1 settings - try common locations for mappings.json
-                    var assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                    var assemblyDir = Path.GetDirectoryName(assemblyLocation) ?? "";
-
-                    var possiblePaths = new[]
-                    {
-                        Path.Combine(assemblyDir, "mappings.json"),
-                        Path.Combine(assemblyDir, "..", "..", "..", "..", "..", "CamBridge.Service", "mappings.json"),
-                        Path.Combine(Environment.CurrentDirectory, "mappings.json"),
-                        Path.Combine(Environment.CurrentDirectory, "src", "CamBridge.Service", "mappings.json"),
-                        @"C:\Users\oliver.stern\source\repos\CamBridge\src\CamBridge.Service\mappings.json"
-                    };
-
-                    foreach (var path in possiblePaths)
-                    {
-                        var fullPath = Path.GetFullPath(path);
-                        _logger.LogDebug($"Checking for mappings at: {fullPath}");
-                        if (File.Exists(fullPath))
-                        {
-                            mappingFile = fullPath;
-                            _logger.LogInformation($"Found mappings.json at: {fullPath}");
-                            break;
-                        }
-                    }
-                }
-
-                if (_mappingConfiguration != null && File.Exists(mappingFile))
-                {
-                    // Try to load existing mapping rules
-                    await _mappingConfiguration.LoadConfigurationAsync(mappingFile);
-                    var rules = _mappingConfiguration.GetMappingRules().ToList();
-
-                    if (rules.Count > 0)
-                    {
-                        // Fix transform names from old format
-                        foreach (var rule in rules)
-                        {
-                            rule.Transform = rule.Transform switch
-                            {
-                                "GenderToDicom" => "MapGender",
-                                "TruncateTo16" => "None", // Not available in current version
-                                _ => rule.Transform
-                            };
-                        }
-
-                        // Create migrated set from v1 rules
-                        var migratedSet = new MappingSet
-                        {
-                            Id = Guid.NewGuid(),
-                            Name = "[Migrated] Default Mapping Set",
-                            Description = $"Migrated from {Path.GetFileName(mappingFile)}",
-                            IsSystemDefault = false,
-                            Rules = rules,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
-                        };
-
-                        MappingSets.Add(migratedSet);
-                        _logger.LogInformation($"Migrated {rules.Count} rules from {mappingFile}");
-                    }
-                }
-                else
-                {
-                    _logger.LogWarning($"Could not find mappings file at: {mappingFile}");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not migrate v1 mappings");
-            }
-        }
+        
 
         private void LoadSystemDefaults()
         {

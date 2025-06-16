@@ -1,23 +1,23 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.7.18 -->
+<!-- Version: 0.7.20 -->
 <!-- Modified: 2025-06-16 -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.7.18</VersionPrefix>
+		<VersionPrefix>0.7.20</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
 		<AssemblyVersion>0.7.0.0</AssemblyVersion>
 
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.7.18.0</FileVersion>
+		<FileVersion>0.7.20.0</FileVersion>
 
 		<!-- Informational version shown in logs and UI -->
-		<InformationalVersion>0.7.18 - Sprint 10: Interface Removal Complete</InformationalVersion>
+		<InformationalVersion>0.7.20 - Pipeline Architecture Fix Complete</InformationalVersion>
 
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.7.18</PackageVersion>
+		<PackageVersion>0.7.20</PackageVersion>
 
 		<!-- Product information -->
 		<Product>CamBridge</Product>
