@@ -1,180 +1,144 @@
-/**************************************************************************
-*  DashboardViewModel.cs                                                  *
-*  PATH: src\CamBridge.Config\ViewModels\DashboardViewModel.cs           *
-*  VERSION: 0.7.11 | SIZE: ~10KB | MODIFIED: 2025-06-13                  *
-*                                                                         *
-*  DESCRIPTION: ViewModel for the main dashboard display                  *
-*  Copyright (c) 2025 Claude's Improbably Reliable Software Solutions     *
-**************************************************************************/
+// src\CamBridge.Config\ViewModels\DashboardViewModel.cs
+// Version: 0.7.21
+// Description: MINIMAL Dashboard - Just show if service is running!
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using CamBridge.Config.Models;
 using CamBridge.Config.Services;
 using CamBridge.Core;
-using CamBridge.Core.Infrastructure;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace CamBridge.Config.ViewModels
 {
     /// <summary>
-    /// ViewModel for the dashboard page showing service and pipeline status
-    /// KISS Edition - Works with actual API!
+    /// MINIMAL Dashboard - KISS approach!
     /// </summary>
     public partial class DashboardViewModel : ObservableObject
     {
-        private readonly IApiService _apiService;
         private readonly IConfigurationService _configurationService;
         private DispatcherTimer? _refreshTimer;
-        private bool _isInitialized = false;
+        private readonly HttpClient _httpClient = new();
 
         [ObservableProperty]
         private string serviceStatus = "Checking...";
 
         [ObservableProperty]
-        private int totalQueueLength;
+        private bool isServiceRunning = false;
 
         [ObservableProperty]
-        private int totalActiveProcessing;
+        private string uptimeText = "";
 
         [ObservableProperty]
-        private int totalSuccessCount;
-
-        [ObservableProperty]
-        private int totalErrorCount;
-
-        [ObservableProperty]
-        private double overallSuccessRate;
-
-        [ObservableProperty]
-        private TimeSpan uptime;
+        private string versionText = "";
 
         [ObservableProperty]
         private DateTime lastUpdate = DateTime.Now;
 
         [ObservableProperty]
-        private bool isConnected;
-
-        [ObservableProperty]
-        private string connectionStatus = "Connecting...";
-
-        [ObservableProperty]
-        private string statusMessage = "";
-
-        [ObservableProperty]
-        private string configPath = "";
-
-        [ObservableProperty]
         private bool isLoading;
 
-        // Collections - created on UI thread
+        // Collections
         public ObservableCollection<PipelineStatusViewModel> PipelineStatuses { get; }
-        public ObservableCollection<RecentActivityViewModel> RecentActivities { get; }
 
         // Commands
-        public IAsyncRelayCommand RefreshDataCommand { get; }
-        public IRelayCommand ShowConfigPathCommand { get; }
+        public IAsyncRelayCommand RefreshCommand { get; }
+        public IAsyncRelayCommand StartServiceCommand { get; }
 
-        public DashboardViewModel(
-            IApiService apiService,
-            IConfigurationService? configurationService = null)
+        public DashboardViewModel(IApiService? apiService = null, IConfigurationService? configurationService = null)
         {
-            _apiService = apiService ?? throw new ArgumentNullException(nameof(apiService));
+            // We ignore IApiService - go direct!
             _configurationService = configurationService ?? new ConfigurationService();
 
-            // Initialize collections on UI thread (MUST be in constructor!)
             PipelineStatuses = new ObservableCollection<PipelineStatusViewModel>();
-            RecentActivities = new ObservableCollection<RecentActivityViewModel>();
 
-            // Initialize commands
-            RefreshDataCommand = new AsyncRelayCommand(RefreshDataAsync);
-            ShowConfigPathCommand = new RelayCommand(ShowConfigPath);
+            RefreshCommand = new AsyncRelayCommand(RefreshAsync);
+            StartServiceCommand = new AsyncRelayCommand(StartServiceAsync);
 
-            // Set config path for display
-            ConfigPath = ConfigurationPaths.GetPrimaryConfigPath();
-
-            Debug.WriteLine("DashboardViewModel created - waiting for initialization");
-        }
-
-        public async Task InitializeAsync()
-        {
-            if (_isInitialized) return;
-
-            Debug.WriteLine("=== DashboardViewModel.InitializeAsync START ===");
-
-            // Initial data load
-            await RefreshDataAsync();
-
-            // Set up refresh timer on UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            // Setup timer
+            _refreshTimer = new DispatcherTimer
             {
-                _refreshTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromSeconds(5)
-                };
-                _refreshTimer.Tick += async (s, e) => await RefreshDataAsync();
-                _refreshTimer.Start();
-            });
+                Interval = TimeSpan.FromSeconds(5)
+            };
+            _refreshTimer.Tick += async (s, e) => await RefreshAsync();
+            _refreshTimer.Start();
 
-            _isInitialized = true;
-            Debug.WriteLine("=== DashboardViewModel.InitializeAsync END ===");
+            // Initial load
+            Task.Run(async () => await RefreshAsync());
         }
 
-        private async Task RefreshDataAsync()
+        private async Task RefreshAsync()
         {
             try
             {
-                Debug.WriteLine($"\n=== DASHBOARD REFRESH START (Thread: {Thread.CurrentThread.ManagedThreadId}) ===");
-                Debug.WriteLine($"Config Path: {ConfigPath}");
-
                 IsLoading = true;
-                StatusMessage = "Refreshing...";
+                Debug.WriteLine($"[{DateTime.Now:HH:mm:ss}] Dashboard refresh...");
 
-                // Check service availability
-                var isAvailable = await _apiService.IsServiceAvailableAsync();
-                IsConnected = isAvailable;
+                // MINIMAL: Direct HTTP call!
+                var response = await _httpClient.GetAsync("http://localhost:5111/api/status");
 
-                if (isAvailable)
+                if (response.IsSuccessStatusCode)
                 {
-                    // Get service status
-                    var status = await _apiService.GetStatusAsync();
+                    var json = await response.Content.ReadAsStringAsync();
+                    var status = JsonSerializer.Deserialize<ServiceStatusModel>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
                     if (status != null)
                     {
-                        UpdateServiceStatus(status);
-                    }
+                        // Update UI on dispatcher
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            IsServiceRunning = true;
+                            ServiceStatus = status.ServiceStatus;
+                            UptimeText = $"Uptime: {status.Uptime:hh\\:mm\\:ss}";
+                            VersionText = $"Version: {status.Version}";
 
-                    ConnectionStatus = "Connected";
-                    StatusMessage = "Service is running";
+                            Debug.WriteLine($"Service is {status.ServiceStatus}!");
+
+                            // Update pipelines
+                            if (status.Pipelines != null)
+                            {
+                                UpdatePipelines(status.Pipelines);
+                            }
+                        });
+                    }
                 }
                 else
                 {
-                    ConnectionStatus = "Service Offline";
-                    ServiceStatus = "Offline";
-                    StatusMessage = "Service is not running. Please start the service.";
-                }
-
-                // Load configuration for pipeline info
-                var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>();
-                if (settings?.Pipelines != null && settings.Pipelines.Count > 0)
-                {
-                    UpdatePipelinesFromConfig(settings.Pipelines);
+                    // Service offline
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        IsServiceRunning = false;
+                        ServiceStatus = "Offline";
+                        UptimeText = "";
+                        VersionText = "";
+                        Debug.WriteLine("Service is offline!");
+                    });
                 }
 
                 LastUpdate = DateTime.Now;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error refreshing dashboard: {ex.Message}");
-                HandleError(ex);
+                Debug.WriteLine($"Dashboard refresh error: {ex.Message}");
+
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsServiceRunning = false;
+                    ServiceStatus = "Offline";
+                    UptimeText = "";
+                    VersionText = "Cannot connect to service";
+                });
             }
             finally
             {
@@ -182,114 +146,55 @@ namespace CamBridge.Config.ViewModels
             }
         }
 
-        private void UpdateServiceStatus(ServiceStatusModel status)
+        private void UpdatePipelines(List<PipelineStatusData> pipelines)
         {
-            ServiceStatus = status.ServiceStatus == "Running" ? "Running" : "Stopped";
-            Uptime = status.Uptime;
+            PipelineStatuses.Clear();
 
-            // Update totals from service
-            TotalQueueLength = status.QueueLength;
-            TotalActiveProcessing = status.ActiveProcessing;
-            TotalSuccessCount = status.TotalSuccessful;
-            TotalErrorCount = status.TotalFailed;
-            OverallSuccessRate = status.SuccessRate;
-
-            // Update pipeline statuses if available
-            if (status.Pipelines != null)
+            foreach (var p in pipelines)
             {
-                Application.Current.Dispatcher.InvokeAsync(() =>
+                PipelineStatuses.Add(new PipelineStatusViewModel
                 {
-                    foreach (var pipelineData in status.Pipelines)
-                    {
-                        // FIX: Use PipelineName instead of Name
-                        var existing = PipelineStatuses.FirstOrDefault(p => p.PipelineName == pipelineData.Name);
-                        if (existing != null)
-                        {
-                            existing.IsEnabled = pipelineData.IsActive;
-                            existing.Status = pipelineData.IsActive ? "Active" : "Inactive";
-                            existing.QueueLength = pipelineData.QueueLength;
-
-                            // Map to existing properties in PipelineStatusViewModel
-                            existing.ProcessedToday = pipelineData.TotalSuccessful + pipelineData.TotalFailed;
-                            existing.ErrorsToday = pipelineData.TotalFailed;
-
-                            var total = pipelineData.TotalSuccessful + pipelineData.TotalFailed;
-                            existing.SuccessRate = total > 0 ?
-                                (double)pipelineData.TotalSuccessful / total * 100 : 0;
-                        }
-                    }
+                    PipelineName = p.Name,
+                    Status = p.IsActive ? "Active" : "Inactive",
+                    IsEnabled = p.IsActive,
+                    QueueLength = p.QueueLength,
+                    ProcessedToday = p.TotalProcessed,
+                    ErrorsToday = p.TotalFailed,
+                    WatchFolder = p.WatchedFolders?.Count > 0 ? p.WatchedFolders[0] : ""
                 });
             }
         }
 
-        private void UpdatePipelinesFromConfig(List<PipelineConfiguration> pipelines)
-        {
-            Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                try
-                {
-                    // Update existing or add new
-                    foreach (var pipeline in pipelines)
-                    {
-                        // FIX 1: Use PipelineName instead of Name
-                        var existing = PipelineStatuses.FirstOrDefault(p => p.PipelineName == pipeline.Name);
-                        if (existing == null)
-                        {
-                            PipelineStatuses.Add(new PipelineStatusViewModel
-                            {
-                                // FIX 2: Use correct property names
-                                PipelineName = pipeline.Name,
-                                IsEnabled = pipeline.Enabled,
-                                Status = pipeline.Enabled ? "Ready" : "Disabled",  // FIX 3: Complete ternary operator!
-                                PipelineId = pipeline.Id,
-                                WatchFolder = pipeline.WatchSettings?.Path ?? ""   // FIX 4: Use Path not WatchFolder
-                            });
-                        }
-                        else
-                        {
-                            existing.IsEnabled = pipeline.Enabled;
-                            existing.Status = pipeline.Enabled ? "Ready" : "Disabled";
-                            existing.WatchFolder = pipeline.WatchSettings?.Path ?? "";  // FIX 5: Use Path
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error updating pipelines: {ex.Message}");
-                }
-            });
-        }
-
-        private void HandleError(Exception ex)
-        {
-            IsConnected = false;
-            ConnectionStatus = "Error";
-            StatusMessage = $"Error: {ex.Message}";
-            ServiceStatus = "Error";
-        }
-
-        private void ShowConfigPath()
+        private async Task StartServiceAsync()
         {
             try
             {
-                var dir = Path.GetDirectoryName(ConfigPath);
-                if (Directory.Exists(dir))
+                var startInfo = new ProcessStartInfo
                 {
-                    Process.Start("explorer.exe", dir);
-                }
+                    FileName = "net.exe",
+                    Arguments = "start CamBridgeService",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    Verb = "runas"
+                };
+
+                var process = Process.Start(startInfo);
+                await process!.WaitForExitAsync();
+
+                // Wait and refresh
+                await Task.Delay(2000);
+                await RefreshAsync();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error opening config path: {ex.Message}");
+                Debug.WriteLine($"Failed to start service: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Cleanup when view model is disposed
-        /// </summary>
         public void Cleanup()
         {
             _refreshTimer?.Stop();
+            _httpClient?.Dispose();
         }
     }
 }

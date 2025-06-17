@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.7.18
+# // Version: 0.7.21
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -46,7 +46,7 @@
 #   - TOOLS
 #
 # Total files: 273
-# Generated: 2025-06-16 22:32
+# Generated: 2025-06-17 01:15
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -95,8 +95,6 @@ src\CamBridge.Config\Views\PipelineConfigPage.xaml
 src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
 src\CamBridge.Config\Views\ServiceControlPage.xaml
 src\CamBridge.Config\Views\ServiceControlPage.xaml.cs
-src\CamBridge.Config\Views\SettingsPage.xaml
-src\CamBridge.Config\Views\SettingsPage.xaml.cs
 src\CamBridge.Config\Views\VogonPoetryWindow.xaml
 src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs
 
@@ -253,6 +251,8 @@ Create-DeploymentPackage - Kopie.ps1
 Create-DeploymentPackage.ps1
 Create-NumberedTools.ps1
 current-build-error-files.txt
+dashboard-analysis.txt
+dashboard-complete-analysis.txt
 dead-letter-surgery-files.txt
 Directory.Build.props
 docs\sources\SOURCES_CONFIG.txt

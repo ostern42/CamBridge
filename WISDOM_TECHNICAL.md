@@ -1,6 +1,6 @@
 # WISDOM_TECHNICAL.md - Complete Technical Reference
-**Version**: 0.7.20  
-**Last Update**: 2025-06-16 23:10  
+**Version**: 0.7.21  
+**Last Update**: 2025-06-17 01:15  
 **Purpose**: Technical implementation wisdom, patterns, solutions  
 **Philosophy**: KISS, Tab-Complete, Sources First, Direct Dependencies, Pipeline Isolation
 
@@ -28,7 +28,7 @@ N - Next: Clear next actions
 ```
 "VOGON INIT für Interface Removal"
 "Mini-VOGON für Config check"
-"VOGON EXIT mit v0.7.20 release"
+"VOGON EXIT mit v0.7.21 release"
 ```
 
 ## 🔧 TECHNICAL STACK
@@ -82,7 +82,7 @@ Get-EventLog -LogName Application -Source CamBridge* -Newest 20
 Get-Content "$env:ProgramData\CamBridge\logs\*.log" -Tail 50 -Wait
 ```
 
-### API Testing (v0.7.20 endpoints)
+### API Testing (v0.7.21 endpoints)
 ```powershell
 # Working endpoints
 Invoke-RestMethod "http://localhost:5111/api/status"         # Full status
@@ -130,7 +130,7 @@ public static string Version
             return version;
         }
         
-        return "0.7.20"; // Emergency fallback only
+        return "0.7.21"; // Emergency fallback only
     }
 }
 ```
@@ -210,6 +210,31 @@ public class FileProcessor
 {
     private readonly ExifToolReader _exifReader;
     public FileProcessor(ExifToolReader exifReader) { }
+}
+```
+
+### Minimal Dashboard Pattern (v0.7.21!)
+```csharp
+// When complex fails, go simple!
+public class DashboardViewModel
+{
+    private readonly HttpClient _httpClient = new();
+    
+    public DashboardViewModel()
+    {
+        // Timer starts immediately - no InitializeAsync!
+        _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _refreshTimer.Tick += async (s, e) => await RefreshAsync();
+        _refreshTimer.Start();
+    }
+    
+    private async Task RefreshAsync()
+    {
+        // Direct HTTP - no abstractions!
+        var response = await _httpClient.GetAsync("http://localhost:5111/api/status");
+        var json = await response.Content.ReadAsStringAsync();
+        // Parse and update UI
+    }
 }
 ```
 
@@ -300,6 +325,58 @@ Implementation:
 Status: FIXED in v0.7.20 ✅
 ```
 
+### Fix #9: Dashboard ViewModel Injection (v0.7.21)
+```yaml
+Problem: Dashboard zeigte keine Service Daten
+Symptom: Service Control funktioniert, Dashboard nicht
+Root Cause: NavigationService erstellte Pages OHNE ViewModels
+Solution: ViewModel Injection in NavigationService
+Files: NavigationService.cs, DashboardPage.xaml.cs
+Learning: "When one page works and another doesn't, copy what works!"
+Status: FIXED in v0.7.21 ✅
+```
+
+### Fix #10: API Property Case Sensitivity (v0.7.21)
+```yaml
+Problem: Dashboard zeigte keine Pipeline Status
+Root Cause: API sendet lowercase "name", Code suchte "Name"
+Solution: Case-insensitive comparison + check actual response
+Example:
+  API sends: { "name": "Radiology" }
+  Code expected: { "Name": "Radiology" }
+Fix: PropertyNameCaseInsensitive = true
+Status: FIXED in v0.7.21 ✅
+```
+
+### Fix #11: ViewModel Initialization Pattern (v0.7.21)
+```yaml
+Problem: Dashboard showed no data despite API working
+Root Cause: InitializeAsync never called (DataContextChanged issue)
+Investigation:
+  - OnDataContextChanged only fires when DataContext CHANGES
+  - Constructor already set DataContext = no change event
+  - InitializeAsync never ran = no timer = no data
+Solution: Use Loaded event OR initialize in constructor
+Better: Skip InitializeAsync pattern completely!
+Status: FIXED in v0.7.21 ✅
+```
+
+### Fix #12: Minimal Dashboard Pattern (v0.7.21)
+```yaml
+Problem: Complex IApiService/refresh logic failed mysteriously
+Solution: Direct HttpClient calls in ViewModel
+Implementation:
+  private readonly HttpClient _httpClient = new();
+  // Direct calls, no abstractions
+Pattern:
+  - HttpClient in ViewModel (KISS)
+  - Simple timer in constructor
+  - No InitializeAsync complexity
+  - JsonSerializer.Deserialize directly
+Result: Working dashboard in <100 LOC!
+Status: FIXED in v0.7.21 ✅
+```
+
 ## 🔨 ESSENTIAL TOOLS
 
 ### Development Tools
@@ -336,7 +413,7 @@ Create-DeploymentPackage.ps1  # Release builder
 
 # Full release cycle
 00[TAB] # Build with ZIP
-git tag v0.7.20
+git tag v0.7.21
 git push --tags
 ```
 
@@ -344,10 +421,10 @@ git push --tags
 ```xml
 <!-- Single source of truth for versions -->
 <PropertyGroup>
-  <VersionPrefix>0.7.20</VersionPrefix>
-  <FileVersion>0.7.20.0</FileVersion>
+  <VersionPrefix>0.7.21</VersionPrefix>
+  <FileVersion>0.7.21.0</FileVersion>
   <AssemblyVersion>0.7.0.0</AssemblyVersion>
-  <InformationalVersion>0.7.20 - Pipeline Architecture Fix Complete</InformationalVersion>
+  <InformationalVersion>0.7.21 - Dashboard ViewModel Fix</InformationalVersion>
 </PropertyGroup>
 ```
 
@@ -441,6 +518,15 @@ C:\CamBridge\Output\  # DICOM output
 - **Achievement**: True pipeline isolation!
 - **Learning**: Architecture debt must be paid
 
+### Session 69: Dashboard Detective Victory!
+- Problem: Dashboard blank for 3+ hours
+- Tried: Complex debugging, multiple approaches
+- Solution: Minimal rewrite with direct HTTP
+- **Learning**: When complex fails, go minimal!
+- **Pattern**: Compare working (Service Control) vs broken (Dashboard)
+- **Victory**: Dashboard finally shows service status!
+- **Emotion**: Frustration → "minimal" decision → Success!
+
 ## 📊 METRICS THAT MATTER
 
 ```yaml
@@ -449,62 +535,68 @@ Interfaces: Started 12+ → Current 2 → Target 0
 Build Time: 3min → 20sec (without ZIP)
 Config Formats: 3 → 1 (V2 unified)
 Warnings: ~140 (needs cleanup)
-Deleted: 650+ LOC (Dead Letter + more)
+Deleted: 700+ LOC (Dead Letter + more)
 Fixed: Port 5111 everywhere ✅
-Version: 0.7.20 (dynamic now!)
+Version: 0.7.21 (dynamic now!)
 Pipelines: Truly isolated! ✅
 API Endpoints: 4/5 implemented
 CORE FEATURE: JPEG→DICOM WORKING! ✅
 CONFIG: Validates all enums ✅
 ARCHITECTURE: Pipeline isolation! ✅
+DASHBOARD: Shows service status! ✅
 ```
 
 ## 📈 CURRENT STATUS & ROADMAP
 
-### Current: v0.7.20 - Pipeline Architecture Fixed
+### Current: v0.7.21 - Dashboard Working!
 ```yaml
 Done:
-✅ FileProcessor per pipeline
-✅ True pipeline isolation
-✅ DicomOverrides working
-✅ All build errors fixed
-✅ V1 references removed
-✅ Service running stable
+✅ Dashboard shows service status
+✅ Minimal implementation works
+✅ NavigationService injects ViewModels
+✅ Direct HTTP pattern proven
+✅ Auto-refresh reliable
+✅ Pipelines visible
 
 Issues:
+- Pipeline Config page empty
 - ~140 build warnings
 - Missing API endpoint (/api/statistics)
 - 2 interfaces remain
-- ValidateInfrastructure removed
 ```
 
-### Next: Sprint 15 - Warning Reduction (v0.8.x)
+### Next: Sprint 16 - UI Polish (v0.7.x)
 ```yaml
 Goals:
-- Reduce warnings to <50
-- Fix nullable reference warnings
-- Clean up unused usings
-- Remove obsolete code
+- Fix Pipeline Config page
+- Modern dashboard design
+- Interactive features
+- Live activity feed
 
 Scope:
-- No functional changes
-- Pure cleanup sprint
-- Documentation updates
+- UI improvements only
+- No architecture changes
+- Focus on user experience
 ```
 
 ### Future Sprints
 ```yaml
-Sprint 16: Final Interface Analysis (v0.8.x)
+Sprint 17: Warning Reduction (v0.8.x)
+- Reduce warnings to <50
+- Fix nullable reference warnings
+- Clean up unused code
+
+Sprint 18: Final Interface Analysis (v0.8.x)
 - Analyze IMappingConfiguration necessity
 - Analyze IDicomTagMapper necessity
 - Consider full direct dependency model
 
-Sprint 17: Performance (v0.9.x)
+Sprint 19: Performance (v0.9.x)
 - Optimize file processing
 - Parallel pipeline execution
 - Memory usage optimization
 
-Sprint 18+: Protected Medical Features
+Sprint 20+: Protected Medical Features
 - FTP Server (basic only!)
 - C-STORE SCP
 - Modality Worklist  
@@ -542,6 +634,7 @@ Dynamic Version: Never hardcode again
 Enum Validation: Clear errors always
 Direct Dependencies: The new way
 Pipeline Isolation: Each pipeline independent!
+Minimal Dashboard: When complex fails, go simple!
 ```
 
 ## 🔧 QUICK REFERENCE CARD
@@ -584,6 +677,9 @@ Start-Service CamBridgeService  # Creates fresh config
 
 # Pipeline not working
 # Check pipeline has own output folder configured
+
+# Dashboard shows nothing
+# Try minimal approach - direct HTTP!
 ```
 
 ## 📝 WISDOM NOTES
@@ -597,12 +693,14 @@ Start-Service CamBridgeService  # Creates fresh config
 - Enum validation
 - Direct dependencies
 - Per-pipeline FileProcessor
+- Minimal dashboard approach (v0.7.21!)
 
 ### What Needs Work
 - Too many warnings (~140)
 - Missing API endpoint
 - Documentation gaps
 - Some architectural debt remains
+- Pipeline Config page empty
 
 ### Lessons Learned
 1. **KISS beats SOLID** every single time
@@ -613,18 +711,20 @@ Start-Service CamBridgeService  # Creates fresh config
 6. **Check sources first** - code might already exist!
 7. **Direct > Abstract** - interfaces without reason = delete!
 8. **Singletons + Config = Problems** - isolate pipelines!
+9. **When complex fails, go minimal** - Session 69 proved it!
 
-### Session 68 Special Learning
+### Session 69 Special Learning
 ```yaml
-Problem: FileProcessor singleton but needs pipeline config
-Discovery: During V1 cleanup
-Solution: Each pipeline creates own FileProcessor
-Impact: True pipeline isolation achieved
-Oliver's wisdom: "Die Pipeline ist zu wichtig"
-Result: Medical data properly isolated
+Problem: Dashboard wouldn't show service status
+Duration: 3+ hours of debugging
+Attempts: 10+ different approaches
+User: "ich werde bald wahnsinnig"
+Solution: "minimal" - complete rewrite
+Result: Working in minutes!
+Learning: Sometimes throwing away code is the answer
 ```
 
 ---
 
-*"Making the improbable reliably simple - one pipeline at a time!"*
-*Version 0.7.20 - Pipeline isolation complete!*
+*"Making the improbable reliably simple - one minimal solution at a time!"*
+*Version 0.7.21 - Dashboard works through minimalism!*

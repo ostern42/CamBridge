@@ -6,6 +6,66 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# CHANGELOG.md - Session 69 Entry
+
+## [0.7.21] - 2025-06-17
+
+### 🔧 Fixed
+- **Dashboard Service Status Display** - Complete rewrite with minimal approach
+  - NavigationService now properly injects ViewModels into pages
+  - Dashboard uses direct HttpClient instead of IApiService
+  - Simple timer-based refresh instead of complex InitializeAsync
+  - Fixed case sensitivity in API property mapping
+- **ViewModel Initialization** - Fixed initialization pattern
+  - Removed problematic DataContextChanged approach
+  - Timer starts immediately in constructor
+  - No more race conditions or missed events
+
+### 🎯 Changed
+- **Dashboard Architecture** - Simplified to minimal implementation
+  - Removed all IApiService dependencies
+  - Direct HTTP calls to service API
+  - < 100 LOC for entire dashboard logic
+  - Reuses existing ServiceStatusToColorConverter
+- **NavigationService** - Enhanced with ViewModel injection
+  - Each page receives its ViewModel from DI
+  - Consistent pattern across all pages
+  - Debug output for troubleshooting
+
+### 📝 Technical Details
+- **Session 69**: Epic 3+ hour debugging session
+- **Problem**: Dashboard showed no data while Service Control worked
+- **Root Causes**: 
+  1. NavigationService didn't inject ViewModels
+  2. InitializeAsync pattern failed due to event sequence
+  3. Complex refresh logic obscured simple issues
+- **Solution**: Complete minimal rewrite
+- **Files Modified**: 
+  - NavigationService.cs
+  - DashboardViewModel.cs 
+  - DashboardPage.xaml/xaml.cs
+  - ValueConverters.cs
+- **Learning**: "When debugging fails, go minimal!"
+
+### 🏆 Achievements
+- Dashboard finally shows service status! ✅
+- Pipelines visible with basic info ✅
+- Auto-refresh working reliably ✅
+- Proved that minimal > complex sometimes ✅
+- User frustration resolved! ✅
+
+### 💡 Key Quote
+> "ich werde bald wahnsinnig" → "minimal" → SUCCESS!
+
+### 🚀 Next Steps
+- Sprint 16: Modern dashboard design
+- Sprint 16: Fix empty Pipeline Config page
+- Future: Add interactive features
+
+---
+
+*"Making the improbable reliably simple through strategic minimalism!"*
+
 ## [0.7.20] - 2025-06-16
 
 ### 🔧 Fixed

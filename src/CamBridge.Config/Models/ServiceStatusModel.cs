@@ -1,5 +1,5 @@
 // src\CamBridge.Config\Models\ServiceStatusModel.cs
-// Version: 0.7.1
+// Version: 0.7.21
 // Description: Service status model with config path information
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 

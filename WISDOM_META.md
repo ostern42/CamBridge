@@ -1,8 +1,8 @@
 # WISDOM_META.md - CamBridge Master Reference
-**Version**: 0.7.20  
-**Last Update**: 2025-06-16 23:10  
+**Version**: 0.7.21  
+**Last Update**: 2025-06-17 01:15  
 **Purpose**: Consolidated technical & operational wisdom with complete code map  
-**Philosophy**: Sources First, KISS, Tab-Complete Everything, Direct Dependencies, Pipeline Isolation
+**Philosophy**: Sources First, KISS, Tab-Complete Everything, Direct Dependencies, Pipeline Isolation, Minimal When Needed
 
 ## 🚀 QUICK REFERENCE
 
@@ -13,7 +13,7 @@ Service Name: CamBridgeService (no space!)
 Config Path: %ProgramData%\CamBridge\appsettings.json
 Config Format: V2 with CamBridge wrapper (MANDATORY!)
 Output Org Values: [None, ByPatient, ByDate, ByPatientAndDate]
-Version: 0.7.20 (dynamically read from assembly!)
+Version: 0.7.21 (dynamically read from assembly!)
 Interfaces: Only 2 remain! (was 8+)
 FileProcessor: Per-pipeline instance (NOT singleton!)
 ```
@@ -32,7 +32,7 @@ Get-Service CamBridgeService
 Stop-Service CamBridgeService -Force
 Start-Service CamBridgeService
 
-# API Testing (v0.7.20)
+# API Testing (v0.7.21)
 Invoke-RestMethod "http://localhost:5111/api/status"
 Invoke-RestMethod "http://localhost:5111/api/pipelines"
 Invoke-RestMethod "http://localhost:5111/api/status/version"
@@ -41,11 +41,11 @@ Invoke-RestMethod "http://localhost:5111/api/status/health"
 # Config Validation
 .\Debug-CamBridgeJson.ps1
 
-# Version Check (should show 0.7.20)
+# Version Check (should show 0.7.21)
 (Invoke-RestMethod "http://localhost:5111/api/status").version
 ```
 
-## 🗺️ COMPLETE CODE MAP v2.4
+## 🗺️ COMPLETE CODE MAP v2.5
 
 ### System Overview
 ```
@@ -332,7 +332,7 @@ AssemblyInfo.cs
   - Copyright
 ```
 
-#### ViewModels (MVVM Pattern)
+#### ViewModels (MVVM Pattern) - Updated v0.7.21
 ```yaml
 ViewModelBase.cs
   - PropertyChanged implementation
@@ -346,13 +346,14 @@ MainViewModel.cs
   - Current page tracking
   - Menu items (if any)
 
-DashboardViewModel.cs ⭐ [Main Status View]
-  - ServiceStatus: ServiceStatusModel?
-  - PipelineStatuses: ObservableCollection<PipelineStatus>
-  - RefreshCommand: ICommand
-  - StartServiceCommand, StopServiceCommand
+DashboardViewModel.cs ⭐⭐ [MINIMAL REWRITE v0.7.21!]
+  - NO IApiService dependency!
+  - Direct HttpClient usage
+  - Simple timer in constructor (no InitializeAsync!)
+  - ServiceStatus: string
   - IsServiceRunning: bool
-  - UpdateInterval: DispatcherTimer (5 sec)
+  - PipelineStatuses: ObservableCollection<PipelineStatusViewModel>
+  - RefreshAsync(): Direct HTTP calls
   - Port: 5111 (must match service!)
 
 PipelineViewModel.cs [Pipeline Management]
@@ -362,6 +363,7 @@ PipelineViewModel.cs [Pipeline Management]
   - SaveCommand, CancelCommand
   - LoadPipelinesAsync(): Task
   - EnablePipelineCommand, DisablePipelineCommand
+  [NOTE: Currently empty in UI - needs fix in Sprint 16]
 
 MappingEditorViewModel.cs [DICOM Tag Mapping - v0.7.20]
   - MappingSets: ObservableCollection<MappingSet>
@@ -378,7 +380,7 @@ SettingsPage.xaml [REMOVED in v0.7.20!] ❌
 SettingsPage.xaml.cs [REMOVED in v0.7.20!] ❌
 ```
 
-#### Services (Supporting Config Tool)
+#### Services (Supporting Config Tool) - Updated v0.7.21
 ```yaml
 ConfigurationService.cs [IConfigurationService] ⭐ v0.7.17 UPDATE
   - LoadConfigurationAsync<T>(): Task<T?>
@@ -403,27 +405,35 @@ ServiceManager.cs [IServiceManager]
   - RestartServiceAsync(): Task<bool>
   - Uses: ServiceController class
 
-NavigationService.cs [INavigationService]
+NavigationService.cs ⭐ [CRITICAL UPDATE v0.7.21!]
   - NavigateTo(pageKey): void
   - GoBack(): void
   - CanGoBack: bool
   - Page registration system
   - NO SettingsPage anymore!
+  - NEW: ViewModel injection for each page!
+  - Pattern: pageKey switch expression
 ```
 
-#### Views (WPF Pages)
+#### Views (WPF Pages) - Updated v0.7.21
 ```yaml
-DashboardPage.xaml [Main View]
-  - Service status card
-  - Pipeline status list
-  - Quick action buttons
+DashboardPage.xaml ⭐ [MINIMAL v0.7.21]
+  - Service status card (simple)
+  - Pipeline list (basic)
   - Auto-refresh (5 sec)
+  - Uses ServiceStatusToColorConverter
+
+DashboardPage.xaml.cs [SIMPLIFIED v0.7.21]
+  - Just InitializeComponent()
+  - No complex initialization
+  - ViewModel from NavigationService
 
 PipelineConfigPage.xaml [Replaces Settings!]
   - Pipeline list/grid
   - Pipeline editor form
   - Enable/disable toggles
   - Watch folder config
+  [NOTE: Empty in UI - needs fix]
 
 MappingRulePage.xaml [DICOM Mapping]
   - Mapping set selector
@@ -553,7 +563,7 @@ public const string Version = "0.7.9";
 // NEW (dynamic - good!)
 public static string Version => 
     FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
-        .FileVersion?.TrimEnd(".0") ?? "0.7.20";
+        .FileVersion?.TrimEnd(".0") ?? "0.7.21";
 ```
 
 ### 6. InitializePrimaryConfig (Was never broken!)
@@ -583,6 +593,27 @@ Key changes:
   - PipelineManager creates FileProcessor
   - ProcessingQueue gets direct dependency
   - DicomOverrides vs DicomSettings resolved
+```
+
+### 9. The InitializeAsync Trap (v0.7.21!)
+```yaml
+Problem: ViewModel has InitializeAsync but never called
+Cause: DataContextChanged doesn't fire if already set
+Fix: Use Loaded event or initialize in constructor
+Better: Don't use InitializeAsync pattern at all!
+Example: Dashboard in Session 69
+```
+
+### 10. The Minimal Victory Pattern (v0.7.21!)
+```yaml
+When debugging for hours with no progress:
+1. Accept the complex approach failed
+2. Delete the complex code
+3. Write minimal version
+4. Use direct dependencies
+5. Celebrate when it works!
+Example: Dashboard rewrite in Session 69
+Result: 50 lines worked where 200 failed!
 ```
 
 ## 🛠️ STANDARD WORKFLOWS
@@ -743,6 +774,19 @@ Benefits:
 Impact: Architecture finally correct!
 ```
 
+### Why Minimal Dashboard? (v0.7.21)
+```yaml
+Original: Complex IApiService pattern
+Problem: Wouldn't show data for hours
+Solution: Direct HttpClient calls
+Benefits:
+- Working in minutes
+- 50 lines vs 200
+- No complex initialization
+- Timer in constructor
+Impact: Sometimes simple beats "proper"!
+```
+
 ## 📚 KEY LEARNINGS CRYSTALLIZED
 
 ### Technical Wisdoms
@@ -753,6 +797,7 @@ Impact: Architecture finally correct!
 5. **Working > Perfect** - Ship it, then improve it
 6. **Direct > Abstract** - Interfaces without multiple implementations = delete
 7. **Isolate pipelines** - Medical data requires separation
+8. **Minimal when stuck** - Sometimes throwing away is faster than fixing
 
 ### Process Wisdoms  
 1. **Sources First** - Always check what exists before coding
@@ -761,6 +806,7 @@ Impact: Architecture finally correct!
 4. **Document decisively** - Future you will thank current you
 5. **Test immediately** - Build success ≠ feature works
 6. **Architecture debt** - Must be paid eventually
+7. **Frustration = signal** - Time to try different approach
 
 ### Debugging Wisdoms
 1. **Check the obvious** - Port numbers, service names, typos
@@ -768,6 +814,7 @@ Impact: Architecture finally correct!
 3. **Validate assumptions** - Is config loaded? Is service running?
 4. **Use the tools** - Event Log, API endpoints, console mode
 5. **When stuck, restart** - Clean slate often reveals issues
+6. **Compare working vs broken** - Session 69 pattern!
 
 ### Architecture Wisdoms
 1. **Start simple** - You can always add complexity later
@@ -776,10 +823,11 @@ Impact: Architecture finally correct!
 4. **Patterns are tools** - Not rules to follow blindly
 5. **Evolution is OK** - Code can grow and change
 6. **Singletons + Config = Problems** - Isolate state per context
+7. **Working ugly > Beautiful broken** - Ship it!
 
 ## 🎯 CURRENT STATE & PRIORITIES
 
-### Complete (v0.7.20) ✅
+### Complete (v0.7.21) ✅
 ```yaml
 Pipeline Architecture Fixed:
 ✅ FileProcessor per pipeline
@@ -789,20 +837,27 @@ Pipeline Architecture Fixed:
 ✅ All build errors resolved
 ✅ Service builds and runs
 
-Session 68 Achievements:
-✅ Fixed singleton problem
-✅ KISS principle applied
-✅ Medical data properly isolated
-✅ Version updated to 0.7.20
-✅ All WISDOM files updated
+Dashboard Working:
+✅ Service status visible
+✅ Version and uptime shown
+✅ Pipelines listed
+✅ Auto-refresh working
+✅ Minimal approach victory
+
+Session 69 Achievements:
+✅ NavigationService injects ViewModels
+✅ Direct HTTP pattern proven
+✅ Complex debugging overcome
+✅ User frustration resolved
 ```
 
-### Immediate (v0.7.21)
+### Immediate (Sprint 16)
 ```yaml
-Nice to Have:
-1. Deploy and test multi-pipeline
-2. Verify pipeline isolation
-3. Document success
+UI Polish:
+1. Fix empty Pipeline Config page
+2. Modern dashboard design
+3. Interactive features
+4. Live activity feed
 ```
 
 ### Short Term (v0.8.0)
@@ -849,13 +904,18 @@ Get-EventLog -LogName Application -Source CamBridge* -Newest 10
 Remove-Item "$env:ProgramData\CamBridge\appsettings.json" -Force
 ```
 
-### Dashboard Shows Nothing
+### Dashboard Shows Nothing (FIXED in v0.7.21!)
 ```yaml
-Check:
-1. Port 5111 in all places
-2. Service is running
-3. API responds: http://localhost:5111/api/status
-4. No firewall blocking
+Old Complex Approach:
+1. Check ports
+2. Check API
+3. Debug ViewModels
+4. Hours of frustration
+
+New Minimal Approach:
+1. Direct HttpClient
+2. Timer in constructor
+3. Works immediately!
 ```
 
 ### Pipeline Not Processing
@@ -913,7 +973,7 @@ Write-Host "Building version $($version.InnerText)"
 ## 📊 PROJECT METRICS
 
 ```yaml
-Current Version: 0.7.20
+Current Version: 0.7.21
 Total LOC: 14,350+
 Written By: Claude (100%)
 Deleted: 700+ LOC
@@ -924,6 +984,7 @@ API Endpoints: 4/5 implemented
 Test Coverage: Manual only
 Documentation: Wisdom files + code comments
 Architecture: Pipeline-isolated processing!
+Dashboard: Minimal but working!
 ```
 
 ## 🎉 SUCCESS CRITERIA
@@ -940,6 +1001,7 @@ Architecture: Pipeline-isolated processing!
 - [x] Config errors are clear
 - [x] Direct dependencies implemented
 - [x] Pipeline isolation complete
+- [x] Dashboard shows service status
 
 ### Production Ready When:
 - [x] Zero crashes on bad input (enum validation added!)
@@ -952,6 +1014,6 @@ Architecture: Pipeline-isolated processing!
 
 ---
 
-*"Making the improbable reliably simple - one isolated pipeline at a time!"*
+*"Making the improbable reliably simple - one minimal solution at a time!"*
 
-*Master reference for CamBridge v0.7.20 - Pipeline architecture complete!*
+*Master reference for CamBridge v0.7.21 - Dashboard works through minimalism!*

@@ -10,7 +10,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Include="NotificationSettings.cs.bak" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -18,3 +17,4 @@
 	</ItemGroup>
 
 </Project>
+

@@ -1,5 +1,5 @@
 // src/CamBridge.Config/Converters/ValueConverters.cs
-// Version: 0.7.7
+// Version: 0.7.21
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -439,6 +439,27 @@ namespace CamBridge.Config.Converters
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts boolean to color (Green for true, Red for false)
+    /// NEW in v0.7.21 for Dashboard minimal
+    /// </summary>
+    public class BoolToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isTrue)
+            {
+                return new SolidColorBrush(isTrue ? Colors.Green : Colors.Red);
+            }
+            return new SolidColorBrush(Colors.Gray);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }
