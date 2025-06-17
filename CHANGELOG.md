@@ -6,7 +6,105 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# CHANGELOG.md - Session 69 Entry
+
+
+# CHANGELOG.md - Session 71 Entry
+
+## [0.7.23] - 2025-06-17 (INCOMPLETE)
+
+### 🚧 Attempted
+- **TabControl Build Error** - MC3072 TabControlHelper.TabStripPlacement
+  - Property doesn't exist in ModernWpfUI namespace
+  - PipelineConfigPage.xaml shows fix already applied (line 208)
+  - Build system seeing different version of file
+  - Suspected build cache or unsaved file issue
+
+### 🔍 Discovered
+- **Dead Letter Folder UI** - Still present in PipelineConfigPage
+  - Lines 310-322 need removal in Sprint 16
+  - Part of larger dead letter cleanup effort
+- **MappingEditorPage** - May have scrollbar issues
+  - Found ScrollViewer references at lines 164, 225, 303
+  - Needs investigation after build fix
+
+### 📝 Documentation
+- Created WISDOM_SPRINT_16.md for error handling improvements
+- Updated all WISDOM files to v0.7.23
+- Added "Phantom Property" pattern to technical wisdom
+- Added build cache cleaning to troubleshooting guide
+
+### 🛑 Blocked By
+- Build error preventing all progress
+- Need to clean build cache and verify file state
+- Cannot test any changes until resolved
+
+### 🔧 Next Steps
+```powershell
+# 1. Clean build completely
+Remove-Item -Recurse -Force */obj, */bin
+
+# 2. Verify file is saved
+Get-Content "src\CamBridge.Config\Views\PipelineConfigPage.xaml" | Select-String "TabControlHelper"
+
+# 3. Check for other occurrences
+Select-String -Path "src\**\*.xaml" -Pattern "TabControlHelper" -Recurse
+
+# 4. Rebuild
+0[TAB]
+```
+
+### 💡 Session Learning
+> "When the build shows errors for code that's already fixed, the build cache is lying to you!"
+
+### ⚠️ Note
+Session 71 ended incomplete due to phantom property build error. Version incremented but no functional changes delivered.
+
+---
+
+*"Sometimes you fight ghosts in the machine - and the ghosts win (temporarily)!"*
+
+## [0.7.22] - 2025-06-17
+🔧 Fixed
+
+Pipeline Config Page - Fixed "No Pipeline Selected" display bug
+
+Wrong converter was being used (InverseBoolToVisibility instead of NullToVisibility)
+Now correctly hides message when pipeline is selected
+Pipeline details properly shown for selected pipelines
+
+
+TabControl Scrolling - Removed unnecessary scroll arrows
+
+Added ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+Cleaner UI without tab navigation arrows
+
+
+
+🎯 Changed
+
+Version - Bumped to 0.7.22 for Pipeline Config UI Polish
+InformationalVersion - Updated to "0.7.22 - Pipeline Config UI Polish"
+
+📝 Technical Details
+
+Session 70: Pipeline Config converter fix
+Problem: InverseBooleanToVisibilityConverter expects boolean, was receiving object
+Solution: Changed to NullToVisibilityConverter with Inverse parameter
+Files Modified:
+
+PipelineConfigPage.xaml (line 366 and TabControl)
+Version.props
+
+
+
+🚀 Next Sprint (16)
+
+Remove dead letter folder references
+Enhance error management UI
+General Pipeline Config polish
+
+
+"Making converters convert correctly since 2025!"
 
 ## [0.7.21] - 2025-06-17
 

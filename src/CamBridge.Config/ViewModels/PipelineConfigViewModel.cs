@@ -1,6 +1,6 @@
 // src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs
-// Version: 0.7.7
-// Description: Pipeline Configuration ViewModel - Zero Global Settings!
+// Version: 0.7.21
+// Description: Pipeline Configuration ViewModel - FIXED with diagnostics
 
 using CamBridge.Config.Services;
 using CamBridge.Core;
@@ -13,7 +13,7 @@ using System.Linq;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace CamBridge.Config.ViewModels
 {
@@ -22,7 +22,6 @@ namespace CamBridge.Config.ViewModels
     {
         private readonly IConfigurationService _configurationService;
         private CamBridgeSettingsV2? _originalSettings;
-        private bool _isInitializing = false;
 
         // Collections
         [ObservableProperty]
@@ -40,6 +39,7 @@ namespace CamBridge.Config.ViewModels
             {
                 if (SetProperty(ref _selectedPipeline, value))
                 {
+                    Debug.WriteLine($"SelectedPipeline changed to: {value?.Name ?? "null"}");
                     OnPropertyChanged(nameof(SelectedPipelineDicomOverrides));
                     OnPropertyChanged(nameof(UseCustomLogging));
                     OnPropertyChanged(nameof(UseCustomNotifications));
@@ -128,7 +128,7 @@ namespace CamBridge.Config.ViewModels
         private bool _isSaving;
 
         [ObservableProperty]
-        private string _statusMessage = "Ready";
+        private string _statusMessage = "Initializing...";
 
         [ObservableProperty]
         private bool _isError;
@@ -145,11 +145,13 @@ namespace CamBridge.Config.ViewModels
         public PipelineConfigViewModel(IConfigurationService configurationService)
         {
             _configurationService = configurationService;
+            Debug.WriteLine("PipelineConfigViewModel constructor called");
 
             // Subscribe to collection changes
             Pipelines.CollectionChanged += (s, e) =>
             {
-                if (!IsLoading && !_isInitializing)
+                Debug.WriteLine($"Pipelines collection changed: Count = {Pipelines.Count}");
+                if (!IsLoading)
                 {
                     HasUnsavedChanges = true;
                     UnsavedChangesCount++;
@@ -159,29 +161,52 @@ namespace CamBridge.Config.ViewModels
 
         public async Task InitializeAsync()
         {
+            Debug.WriteLine("=== PipelineConfigViewModel.InitializeAsync START ===");
             try
             {
-                _isInitializing = true;
                 await LoadSettingsAsync();
+
+                // Ensure we have at least one pipeline
+                if (Pipelines.Count == 0)
+                {
+                    Debug.WriteLine("No pipelines loaded, creating default");
+                    CreateDefaultPipeline();
+                }
+
+                Debug.WriteLine($"InitializeAsync completed. Pipeline count: {Pipelines.Count}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"InitializeAsync FAILED: {ex.Message}");
+                Debug.WriteLine($"Stack: {ex.StackTrace}");
+                StatusMessage = $"Initialization failed: {ex.Message}";
+                IsError = true;
+
+                // Create default pipeline even on error
+                CreateDefaultPipeline();
             }
             finally
             {
-                _isInitializing = false;
+                Debug.WriteLine("=== PipelineConfigViewModel.InitializeAsync END ===");
             }
         }
 
         [RelayCommand]
         private async Task LoadSettingsAsync()
         {
+            Debug.WriteLine("LoadSettingsAsync called");
             try
             {
                 IsLoading = true;
                 IsError = false;
                 StatusMessage = "Loading pipeline configuration...";
 
+                Debug.WriteLine("Calling ConfigurationService.LoadConfigurationAsync<CamBridgeSettingsV2>");
                 var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>();
+
                 if (settings != null)
                 {
+                    Debug.WriteLine($"Settings loaded: Version={settings.Version}, Pipelines={settings.Pipelines.Count}");
                     _originalSettings = settings;
                     MapFromSettings(settings);
 
@@ -194,6 +219,7 @@ namespace CamBridge.Config.ViewModels
                 }
                 else
                 {
+                    Debug.WriteLine("Settings is null - creating default pipeline");
                     // Create default settings
                     CreateDefaultPipeline();
                     StatusMessage = "Created default pipeline configuration";
@@ -201,12 +227,21 @@ namespace CamBridge.Config.ViewModels
             }
             catch (Exception ex)
             {
+                Debug.WriteLine($"LoadSettingsAsync ERROR: {ex.Message}");
+                Debug.WriteLine($"Exception type: {ex.GetType().Name}");
                 StatusMessage = $"Error loading settings: {ex.Message}";
                 IsError = true;
+
+                // Ensure we have at least one pipeline
+                if (Pipelines.Count == 0)
+                {
+                    CreateDefaultPipeline();
+                }
             }
             finally
             {
                 IsLoading = false;
+                Debug.WriteLine($"LoadSettingsAsync completed. Pipelines count: {Pipelines.Count}");
             }
         }
 
@@ -255,8 +290,11 @@ namespace CamBridge.Config.ViewModels
         [RelayCommand]
         private void AddPipeline()
         {
+            Debug.WriteLine("AddPipeline called");
+
             var newPipeline = new PipelineConfiguration
             {
+                Id = Guid.NewGuid(),
                 Name = $"Pipeline {Pipelines.Count + 1}",
                 Description = "New pipeline configuration",
                 Enabled = true,
@@ -264,7 +302,8 @@ namespace CamBridge.Config.ViewModels
                 {
                     Path = @"C:\CamBridge\NewPipeline\Input",
                     FilePattern = "*.jpg;*.jpeg",
-                    IncludeSubdirectories = false
+                    IncludeSubdirectories = false,
+                    MinimumFileAgeSeconds = 5
                 },
                 ProcessingOptions = new ProcessingOptions
                 {
@@ -283,6 +322,11 @@ namespace CamBridge.Config.ViewModels
                 MappingSetId = MappingSets.FirstOrDefault(m => !m.IsSystemDefault)?.Id
             };
 
+            // Subscribe to property changes
+            newPipeline.PropertyChanged += Pipeline_PropertyChanged;
+            newPipeline.WatchSettings.PropertyChanged += Pipeline_PropertyChanged;
+            newPipeline.ProcessingOptions.PropertyChanged += Pipeline_PropertyChanged;
+
             // Add to collection
             Pipelines.Add(newPipeline);
             SelectedPipeline = newPipeline;
@@ -290,6 +334,8 @@ namespace CamBridge.Config.ViewModels
             HasUnsavedChanges = true;
             UnsavedChangesCount++;
             StatusMessage = $"Added new pipeline: {newPipeline.Name}";
+
+            Debug.WriteLine($"Pipeline added. Total count: {Pipelines.Count}");
         }
 
         [RelayCommand(CanExecute = nameof(CanDeletePipeline))]
@@ -342,7 +388,12 @@ namespace CamBridge.Config.ViewModels
                 var index = Pipelines.IndexOf(SelectedPipeline);
                 if (index >= 0)
                 {
-                    Pipelines[index] = ClonePipeline(originalPipeline);
+                    var cloned = ClonePipeline(originalPipeline);
+                    cloned.PropertyChanged += Pipeline_PropertyChanged;
+                    cloned.WatchSettings.PropertyChanged += Pipeline_PropertyChanged;
+                    cloned.ProcessingOptions.PropertyChanged += Pipeline_PropertyChanged;
+
+                    Pipelines[index] = cloned;
                     SelectedPipeline = Pipelines[index];
                 }
             }
@@ -355,6 +406,8 @@ namespace CamBridge.Config.ViewModels
 
         private void MapFromSettings(CamBridgeSettingsV2 settings)
         {
+            Debug.WriteLine($"MapFromSettings called. Settings has {settings.Pipelines.Count} pipelines, {settings.MappingSets.Count} mapping sets");
+
             // Clear existing
             Pipelines.Clear();
             MappingSets.Clear();
@@ -363,6 +416,7 @@ namespace CamBridge.Config.ViewModels
             foreach (var mappingSet in settings.MappingSets)
             {
                 MappingSets.Add(mappingSet);
+                Debug.WriteLine($"Added mapping set: {mappingSet.Name}");
             }
 
             // Map pipelines
@@ -376,18 +430,21 @@ namespace CamBridge.Config.ViewModels
                 clonedPipeline.ProcessingOptions.PropertyChanged += Pipeline_PropertyChanged;
 
                 Pipelines.Add(clonedPipeline);
+                Debug.WriteLine($"Added pipeline: {clonedPipeline.Name}");
             }
 
             // Select first pipeline
             SelectedPipeline = Pipelines.FirstOrDefault();
+            Debug.WriteLine($"Selected first pipeline: {SelectedPipeline?.Name ?? "none"}");
         }
 
         private void Pipeline_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (!IsLoading && !_isInitializing)
+            if (!IsLoading)
             {
                 SelectedPipelineHasChanges = true;
                 HasUnsavedChanges = true;
+                Debug.WriteLine($"Pipeline property changed: {e.PropertyName}");
             }
         }
 
@@ -470,26 +527,44 @@ namespace CamBridge.Config.ViewModels
 
         private void CreateDefaultPipeline()
         {
+            Debug.WriteLine("CreateDefaultPipeline called");
+
+            // Don't clear if we already have pipelines
+            if (Pipelines.Count > 0)
+            {
+                Debug.WriteLine($"Already have {Pipelines.Count} pipelines, not creating default");
+                return;
+            }
+
+            // Clear mapping sets if needed
+            MappingSets.Clear();
+
             // Create default mapping set
             var defaultMappingSet = new MappingSet
             {
-                Name = "Ricoh Standard",
-                Description = "Standard mapping for Ricoh cameras",
-                IsSystemDefault = false
+                Id = Guid.NewGuid(),
+                Name = "Default Mapping",
+                Description = "Default EXIF to DICOM mapping",
+                IsSystemDefault = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
             MappingSets.Add(defaultMappingSet);
 
             // Create default pipeline
             var defaultPipeline = new PipelineConfiguration
             {
+                Id = Guid.NewGuid(),
                 Name = "Default Pipeline",
                 Description = "Default processing pipeline",
                 Enabled = true,
                 WatchSettings = new PipelineWatchSettings
                 {
-                    Path = @"C:\CamBridge\Input",
+                    Path = @"C:\CamBridge\Watch\Default",
                     FilePattern = "*.jpg;*.jpeg",
-                    IncludeSubdirectories = false
+                    IncludeSubdirectories = false,
+                    OutputPath = @"C:\CamBridge\Output\Default",
+                    MinimumFileAgeSeconds = 5
                 },
                 ProcessingOptions = new ProcessingOptions
                 {
@@ -503,9 +578,12 @@ namespace CamBridge.Config.ViewModels
                     MaxConcurrentProcessing = 2,
                     RetryOnFailure = true,
                     MaxRetryAttempts = 3,
-                    OutputOrganization = OutputOrganization.ByPatientAndDate
+                    OutputOrganization = OutputOrganization.ByPatientAndDate,
+                    ProcessExistingOnStartup = false
                 },
-                MappingSetId = defaultMappingSet.Id
+                MappingSetId = defaultMappingSet.Id,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
             defaultPipeline.PropertyChanged += Pipeline_PropertyChanged;
@@ -514,6 +592,9 @@ namespace CamBridge.Config.ViewModels
 
             Pipelines.Add(defaultPipeline);
             SelectedPipeline = defaultPipeline;
+
+            Debug.WriteLine($"Default pipeline created. Pipelines count: {Pipelines.Count}");
+            StatusMessage = "Created default pipeline";
         }
 
         private void EnsureSystemDefaults()
@@ -525,7 +606,7 @@ namespace CamBridge.Config.ViewModels
                 var ricohStandard = new MappingSet
                 {
                     Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
-                    Name = "Ricoh Standard",
+                    Name = "[System] Ricoh Standard",
                     Description = "Built-in mapping for Ricoh cameras",
                     IsSystemDefault = true,
                     CreatedAt = DateTime.UtcNow,
@@ -533,6 +614,7 @@ namespace CamBridge.Config.ViewModels
                 };
 
                 MappingSets.Insert(0, ricohStandard);
+                Debug.WriteLine("Added system default mapping set: Ricoh Standard");
             }
         }
 
@@ -556,4 +638,3 @@ namespace CamBridge.Config.ViewModels
         }
     }
 }
-

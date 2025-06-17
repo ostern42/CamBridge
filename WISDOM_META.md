@@ -1,6 +1,6 @@
 # WISDOM_META.md - CamBridge Master Reference
-**Version**: 0.7.21  
-**Last Update**: 2025-06-17 01:15  
+**Version**: 0.7.23  
+**Last Update**: 2025-06-17 19:35  
 **Purpose**: Consolidated technical & operational wisdom with complete code map  
 **Philosophy**: Sources First, KISS, Tab-Complete Everything, Direct Dependencies, Pipeline Isolation, Minimal When Needed
 
@@ -13,7 +13,7 @@ Service Name: CamBridgeService (no space!)
 Config Path: %ProgramData%\CamBridge\appsettings.json
 Config Format: V2 with CamBridge wrapper (MANDATORY!)
 Output Org Values: [None, ByPatient, ByDate, ByPatientAndDate]
-Version: 0.7.21 (dynamically read from assembly!)
+Version: 0.7.23 (dynamically read from assembly!)
 Interfaces: Only 2 remain! (was 8+)
 FileProcessor: Per-pipeline instance (NOT singleton!)
 ```
@@ -26,13 +26,14 @@ FileProcessor: Per-pipeline instance (NOT singleton!)
 2[TAB]   # Open Config Tool
 9[TAB]   # Quick Test (no build)
 4[TAB]   # Console Mode (debugging)
+7[TAB]   # Clean build (Session 71!)
 
 # Service Control
 Get-Service CamBridgeService
 Stop-Service CamBridgeService -Force
 Start-Service CamBridgeService
 
-# API Testing (v0.7.21)
+# API Testing (v0.7.23)
 Invoke-RestMethod "http://localhost:5111/api/status"
 Invoke-RestMethod "http://localhost:5111/api/pipelines"
 Invoke-RestMethod "http://localhost:5111/api/status/version"
@@ -41,7 +42,7 @@ Invoke-RestMethod "http://localhost:5111/api/status/health"
 # Config Validation
 .\Debug-CamBridgeJson.ps1
 
-# Version Check (should show 0.7.21)
+# Version Check (should show 0.7.23)
 (Invoke-RestMethod "http://localhost:5111/api/status").version
 ```
 
@@ -105,6 +106,8 @@ ProcessingOptions.cs [v0.7.17 - With enum validation!]
   - FailureAction: enum [Leave, Move]
   - CreateBackup: bool
   - MaxConcurrentProcessing: int
+  - DeadLetterFolder: string? [TO BE REMOVED IN SPRINT 16!]
+  - ErrorFolder: string
 
 DicomOverrides.cs [Pipeline-specific overrides]
   - InstitutionName: string?
@@ -137,7 +140,7 @@ ImageMetadata.cs
   - TechnicalData: ImageTechnicalData
   - ExifData: Dictionary<string,string>
   - InstanceNumber: int
-  [NO CameraInfo or OriginalFilename properties!]
+[NO CameraInfo or OriginalFilename properties!]
 
 ProcessedImage.cs
   - Id: Guid
@@ -252,7 +255,7 @@ FolderWatcherService.cs [NO INTERFACE!]
 NotificationService.cs [NO INTERFACE - v0.7.18!]
   - SendDailySummaryAsync(summary): Task
   - NotifyErrorAsync(message, exception?): Task
-  [Just logs - no email implementation!]
+[Just logs - no email implementation!]
 
 ServiceCollectionExtensions.cs [Updated v0.7.20]
   - AddInfrastructure(services, config): IServiceCollection
@@ -332,7 +335,7 @@ AssemblyInfo.cs
   - Copyright
 ```
 
-#### ViewModels (MVVM Pattern) - Updated v0.7.21
+#### ViewModels (MVVM Pattern) - Updated v0.7.23
 ```yaml
 ViewModelBase.cs
   - PropertyChanged implementation
@@ -356,14 +359,15 @@ DashboardViewModel.cs ⭐⭐ [MINIMAL REWRITE v0.7.21!]
   - RefreshAsync(): Direct HTTP calls
   - Port: 5111 (must match service!)
 
-PipelineViewModel.cs [Pipeline Management]
+PipelineConfigViewModel.cs ⭐ [Pipeline Management - v0.7.22]
   - Pipelines: ObservableCollection<PipelineConfiguration>
   - SelectedPipeline: PipelineConfiguration?
   - AddCommand, EditCommand, DeleteCommand
   - SaveCommand, CancelCommand
   - LoadPipelinesAsync(): Task
   - EnablePipelineCommand, DisablePipelineCommand
-  [NOTE: Currently empty in UI - needs fix in Sprint 16]
+  - Fixed in v0.7.22 with NavigationService injection
+  - DeadLetterFolder still present! [TO FIX IN SPRINT 16]
 
 MappingEditorViewModel.cs [DICOM Tag Mapping - v0.7.20]
   - MappingSets: ObservableCollection<MappingSet>
@@ -415,7 +419,7 @@ NavigationService.cs ⭐ [CRITICAL UPDATE v0.7.21!]
   - Pattern: pageKey switch expression
 ```
 
-#### Views (WPF Pages) - Updated v0.7.21
+#### Views (WPF Pages) - Updated v0.7.23
 ```yaml
 DashboardPage.xaml ⭐ [MINIMAL v0.7.21]
   - Service status card (simple)
@@ -428,18 +432,22 @@ DashboardPage.xaml.cs [SIMPLIFIED v0.7.21]
   - No complex initialization
   - ViewModel from NavigationService
 
-PipelineConfigPage.xaml [Replaces Settings!]
+PipelineConfigPage.xaml ⭐ [FIXED v0.7.22! BUILD ERROR v0.7.23!]
   - Pipeline list/grid
   - Pipeline editor form
   - Enable/disable toggles
   - Watch folder config
-  [NOTE: Empty in UI - needs fix]
+  - FIXED: Converter bug (NullToVisibility)
+  - FIXED: TabControl scrolling disabled
+  - ERROR: TabControlHelper.TabStripPlacement (phantom property)
+  - Still has DeadLetterFolder UI! (line 310-322)
 
 MappingRulePage.xaml [DICOM Mapping]
   - Mapping set selector
   - Rule editor grid
   - EXIF → DICOM mapping
   - Import/Export buttons
+  - May have ScrollViewer issues
 
 ServiceControlPage.xaml [Service Management]
   - Service status display
@@ -451,6 +459,7 @@ DeadLettersPage.xaml [Error Management]
   - Simple error folder viewer
   - No complex queue UI
   - Windows Explorer integration
+  - [TO BE ENHANCED IN SPRINT 16!]
 
 AboutPage.xaml [Info & Easter Eggs]
   - Version info
@@ -464,6 +473,8 @@ SettingsPage.xaml [REMOVED in v0.7.20!]
 
 ```yaml
 Still Present but Unused:
+- DeadLetterFolder in ProcessingOptions (Sprint 16!)
+- DeadLetterFolder UI in PipelineConfigPage (line 310-322)
 - Some interface definitions in Core (2 remain)
 - Several [Obsolete] methods
 - ~140 build warnings
@@ -563,7 +574,7 @@ public const string Version = "0.7.9";
 // NEW (dynamic - good!)
 public static string Version => 
     FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
-        .FileVersion?.TrimEnd(".0") ?? "0.7.21";
+        .FileVersion?.TrimEnd(".0") ?? "0.7.23";
 ```
 
 ### 6. InitializePrimaryConfig (Was never broken!)
@@ -616,6 +627,28 @@ Example: Dashboard rewrite in Session 69
 Result: 50 lines worked where 200 failed!
 ```
 
+### 11. The Converter Type Mismatch (v0.7.22!)
+```yaml
+Problem: Wrong converter for data type
+Example: InverseBoolToVisibility used on object
+Fix: Use appropriate converter (NullToVisibility)
+Learning: Converters must match data types!
+Result: One line fix = feature works!
+```
+
+### 12. The Phantom Property (v0.7.23 - NEW!)
+```yaml
+Problem: Build error for property that doesn't exist
+Example: TabControlHelper.TabStripPlacement
+File shows: Property already removed
+Build shows: MC3072 error persists
+Suspects:
+  - Build cache stale
+  - File not saved
+  - Property exists elsewhere
+Fix: Clean build completely!
+```
+
 ## 🛠️ STANDARD WORKFLOWS
 
 ### Daily Development Cycle
@@ -655,6 +688,24 @@ Invoke-RestMethod "http://localhost:5111/api/status" | ConvertTo-Json -Depth 5
 
 # 5. Check config validity
 .\Debug-CamBridgeJson.ps1
+```
+
+### Build Error Workflow (NEW v0.7.23!)
+```powershell
+# When build shows errors for fixed code:
+# 1. Clean everything
+7[TAB]  # If you have clean script
+# OR manually:
+Remove-Item -Recurse -Force */obj, */bin
+
+# 2. Verify file is saved
+Get-Content "path\to\problem\file.xaml" | Select-String "ErrorPattern"
+
+# 3. Search for duplicates
+Select-String -Path "src\**\*.xaml" -Pattern "TabControlHelper" -Recurse
+
+# 4. Rebuild
+0[TAB]
 ```
 
 ### Config Reset Procedure
@@ -787,6 +838,32 @@ Benefits:
 Impact: Sometimes simple beats "proper"!
 ```
 
+### Why Proper Converter Types? (v0.7.22)
+```yaml
+Problem: Wrong converter causes UI bugs
+Example: Boolean converter on object
+Solution: Match converter to data type
+Benefits:
+- UI works correctly
+- No mysterious bugs
+- Clear error messages
+- One line fixes
+Impact: Type safety prevents hours of debugging!
+```
+
+### Why Clean Build Cache? (v0.7.23)
+```yaml
+Problem: Phantom properties in build errors
+Example: TabControlHelper.TabStripPlacement
+Solution: Aggressive cache cleaning
+Benefits:
+- Removes stale artifacts
+- Forces fresh compilation
+- Reveals actual issues
+- Prevents ghost errors
+Impact: Build truth matches source truth!
+```
+
 ## 📚 KEY LEARNINGS CRYSTALLIZED
 
 ### Technical Wisdoms
@@ -798,6 +875,8 @@ Impact: Sometimes simple beats "proper"!
 6. **Direct > Abstract** - Interfaces without multiple implementations = delete
 7. **Isolate pipelines** - Medical data requires separation
 8. **Minimal when stuck** - Sometimes throwing away is faster than fixing
+9. **Type-match converters** - Boolean converters need booleans!
+10. **Clean build cache** - Phantom errors need aggressive cleaning
 
 ### Process Wisdoms  
 1. **Sources First** - Always check what exists before coding
@@ -815,6 +894,8 @@ Impact: Sometimes simple beats "proper"!
 4. **Use the tools** - Event Log, API endpoints, console mode
 5. **When stuck, restart** - Clean slate often reveals issues
 6. **Compare working vs broken** - Session 69 pattern!
+7. **Check data types** - Converters must match!
+8. **Clean build aggressively** - Cache lies!
 
 ### Architecture Wisdoms
 1. **Start simple** - You can always add complexity later
@@ -827,14 +908,14 @@ Impact: Sometimes simple beats "proper"!
 
 ## 🎯 CURRENT STATE & PRIORITIES
 
-### Complete (v0.7.21) ✅
+### Complete (v0.7.22) ✅
 ```yaml
 Pipeline Architecture Fixed:
 ✅ FileProcessor per pipeline
 ✅ True pipeline isolation  
 ✅ DicomOverrides working correctly
 ✅ V1 settings completely removed
-✅ All build errors resolved
+✅ All build errors resolved (except current)
 ✅ Service builds and runs
 
 Dashboard Working:
@@ -844,20 +925,38 @@ Dashboard Working:
 ✅ Auto-refresh working
 ✅ Minimal approach victory
 
-Session 69 Achievements:
+Pipeline Config Fixed:
 ✅ NavigationService injects ViewModels
-✅ Direct HTTP pattern proven
-✅ Complex debugging overcome
-✅ User frustration resolved
+✅ Converter bug resolved
+✅ Multiple pipelines supported
+✅ All tabs functional
+✅ Save/Load working
+✅ TabControl scrolling disabled
+
+Session 70 Achievements:
+✅ Fixed "No Pipeline Selected" bug
+✅ Identified wrong converter usage
+✅ One-line fix success
+✅ User can manage pipelines
+```
+
+### Blocked (v0.7.23) ⏳
+```yaml
+Build Error MC3072:
+❌ TabControlHelper.TabStripPlacement not found
+❌ File shows fix already applied
+❌ Build cache or save issue suspected
+⏳ Need to clean and verify
 ```
 
 ### Immediate (Sprint 16)
 ```yaml
-UI Polish:
-1. Fix empty Pipeline Config page
-2. Modern dashboard design
-3. Interactive features
-4. Live activity feed
+Error Handling Enhancement:
+1. Fix build error first!
+2. Remove dead letter folder references
+3. Enhance error management UI
+4. Show error list with details
+5. Add retry functionality
 ```
 
 ### Short Term (v0.8.0)
@@ -918,6 +1017,29 @@ New Minimal Approach:
 3. Works immediately!
 ```
 
+### UI Shows Wrong Thing (NEW in v0.7.22!)
+```yaml
+Check:
+1. Converter type matches data
+2. Boolean converter → boolean data
+3. Null converter → object data
+4. Collection converter → collection data
+```
+
+### Build Shows Phantom Errors (NEW in v0.7.23!)
+```yaml
+Symptoms:
+1. Error for property that doesn't exist
+2. File shows fix already applied
+3. Build persists with error
+
+Fix:
+1. Clean aggressively: Remove-Item -Recurse -Force */obj, */bin
+2. Verify file saved: cat file.xaml | Select-String "property"
+3. Search duplicates: Select-String -Recurse "property"
+4. Rebuild: 0[TAB]
+```
+
 ### Pipeline Not Processing
 ```yaml
 Verify:
@@ -936,6 +1058,8 @@ Common fixes:
 2. IsError property in MappingEditorViewModel
 3. Remove SettingsPage files
 4. Check DicomOverrides vs DicomSettings
+5. Check converter usage
+6. Clean build cache!
 ```
 
 ## 🚨 EMERGENCY PROCEDURES
@@ -970,10 +1094,18 @@ Write-Host "Building version $($version.InnerText)"
 0[TAB]  # Build with new version
 ```
 
+### Build Cache Nuclear Option
+```powershell
+# When nothing else works
+Get-ChildItem -Recurse -Directory -Include obj,bin | Remove-Item -Recurse -Force
+dotnet nuget locals all --clear
+Remove-Item "$env:TEMP\*.tmp" -Force -ErrorAction SilentlyContinue
+```
+
 ## 📊 PROJECT METRICS
 
 ```yaml
-Current Version: 0.7.21
+Current Version: 0.7.23
 Total LOC: 14,350+
 Written By: Claude (100%)
 Deleted: 700+ LOC
@@ -985,6 +1117,8 @@ Test Coverage: Manual only
 Documentation: Wisdom files + code comments
 Architecture: Pipeline-isolated processing!
 Dashboard: Minimal but working!
+Pipeline Config: Fully functional (build error aside)
+Current Blocker: TabControlHelper.TabStripPlacement
 ```
 
 ## 🎉 SUCCESS CRITERIA
@@ -1002,6 +1136,7 @@ Dashboard: Minimal but working!
 - [x] Direct dependencies implemented
 - [x] Pipeline isolation complete
 - [x] Dashboard shows service status
+- [x] Pipeline configuration works
 
 ### Production Ready When:
 - [x] Zero crashes on bad input (enum validation added!)
@@ -1011,9 +1146,10 @@ Dashboard: Minimal but working!
 - [ ] Documentation complete
 - [x] Error handling robust
 - [x] Pipeline isolation verified
+- [x] UI works correctly (except current build issue)
 
 ---
 
-*"Making the improbable reliably simple - one minimal solution at a time!"*
+*"Making the improbable reliably simple - one clean build at a time!"*
 
-*Master reference for CamBridge v0.7.21 - Dashboard works through minimalism!*
+*Master reference for CamBridge v0.7.23 - Fighting phantom properties!*

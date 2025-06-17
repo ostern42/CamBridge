@@ -1,6 +1,6 @@
 // src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
-// Version: 0.7.7
-// Description: Pipeline Configuration page code-behind
+// Version: 0.7.21
+// Description: Pipeline Configuration page - SIMPLE FIX
 
 using System;
 using System.Runtime.Versioning;
@@ -8,12 +8,13 @@ using System.Windows;
 using System.Windows.Controls;
 using CamBridge.Config.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Win32;
+using System.Diagnostics;
 
 namespace CamBridge.Config.Views
 {
     /// <summary>
     /// Pipeline Configuration page - Zero Global Settings!
+    /// NavigationService ALREADY injects the ViewModel, so we just need to initialize it
     /// </summary>
     [SupportedOSPlatform("windows")]
     public partial class PipelineConfigPage : Page
@@ -21,21 +22,49 @@ namespace CamBridge.Config.Views
         public PipelineConfigPage()
         {
             InitializeComponent();
+
+            // Use Loaded event instead of OnInitialized to ensure NavigationService has done its job
+            this.Loaded += Page_Loaded;
         }
 
-        protected override async void OnInitialized(EventArgs e)
+        private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            base.OnInitialized(e);
+            // Only run once
+            this.Loaded -= Page_Loaded;
 
-            // Get the ViewModel from DI container
-            var app = Application.Current as App;
-            if (app?.Host?.Services != null)
+            Debug.WriteLine("=== PipelineConfigPage Loaded ===");
+
+            // NavigationService should have already set our DataContext
+            if (DataContext is PipelineConfigViewModel vm)
             {
-                var viewModel = app.Host.Services.GetRequiredService<PipelineConfigViewModel>();
-                DataContext = viewModel;
+                Debug.WriteLine("ViewModel found! Initializing...");
+                try
+                {
+                    await vm.InitializeAsync();
+                    Debug.WriteLine($"Initialization complete. Pipelines: {vm.Pipelines.Count}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Initialization failed: {ex.Message}");
+                    MessageBox.Show(
+                        $"Failed to load pipeline configuration:\n{ex.Message}",
+                        "Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"ERROR: DataContext is {DataContext?.GetType().Name ?? "null"} - expected PipelineConfigViewModel");
 
-                // Initialize the ViewModel
-                await viewModel.InitializeAsync();
+                // Fallback - try to get it ourselves
+                var app = Application.Current as App;
+                if (app?.Host?.Services != null)
+                {
+                    var viewModel = app.Host.Services.GetRequiredService<PipelineConfigViewModel>();
+                    DataContext = viewModel;
+                    await viewModel.InitializeAsync();
+                }
             }
         }
 
@@ -110,5 +139,3 @@ namespace CamBridge.Config.Views
         }
     }
 }
-
-

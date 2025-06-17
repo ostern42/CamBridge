@@ -1,6 +1,6 @@
 # WISDOM_TECHNICAL.md - Complete Technical Reference
-**Version**: 0.7.21  
-**Last Update**: 2025-06-17 01:15  
+**Version**: 0.7.23  
+**Last Update**: 2025-06-17 19:30  
 **Purpose**: Technical implementation wisdom, patterns, solutions  
 **Philosophy**: KISS, Tab-Complete, Sources First, Direct Dependencies, Pipeline Isolation
 
@@ -28,7 +28,7 @@ N - Next: Clear next actions
 ```
 "VOGON INIT für Interface Removal"
 "Mini-VOGON für Config check"
-"VOGON EXIT mit v0.7.21 release"
+"VOGON EXIT mit v0.7.23 release"
 ```
 
 ## 🔧 TECHNICAL STACK
@@ -64,6 +64,7 @@ h[TAB]  # Show help
 11[TAB] # Deploy with backup
 99[TAB] # Full test with build
 4[TAB]  # Start console mode (debugging)
+7[TAB]  # Clean build artifacts (Session 71!)
 ```
 
 ### Service Management
@@ -82,7 +83,7 @@ Get-EventLog -LogName Application -Source CamBridge* -Newest 20
 Get-Content "$env:ProgramData\CamBridge\logs\*.log" -Tail 50 -Wait
 ```
 
-### API Testing (v0.7.21 endpoints)
+### API Testing (v0.7.23 endpoints)
 ```powershell
 # Working endpoints
 Invoke-RestMethod "http://localhost:5111/api/status"         # Full status
@@ -130,7 +131,7 @@ public static string Version
             return version;
         }
         
-        return "0.7.21"; // Emergency fallback only
+        return "0.7.23"; // Emergency fallback only
     }
 }
 ```
@@ -236,6 +237,22 @@ public class DashboardViewModel
         // Parse and update UI
     }
 }
+```
+
+### The Build Cache Pattern (NEW v0.7.23!)
+```powershell
+# When build shows errors for fixed code
+# 1. Clean completely
+Remove-Item -Recurse -Force */obj, */bin
+
+# 2. Verify file saved
+Get-Content "path\to\file.xaml" | Select-String "ErrorPattern"
+
+# 3. Search for other occurrences
+Select-String -Path "src\**\*.xaml" -Pattern "ErrorPattern" -Recurse
+
+# 4. Rebuild clean
+dotnet build --no-incremental
 ```
 
 ## 🐛 CRITICAL FIXES REFERENCE
@@ -377,6 +394,33 @@ Result: Working dashboard in <100 LOC!
 Status: FIXED in v0.7.21 ✅
 ```
 
+### Fix #13: Pipeline Config Converter Bug (v0.7.22)
+```yaml
+Problem: "No Pipeline Selected" shown even when pipeline selected
+Root Cause: InverseBoolToVisibility converter used with object
+Solution: Use NullToVisibility converter with Inverse parameter
+Example:
+  Wrong: Converter={StaticResource InverseBoolToVisibility}
+  Right: Converter={StaticResource NullToVisibility}, ConverterParameter=Inverse
+Fix: One line change in XAML
+Status: FIXED in v0.7.22 ✅
+```
+
+### Fix #14: TabControl Property Mystery (v0.7.23)
+```yaml
+Problem: TabControlHelper.TabStripPlacement doesn't exist
+Error: MC3072 at line 208
+Investigation:
+  - Property not in ModernWpfUI namespace
+  - File shows it's already removed
+  - Build cache seeing old version?
+Solution: 
+  1. Clean build completely
+  2. Verify file is saved
+  3. Remove property if found
+Status: IN PROGRESS ⏳
+```
+
 ## 🔨 ESSENTIAL TOOLS
 
 ### Development Tools
@@ -413,7 +457,7 @@ Create-DeploymentPackage.ps1  # Release builder
 
 # Full release cycle
 00[TAB] # Build with ZIP
-git tag v0.7.21
+git tag v0.7.23
 git push --tags
 ```
 
@@ -421,10 +465,10 @@ git push --tags
 ```xml
 <!-- Single source of truth for versions -->
 <PropertyGroup>
-  <VersionPrefix>0.7.21</VersionPrefix>
-  <FileVersion>0.7.21.0</FileVersion>
+  <VersionPrefix>0.7.23</VersionPrefix>
+  <FileVersion>0.7.23.0</FileVersion>
   <AssemblyVersion>0.7.0.0</AssemblyVersion>
-  <InformationalVersion>0.7.21 - Dashboard ViewModel Fix</InformationalVersion>
+  <InformationalVersion>0.7.23 - Config UI TabControl Fix</InformationalVersion>
 </PropertyGroup>
 ```
 
@@ -527,6 +571,22 @@ C:\CamBridge\Output\  # DICOM output
 - **Victory**: Dashboard finally shows service status!
 - **Emotion**: Frustration → "minimal" decision → Success!
 
+### Session 70: Pipeline Config Converter Fix!
+- Fixed "No Pipeline Selected" showing when pipeline selected
+- Wrong converter: InverseBoolToVisibility (expects bool)
+- Right converter: NullToVisibility with Inverse parameter
+- **Learning**: Match converters to data types!
+- **Achievement**: Pipeline Config fully functional!
+- **Next**: Remove dead letter references (Sprint 16)
+
+### Session 71: TabControl Property Mystery!
+- Error: TabControlHelper.TabStripPlacement not found
+- File shows property already removed
+- Build cache or save issue suspected
+- **Learning**: When fix is in file but error persists, check cache!
+- **Status**: Blocked by build error
+- **Next**: Clean build and verify file state
+
 ## 📊 METRICS THAT MATTER
 
 ```yaml
@@ -537,18 +597,20 @@ Config Formats: 3 → 1 (V2 unified)
 Warnings: ~140 (needs cleanup)
 Deleted: 700+ LOC (Dead Letter + more)
 Fixed: Port 5111 everywhere ✅
-Version: 0.7.21 (dynamic now!)
+Version: 0.7.23 (dynamic now!)
 Pipelines: Truly isolated! ✅
 API Endpoints: 4/5 implemented
 CORE FEATURE: JPEG→DICOM WORKING! ✅
 CONFIG: Validates all enums ✅
 ARCHITECTURE: Pipeline isolation! ✅
 DASHBOARD: Shows service status! ✅
+PIPELINE CONFIG: All converters working! ✅
+BUILD STATUS: Blocked by phantom property ⏳
 ```
 
 ## 📈 CURRENT STATUS & ROADMAP
 
-### Current: v0.7.21 - Dashboard Working!
+### Current: v0.7.23 - TabControl Fix Attempt
 ```yaml
 Done:
 ✅ Dashboard shows service status
@@ -557,26 +619,30 @@ Done:
 ✅ Direct HTTP pattern proven
 ✅ Auto-refresh reliable
 ✅ Pipelines visible
+✅ Pipeline Config page fixed (mostly)
+✅ Converter issue resolved
+✅ TabControl scrolling fixed (in file)
 
 Issues:
-- Pipeline Config page empty
+⏳ Build error MC3072 blocking progress
+- Dead letter folder references remain
+- Error management basic (folder only)
 - ~140 build warnings
 - Missing API endpoint (/api/statistics)
 - 2 interfaces remain
 ```
 
-### Next: Sprint 16 - UI Polish (v0.7.x)
+### Next: Sprint 16 - Error Handling Improvements (v0.7.x)
 ```yaml
 Goals:
-- Fix Pipeline Config page
-- Modern dashboard design
-- Interactive features
-- Live activity feed
+- Remove dead letter folder references
+- Enhance error management UI
+- Show error list with details
+- Retry functionality
 
-Scope:
-- UI improvements only
-- No architecture changes
-- Focus on user experience
+Blocked by:
+- TabControlHelper.TabStripPlacement build error
+- Need clean build first
 ```
 
 ### Future Sprints
@@ -635,6 +701,8 @@ Enum Validation: Clear errors always
 Direct Dependencies: The new way
 Pipeline Isolation: Each pipeline independent!
 Minimal Dashboard: When complex fails, go simple!
+Converter Matching: Types must match!
+Build Cache Clean: When phantom errors appear!
 ```
 
 ## 🔧 QUICK REFERENCE CARD
@@ -646,6 +714,7 @@ Minimal Dashboard: When complex fails, go simple!
 2[TAB]   # Config Tool
 9[TAB]   # Test
 4[TAB]   # Console Mode
+7[TAB]   # Clean build
 ```
 
 ### Check Status
@@ -680,6 +749,13 @@ Start-Service CamBridgeService  # Creates fresh config
 
 # Dashboard shows nothing
 # Try minimal approach - direct HTTP!
+
+# UI shows wrong thing
+# Check converter matches data type!
+
+# Build error for fixed code (NEW!)
+# Clean build cache completely:
+Remove-Item -Recurse -Force */obj, */bin
 ```
 
 ## 📝 WISDOM NOTES
@@ -694,13 +770,15 @@ Start-Service CamBridgeService  # Creates fresh config
 - Direct dependencies
 - Per-pipeline FileProcessor
 - Minimal dashboard approach (v0.7.21!)
+- Type-matched converters (v0.7.22!)
 
 ### What Needs Work
+- Build cache issues (Session 71!)
 - Too many warnings (~140)
 - Missing API endpoint
 - Documentation gaps
 - Some architectural debt remains
-- Pipeline Config page empty
+- Dead letter references need removal
 
 ### Lessons Learned
 1. **KISS beats SOLID** every single time
@@ -712,19 +790,20 @@ Start-Service CamBridgeService  # Creates fresh config
 7. **Direct > Abstract** - interfaces without reason = delete!
 8. **Singletons + Config = Problems** - isolate pipelines!
 9. **When complex fails, go minimal** - Session 69 proved it!
+10. **Match converters to data types** - Session 70 wisdom!
+11. **Clean build cache when phantom errors** - Session 71 learning!
 
-### Session 69 Special Learning
+### Session 71 Special Learning
 ```yaml
-Problem: Dashboard wouldn't show service status
-Duration: 3+ hours of debugging
-Attempts: 10+ different approaches
-User: "ich werde bald wahnsinnig"
-Solution: "minimal" - complete rewrite
-Result: Working in minutes!
-Learning: Sometimes throwing away code is the answer
+Problem: Build error for property that doesn't exist
+Duration: Still ongoing
+Root Cause: Unknown - file shows fix applied
+Solution: Clean build cache and verify
+Learning: Build systems can see ghosts
+Next: Clean, verify, rebuild
 ```
 
 ---
 
-*"Making the improbable reliably simple - one minimal solution at a time!"*
-*Version 0.7.21 - Dashboard works through minimalism!*
+*"Making the improbable reliably simple - one clean build at a time!"*
+*Version 0.7.23 - Fighting phantom properties!*
