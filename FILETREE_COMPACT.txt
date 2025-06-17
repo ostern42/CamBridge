@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.7.22
+# // Version: 0.7.24
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 267
-# Generated: 2025-06-17 14:16
+# Total files: 264
+# Generated: 2025-06-17 23:18
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -244,7 +244,6 @@ COLLECTOR_README.md
 config-analysis.txt
 ConnectionTest\ConnectionTest.cs
 ConnectionTest\ConnectionTest.csproj
-converters.txt
 Create-DeploymentPackage - 250609.ps1
 Create-DeploymentPackage - 250610.ps1
 Create-DeploymentPackage - Kopie.ps1
@@ -270,14 +269,12 @@ Get-WisdomSources - Kopie.ps1
 Get-WisdomSources.ps1
 h-help.ps1
 Migrate-CamBridgeConfig.ps1
-pipeline-config-sources.txt
 Program.cs
 PROJECT_WISDOM.md
 qrbridge-constants.txt
 README.md
 README-Deployment.md
 service-manager.ps1
-session70-sources.txt
 ShowVersion.targets
 test-api.ps1
 Test-CompletePipeline.ps1

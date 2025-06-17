@@ -1,6 +1,6 @@
 // src\CamBridge.Config\MainWindow.xaml.cs
-// Version: 0.7.7
-// Description: Main window code-behind with dynamic version display
+// Version: 0.7.23
+// Description: Main window code-behind with navigation history fix
 
 using System;
 using System.Reflection;
@@ -46,6 +46,9 @@ namespace CamBridge.Config
                 navService.SetFrame(ContentFrame);
             }
 
+            // Clear navigation journal to prevent history
+            ContentFrame.NavigationService.RemoveBackEntry();
+
             // Navigate to dashboard on startup
             NavView.SelectedItem = NavView.MenuItems[0];
         }
@@ -58,6 +61,13 @@ namespace CamBridge.Config
                 if (!string.IsNullOrEmpty(tag))
                 {
                     _navigationService.NavigateTo(tag);
+
+                    // Clear navigation history after each navigation
+                    // This prevents the dropdown from appearing
+                    while (ContentFrame.NavigationService.CanGoBack)
+                    {
+                        ContentFrame.NavigationService.RemoveBackEntry();
+                    }
                 }
             }
         }

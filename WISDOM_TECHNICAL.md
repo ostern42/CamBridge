@@ -1,6 +1,6 @@
 # WISDOM_TECHNICAL.md - Complete Technical Reference
-**Version**: 0.7.23  
-**Last Update**: 2025-06-17 19:30  
+**Version**: 0.7.24  
+**Last Update**: 2025-06-17 22:30  
 **Purpose**: Technical implementation wisdom, patterns, solutions  
 **Philosophy**: KISS, Tab-Complete, Sources First, Direct Dependencies, Pipeline Isolation
 
@@ -28,7 +28,7 @@ N - Next: Clear next actions
 ```
 "VOGON INIT für Interface Removal"
 "Mini-VOGON für Config check"
-"VOGON EXIT mit v0.7.23 release"
+"VOGON EXIT mit v0.7.24 release"
 ```
 
 ## 🔧 TECHNICAL STACK
@@ -83,7 +83,7 @@ Get-EventLog -LogName Application -Source CamBridge* -Newest 20
 Get-Content "$env:ProgramData\CamBridge\logs\*.log" -Tail 50 -Wait
 ```
 
-### API Testing (v0.7.23 endpoints)
+### API Testing (v0.7.24 endpoints)
 ```powershell
 # Working endpoints
 Invoke-RestMethod "http://localhost:5111/api/status"         # Full status
@@ -131,7 +131,7 @@ public static string Version
             return version;
         }
         
-        return "0.7.23"; // Emergency fallback only
+        return "0.7.24"; // Emergency fallback only
     }
 }
 ```
@@ -406,19 +406,15 @@ Fix: One line change in XAML
 Status: FIXED in v0.7.22 ✅
 ```
 
-### Fix #14: TabControl Property Mystery (v0.7.23)
+### Fix #14: Navigation Dropdown (v0.7.24)
 ```yaml
-Problem: TabControlHelper.TabStripPlacement doesn't exist
-Error: MC3072 at line 208
-Investigation:
-  - Property not in ModernWpfUI namespace
-  - File shows it's already removed
-  - Build cache seeing old version?
-Solution: 
-  1. Clean build completely
-  2. Verify file is saved
-  3. Remove property if found
-Status: IN PROGRESS ⏳
+Problem: Frame shows growing navigation history dropdown
+Solution: NavigationUIVisibility="Hidden" + clear history
+Implementation:
+  <Frame NavigationUIVisibility="Hidden"/>
+  while (ContentFrame.NavigationService.CanGoBack)
+      ContentFrame.NavigationService.RemoveBackEntry();
+Status: FIXED in v0.7.24 ✅
 ```
 
 ## 🔨 ESSENTIAL TOOLS
@@ -457,7 +453,7 @@ Create-DeploymentPackage.ps1  # Release builder
 
 # Full release cycle
 00[TAB] # Build with ZIP
-git tag v0.7.23
+git tag v0.7.24
 git push --tags
 ```
 
@@ -465,10 +461,10 @@ git push --tags
 ```xml
 <!-- Single source of truth for versions -->
 <PropertyGroup>
-  <VersionPrefix>0.7.23</VersionPrefix>
-  <FileVersion>0.7.23.0</FileVersion>
+  <VersionPrefix>0.7.24</VersionPrefix>
+  <FileVersion>0.7.24.0</FileVersion>
   <AssemblyVersion>0.7.0.0</AssemblyVersion>
-  <InformationalVersion>0.7.23 - Config UI TabControl Fix</InformationalVersion>
+  <InformationalVersion>0.7.24 - Navigation and Dashboard Polish</InformationalVersion>
 </PropertyGroup>
 ```
 
@@ -495,98 +491,6 @@ C:\CamBridge\Output\  # DICOM output
 └── Emergency\
 ```
 
-## 📅 SESSION HISTORY (Key Learnings)
-
-### Sessions 1-20: Architecture Explosion
-- Started with Clean Architecture → 12+ interfaces
-- **Learning**: SOLID ≠ Simple, overengineering kills
-- **Impact**: Complexity debt we're still paying
-
-### Sessions 21-40: Config Chaos
-- 3 config versions, multiple loaders, migration hell
-- **Learning**: One format, one path, one truth
-- **Status**: Still cleaning up (V1 remnants exist)
-
-### Sessions 41-50: GUI Implementation  
-- WPF + MVVM, Dashboard wouldn't load
-- **Learning**: Check ports, check dependencies, check obvious
-- **Fix**: Port 5111 everywhere
-
-### Sessions 51-55: Tab-Complete Revolution
-- Build times 3min → 20sec with simple PowerShell
-- **Learning**: User ideas > complex solutions
-- **Impact**: Development speed 10x
-
-### Sessions 56-58: The Great Deletion
-- Removed Dead Letter Queue (-650 LOC)
-- **Learning**: Deleting code is progress
-- **Philosophy**: KISS wins every time
-
-### Sessions 59-61: Dashboard Victory
-- Fixed port mismatch (5050 → 5111)
-- **Learning**: Small details break everything
-- **The Enlightenment**: "I wrote ALL this code!"
-
-### Sessions 62-63: Final Fixes
-- Host property, enum values, config completion
-- **Learning**: One line can fix 144 errors
-- **Status**: Core functionality working
-
-### Session 64-65: Core Functionality Complete!
-- Dynamic version reading implemented
-- ExifTool deadlock fixed
-- Development.json eliminated
-- Encoding issues resolved
-- **Achievement**: JPEG→DICOM WORKING!
-- **Learning**: Check obvious first, KISS wins
-
-### Session 66: Sprint 9 Complete!
-- Discovered InitializePrimaryConfig was already complete
-- Added enum validation for OutputOrganization
-- Clear error messages for config issues
-- **Learning**: Always check sources first!
-- **Achievement**: Config system now robust
-
-### Session 67: Sprint 10 - Interface Removal!
-- Removed IDicomConverter and INotificationService
-- Discovered IExifReader and IFolderWatcher already gone
-- Made up properties in DicomConverter (Sources First fail!)
-- **Learning**: Always check real interfaces/properties
-- **Achievement**: 8 → 2 interfaces (75% reduction!)
-
-### Session 68: Pipeline Architecture Fix!
-- Fixed FileProcessor singleton problem
-- Each pipeline now has own FileProcessor
-- DicomOverrides vs DicomSettings resolved
-- Legacy V1 references removed
-- **Achievement**: True pipeline isolation!
-- **Learning**: Architecture debt must be paid
-
-### Session 69: Dashboard Detective Victory!
-- Problem: Dashboard blank for 3+ hours
-- Tried: Complex debugging, multiple approaches
-- Solution: Minimal rewrite with direct HTTP
-- **Learning**: When complex fails, go minimal!
-- **Pattern**: Compare working (Service Control) vs broken (Dashboard)
-- **Victory**: Dashboard finally shows service status!
-- **Emotion**: Frustration → "minimal" decision → Success!
-
-### Session 70: Pipeline Config Converter Fix!
-- Fixed "No Pipeline Selected" showing when pipeline selected
-- Wrong converter: InverseBoolToVisibility (expects bool)
-- Right converter: NullToVisibility with Inverse parameter
-- **Learning**: Match converters to data types!
-- **Achievement**: Pipeline Config fully functional!
-- **Next**: Remove dead letter references (Sprint 16)
-
-### Session 71: TabControl Property Mystery!
-- Error: TabControlHelper.TabStripPlacement not found
-- File shows property already removed
-- Build cache or save issue suspected
-- **Learning**: When fix is in file but error persists, check cache!
-- **Status**: Blocked by build error
-- **Next**: Clean build and verify file state
-
 ## 📊 METRICS THAT MATTER
 
 ```yaml
@@ -597,34 +501,33 @@ Config Formats: 3 → 1 (V2 unified)
 Warnings: ~140 (needs cleanup)
 Deleted: 700+ LOC (Dead Letter + more)
 Fixed: Port 5111 everywhere ✅
-Version: 0.7.23 (dynamic now!)
+Version: 0.7.24 (dynamic now!)
 Pipelines: Truly isolated! ✅
 API Endpoints: 4/5 implemented
 CORE FEATURE: JPEG→DICOM WORKING! ✅
 CONFIG: Validates all enums ✅
 ARCHITECTURE: Pipeline isolation! ✅
-DASHBOARD: Shows service status! ✅
+DASHBOARD: Shows service status & errors! ✅
+NAVIGATION: Clean, no dropdowns! ✅
 PIPELINE CONFIG: All converters working! ✅
-BUILD STATUS: Blocked by phantom property ⏳
+BUILD STATUS: Clean ✅
 ```
 
 ## 📈 CURRENT STATUS & ROADMAP
 
-### Current: v0.7.23 - TabControl Fix Attempt
+### Current: v0.7.24 - Navigation & Dashboard Polish
 ```yaml
 Done:
 ✅ Dashboard shows service status
+✅ Error counts visible
+✅ Navigation dropdown removed
 ✅ Minimal implementation works
-✅ NavigationService injects ViewModels
 ✅ Direct HTTP pattern proven
 ✅ Auto-refresh reliable
-✅ Pipelines visible
 ✅ Pipeline Config page fixed (mostly)
-✅ Converter issue resolved
-✅ TabControl scrolling fixed (in file)
 
 Issues:
-⏳ Build error MC3072 blocking progress
+- Mapping Editor broken (drag & drop, browse tags)
 - Dead letter folder references remain
 - Error management basic (folder only)
 - ~140 build warnings
@@ -632,17 +535,18 @@ Issues:
 - 2 interfaces remain
 ```
 
-### Next: Sprint 16 - Error Handling Improvements (v0.7.x)
+### Next: Sprint 16 Completion (v0.7.x)
 ```yaml
 Goals:
+- Fix Mapping Editor functionality
 - Remove dead letter folder references
 - Enhance error management UI
-- Show error list with details
-- Retry functionality
+- Test complete pipeline
 
-Blocked by:
-- TabControlHelper.TabStripPlacement build error
-- Need clean build first
+Known Issues:
+- Drag & drop not working
+- Browse All Tags non-functional
+- New Mapping Set needs name field
 ```
 
 ### Future Sprints
@@ -702,7 +606,7 @@ Direct Dependencies: The new way
 Pipeline Isolation: Each pipeline independent!
 Minimal Dashboard: When complex fails, go simple!
 Converter Matching: Types must match!
-Build Cache Clean: When phantom errors appear!
+Navigation Hiding: Sometimes removal is best!
 ```
 
 ## 🔧 QUICK REFERENCE CARD
@@ -753,7 +657,10 @@ Start-Service CamBridgeService  # Creates fresh config
 # UI shows wrong thing
 # Check converter matches data type!
 
-# Build error for fixed code (NEW!)
+# Navigation annoyance
+# NavigationUIVisibility="Hidden"
+
+# Build error for fixed code
 # Clean build cache completely:
 Remove-Item -Recurse -Force */obj, */bin
 ```
@@ -771,9 +678,10 @@ Remove-Item -Recurse -Force */obj, */bin
 - Per-pipeline FileProcessor
 - Minimal dashboard approach (v0.7.21!)
 - Type-matched converters (v0.7.22!)
+- Navigation hiding (v0.7.24!)
 
 ### What Needs Work
-- Build cache issues (Session 71!)
+- Mapping Editor (Session 72 focus!)
 - Too many warnings (~140)
 - Missing API endpoint
 - Documentation gaps
@@ -791,19 +699,9 @@ Remove-Item -Recurse -Force */obj, */bin
 8. **Singletons + Config = Problems** - isolate pipelines!
 9. **When complex fails, go minimal** - Session 69 proved it!
 10. **Match converters to data types** - Session 70 wisdom!
-11. **Clean build cache when phantom errors** - Session 71 learning!
-
-### Session 71 Special Learning
-```yaml
-Problem: Build error for property that doesn't exist
-Duration: Still ongoing
-Root Cause: Unknown - file shows fix applied
-Solution: Clean build cache and verify
-Learning: Build systems can see ghosts
-Next: Clean, verify, rebuild
-```
+11. **Hide unwanted UI elements** - Session 71 victory!
 
 ---
 
-*"Making the improbable reliably simple - one clean build at a time!"*
-*Version 0.7.23 - Fighting phantom properties!*
+*"Making the improbable reliably simple - one fix at a time!"*
+*Technical reference for CamBridge v0.7.24*

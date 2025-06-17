@@ -8,6 +8,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [0.7.24] - 2025-06-17
+
+### 🔧 Fixed
+- **Navigation Tab Dropdown** - Completely removed the annoying history dropdown
+  - Added `NavigationUIVisibility="Hidden"` to Frame control
+  - Clear navigation journal after each page navigation
+  - No more accumulating "Ohne Titel" entries
+- **Dashboard Error Display** - Error counts now visible for each pipeline
+  - Shows "Errors: X" in red when errors exist
+  - Uses existing ErrorsToday property from API
+  - Maintains minimal dashboard design
+
+### 🎯 Changed
+- **Version** - Bumped to 0.7.24 for Navigation & Dashboard improvements
+- **InformationalVersion** - "0.7.24 - Navigation and Dashboard Polish"
+- **Error Management** - Renamed "Dead Letters" to "Error Management" in navigation
+
+### 🔍 Discovered
+- **Mapping Editor Issues** - Multiple functionality problems found
+  - Drag & Drop not working
+  - "Browse All Tags..." button non-functional
+  - New Mapping Set lacks name input field
+  - Mapping rules show as "newField" instead of actual names
+- **Dead Letter UI** - Still present in PipelineConfigPage (lines 310-322)
+
+### 📝 Documentation
+- Updated WISDOM_SPRINT_16.md with completed tasks
+- Prepared deployment artifacts for 3 modified files
+- Documented Mapping Editor issues for next session
+- Reduced redundancy between WISDOM_TECHNICAL and WISDOM_META
+
+### 💡 Session Learning
+> "Sometimes the simplest fixes have the biggest impact - removing one navigation property made the whole UI cleaner!"
+
+### ⚠️ Known Issues
+- Mapping Editor needs significant fixes (planned for Session 72)
+- Dead Letter folder references still in Pipeline Config UI
+- Enhanced error management UI not yet implemented
+
+---
+
+*"Making navigation smooth and errors visible - one property at a time!"*
+*Session 71: Small victories add up!*
+
 # CHANGELOG.md - Session 71 Entry
 
 ## [0.7.23] - 2025-06-17 (INCOMPLETE)
