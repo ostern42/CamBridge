@@ -1,0 +1,241 @@
+<ui:ContentDialog x:Class="CamBridge.Config.Dialogs.TransformEditorDialog"
+                   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                   xmlns:ui="http://schemas.modernwpf.com/2019"
+                   xmlns:converters="clr-namespace:CamBridge.Config.Converters"
+                   Title="Edit Transformation"
+                   PrimaryButtonText="OK"
+                   SecondaryButtonText="Cancel"
+                   DefaultButton="Primary"
+                   Width="600">
+
+    <ui:ContentDialog.Resources>
+        <converters:TransformToDescriptionConverter x:Key="TransformToDescriptionConverter"/>
+        <converters:TransformToSymbolConverter x:Key="TransformToSymbolConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </ui:ContentDialog.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Current Mapping Info -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                Padding="12"
+                CornerRadius="4"
+                Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock>
+                    <Run Text="{Binding SourceField}" FontWeight="SemiBold"/>
+                    <Run Text=" → "/>
+                    <Run Text="{Binding DicomTag}" Foreground="{DynamicResource SystemControlForegroundAccentBrush}"/>
+                </TextBlock>
+                <TextBlock Text="{Binding DicomTagName}" 
+                           Opacity="0.7" 
+                           FontSize="12"
+                           Margin="0,2,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Transform Selection -->
+        <TextBlock Grid.Row="1" 
+                   Text="Select Transformation:"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,8"/>
+
+        <ComboBox Grid.Row="2" 
+                  ItemsSource="{Binding AvailableTransforms}"
+                  SelectedItem="{Binding SelectedTransform}"
+                  Margin="0,0,0,16">
+            <ComboBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="30"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding Converter={StaticResource TransformToSymbolConverter}}"
+                                   FontSize="14"/>
+
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding}"
+                                   FontWeight="SemiBold"
+                                   Margin="8,0,0,0"/>
+
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding Converter={StaticResource TransformToDescriptionConverter}}"
+                                   Opacity="0.7"
+                                   TextWrapping="Wrap"
+                                   Margin="8,0,0,0"/>
+                    </Grid>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <!-- Preview Section -->
+        <Border Grid.Row="3"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="12"
+                Margin="0,0,0,16"
+                Visibility="{Binding ShowPreview, Converter={StaticResource BoolToVisibility}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Preview:"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,8"/>
+
+                    <!-- View Mode Selector -->
+                    <StackPanel Grid.Column="1" 
+                                Orientation="Horizontal"
+                                Margin="0,0,0,8">
+                        <RadioButton Content="Normal" 
+                                     IsChecked="{Binding ShowNormalView}"
+                                     Margin="0,0,8,0"/>
+                        <RadioButton Content="Special Chars" 
+                                     IsChecked="{Binding ShowSpecialCharsView}"
+                                     Margin="0,0,8,0"/>
+                        <RadioButton Content="HEX" 
+                                     IsChecked="{Binding ShowHexView}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Input Section -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Test input:"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+
+                    <TextBox Grid.Column="1"
+                             Text="{Binding PreviewInput, UpdateSourceTrigger=PropertyChanged}"
+                             ui:ControlHelper.PlaceholderText="Enter test value..."
+                             FontFamily="Consolas"/>
+
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding InputEncoding}"
+                               FontSize="11"
+                               Opacity="0.6"
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0"/>
+                </Grid>
+
+                <!-- Output Section -->
+                <Grid Grid.Row="2" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Result:"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+
+                    <!-- Normal View -->
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding PreviewOutput}"
+                               FontFamily="Consolas"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource SystemControlForegroundAccentBrush}"
+                               Visibility="{Binding ShowNormalView, Converter={StaticResource BoolToVisibility}}"/>
+
+                    <!-- Special Chars View -->
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding PreviewOutputSpecialChars}"
+                               FontFamily="Consolas"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource SystemControlForegroundAccentBrush}"
+                               Visibility="{Binding ShowSpecialCharsView, Converter={StaticResource BoolToVisibility}}"/>
+
+                    <!-- HEX View -->
+                    <ScrollViewer Grid.Column="1"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Disabled"
+                                  MaxHeight="60"
+                                  Visibility="{Binding ShowHexView, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding PreviewOutputHex}"
+                                   FontFamily="Consolas"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource SystemControlForegroundAccentBrush}"/>
+                    </ScrollViewer>
+
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding OutputEncoding}"
+                               FontSize="11"
+                               Opacity="0.6"
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0"/>
+                </Grid>
+
+                <!-- Encoding Warning -->
+                <Border Grid.Row="3"
+                        Background="Orange"
+                        CornerRadius="4"
+                        Padding="8,4"
+                        Margin="0,8,0,0"
+                        Visibility="{Binding ShowEncodingWarning, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding EncodingWarning}"
+                               Foreground="White"
+                               FontSize="12"
+                               TextWrapping="Wrap"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- DICOM Compliance Info -->
+        <Border Grid.Row="4"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                Padding="8"
+                CornerRadius="4"
+                Margin="0,0,0,12"
+                Visibility="{Binding ShowDicomInfo, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock Text="DICOM Information:" 
+                           FontWeight="SemiBold"
+                           FontSize="12"
+                           Margin="0,0,0,4"/>
+                <TextBlock Text="{Binding DicomInfo}"
+                           FontSize="11"
+                           Opacity="0.8"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Description -->
+        <TextBlock Grid.Row="5"
+                   Text="{Binding SelectedTransform, Converter={StaticResource TransformToDescriptionConverter}}"
+                   TextWrapping="Wrap"
+                   Opacity="0.7"
+                   FontSize="12"/>
+    </Grid>
+</ui:ContentDialog>

@@ -1,5 +1,5 @@
 // src/CamBridge.Config/Converters/ValueConverters.cs
-// Version: 0.7.21
+// Version: 0.7.25
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using CamBridge.Core;
 
 namespace CamBridge.Config.Converters
 {
@@ -457,6 +458,76 @@ namespace CamBridge.Config.Converters
                 return new SolidColorBrush(isTrue ? Colors.Green : Colors.Red);
             }
             return new SolidColorBrush(Colors.Gray);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts Transform enum to a visual symbol for display
+    /// NEW in v0.7.25 for Mapping Editor Redesign
+    /// </summary>
+    public class TransformToSymbolConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ValueTransform transform)
+            {
+                return transform switch
+                {
+                    ValueTransform.None => "→",
+                    ValueTransform.DateToDicom => "📅→",
+                    ValueTransform.TimeToDicom => "⏰→",
+                    ValueTransform.DateTimeToDicom => "📅⏰→",
+                    ValueTransform.MapGender => "♂♀→",
+                    ValueTransform.RemovePrefix => "✂→",
+                    ValueTransform.ExtractDate => "📅←",
+                    ValueTransform.ExtractTime => "⏰←",
+                    ValueTransform.ToUpperCase => "A→",
+                    ValueTransform.ToLowerCase => "a→",
+                    ValueTransform.Trim => "⎵→",
+                    _ => "→"
+                };
+            }
+            return "→";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts Transform enum to a descriptive text
+    /// NEW in v0.7.25 for Mapping Editor Redesign
+    /// </summary>
+    public class TransformToDescriptionConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ValueTransform transform)
+            {
+                return transform switch
+                {
+                    ValueTransform.None => "Direct mapping",
+                    ValueTransform.DateToDicom => "Convert date to DICOM format (YYYYMMDD)",
+                    ValueTransform.TimeToDicom => "Convert time to DICOM format (HHMMSS)",
+                    ValueTransform.DateTimeToDicom => "Convert datetime to DICOM format",
+                    ValueTransform.MapGender => "Map gender values (M/F/O)",
+                    ValueTransform.RemovePrefix => "Remove prefix from value",
+                    ValueTransform.ExtractDate => "Extract date from datetime",
+                    ValueTransform.ExtractTime => "Extract time from datetime",
+                    ValueTransform.ToUpperCase => "Convert to uppercase",
+                    ValueTransform.ToLowerCase => "Convert to lowercase",
+                    ValueTransform.Trim => "Remove leading/trailing spaces",
+                    _ => "Unknown transformation"
+                };
+            }
+            return "No transformation";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

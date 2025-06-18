@@ -1,12 +1,14 @@
 <!-- src/CamBridge.Config/Dialogs/DicomTagBrowserDialog.xaml -->
+<!-- Version: 0.7.25 -->
+<!-- Enhanced with 3-column layout and NEMA-compliant descriptions -->
 <Window x:Class="CamBridge.Config.Dialogs.DicomTagBrowserDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.modernwpf.com/2019"
         ui:WindowHelper.UseModernWindowStyle="True"
-        Title="Select DICOM Tag"
-        Height="600"
-        Width="800"
+        Title="Select DICOM Tag - NEMA PS3.6 Data Dictionary"
+        Height="700"
+        Width="1000"
         WindowStartupLocation="CenterOwner"
         PreviewKeyDown="Window_PreviewKeyDown">
 
@@ -36,24 +38,45 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="300"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="60"/>
                     </Grid.ColumnDefinitions>
 
+                    <!-- Tag Number -->
                     <TextBlock Grid.Column="0" 
                                Text="{Binding TagString}" 
                                FontFamily="Consolas"
+                               FontSize="13"
                                Foreground="{DynamicResource SystemControlForegroundAccentBrush}"/>
 
+                    <!-- DICOM Name -->
                     <TextBlock Grid.Column="1" 
                                Text="{Binding Name}" 
-                               Margin="8,0,0,0"/>
+                               Margin="8,0,0,0"
+                               FontWeight="SemiBold"/>
 
+                    <!-- NEMA Description / Examples -->
                     <TextBlock Grid.Column="2" 
-                               Text="{Binding VR}" 
-                               FontFamily="Consolas"
-                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                               HorizontalAlignment="Right"/>
+                               Text="{Binding Description}" 
+                               Margin="8,0,0,0"
+                               Opacity="0.8"
+                               TextTrimming="CharacterEllipsis">
+                        <TextBlock.ToolTip>
+                            <ToolTip MaxWidth="400">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+                                    <TextBlock Margin="0,4,0,0">
+                                        <Run Text="VR: " FontWeight="SemiBold"/>
+                                        <Run Text="{Binding VR}"/>
+                                        <Run Text=" (" FontWeight="SemiBold"/>
+                                        <Run Text="{Binding VRDescription}"/>
+                                        <Run Text=")" FontWeight="SemiBold"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </ToolTip>
+                        </TextBlock.ToolTip>
+                    </TextBlock>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -74,6 +97,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <ui:SymbolIcon Grid.Column="0" 
@@ -83,10 +107,39 @@
 
                 <ui:AutoSuggestBox Grid.Column="1"
                                    x:Name="SearchBox"
-                                   PlaceholderText="Search by tag, name, or module..."
+                                   PlaceholderText="Search by tag, name, module, or description..."
                                    Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                    QueryIcon="Find"
                                    KeyDown="SearchBox_KeyDown"/>
+
+                <TextBlock Grid.Column="2"
+                           VerticalAlignment="Center"
+                           Margin="16,0,0,0"
+                           Opacity="0.6">
+                    <Run Text="DICOM Standard PS3.6"/>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <!-- Column Headers -->
+        <Border Grid.Row="1"
+                VerticalAlignment="Top"
+                Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="8,4"
+                Margin="0,0,0,0"
+                Panel.ZIndex="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="300"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="Tag" FontWeight="SemiBold" Margin="20,0,0,0"/>
+                <TextBlock Grid.Column="1" Text="Attribute Name" FontWeight="SemiBold" Margin="8,0,0,0"/>
+                <TextBlock Grid.Column="2" Text="Description / Examples" FontWeight="SemiBold" Margin="8,0,0,0"/>
             </Grid>
         </Border>
 
@@ -97,7 +150,8 @@
                   ItemTemplate="{StaticResource TagItemTemplate}"
                   SelectionMode="Single"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                  MouseDoubleClick="TagsListView_MouseDoubleClick">
+                  MouseDoubleClick="TagsListView_MouseDoubleClick"
+                  Margin="0,30,0,0">
             <ListView.GroupStyle>
                 <GroupStyle ContainerStyle="{StaticResource GroupHeaderStyle}"/>
             </ListView.GroupStyle>
@@ -121,13 +175,19 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Info Text -->
-                <TextBlock Grid.Column="0" 
-                           VerticalAlignment="Center"
-                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}">
-                    <Run Text="Tag format: "/>
-                    <Run Text="(GGGG,EEEE)" FontFamily="Consolas"/>
-                    <Run Text=" - Name (VR)"/>
-                </TextBlock>
+                <StackPanel Grid.Column="0" 
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <TextBlock Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}">
+                        <Run Text="Selected: "/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding ElementName=TagsListView, Path=SelectedItem.TagString}" 
+                               FontFamily="Consolas"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource SystemControlForegroundAccentBrush}"/>
+                    <TextBlock Text="{Binding ElementName=TagsListView, Path=SelectedItem.Name}" 
+                               Margin="8,0,0,0"/>
+                </StackPanel>
 
                 <!-- Buttons -->
                 <Button Grid.Column="1" 

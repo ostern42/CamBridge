@@ -1,6 +1,7 @@
 // src/CamBridge.Config/Dialogs/DicomTagBrowserDialog.xaml.cs
-// Version: 0.5.26
-// Fixed: Nullable warnings resolved
+// Version: 0.7.25
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Enhanced with NEMA-compliant descriptions
 
 using System;
 using System.Collections.Generic;
@@ -70,56 +71,99 @@ namespace CamBridge.Config.Dialogs
             // Clear and reinitialize
             _allTags.Clear();
 
-            // Patient Module
-            AddTag("Patient", CoreDicomTag.PatientModule.PatientName, "Patient's Name", "PN");
-            AddTag("Patient", CoreDicomTag.PatientModule.PatientID, "Patient ID", "LO");
-            AddTag("Patient", CoreDicomTag.PatientModule.PatientBirthDate, "Patient's Birth Date", "DA");
-            AddTag("Patient", CoreDicomTag.PatientModule.PatientSex, "Patient's Sex", "CS");
-            AddTag("Patient", CoreDicomTag.PatientModule.OtherPatientIDs, "Other Patient IDs", "LO");
-            AddTag("Patient", CoreDicomTag.PatientModule.PatientComments, "Patient Comments", "LT");
+            // Patient Module - NEMA PS3.3 Table C.7-1
+            AddTag("Patient", CoreDicomTag.PatientModule.PatientName, "Patient's Name", "PN",
+                "Primary identifier - Format: Family^Given^Middle^Prefix^Suffix");
+            AddTag("Patient", CoreDicomTag.PatientModule.PatientID, "Patient ID", "LO",
+                "Primary hospital/institution identification number");
+            AddTag("Patient", CoreDicomTag.PatientModule.PatientBirthDate, "Patient's Birth Date", "DA",
+                "Format: YYYYMMDD (e.g., 19850315 for March 15, 1985)");
+            AddTag("Patient", CoreDicomTag.PatientModule.PatientSex, "Patient's Sex", "CS",
+                "M=Male, F=Female, O=Other (fixed enumeration)");
+            AddTag("Patient", CoreDicomTag.PatientModule.OtherPatientIDs, "Other Patient IDs", "LO",
+                "Additional identifiers from other systems");
+            AddTag("Patient", CoreDicomTag.PatientModule.PatientComments, "Patient Comments", "LT",
+                "Additional information about the patient");
 
-            // Study Module
-            AddTag("Study", CoreDicomTag.StudyModule.StudyInstanceUID, "Study Instance UID", "UI");
-            AddTag("Study", CoreDicomTag.StudyModule.StudyDate, "Study Date", "DA");
-            AddTag("Study", CoreDicomTag.StudyModule.StudyTime, "Study Time", "TM");
-            AddTag("Study", CoreDicomTag.StudyModule.StudyID, "Study ID", "SH");
-            AddTag("Study", CoreDicomTag.StudyModule.AccessionNumber, "Accession Number", "SH");
-            AddTag("Study", CoreDicomTag.StudyModule.StudyDescription, "Study Description", "LO");
-            AddTag("Study", CoreDicomTag.StudyModule.ReferringPhysicianName, "Referring Physician's Name", "PN");
+            // Study Module - NEMA PS3.3 Table C.7-3
+            AddTag("Study", CoreDicomTag.StudyModule.StudyInstanceUID, "Study Instance UID", "UI",
+                "Unique identifier for the study - automatically generated");
+            AddTag("Study", CoreDicomTag.StudyModule.StudyDate, "Study Date", "DA",
+                "Date the study started - Format: YYYYMMDD");
+            AddTag("Study", CoreDicomTag.StudyModule.StudyTime, "Study Time", "TM",
+                "Time the study started - Format: HHMMSS.FFFFFF");
+            AddTag("Study", CoreDicomTag.StudyModule.StudyID, "Study ID", "SH",
+                "Institution-generated study identifier");
+            AddTag("Study", CoreDicomTag.StudyModule.AccessionNumber, "Accession Number", "SH",
+                "RIS/HIS generated number that identifies the order");
+            AddTag("Study", CoreDicomTag.StudyModule.StudyDescription, "Study Description", "LO",
+                "Institution-generated description or classification of the study");
+            AddTag("Study", CoreDicomTag.StudyModule.ReferringPhysicianName, "Referring Physician's Name", "PN",
+                "Name of the physician who requested the study");
 
-            // Series Module
-            AddTag("Series", CoreDicomTag.SeriesModule.SeriesInstanceUID, "Series Instance UID", "UI");
-            AddTag("Series", CoreDicomTag.SeriesModule.SeriesNumber, "Series Number", "IS");
-            AddTag("Series", CoreDicomTag.SeriesModule.SeriesDate, "Series Date", "DA");
-            AddTag("Series", CoreDicomTag.SeriesModule.SeriesTime, "Series Time", "TM");
-            AddTag("Series", CoreDicomTag.SeriesModule.SeriesDescription, "Series Description", "LO");
-            AddTag("Series", CoreDicomTag.SeriesModule.Modality, "Modality", "CS");
+            // Series Module - NEMA PS3.3 Table C.7-5a
+            AddTag("Series", CoreDicomTag.SeriesModule.SeriesInstanceUID, "Series Instance UID", "UI",
+                "Unique identifier for the series - automatically generated");
+            AddTag("Series", CoreDicomTag.SeriesModule.SeriesNumber, "Series Number", "IS",
+                "A number that identifies this series (e.g., 1, 2, 3...)");
+            AddTag("Series", CoreDicomTag.SeriesModule.SeriesDate, "Series Date", "DA",
+                "Date the series started");
+            AddTag("Series", CoreDicomTag.SeriesModule.SeriesTime, "Series Time", "TM",
+                "Time the series started");
+            AddTag("Series", CoreDicomTag.SeriesModule.SeriesDescription, "Series Description", "LO",
+                "Description of the series (e.g., 'Chest PA', 'Lateral View')");
+            AddTag("Series", CoreDicomTag.SeriesModule.Modality, "Modality", "CS",
+                "Type of equipment (e.g., XA=X-Ray Angiography, OT=Other)");
 
-            // Instance Module (was ImageModule)
-            AddTag("Instance", CoreDicomTag.InstanceModule.SOPInstanceUID, "SOP Instance UID", "UI");
-            AddTag("Instance", CoreDicomTag.InstanceModule.InstanceNumber, "Instance Number", "IS");
-            AddTag("Instance", CoreDicomTag.InstanceModule.ContentDate, "Content Date", "DA");
-            AddTag("Instance", CoreDicomTag.InstanceModule.ContentTime, "Content Time", "TM");
-            AddTag("Instance", CoreDicomTag.InstanceModule.AcquisitionDateTime, "Acquisition DateTime", "DT");
+            // General Image Module - NEMA PS3.3 Table C.7-9
+            AddTag("Image", CoreDicomTag.InstanceModule.SOPInstanceUID, "SOP Instance UID", "UI",
+                "Unique identifier for this image - automatically generated");
+            AddTag("Image", CoreDicomTag.InstanceModule.InstanceNumber, "Instance Number", "IS",
+                "A number that identifies this image (1, 2, 3...)");
+            AddTag("Image", CoreDicomTag.InstanceModule.ContentDate, "Content Date", "DA",
+                "The date the image pixel data creation started");
+            AddTag("Image", CoreDicomTag.InstanceModule.ContentTime, "Content Time", "TM",
+                "The time the image pixel data creation started");
+            AddTag("Image", CoreDicomTag.InstanceModule.AcquisitionDateTime, "Acquisition DateTime", "DT",
+                "Date and time the acquisition started - Format: YYYYMMDDHHMMSS.FFFFFF");
 
-            // Equipment Module
-            AddTag("Equipment", CoreDicomTag.EquipmentModule.Manufacturer, "Manufacturer", "LO");
-            AddTag("Equipment", CoreDicomTag.EquipmentModule.InstitutionName, "Institution Name", "LO");
-            AddTag("Equipment", CoreDicomTag.EquipmentModule.StationName, "Station Name", "SH");
-            AddTag("Equipment", CoreDicomTag.EquipmentModule.ManufacturerModelName, "Manufacturer's Model Name", "LO");
-            AddTag("Equipment", CoreDicomTag.EquipmentModule.SoftwareVersions, "Software Versions", "LO");
+            // General Equipment Module - NEMA PS3.3 Table C.7-8
+            AddTag("Equipment", CoreDicomTag.EquipmentModule.Manufacturer, "Manufacturer", "LO",
+                "Manufacturer of the equipment (e.g., 'RICOH')");
+            AddTag("Equipment", CoreDicomTag.EquipmentModule.InstitutionName, "Institution Name", "LO",
+                "Institution where the equipment is located");
+            AddTag("Equipment", CoreDicomTag.EquipmentModule.StationName, "Station Name", "SH",
+                "User-defined name identifying the machine");
+            AddTag("Equipment", CoreDicomTag.EquipmentModule.ManufacturerModelName, "Manufacturer's Model Name", "LO",
+                "Manufacturer's model name (e.g., 'G900 II')");
+            AddTag("Equipment", CoreDicomTag.EquipmentModule.SoftwareVersions, "Software Versions", "LO",
+                "Manufacturer's software version (e.g., 'CamBridge 0.7.25')");
+
+            // Additional commonly used tags
+            AddTag("General", new CoreDicomTag(0x0008, 0x0005), "Specific Character Set", "CS",
+                "Character encoding (e.g., 'ISO_IR 100' for Latin-1)");
+            AddTag("General", new CoreDicomTag(0x0008, 0x0016), "SOP Class UID", "UI",
+                "Identifies the DICOM IOD (e.g., Secondary Capture)");
+            AddTag("General", new CoreDicomTag(0x0008, 0x0064), "Conversion Type", "CS",
+                "Describes the conversion (e.g., 'WSD' = Workstation)");
+            AddTag("General", new CoreDicomTag(0x0020, 0x0013), "Instance Number", "IS",
+                "Number that identifies this instance");
+            AddTag("General", new CoreDicomTag(0x0028, 0x0002), "Samples per Pixel", "US",
+                "Number of samples per pixel (1=grayscale, 3=color)");
+            AddTag("General", new CoreDicomTag(0x0028, 0x0004), "Photometric Interpretation", "CS",
+                "Color space (e.g., 'RGB', 'YBR_FULL_422')");
 
             // Setup CollectionViewSource with grouping
             _tagsViewSource = new CollectionViewSource { Source = _allTags };
             _tagsViewSource.GroupDescriptions.Add(new PropertyGroupDescription("Module"));
             _tagsViewSource.SortDescriptions.Add(new SortDescription("Module", ListSortDirection.Ascending));
-            _tagsViewSource.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
+            _tagsViewSource.SortDescriptions.Add(new SortDescription("TagString", ListSortDirection.Ascending));
 
             // Notify UI
             OnPropertyChanged(nameof(TagsView));
         }
 
-        private void AddTag(string module, CoreDicomTag tag, string name, string vr)
+        private void AddTag(string module, CoreDicomTag tag, string name, string vr, string description)
         {
             _allTags.Add(new DicomTagInfo
             {
@@ -127,9 +171,30 @@ namespace CamBridge.Config.Dialogs
                 Tag = tag,
                 Name = name,
                 VR = vr,
+                VRDescription = GetVRDescription(vr),
                 TagString = tag.ToString(),
+                Description = description,
                 DisplayText = $"{tag} - {name} ({vr})"
             });
+        }
+
+        private string GetVRDescription(string vr)
+        {
+            return vr switch
+            {
+                "CS" => "Code String - max 16 chars",
+                "DA" => "Date - YYYYMMDD",
+                "DT" => "DateTime - YYYYMMDDHHMMSS.FFFFFF",
+                "IS" => "Integer String - max 12 chars",
+                "LO" => "Long String - max 64 chars",
+                "LT" => "Long Text - max 10240 chars",
+                "PN" => "Person Name - 5 components with ^",
+                "SH" => "Short String - max 16 chars",
+                "TM" => "Time - HHMMSS.FFFFFF",
+                "UI" => "Unique Identifier - max 64 chars",
+                "US" => "Unsigned Short - 2 bytes",
+                _ => vr
+            };
         }
 
         #endregion
@@ -154,7 +219,8 @@ namespace CamBridge.Config.Dialogs
                         return tagInfo.Name.ToLower().Contains(searchLower) ||
                                tagInfo.TagString.Contains(searchLower) ||
                                tagInfo.Module.ToLower().Contains(searchLower) ||
-                               tagInfo.VR.ToLower().Contains(searchLower);
+                               tagInfo.VR.ToLower().Contains(searchLower) ||
+                               tagInfo.Description.ToLower().Contains(searchLower);
                     }
                     return false;
                 };
@@ -235,7 +301,9 @@ namespace CamBridge.Config.Dialogs
             public CoreDicomTag Tag { get; set; } = null!;
             public string Name { get; set; } = string.Empty;
             public string VR { get; set; } = string.Empty;
+            public string VRDescription { get; set; } = string.Empty;
             public string TagString { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
             public string DisplayText { get; set; } = string.Empty;
         }
 

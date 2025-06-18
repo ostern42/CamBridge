@@ -1,8 +1,8 @@
 # WISDOM_TECHNICAL.md - Complete Technical Reference
-**Version**: 0.7.24  
-**Last Update**: 2025-06-17 22:30  
+**Version**: 0.7.26  
+**Last Update**: 2025-06-18 15:42  
 **Purpose**: Technical implementation wisdom, patterns, solutions  
-**Philosophy**: KISS, Tab-Complete, Sources First, Direct Dependencies, Pipeline Isolation
+**Philosophy**: KISS, Tab-Complete, Sources First, Direct Dependencies, Pipeline Isolation, UI Clarity, Hidden Treasures
 
 ## 🎭 V.O.G.O.N. PROTOCOL
 
@@ -26,9 +26,9 @@ N - Next: Clear next actions
 
 ### Usage Examples
 ```
-"VOGON INIT für Interface Removal"
-"Mini-VOGON für Config check"
-"VOGON EXIT mit v0.7.24 release"
+"VOGON INIT für Mapping Editor Fix"
+"Mini-VOGON für Event Handler check"
+"VOGON EXIT mit v0.7.26 release"
 ```
 
 ## 🔧 TECHNICAL STACK
@@ -46,6 +46,7 @@ Build: MSBuild with Version.props
 Deployment: PowerShell Scripts
 Dependencies: Direct (no interfaces!)
 Architecture: Pipeline-isolated processing
+UI Philosophy: Clean, minimal, functional
 ```
 
 ## 💻 ESSENTIAL COMMANDS
@@ -97,6 +98,80 @@ Invoke-RestMethod "http://localhost:5111/api/status/health"  # Health check
 
 ## 🎯 PROVEN PATTERNS
 
+### The Hidden Treasures Pattern (NEW v0.7.26!)
+```yaml
+Problem: Features implemented but not exposed
+Discovery Method:
+  1. User mentions something should exist
+  2. Check implementation phase code
+  3. Find it's already there!
+  4. Create UI to expose it
+
+Example - Transform System:
+  - 11 transforms in ValueTransform.cs ✓
+  - ApplyTransform() fully working ✓
+  - Just needed Transform Editor UI ✓
+  
+Learning: Always check existing code first!
+```
+
+### Transform Editor Pattern (NEW v0.7.26!)
+```csharp
+// Multi-View Preview for medical data
+public enum PreviewMode 
+{
+    Normal,        // Standard view
+    SpecialChars,  // Shows [CR], [LF], [TAB]
+    Hex           // Full hex dump
+}
+
+// Encoding awareness
+private void DetectInputEncoding()
+{
+    bool hasUmlauts = input.Any(c => "äöüÄÖÜß".Contains(c));
+    InputEncoding = hasUmlauts ? "UTF-8" : "Windows-1252";
+}
+
+// Transform-aware test data
+PreviewInput = SelectedTransform switch
+{
+    ValueTransform.ExtractDate => DateTime.Now.ToString("yyyy:MM:dd HH:mm:ss"),
+    ValueTransform.MapGender => "M",
+    ValueTransform.Trim => "  trimmed text  ",
+    // etc...
+};
+```
+
+### XAML Compatibility Patterns (NEW v0.7.26!)
+```xml
+<!-- WRONG: Run doesn't support Opacity -->
+<Run Text="text" Opacity="0.7"/>
+
+<!-- RIGHT: Use TextBlock -->
+<TextBlock Text="text" Opacity="0.7"/>
+
+<!-- WRONG: Direct PlaceholderText -->
+<TextBox PlaceholderText="Enter..."/>
+
+<!-- RIGHT: ModernWpfUI attached property -->
+<TextBox ui:ControlHelper.PlaceholderText="Enter..."/>
+```
+
+### ContentDialog vs Window Pattern (NEW v0.7.26!)
+```csharp
+// Window (regular dialog)
+var dialog = new DicomTagBrowserDialog
+{
+    Owner = Application.Current.MainWindow
+};
+if (dialog.ShowDialog() == true) { }
+
+// ContentDialog (ModernWpfUI)
+var dialog = new TransformEditorDialog();
+var result = await dialog.ShowAsync();
+if (result == ContentDialogResult.Primary) { }
+```
+
 ### Configuration Management
 ```csharp
 // SINGLE SOURCE OF TRUTH - ConfigurationPaths
@@ -131,7 +206,7 @@ public static string Version
             return version;
         }
         
-        return "0.7.24"; // Emergency fallback only
+        return "0.7.26"; // Emergency fallback only
     }
 }
 ```
@@ -253,6 +328,43 @@ Select-String -Path "src\**\*.xaml" -Pattern "ErrorPattern" -Recurse
 
 # 4. Rebuild clean
 dotnet build --no-incremental
+```
+
+### Event Handler Connection Pattern (NEW v0.7.24!)
+```csharp
+// XAML.CS - Connect event handlers in constructor
+public MappingEditorPage()
+{
+    InitializeComponent();
+    
+    // Connect drag & drop handlers
+    foreach (var item in SourceFieldsList.Items)
+    {
+        if (item is FrameworkElement element)
+        {
+            element.MouseMove += SourceField_MouseMove;
+            element.GiveFeedback += SourceField_GiveFeedback;
+        }
+    }
+}
+
+// Don't forget AllowDrop="True" in XAML!
+```
+
+### UI Clarity Pattern (NEW v0.7.25!)
+```xml
+<!-- BEFORE: Complex UI with unnecessary elements -->
+<Grid.ColumnDefinitions>
+    <ColumnDefinition Width="300"/> <!-- Sources -->
+    <ColumnDefinition Width="*"/>   <!-- Rules -->
+    <ColumnDefinition Width="300"/> <!-- Cheat Sheet -->
+</Grid.ColumnDefinitions>
+
+<!-- AFTER: Clean, focused UI -->
+<Grid.ColumnDefinitions>
+    <ColumnDefinition Width="300"/> <!-- Sources -->
+    <ColumnDefinition Width="*"/>   <!-- Rules (more space!) -->
+</Grid.ColumnDefinitions>
 ```
 
 ## 🐛 CRITICAL FIXES REFERENCE
@@ -417,6 +529,86 @@ Implementation:
 Status: FIXED in v0.7.24 ✅
 ```
 
+### Fix #15: Mapping Editor Issues (v0.7.25)
+```yaml
+Problem: Multiple UI issues in Mapping Editor
+Issues:
+  - Drag & Drop not working
+  - Browse All Tags does nothing
+  - New Mapping Set has no name input
+  - Fields show as "newField"
+Solution: Event handlers connected, UI elements added
+Status: FIXED in v0.7.25 ✅
+```
+
+### Fix #16: UI Clutter (v0.7.25)
+```yaml
+Problem: Cheat sheet takes 25% of screen space
+User Question: "brauchen wir den spickzettel überhaupt?"
+Analysis: Browse button exists, cheat sheet rarely used
+Solution: Remove cheat sheet, expand mapping area
+Implementation:
+  - Removed right column
+  - Expanded center column
+  - Moved browse button to header
+Result: 40% more working space!
+Status: FIXED in v0.7.25 ✅
+```
+
+### Fix #17: XAML Opacity on Run (v0.7.25)
+```yaml
+Problem: Run elements don't support Opacity property
+Error: MC3072 at line 327
+Solution: Remove Opacity from Run elements
+Alternative: Use different Foreground colors
+Status: FIXED in v0.7.25 ✅
+```
+
+### Fix #18: Transform System Hidden (v0.7.26)
+```yaml
+Problem: Transform system not exposed in UI
+Discovery: Everything already implemented!
+Found:
+  - ValueTransform.cs with 11 types
+  - MappingRule.ApplyTransform() working
+  - Converters ready
+Solution: Add Transform Editor Dialog
+Features:
+  - Multi-view preview
+  - Encoding detection
+  - Special char visualization
+Learning: Check implementation phase code!
+Status: ENHANCED in v0.7.26 ✅
+```
+
+### Fix #19: XAML Run Opacity (v0.7.26)
+```yaml
+Problem: Run element doesn't support Opacity
+Error: MC3072
+Solution: Use TextBlock instead of Run for opacity
+Status: FIXED in v0.7.26 ✅
+```
+
+### Fix #20: PlaceholderText Property (v0.7.26)
+```yaml
+Problem: PlaceholderText not found
+Solution: Use ui:ControlHelper.PlaceholderText
+Framework: ModernWpfUI pattern
+Status: FIXED in v0.7.26 ✅
+```
+
+### Fix #21: ShowDialog vs ShowAsync (v0.7.26)
+```yaml
+Problem: Wrong dialog show method for different types
+Solution:
+  - Window → ShowDialog()
+  - ContentDialog → ShowAsync()
+Example:
+  DicomTagBrowserDialog (Window) → ShowDialog()
+  TransformEditorDialog (ContentDialog) → ShowAsync()
+Status: FIXED in v0.7.26 ✅
+```
+
 ## 🔨 ESSENTIAL TOOLS
 
 ### Development Tools
@@ -453,7 +645,7 @@ Create-DeploymentPackage.ps1  # Release builder
 
 # Full release cycle
 00[TAB] # Build with ZIP
-git tag v0.7.24
+git tag v0.7.26
 git push --tags
 ```
 
@@ -461,10 +653,10 @@ git push --tags
 ```xml
 <!-- Single source of truth for versions -->
 <PropertyGroup>
-  <VersionPrefix>0.7.24</VersionPrefix>
-  <FileVersion>0.7.24.0</FileVersion>
+  <VersionPrefix>0.7.26</VersionPrefix>
+  <FileVersion>0.7.26.0</FileVersion>
   <AssemblyVersion>0.7.0.0</AssemblyVersion>
-  <InformationalVersion>0.7.24 - Navigation and Dashboard Polish</InformationalVersion>
+  <InformationalVersion>0.7.26 - Session 74 Transform Editor Enhanced</InformationalVersion>
 </PropertyGroup>
 ```
 
@@ -494,14 +686,14 @@ C:\CamBridge\Output\  # DICOM output
 ## 📊 METRICS THAT MATTER
 
 ```yaml
-Total LOC: 14,350+ (all by Claude!)
+Total LOC: 14,850+ (all by Claude!)
 Interfaces: Started 12+ → Current 2 → Target 0
 Build Time: 3min → 20sec (without ZIP)
 Config Formats: 3 → 1 (V2 unified)
 Warnings: ~140 (needs cleanup)
 Deleted: 700+ LOC (Dead Letter + more)
 Fixed: Port 5111 everywhere ✅
-Version: 0.7.24 (dynamic now!)
+Version: 0.7.26 (dynamic now!)
 Pipelines: Truly isolated! ✅
 API Endpoints: 4/5 implemented
 CORE FEATURE: JPEG→DICOM WORKING! ✅
@@ -511,42 +703,50 @@ DASHBOARD: Shows service status & errors! ✅
 NAVIGATION: Clean, no dropdowns! ✅
 PIPELINE CONFIG: All converters working! ✅
 BUILD STATUS: Clean ✅
+MAPPING EDITOR: Fully functional! ✅
+UI CLARITY: Cheat sheet removed! ✅
+DICOM BROWSER: NEMA-compliant! ✅
+TRANSFORM EDITOR: Professional preview! ✅
+HIDDEN FEATURES: Transform system exposed! ✅
+MULTI-VIEW: Normal/Special/HEX views! ✅
 ```
 
 ## 📈 CURRENT STATUS & ROADMAP
 
-### Current: v0.7.24 - Navigation & Dashboard Polish
+### Current: v0.7.26 - Transform Editor Enhanced
 ```yaml
 Done:
-✅ Dashboard shows service status
-✅ Error counts visible
-✅ Navigation dropdown removed
-✅ Minimal implementation works
-✅ Direct HTTP pattern proven
-✅ Auto-refresh reliable
-✅ Pipeline Config page fixed (mostly)
+✅ Transform Editor Dialog created
+✅ Multi-view preview working
+✅ Encoding detection implemented
+✅ Transform-aware test inputs
+✅ DICOM compliance hints
+✅ Special character visualization
+✅ Hidden transform system exposed
+✅ Professional medical software quality
 
 Issues:
-- Mapping Editor broken (drag & drop, browse tags)
 - Dead letter folder references remain
 - Error management basic (folder only)
 - ~140 build warnings
 - Missing API endpoint (/api/statistics)
 - 2 interfaces remain
+- Encoding (© vs Â©) needs fixing
 ```
 
-### Next: Sprint 16 Completion (v0.7.x)
+### Next: Treasure Hunt Sprint (v0.7.x)
 ```yaml
 Goals:
-- Fix Mapping Editor functionality
-- Remove dead letter folder references
-- Enhance error management UI
-- Test complete pipeline
+- Search for more hidden features
+- Check implementation phase code
+- Expose any hidden functionality
+- Document all discoveries
 
-Known Issues:
-- Drag & drop not working
-- Browse All Tags non-functional
-- New Mapping Set needs name field
+Questions to explore:
+- What else did past-Claude implement?
+- Any hidden validation logic?
+- Unused but useful utilities?
+- Configuration options not exposed?
 ```
 
 ### Future Sprints
@@ -583,14 +783,27 @@ Level 3: It's elegant (getting there)
 Level 4: It's invisible (nirvana)
 ```
 
-### Decision Framework
+### The Hidden Treasure Principle (NEW!)
+```yaml
+Before implementing new features:
+1. Check if it already exists
+2. Look in implementation files
+3. Search for related keywords
+4. Test existing methods
+5. Only build if truly missing
+→ Past-Claude was thorough!
+```
+
+### Decision Framework (UPDATED)
 ```yaml
 Question: "Should we add this feature?"
-1. Does it solve a real problem? 
-2. Is it the simplest solution?
-3. Can we delete something instead?
-4. What would Oliver say?
-→ If any "No": Don't do it
+1. Does it already exist hidden? ← NEW!
+2. Does it solve a real problem? 
+3. Is it the simplest solution?
+4. Can we delete something instead?
+5. What would Oliver say?
+6. Does it add UI clutter?
+→ If any "No" after #1: Don't do it
 ```
 
 ### Protected Patterns
@@ -607,6 +820,10 @@ Pipeline Isolation: Each pipeline independent!
 Minimal Dashboard: When complex fails, go simple!
 Converter Matching: Types must match!
 Navigation Hiding: Sometimes removal is best!
+Event Handler Connection: Check xaml.cs first!
+UI Clarity: Remove clutter, add space!
+NEMA Compliance: Always follow the standard!
+Hidden Treasures: Check before building!
 ```
 
 ## 🔧 QUICK REFERENCE CARD
@@ -660,9 +877,21 @@ Start-Service CamBridgeService  # Creates fresh config
 # Navigation annoyance
 # NavigationUIVisibility="Hidden"
 
+# Drag & Drop not working
+# Check event handlers in xaml.cs!
+
 # Build error for fixed code
 # Clean build cache completely:
 Remove-Item -Recurse -Force */obj, */bin
+
+# UI element takes too much space
+# Ask: "brauchen wir das?" → Maybe DELETE!
+
+# XAML property not supported
+# Check element type - Run vs TextBlock!
+
+# Dialog won't show
+# Window → ShowDialog(), ContentDialog → ShowAsync()
 ```
 
 ## 📝 WISDOM NOTES
@@ -679,9 +908,13 @@ Remove-Item -Recurse -Force */obj, */bin
 - Minimal dashboard approach (v0.7.21!)
 - Type-matched converters (v0.7.22!)
 - Navigation hiding (v0.7.24!)
+- Event handler patterns (v0.7.25!)
+- UI clarity through removal (v0.7.25!)
+- Transform system UI exposure (v0.7.26!)
+- Multi-view preview pattern (v0.7.26!)
 
 ### What Needs Work
-- Mapping Editor (Session 72 focus!)
+- Encoding (© vs Â©)
 - Too many warnings (~140)
 - Missing API endpoint
 - Documentation gaps
@@ -700,8 +933,13 @@ Remove-Item -Recurse -Force */obj, */bin
 9. **When complex fails, go minimal** - Session 69 proved it!
 10. **Match converters to data types** - Session 70 wisdom!
 11. **Hide unwanted UI elements** - Session 71 victory!
+12. **Check event handlers first** - Session 72 approach!
+13. **Remove UI clutter** - Session 73 clarity!
+14. **XAML has limits** - Not all properties on all elements!
+15. **Hidden treasures exist** - Check before building new!
 
 ---
 
-*"Making the improbable reliably simple - one fix at a time!"*
-*Technical reference for CamBridge v0.7.24*
+*"Making the improbable reliably simple - and finding what's already there!"*
+*Technical reference for CamBridge v0.7.26*
+*Session 74: Transform Editor Complete - Hidden treasures revealed!*

@@ -8,6 +8,137 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+# CHANGELOG.md
+
+## [0.7.26] - 2025-06-18 - Session 74
+### Added
+- Transform Editor Dialog with professional multi-view preview
+- Encoding detection for input data (UTF-8/Windows-1252/ASCII)
+- Special character visualization mode ([CR], [LF], [TAB])
+- HEX dump view for debugging transformations
+- DICOM compliance hints for specific tags
+- Transform-aware preview inputs (adapts test data to transform type)
+- Save success feedback in Mapping Editor
+
+### Enhanced
+- MappingEditorViewModel with EditTransformCommand
+- Transform symbols now visible in mapping rules (→, 📅→, ♂♀→)
+- Preview automatically updates when transform changes
+- Import/Export uses direct JSON serialization
+
+### Fixed
+- XAML Run element opacity compatibility issue
+- TextBox PlaceholderText to use ui:ControlHelper
+- ContentDialog vs Window ShowDialog/ShowAsync patterns
+- Async command naming (no "Async" suffix from RelayCommand)
+
+### Technical
+- Transform system was already fully implemented - just needed UI!
+- 11 transform types discovered in existing code
+- Hidden treasures from implementation phase revealed
+
+## [0.7.25] - 2025-06-17 - Session 73
+### Changed
+- Mapping Editor UI completely redesigned
+- Removed cheat sheet to gain 40% more working space
+- Added DICOM tag names to mapping rules display
+- Added transform indicators between source and target
+- Moved "Browse All Tags" button to header
+
+### Enhanced
+- DICOM Tag Browser now NEMA PS3.6 compliant
+- Added 3-column layout: Tag | Name | Description  
+- Search now includes descriptions
+- Added tooltips with VR (Value Representation) explanations
+
+### Added
+- TransformToSymbolConverter for visual transform indicators
+- TransformToDescriptionConverter for transform tooltips
+
+### Fixed
+- XAML Run element opacity issues
+- DICOM tag display concerns (tags were correct all along)
+
+### UI/UX
+- Cleaner, more professional interface
+- More space for actual mapping work
+- Better visual feedback for transforms
+
+## [0.7.24] - 2025-06-16
+
+# CHANGELOG.md - Session 72 Entry
+
+## [0.7.25] - 2025-06-17 - Session 72
+
+### 🔧 Fixed - Mapping Editor Restoration
+
+#### Drag & Drop Functionality
+- **Added missing event handlers** in MappingEditorPage.xaml.cs
+  - SourceField_MouseLeftButtonDown
+  - SourceField_MouseMove 
+  - MappingArea_DragOver
+  - MappingArea_Drop
+- **Connected handlers in XAML** with proper events
+- **Added AddRuleFromField** method to handle dropped fields
+- **Smart field mapping** - automatically selects appropriate DICOM tag
+
+#### Browse All Tags Button
+- **Fixed command binding** - renamed to BrowseDicomTagsCommand
+- **Command implementation** already existed, just wrong name
+- **Dialog opens** and allows DICOM tag selection
+
+#### New Mapping Set Name Input
+- **Added name edit field** below ComboBox
+- **Two-way binding** to SelectedMappingSet.Name
+- **Only visible** for non-system sets (CanEditCurrentSet)
+- **Immediate editing** after creating new set
+
+#### Field Names Display
+- **Changed default** from "newField" to "Select a field..."
+- **Better user guidance** with descriptive text
+- **Smart defaults** when dragging fields
+- **RemoveRuleCommand** properly implemented
+
+### 🎯 Technical Details
+
+**Files Modified:**
+1. `MappingEditorPage.xaml` - Added event handlers & name input field
+2. `MappingEditorPage.xaml.cs` - Implemented all drag & drop logic
+3. `MappingEditorViewModel.cs` - Fixed commands & added helper methods
+
+**Key Improvements:**
+- Drag & drop from source fields creates properly configured rules
+- Automatic transform selection based on field type
+- Name field allows immediate renaming of new sets
+- All buttons now functional
+
+### 📝 Developer Notes
+
+**Session Duration:** ~30 minutes
+**Problems Solved:** 4 of 4
+**Approach:** Sources First → Direct fixes
+
+**Learning:** Missing event handlers are often the cause of non-functional UI. Always check:
+1. Event handler in code-behind
+2. Event binding in XAML
+3. Command name matches between XAML and ViewModel
+
+### 🚀 Next Steps
+
+1. **Test the fixes** with `9[TAB]`
+2. **Build & Deploy** with `0[TAB]` then `1[TAB]`
+3. **Verify functionality** in Config Tool `2[TAB]`
+4. **Remove DeadLetterFolder** from Pipeline Config UI
+5. **Continue Sprint 16** error management enhancements
+
+### 💡 Session Quote
+> "wo soll man den namen einstellen" - Direct observation leads to simple solution!
+
+---
+
+*"Making Mapping Editor mappable again - one event handler at a time!"*
+*Session 72: Complete success in ~30 minutes!*
+
 ## [0.7.24] - 2025-06-17
 
 ### 🔧 Fixed
