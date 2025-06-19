@@ -1,3 +1,7 @@
+<!-- src\CamBridge.Config\Views\MappingEditorPage.xaml -->
+<!-- Version: 0.7.27 -->
+<!-- Description: Mapping Editor with Enhanced Import/Export Buttons -->
+
 <Page x:Class="CamBridge.Config.Views.MappingEditorPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -44,6 +48,14 @@
         </Style>
     </Page.Resources>
 
+    <!-- Keyboard Shortcuts -->
+    <Page.InputBindings>
+        <KeyBinding Key="I" Modifiers="Control" Command="{Binding ImportMappingsCommand}"/>
+        <KeyBinding Key="E" Modifiers="Control" Command="{Binding ExportMappingsCommand}"/>
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveMappingsCommand}"/>
+        <KeyBinding Key="F5" Command="{Binding TestMappingCommand}"/>
+    </Page.InputBindings>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -69,28 +81,58 @@
                                Margin="0,4,0,0"/>
                 </StackPanel>
 
-                <!-- Action Buttons -->
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <Button Command="{Binding ImportMappingsCommand}"
-                            Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Import"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Command="{Binding SaveMappingsCommand}"
-                            Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Save"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Command="{Binding ExportMappingsCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Export"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                <!-- Enhanced Import/Export Buttons -->
+                <Border Grid.Column="1"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        BorderThickness="1,0,0,0"
+                        Padding="15,0,0,0">
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                        <!-- Import Button - Enhanced -->
+                        <Button Command="{Binding ImportMappingsCommand}"
+                                Style="{StaticResource AccentButtonStyle}"
+                                ToolTip="Import mapping rules from JSON file (Ctrl+I)"
+                                Margin="0,0,5,0">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Download" Foreground="White"/>
+                                <TextBlock Text="Import" 
+                                           Margin="5,0,0,0" 
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Export Button - Enhanced -->
+                        <Button Command="{Binding ExportMappingsCommand}"
+                                ToolTip="Export current mapping rules to JSON file (Ctrl+E)"
+                                Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Upload"/>
+                                <TextBlock Text="Export" 
+                                           Margin="5,0,0,0" 
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Save Button -->
+                        <Button Command="{Binding SaveMappingsCommand}"
+                                Style="{StaticResource AccentButtonStyle}"
+                                ToolTip="Save mapping rules (Ctrl+S)">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Save" Foreground="White"/>
+                                <TextBlock Text="Save" 
+                                           Margin="5,0,0,0" 
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Info text -->
+                        <TextBlock Text="Share mappings between installations"
+                                   VerticalAlignment="Center"
+                                   Opacity="0.7"
+                                   FontStyle="Italic"
+                                   Margin="15,0,0,0"/>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
 
@@ -253,14 +295,25 @@
                                    FontSize="16"
                                    FontWeight="SemiBold"/>
 
-                        <Button Grid.Column="1"
-                                Command="{Binding BrowseDicomTagsCommand}"
-                                ToolTip="Browse all DICOM tags">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="📋 " FontSize="14"/>
-                                <TextBlock Text="Browse All Tags..."/>
-                            </StackPanel>
-                        </Button>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <!-- Test Mapping Button - Made Prominent -->
+                            <Button Command="{Binding TestMappingCommand}"
+                                    ToolTip="Test mapping with sample data (F5)"
+                                    Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="▶️ " FontSize="14"/>
+                                    <TextBlock Text="Test"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding BrowseDicomTagsCommand}"
+                                    ToolTip="Browse all DICOM tags">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="📋 " FontSize="14"/>
+                                    <TextBlock Text="Browse All Tags..."/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                     </Grid>
 
                     <ListBox Grid.Row="1"
@@ -382,7 +435,7 @@
 
                     <!-- Drag Info (no Add button!) -->
                     <TextBlock Grid.Row="2"
-                               Text="💡 Drag fields from the left to create mappings"
+                               Text="💡 Drag fields from the left to create mappings | Press F5 to test"
                                FontSize="12"
                                Opacity="0.6"
                                Margin="0,12,0,16"

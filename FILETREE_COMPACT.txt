@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 268
-# Generated: 2025-06-18 12:50
+# Total files: 266
+# Generated: 2025-06-19 23:07
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -270,8 +270,6 @@ Get-WisdomProjectTree.ps1
 Get-WisdomSources - Kopie.ps1
 Get-WisdomSources.ps1
 h-help.ps1
-mapping-editor-current.txt
-mapping-editor-sources.txt
 Migrate-CamBridgeConfig.ps1
 Program.cs
 PROJECT_WISDOM.md

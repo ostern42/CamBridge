@@ -7,8 +7,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+# CHANGELOG
 
-# CHANGELOG.md
+## [0.7.27] - 2025-06-20 - Sprint 18: Hidden Treasures Activation
+
+### Added
+- Service Installer UI - Install/Uninstall buttons in Service Control page (no more command line!)
+- Hidden API endpoint documented: `GET /api/pipelines/{id}` for detailed pipeline information
+- Auto-backup status indicator integrated into Pipeline Configuration header
+- Import/Export mapping buttons enhanced with icons, tooltips, and keyboard shortcuts (Ctrl+I, Ctrl+E)
+- Test mapping button made prominent with play icon
+
+### Changed
+- Pipeline Configuration UI cleaned up - removed alien backup box
+- Auto-backup information moved from floating panel to subtle header indicator
+- Import/Export functionality made more discoverable with "Share mappings" helper text
+- Save confirmation message now shows backup timestamp
+
+### Removed
+- Apply/Reset pipeline buttons (change tracking was broken, "Save All" is clearer)
+- Floating auto-backup information panel (replaced with header integration)
+
+### Fixed
+- XAML Opacity on Run elements error (moved to parent TextBlock)
+- Pipeline Configuration page layout (proper grid rows)
+
+### Discovered
+- Daily Summary Service incompatible with pipeline architecture (needs refactoring)
+- Apply/Reset buttons change tracking not functional
+- Not all "complete" code is actually working - testing is essential!
+
+### Technical Debt
+- Daily Summary Service needs refactoring to work with PipelineManager
+- Individual pipeline change tracking needs implementation or removal
+
+### Developer Notes
+- Sprint 18 revealed many hidden features ready for activation
+- Backend completeness: ~95%, UI completeness: ~60%
+- 4 of 5 attempted features successfully activated
+- Lesson learned: Always test functionality, not just code existence
 
 ## [0.7.26] - 2025-06-18 - Session 74
 ### Added

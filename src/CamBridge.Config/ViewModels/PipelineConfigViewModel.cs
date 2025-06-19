@@ -261,7 +261,9 @@ namespace CamBridge.Config.ViewModels
                 HasUnsavedChanges = false;
                 UnsavedChangesCount = 0;
                 SelectedPipelineHasChanges = false;
-                StatusMessage = "All pipelines saved successfully";
+                // Update message to inform about backup
+                var backupTime = DateTime.Now.ToString("HH:mm:ss");
+                StatusMessage = $"All pipelines saved successfully (backup created at {backupTime})";
 
                 // Notify success
                 MessageBox.Show("Pipeline configuration saved successfully!",

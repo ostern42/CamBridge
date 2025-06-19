@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\PipelineConfigPage.xaml -->
-<!-- Version: 0.7.23 -->
-<!-- Description: Pipeline Configuration - Fixed TabControlHelper.TabStripPlacement error -->
+<!-- Version: 0.7.27 -->
+<!-- Description: Pipeline Configuration - With Auto-Backup Info Panel -->
 
 <Page x:Class="CamBridge.Config.Views.PipelineConfigPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -52,10 +52,16 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
+                <StackPanel>
                 <TextBlock Text="Pipeline Configuration"
                            FontSize="28"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center"/>
+                           FontWeight="SemiBold"/>
+                <!-- Subtle backup indicator -->
+                <TextBlock Text=" Auto-backup enabled  %ProgramData%\CamBridge\"
+                           Margin="0,4,0,0"
+                           FontSize="12"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+            </StackPanel>
 
                 <Button Grid.Column="1"
                         Command="{Binding SaveAllCommand}"
@@ -184,20 +190,13 @@
                                    FontSize="20"
                                    FontWeight="SemiBold"/>
 
-                        <StackPanel Grid.Column="1"
-                                    Orientation="Horizontal">
-                            <Button Content="Apply"
-                                    Command="{Binding ApplyPipelineCommand}"
-                                    IsEnabled="{Binding SelectedPipelineHasChanges}"
-                                    Margin="0,0,8,0"/>
-                            <Button Content="Reset"
-                                    Command="{Binding ResetPipelineCommand}"
-                                    IsEnabled="{Binding SelectedPipelineHasChanges}"/>
-                            <Button Content="Delete"
-                                    Command="{Binding DeletePipelineCommand}"
-                                    Margin="16,0,0,0"
-                                    Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}"/>
-                        </StackPanel>
+                        <Button Grid.Column="1"
+                        Content="Delete Pipeline"
+                        Command="{Binding DeletePipelineCommand}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="10,0,0,0"
+                        Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}"/>
                     </Grid>
                 </Border>
 
