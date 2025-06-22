@@ -1,6 +1,6 @@
 // src\CamBridge.Config\Services\NavigationService.cs
-// Version: 0.7.21
-// Description: Navigation service with PROPER ViewModel injection!
+// Version: 0.7.28
+// Description: Navigation service with LogViewer page added
 
 using System;
 using System.Collections.Generic;
@@ -23,12 +23,13 @@ namespace CamBridge.Config.Services
             var app = (App)App.Current;
             _serviceProvider = app.Host!.Services;
 
-            // Register pages - New order, no Settings!
+            // Register pages - Updated with LogViewer
             _pages["Dashboard"] = typeof(DashboardPage);
             _pages["PipelineConfig"] = typeof(PipelineConfigPage);
             _pages["DeadLetters"] = typeof(DeadLettersPage);
             _pages["MappingEditor"] = typeof(MappingEditorPage);
             _pages["ServiceControl"] = typeof(ServiceControlPage);
+            _pages["LogViewer"] = typeof(LogViewerPage);
             _pages["About"] = typeof(AboutPage);
         }
 
@@ -55,6 +56,7 @@ namespace CamBridge.Config.Services
                         "DeadLetters" => _serviceProvider.GetService<DeadLettersViewModel>(),
                         "MappingEditor" => _serviceProvider.GetService<MappingEditorViewModel>(),
                         "ServiceControl" => _serviceProvider.GetService<ServiceControlViewModel>(),
+                        "LogViewer" => _serviceProvider.GetService<LogViewerViewModel>(),
                         _ => null
                     };
 

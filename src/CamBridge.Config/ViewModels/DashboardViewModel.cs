@@ -99,9 +99,9 @@ namespace CamBridge.Config.ViewModels
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             IsServiceRunning = true;
-                            ServiceStatus = status.ServiceStatus;
-                            UptimeText = $"Uptime: {status.Uptime:hh\\:mm\\:ss}";
-                            VersionText = $"Version: {status.Version}";
+                            ServiceStatus = status.Service.Status;
+                            UptimeText = $"Uptime: {status.Service.Uptime}";
+                            VersionText = $"Version: {status.Service.Version}";
 
                             Debug.WriteLine($"Service is {status.ServiceStatus}!");
 
@@ -146,24 +146,24 @@ namespace CamBridge.Config.ViewModels
             }
         }
 
-        private void UpdatePipelines(List<PipelineStatusData> pipelines)
-        {
-            PipelineStatuses.Clear();
+private void UpdatePipelines(List<PipelineStatusData> pipelines)
+{
+    PipelineStatuses.Clear();
 
-            foreach (var p in pipelines)
-            {
-                PipelineStatuses.Add(new PipelineStatusViewModel
-                {
-                    PipelineName = p.Name,
-                    Status = p.IsActive ? "Active" : "Inactive",
-                    IsEnabled = p.IsActive,
-                    QueueLength = p.QueueLength,
-                    ProcessedToday = p.TotalProcessed,
-                    ErrorsToday = p.TotalFailed,
-                    WatchFolder = p.WatchedFolders?.Count > 0 ? p.WatchedFolders[0] : ""
-                });
-            }
-        }
+    foreach (var p in pipelines)
+    {
+        PipelineStatuses.Add(new PipelineStatusViewModel
+        {
+            PipelineName = p.Name,
+            Status = p.IsActive ? "Active" : "Inactive",
+            IsEnabled = p.IsActive,
+            QueueLength = p.QueueDepth,           // Changed from QueueLength
+            ProcessedToday = p.ProcessedCount,    // Changed from TotalProcessed
+            ErrorsToday = p.ErrorCount,           // Changed from TotalFailed
+            WatchFolder = p.WatchPath             // Changed from WatchedFolders[0]
+        });
+    }
+}
 
         private async Task StartServiceAsync()
         {

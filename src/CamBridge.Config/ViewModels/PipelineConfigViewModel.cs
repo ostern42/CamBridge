@@ -1,6 +1,6 @@
 // src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs
-// Version: 0.7.21
-// Description: Pipeline Configuration ViewModel - FIXED with diagnostics
+// Version: 0.7.27
+// Description: Pipeline Configuration ViewModel - Improved Status & Layout
 
 using CamBridge.Config.Services;
 using CamBridge.Core;
@@ -128,7 +128,7 @@ namespace CamBridge.Config.ViewModels
         private bool _isSaving;
 
         [ObservableProperty]
-        private string _statusMessage = "Initializing...";
+        private string _statusMessage = "";
 
         [ObservableProperty]
         private bool _isError;
@@ -179,7 +179,7 @@ namespace CamBridge.Config.ViewModels
             {
                 Debug.WriteLine($"InitializeAsync FAILED: {ex.Message}");
                 Debug.WriteLine($"Stack: {ex.StackTrace}");
-                StatusMessage = $"Initialization failed: {ex.Message}";
+                StatusMessage = $"Error: {ex.Message}";
                 IsError = true;
 
                 // Create default pipeline even on error
@@ -199,7 +199,7 @@ namespace CamBridge.Config.ViewModels
             {
                 IsLoading = true;
                 IsError = false;
-                StatusMessage = "Loading pipeline configuration...";
+                StatusMessage = "";
 
                 Debug.WriteLine("Calling ConfigurationService.LoadConfigurationAsync<CamBridgeSettingsV2>");
                 var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>();
@@ -215,21 +215,20 @@ namespace CamBridge.Config.ViewModels
 
                     HasUnsavedChanges = false;
                     UnsavedChangesCount = 0;
-                    StatusMessage = $"Loaded {Pipelines.Count} pipelines";
+                    StatusMessage = "";  // Clear status - pipeline count shown in header
                 }
                 else
                 {
                     Debug.WriteLine("Settings is null - creating default pipeline");
                     // Create default settings
                     CreateDefaultPipeline();
-                    StatusMessage = "Created default pipeline configuration";
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"LoadSettingsAsync ERROR: {ex.Message}");
                 Debug.WriteLine($"Exception type: {ex.GetType().Name}");
-                StatusMessage = $"Error loading settings: {ex.Message}";
+                StatusMessage = $"Error: {ex.Message}";
                 IsError = true;
 
                 // Ensure we have at least one pipeline
@@ -261,19 +260,31 @@ namespace CamBridge.Config.ViewModels
                 HasUnsavedChanges = false;
                 UnsavedChangesCount = 0;
                 SelectedPipelineHasChanges = false;
-                // Update message to inform about backup
-                var backupTime = DateTime.Now.ToString("HH:mm:ss");
-                StatusMessage = $"All pipelines saved successfully (backup created at {backupTime})";
+
+                // Show save confirmation briefly
+                StatusMessage = $"Saved at {DateTime.Now:HH:mm:ss}";
+
+                // Clear status message after 3 seconds
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
+                    StatusMessage = "";
+                });
 
                 // Notify success
-                MessageBox.Show("Pipeline configuration saved successfully!",
+                var backupPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "CamBridge",
+                    $"appsettings.json.backup_{DateTime.Now:yyyyMMdd_HHmmss}");
+
+                MessageBox.Show($"Pipeline configuration saved successfully!\n\nAuto-backup created at:\n{backupPath}",
                                "Success",
                                MessageBoxButton.OK,
                                MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error saving: {ex.Message}";
+                StatusMessage = $"Error: {ex.Message}";
                 IsError = true;
 
                 MessageBox.Show($"Failed to save configuration:\n{ex.Message}",
@@ -335,7 +346,6 @@ namespace CamBridge.Config.ViewModels
 
             HasUnsavedChanges = true;
             UnsavedChangesCount++;
-            StatusMessage = $"Added new pipeline: {newPipeline.Name}";
 
             Debug.WriteLine($"Pipeline added. Total count: {Pipelines.Count}");
         }
@@ -359,7 +369,6 @@ namespace CamBridge.Config.ViewModels
 
                 HasUnsavedChanges = true;
                 UnsavedChangesCount++;
-                StatusMessage = $"Deleted pipeline: {pipelineName}";
             }
         }
 
@@ -372,7 +381,6 @@ namespace CamBridge.Config.ViewModels
 
             // Mark changes as applied
             SelectedPipelineHasChanges = false;
-            StatusMessage = $"Applied changes to {SelectedPipeline.Name}";
         }
 
         private bool CanApplyPipeline() => SelectedPipelineHasChanges && !IsLoading && !IsSaving;
@@ -401,7 +409,6 @@ namespace CamBridge.Config.ViewModels
             }
 
             SelectedPipelineHasChanges = false;
-            StatusMessage = $"Reset {SelectedPipeline.Name} to last saved state";
         }
 
         private bool CanResetPipeline() => SelectedPipelineHasChanges && !IsLoading && !IsSaving;
@@ -596,7 +603,6 @@ namespace CamBridge.Config.ViewModels
             SelectedPipeline = defaultPipeline;
 
             Debug.WriteLine($"Default pipeline created. Pipelines count: {Pipelines.Count}");
-            StatusMessage = "Created default pipeline";
         }
 
         private void EnsureSystemDefaults()

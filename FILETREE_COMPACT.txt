@@ -15,7 +15,7 @@
 # UNSER HEADER-STANDARD (seit v0.5.27):
 # Jede Datei beginnt mit:
 # // src\CamBridge.Service\Program.cs
-# // Version: 0.7.26
+# // Version: 0.7.28
 # // Description: Windows service entry point
 # 
 # Der Pfad MUSS mit dieser Liste uebereinstimmen!
@@ -45,8 +45,8 @@
 #   - ROOT
 #   - TOOLS
 #
-# Total files: 266
-# Generated: 2025-06-19 23:07
+# Total files: 267
+# Generated: 2025-06-22 22:15
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -77,6 +77,7 @@ src\CamBridge.Config\Services\NavigationService.cs
 src\CamBridge.Config\Services\ServiceManager.cs
 src\CamBridge.Config\ViewModels\DashboardViewModel.cs
 src\CamBridge.Config\ViewModels\DeadLettersViewModel.cs
+src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
 src\CamBridge.Config\ViewModels\MainViewModel.cs
 src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs
 src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs
@@ -91,6 +92,8 @@ src\CamBridge.Config\Views\DashboardPage.xaml
 src\CamBridge.Config\Views\DashboardPage.xaml.cs
 src\CamBridge.Config\Views\DeadLettersPage.xaml
 src\CamBridge.Config\Views\DeadLettersPage.xaml.cs
+src\CamBridge.Config\Views\LogViewerPage.xaml
+src\CamBridge.Config\Views\LogViewerPage.xaml.cs
 src\CamBridge.Config\Views\MappingEditorPage.xaml
 src\CamBridge.Config\Views\MappingEditorPage.xaml.cs
 src\CamBridge.Config\Views\PipelineConfigPage.xaml
@@ -265,7 +268,6 @@ ExifToolQuickTest\ExifToolQuickTest.csproj
 ExifToolQuickTest\Program.cs
 ExifToolTest\ExifToolTest.csproj
 ExifToolTest\Program.cs
-FILETREE_COMPACT.txt
 Get-WisdomProjectTree.ps1
 Get-WisdomSources - Kopie.ps1
 Get-WisdomSources.ps1
@@ -274,7 +276,6 @@ Migrate-CamBridgeConfig.ps1
 Program.cs
 PROJECT_WISDOM.md
 qrbridge-constants.txt
-README.md
 README-Deployment.md
 service-manager.ps1
 ShowVersion.targets

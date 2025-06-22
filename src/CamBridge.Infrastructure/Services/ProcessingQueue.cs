@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/ProcessingQueue.cs
-// Version: 0.7.20
-// Description: Thread-safe queue with pipeline-specific FileProcessor!
+// Version: 0.7.28
+// Description: Thread-safe queue with pipeline-specific FileProcessor and EnqueueAsync!
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -94,6 +94,16 @@ namespace CamBridge.Infrastructure.Services
                 filePath, _queue.Count);
 
             return true;
+        }
+
+        /// <summary>
+        /// Async wrapper for TryEnqueue to match PipelineManager expectations
+        /// </summary>
+        public Task<bool> EnqueueAsync(string filePath, CancellationToken cancellationToken = default)
+        {
+            // Simply wrap the synchronous TryEnqueue method
+            var result = TryEnqueue(filePath);
+            return Task.FromResult(result);
         }
 
         /// <summary>

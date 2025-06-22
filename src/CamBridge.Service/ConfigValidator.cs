@@ -1,6 +1,6 @@
 // src/CamBridge.Service/ConfigValidator.cs
-// Version: 0.7.17
-// Description: Validates raw config and warns about invalid values
+// Version: 0.7.28
+// Description: Validates configuration and warns about invalid values
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -9,7 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Serilog;  // CHANGED to Serilog!
+using CamBridge.Core;
+using Serilog;
 
 namespace CamBridge.Service
 {
@@ -18,6 +19,38 @@ namespace CamBridge.Service
     /// </summary>
     public static class ConfigValidator
     {
+        /// <summary>
+        /// Validates the settings object (new method for v0.7.28)
+        /// </summary>
+        public static void ValidateSettings(CamBridgeSettingsV2 settings)
+        {
+            // Basic validation that was expected by Program.cs
+            if (settings == null)
+                throw new ArgumentNullException(nameof(settings));
+
+            if (string.IsNullOrEmpty(settings.Version))
+                throw new InvalidOperationException("Settings version is required");
+
+            if (settings.Version != "2.0")
+                throw new InvalidOperationException($"Unsupported settings version: {settings.Version}. Expected: 2.0");
+
+            // Validate pipelines
+            if (settings.Pipelines == null || settings.Pipelines.Count == 0)
+                throw new InvalidOperationException("At least one pipeline must be configured");
+
+            foreach (var pipeline in settings.Pipelines)
+            {
+                if (string.IsNullOrEmpty(pipeline.Name))
+                    throw new InvalidOperationException($"Pipeline {pipeline.Id} must have a name");
+
+                if (pipeline.WatchSettings == null)
+                    throw new InvalidOperationException($"Pipeline {pipeline.Name} must have watch settings");
+
+                if (string.IsNullOrEmpty(pipeline.WatchSettings.Path))
+                    throw new InvalidOperationException($"Pipeline {pipeline.Name} must have a watch path");
+            }
+        }
+
         /// <summary>
         /// Validates the configuration file and warns about any issues
         /// </summary>

@@ -1,6 +1,7 @@
 // src\CamBridge.Core\PipelineConfiguration.cs
-// Version: 0.6.5
+// Version: 0.7.28
 // Description: Pipeline configuration model with INotifyPropertyChanged support
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;

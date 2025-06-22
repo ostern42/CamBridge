@@ -1,6 +1,6 @@
 // src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
-// Version: 0.7.21
-// Description: Pipeline Configuration page - SIMPLE FIX
+// Version: 0.7.27
+// Description: Pipeline Configuration page - Code Behind
 
 using System;
 using System.Runtime.Versioning;

@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/PipelineManager.cs
-// Version: 0.7.20
-// Description: Orchestrates multiple processing pipelines - Each with own FileProcessor!
+// Version: 0.7.28
+// Description: Orchestrates multiple processing pipelines with isolated logging and corrected log levels
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CamBridge.Core;
@@ -18,8 +19,8 @@ using Microsoft.Extensions.Options;
 namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
-    /// Manages multiple processing pipelines with independent configurations, queues, watchers, AND FileProcessors
-    /// PIPELINE UPDATE: Each pipeline gets its own FileProcessor instance!
+    /// Manages multiple processing pipelines with independent configurations, queues, watchers, FileProcessors, AND Loggers!
+    /// PIPELINE UPDATE: Each pipeline gets its own FileProcessor instance AND Logger!
     /// </summary>
     public class PipelineManager : IDisposable
     {
@@ -102,13 +103,22 @@ namespace CamBridge.Infrastructure.Services
                 {
                     if (!context.IsActive)
                     {
-                        await StartPipelineAsync(context, cancellationToken);
-                        _logger.LogInformation("Pipeline {PipelineId} enabled", pipelineId);
+                        context.Watcher.EnableRaisingEvents = true;
+                        context.IsActive = true;
+                        _logger.LogInformation("Pipeline {PipelineName} enabled", context.Configuration.Name);
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("Pipeline {PipelineId} not found", pipelineId);
+                    // Try to find in configuration and create
+                    var config = _settingsMonitor.CurrentValue.Pipelines
+                        .FirstOrDefault(p => p.Id.ToString() == pipelineId);
+
+                    if (config != null)
+                    {
+                        config.Enabled = true;
+                        await CreateAndStartPipelineAsync(config, cancellationToken);
+                    }
                 }
             }
             finally
@@ -127,15 +137,7 @@ namespace CamBridge.Infrastructure.Services
             {
                 if (_pipelines.TryGetValue(pipelineId, out var context))
                 {
-                    if (context.IsActive)
-                    {
-                        await StopPipelineAsync(context, cancellationToken);
-                        _logger.LogInformation("Pipeline {PipelineId} disabled", pipelineId);
-                    }
-                }
-                else
-                {
-                    _logger.LogWarning("Pipeline {PipelineId} not found", pipelineId);
+                    await StopPipelineAsync(context, cancellationToken);
                 }
             }
             finally
@@ -145,332 +147,166 @@ namespace CamBridge.Infrastructure.Services
         }
 
         /// <summary>
-        /// Gets the status of all pipelines
+        /// Gets the current status of all pipelines
         /// </summary>
-        public Dictionary<string, PipelineStatus> GetPipelineStatuses()
+        public List<PipelineStatus> GetPipelineStatuses()
         {
-            return _pipelines.ToDictionary(
-                kvp => kvp.Key,
-                kvp => new PipelineStatus
-                {
-                    Id = kvp.Value.Configuration.Id.ToString(),
-                    Name = kvp.Value.Configuration.Name,
-                    IsActive = kvp.Value.IsActive,
-                    QueueLength = kvp.Value.Queue?.QueueLength ?? 0,
-                    ActiveProcessing = kvp.Value.Queue?.ActiveProcessing ?? 0,
-                    TotalProcessed = kvp.Value.Queue?.TotalProcessed ?? 0,
-                    TotalSuccessful = kvp.Value.Queue?.TotalSuccessful ?? 0,
-                    TotalFailed = kvp.Value.Queue?.TotalFailed ?? 0,
-                    WatchedFolders = new List<string> { kvp.Value.Configuration.WatchSettings.Path }
-                });
+            return _pipelines.Values.Select(p => new PipelineStatus
+            {
+                Id = p.Configuration.Id,
+                Name = p.Configuration.Name,
+                IsActive = p.IsActive,
+                QueueDepth = p.Queue.QueueLength,
+                ProcessedCount = p.ProcessedCount,
+                ErrorCount = p.ErrorCount,
+                LastProcessed = p.LastProcessed,
+                WatchPath = p.Configuration.WatchSettings.Path,
+                OutputPath = p.Configuration.WatchSettings.OutputPath ?? ""
+            }).ToList();
         }
 
         /// <summary>
-        /// Gets detailed statistics for a specific pipeline
+        /// Gets detailed information about a specific pipeline
         /// </summary>
-        public PipelineDetailedStatus? GetPipelineDetails(string pipelineId)
+        public PipelineStatus? GetPipelineStatus(string pipelineId)
         {
-            if (!_pipelines.TryGetValue(pipelineId, out var context))
-                return null;
-
-            var queueStats = context.Queue?.GetStatistics();
-
-            return new PipelineDetailedStatus
+            if (_pipelines.TryGetValue(pipelineId, out var context))
             {
-                Id = context.Configuration.Id.ToString(),
-                Name = context.Configuration.Name,
-                Description = context.Configuration.Description,
-                IsActive = context.IsActive,
-                Configuration = context.Configuration,
-                QueueStatistics = queueStats,
-                ActiveItems = context.Queue?.GetActiveItems() ?? new List<ProcessingItemStatus>()
-            };
+                return new PipelineStatus
+                {
+                    Id = context.Configuration.Id,
+                    Name = context.Configuration.Name,
+                    IsActive = context.IsActive,
+                    QueueDepth = context.Queue.QueueLength,
+                    ProcessedCount = context.ProcessedCount,
+                    ErrorCount = context.ErrorCount,
+                    LastProcessed = context.LastProcessed,
+                    WatchPath = context.Configuration.WatchSettings.Path,
+                    OutputPath = context.Configuration.WatchSettings.OutputPath ?? ""
+                };
+            }
+            return null;
         }
 
         private async Task CreateAndStartPipelineAsync(PipelineConfiguration config, CancellationToken cancellationToken)
         {
-            await _pipelineLock.WaitAsync(cancellationToken);
+            if (_pipelines.ContainsKey(config.Id.ToString()))
+            {
+                _logger.LogWarning("Pipeline {PipelineName} ({Id}) already exists", config.Name, config.Id);
+                return;
+            }
+
+            // Changed to DEBUG level - technical initialization detail
+            _logger.LogDebug("Creating pipeline: {PipelineName} ({Id})", config.Name, config.Id);
+
             try
             {
-                // Check if pipeline already exists
-                if (_pipelines.ContainsKey(config.Id.ToString()))
-                {
-                    _logger.LogWarning("Pipeline {PipelineId} already exists", config.Id);
-                    return;
-                }
+                // Get services from DI
+                var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
+                var exifReader = _serviceProvider.GetRequiredService<ExifToolReader>();
+                var dicomConverter = _serviceProvider.GetRequiredService<DicomConverter>();
+                var globalDicomSettings = _settingsMonitor.CurrentValue.GlobalDicomSettings ?? new DicomSettings();
+
+                // CRITICAL: Create pipeline-specific logger with sanitized name
+                var sanitizedName = SanitizeForFileName(config.Name);
+                var pipelineLogger = loggerFactory.CreateLogger($"Pipeline.{sanitizedName}");
+
+                // Create FileProcessor for THIS pipeline with pipeline-specific logger
+                var fileProcessor = new FileProcessor(
+                    pipelineLogger,  // Use pipeline-specific logger!
+                    exifReader,
+                    dicomConverter,
+                    config,
+                    globalDicomSettings
+                );
+
+                // Create processing queue for this pipeline
+                var processingOptions = Microsoft.Extensions.Options.Options.Create(config.ProcessingOptions);
+                var queue = new ProcessingQueue(
+                    loggerFactory.CreateLogger<ProcessingQueue>(),
+                    fileProcessor,
+                    processingOptions
+                );
+
+                // Create file system watcher
+                var watcher = CreateFileSystemWatcher(config.WatchSettings);
 
                 // Create pipeline context
-                var context = CreatePipelineContext(config);
+                var context = new PipelineContext(
+                    config,
+                    fileProcessor,
+                    queue,
+                    watcher,
+                    pipelineLogger  // Store pipeline logger in context
+                );
 
-                // Add to collection
-                _pipelines[config.Id.ToString()] = context;
-
-                // Start the pipeline
-                await StartPipelineAsync(context, cancellationToken);
-
-                _logger.LogInformation("Created and started pipeline: {PipelineName} ({PipelineId})",
-                    config.Name, config.Id);
-            }
-            finally
-            {
-                _pipelineLock.Release();
-            }
-        }
-
-        private PipelineContext CreatePipelineContext(PipelineConfiguration config)
-        {
-            // Create pipeline-specific services
-            var scope = _serviceProvider.CreateScope();
-
-            // Get shared services from DI
-            var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
-                .CreateLogger<FileProcessor>();
-            var exifToolReader = scope.ServiceProvider.GetRequiredService<ExifToolReader>();
-            var dicomConverter = scope.ServiceProvider.GetRequiredService<DicomConverter>();
-
-            // Get global DICOM settings
-            var settings = _settingsMonitor.CurrentValue;
-            var globalDicomSettings = settings.GlobalDicomSettings;
-
-            // Create pipeline-specific FileProcessor!
-            var fileProcessor = new FileProcessor(
-                logger,
-                exifToolReader,
-                dicomConverter,
-                config,
-                globalDicomSettings
-            );
-
-            // Create processing queue for this pipeline with its own FileProcessor
-            var processingQueue = new ProcessingQueue(
-                scope.ServiceProvider.GetRequiredService<ILogger<ProcessingQueue>>(),
-                fileProcessor,
-                Options.Create(config.ProcessingOptions));
-
-            // Create context
-            var context = new PipelineContext
-            {
-                Id = config.Id.ToString(),
-                Configuration = config,
-                ServiceScope = scope,
-                FileProcessor = fileProcessor, // NEW: Pipeline-specific FileProcessor!
-                Queue = processingQueue,
-                Watchers = new List<FileSystemWatcher>(),
-                ProcessingTask = null,
-                IsActive = false
-            };
-
-            return context;
-        }
-
-        private async Task StartPipelineAsync(PipelineContext context, CancellationToken cancellationToken)
-        {
-            if (context.IsActive)
-                return;
-
-            _logger.LogInformation("Starting pipeline: {PipelineName}", context.Configuration.Name);
-
-            // Start processing queue
-            context.CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            context.ProcessingTask = Task.Run(async () =>
-            {
-                try
+                // Wire up file processor events
+                fileProcessor.ProcessingCompleted += (sender, args) =>
                 {
-                    await context.Queue.ProcessQueueAsync(context.CancellationTokenSource.Token);
-                }
-                catch (OperationCanceledException)
+                    context.ProcessedCount++;
+                    context.LastProcessed = DateTime.UtcNow;
+                };
+
+                fileProcessor.ProcessingError += (sender, args) =>
                 {
-                    // Expected during shutdown
-                }
-                catch (Exception ex)
+                    context.ErrorCount++;
+                };
+
+                // Register pipeline
+                if (_pipelines.TryAdd(config.Id.ToString(), context))
                 {
-                    _logger.LogError(ex, "Fatal error in pipeline {PipelineId} processing queue", context.Id);
-                }
-            }, context.CancellationTokenSource.Token);
-
-            // Create watcher for the pipeline's watch folder
-            if (context.Configuration.WatchSettings.IsValid)
-            {
-                try
-                {
-                    var watcher = CreateWatcher(context.Configuration.WatchSettings, context);
-                    context.Watchers.Add(watcher);
-
-                    _logger.LogInformation("Started watching folder: {Path} for pipeline {PipelineName}",
-                        context.Configuration.WatchSettings.Path, context.Configuration.Name);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to create watcher for folder: {Path} in pipeline {PipelineId}",
-                        context.Configuration.WatchSettings.Path, context.Id);
-                }
-            }
-
-            // Process existing files if configured
-            if (context.Configuration.ProcessingOptions.ProcessExistingOnStartup)
-            {
-                await ProcessExistingFilesAsync(context, cancellationToken);
-            }
-
-            context.IsActive = true;
-        }
-
-        private async Task StopPipelineAsync(PipelineContext context, CancellationToken cancellationToken)
-        {
-            if (!context.IsActive)
-                return;
-
-            _logger.LogInformation("Stopping pipeline: {PipelineName}", context.Configuration.Name);
-
-            // Stop watchers
-            foreach (var watcher in context.Watchers)
-            {
-                try
-                {
-                    watcher.EnableRaisingEvents = false;
-                    watcher.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error disposing watcher in pipeline {PipelineId}", context.Id);
-                }
-            }
-            context.Watchers.Clear();
-
-            // Stop processing
-            context.CancellationTokenSource?.Cancel();
-
-            if (context.ProcessingTask != null)
-            {
-                try
-                {
-                    await context.ProcessingTask.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
-                }
-                catch (TimeoutException)
-                {
-                    _logger.LogWarning("Pipeline {PipelineId} processing did not complete within timeout", context.Id);
-                }
-            }
-
-            context.IsActive = false;
-        }
-
-        private FileSystemWatcher CreateWatcher(PipelineWatchSettings watchSettings, PipelineContext context)
-        {
-            var watcher = new FileSystemWatcher(watchSettings.Path)
-            {
-                IncludeSubdirectories = watchSettings.IncludeSubdirectories,
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size
-            };
-
-            var patterns = watchSettings.FilePattern.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            if (patterns.Length == 1)
-            {
-                watcher.Filter = patterns[0].Trim();
-            }
-            else
-            {
-                watcher.Filter = "*.*";
-            }
-
-            // Wire up events to enqueue in the pipeline's specific queue
-            watcher.Created += (sender, e) => OnFileEvent(e.FullPath, watchSettings, patterns, context);
-            watcher.Changed += (sender, e) => OnFileEvent(e.FullPath, watchSettings, patterns, context);
-            watcher.Renamed += (sender, e) => OnFileEvent(e.FullPath, watchSettings, patterns, context);
-
-            watcher.Error += (sender, e) =>
-            {
-                var ex = e.GetException();
-                _logger.LogError(ex, "FileSystemWatcher error for path: {Path} in pipeline {PipelineId}",
-                    watchSettings.Path, context.Id);
-            };
-
-            watcher.EnableRaisingEvents = true;
-            return watcher;
-        }
-
-        private void OnFileEvent(string filePath, PipelineWatchSettings watchSettings, string[] patterns, PipelineContext context)
-        {
-            try
-            {
-                // Check if file matches any pattern
-                if (patterns.Length > 1)
-                {
-                    var fileName = Path.GetFileName(filePath);
-                    var matchesPattern = patterns.Any(pattern =>
+                    // Wire up watcher events
+                    watcher.Created += async (sender, e) =>
                     {
-                        var cleanPattern = pattern.Trim();
-                        if (cleanPattern.StartsWith("*"))
+                        if (IsValidImageFile(e.FullPath, config.WatchSettings.FilePattern))
                         {
-                            return fileName.EndsWith(cleanPattern.Substring(1), StringComparison.OrdinalIgnoreCase);
+                            // Changed to DEBUG - file detection is technical detail
+                            pipelineLogger.LogDebug("New file detected: {FilePath}", e.FullPath);
+                            await queue.EnqueueAsync(e.FullPath, cancellationToken);
                         }
-                        return fileName.Equals(cleanPattern, StringComparison.OrdinalIgnoreCase);
-                    });
+                    };
 
-                    if (!matchesPattern)
-                        return;
-                }
+                    // Start processing queue (fire and forget!)
+                    _ = Task.Run(async () =>
+                    {
+                        pipelineLogger.LogDebug("Starting processing queue for pipeline: {PipelineName}", config.Name);
+                        await queue.ProcessQueueAsync(cancellationToken);
+                    }, cancellationToken);
 
-                // Enqueue in the pipeline's specific queue
-                if (context.Queue.TryEnqueue(filePath))
-                {
-                    _logger.LogInformation("Enqueued {FilePath} in pipeline {PipelineName}",
-                        filePath, context.Configuration.Name);
+                    // Enable watcher
+                    watcher.EnableRaisingEvents = true;
+                    context.IsActive = true;
+
+                    // Keep as INFO - important business event
+                    pipelineLogger.LogInformation("Pipeline {PipelineName} started successfully. Watching: {WatchPath}",
+                        config.Name, config.WatchSettings.Path);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error handling file event for: {FilePath} in pipeline {PipelineId}",
-                    filePath, context.Id);
+                _logger.LogError(ex, "Failed to create pipeline: {PipelineName}", config.Name);
+                throw;
             }
         }
 
-        private Task ProcessExistingFilesAsync(PipelineContext context, CancellationToken cancellationToken)
+        private async Task StopPipelineAsync(PipelineContext context, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Processing existing files for pipeline: {PipelineName}",
-                context.Configuration.Name);
-
-            var processedCount = 0;
-            var watchSettings = context.Configuration.WatchSettings;
-
-            if (watchSettings.IsValid)
+            try
             {
-                try
-                {
-                    var patterns = watchSettings.FilePattern
-                        .Split(';', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(p => p.Trim())
-                        .ToArray();
+                context.PipelineLogger.LogInformation("Stopping pipeline: {PipelineName}", context.Configuration.Name);
 
-                    var searchOption = watchSettings.IncludeSubdirectories
-                        ? SearchOption.AllDirectories
-                        : SearchOption.TopDirectoryOnly;
+                context.IsActive = false;
+                context.Watcher.EnableRaisingEvents = false;
 
-                    foreach (var pattern in patterns)
-                    {
-                        var files = Directory.GetFiles(watchSettings.Path, pattern, searchOption);
-                        foreach (var file in files)
-                        {
-                            if (cancellationToken.IsCancellationRequested)
-                                break;
+                // Give queue time to finish current work
+                await Task.Delay(1000, cancellationToken);
 
-                            if (context.Queue.TryEnqueue(file))
-                            {
-                                processedCount++;
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error processing existing files in folder: {Path}", watchSettings.Path);
-                }
+                context.PipelineLogger.LogInformation("Pipeline {PipelineName} stopped", context.Configuration.Name);
             }
-
-            _logger.LogInformation("Enqueued {Count} existing files for pipeline {PipelineName}",
-                processedCount, context.Configuration.Name);
-
-            return Task.CompletedTask;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error stopping pipeline: {PipelineName}", context.Configuration.Name);
+            }
         }
 
         private async Task ReconfigurePipelinesAsync(CamBridgeSettingsV2 newSettings)
@@ -478,47 +314,32 @@ namespace CamBridge.Infrastructure.Services
             await _pipelineLock.WaitAsync();
             try
             {
-                // Find pipelines to remove
-                var toRemove = _pipelines.Keys
-                    .Where(id => !newSettings.Pipelines.Any(p => p.Id.ToString() == id))
-                    .ToList();
+                // Stop pipelines that are no longer in config
+                var configuredIds = newSettings.Pipelines.Select(p => p.Id.ToString()).ToHashSet();
+                var toRemove = _pipelines.Keys.Where(id => !configuredIds.Contains(id)).ToList();
 
-                // Remove deleted pipelines
                 foreach (var id in toRemove)
                 {
                     if (_pipelines.TryRemove(id, out var context))
                     {
                         await StopPipelineAsync(context, CancellationToken.None);
-                        context.ServiceScope?.Dispose();
-                        _logger.LogInformation("Removed pipeline: {PipelineId}", id);
+                        context.Dispose();
                     }
                 }
 
-                // Update or add pipelines
+                // Start or update pipelines from config
                 foreach (var pipelineConfig in newSettings.Pipelines)
                 {
-                    if (_pipelines.TryGetValue(pipelineConfig.Id.ToString(), out var existingContext))
+                    if (pipelineConfig.Enabled)
                     {
-                        // Update existing pipeline
-                        if (pipelineConfig.Enabled && !existingContext.IsActive)
+                        if (!_pipelines.ContainsKey(pipelineConfig.Id.ToString()))
                         {
-                            existingContext.Configuration = pipelineConfig;
-                            await StartPipelineAsync(existingContext, CancellationToken.None);
-                        }
-                        else if (!pipelineConfig.Enabled && existingContext.IsActive)
-                        {
-                            await StopPipelineAsync(existingContext, CancellationToken.None);
-                        }
-                        else
-                        {
-                            // Update configuration
-                            existingContext.Configuration = pipelineConfig;
+                            await CreateAndStartPipelineAsync(pipelineConfig, CancellationToken.None);
                         }
                     }
-                    else if (pipelineConfig.Enabled)
+                    else if (_pipelines.TryGetValue(pipelineConfig.Id.ToString(), out var context))
                     {
-                        // Add new pipeline
-                        await CreateAndStartPipelineAsync(pipelineConfig, CancellationToken.None);
+                        await StopPipelineAsync(context, CancellationToken.None);
                     }
                 }
             }
@@ -528,69 +349,142 @@ namespace CamBridge.Infrastructure.Services
             }
         }
 
+        private FileSystemWatcher CreateFileSystemWatcher(PipelineWatchSettings settings)
+        {
+            // Ensure watch directory exists
+            Directory.CreateDirectory(settings.Path);
+
+            var watcher = new FileSystemWatcher(settings.Path)
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.CreationTime,
+                IncludeSubdirectories = settings.IncludeSubdirectories
+            };
+
+            // Apply file pattern filter(s)
+            // Note: FileSystemWatcher only supports single pattern, so we use *.* and filter in event
+            watcher.Filter = "*.*";
+
+            return watcher;
+        }
+
+        private bool IsValidImageFile(string filePath, string filePattern)
+        {
+            var fileName = Path.GetFileName(filePath);
+
+            // Default to JPEG patterns if not specified
+            if (string.IsNullOrWhiteSpace(filePattern))
+                filePattern = "*.jpg;*.jpeg";
+
+            // Split patterns by semicolon and check each
+            var patterns = filePattern.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim());
+
+            foreach (var pattern in patterns)
+            {
+                // Convert wildcard pattern to regex
+                var regexPattern = "^" + Regex.Escape(pattern)
+                    .Replace("\\*", ".*")
+                    .Replace("\\?", ".") + "$";
+
+                if (Regex.IsMatch(fileName, regexPattern, RegexOptions.IgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private string SanitizeForFileName(string pipelineName)
+        {
+            // Same logic as in LogViewerViewModel
+            var invalid = Path.GetInvalidFileNameChars()
+                .Concat(new[] { ' ', '.', ',', '/', '\\', ':', '-' })
+                .Distinct()
+                .ToArray();
+
+            var sanitized = string.Join("_", pipelineName.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+
+            if (sanitized.Length > 100)
+            {
+                sanitized = sanitized.Substring(0, 97) + "...";
+            }
+
+            return sanitized;
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
 
-            _pipelineLock?.Wait();
             try
             {
+                StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+
                 foreach (var context in _pipelines.Values)
                 {
-                    StopPipelineAsync(context, CancellationToken.None).GetAwaiter().GetResult();
-                    context.ServiceScope?.Dispose();
+                    context.Dispose();
                 }
+
                 _pipelines.Clear();
-            }
-            finally
-            {
-                _pipelineLock?.Release();
                 _pipelineLock?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during PipelineManager disposal");
             }
 
             _disposed = true;
         }
 
         /// <summary>
-        /// Internal context for managing a single pipeline
-        /// NOW WITH ITS OWN FILEPROCESSOR!
+        /// Internal class to hold pipeline runtime context
         /// </summary>
-        private class PipelineContext
+        private class PipelineContext : IDisposable
         {
-            public string Id { get; set; } = string.Empty;
-            public PipelineConfiguration Configuration { get; set; } = new();
-            public FileProcessor FileProcessor { get; set; } = null!; // NEW: Pipeline-specific!
-            public ProcessingQueue Queue { get; set; } = null!;
-            public List<FileSystemWatcher> Watchers { get; set; } = new();
-            public Task? ProcessingTask { get; set; }
-            public CancellationTokenSource? CancellationTokenSource { get; set; }
-            public IServiceScope ServiceScope { get; set; } = null!;
+            public PipelineConfiguration Configuration { get; }
+            public FileProcessor FileProcessor { get; }
+            public ProcessingQueue Queue { get; }
+            public FileSystemWatcher Watcher { get; }
+            public ILogger PipelineLogger { get; }
             public bool IsActive { get; set; }
+            public DateTime LastProcessed { get; set; }
+            public int ProcessedCount { get; set; }
+            public int ErrorCount { get; set; }
+
+            public PipelineContext(
+                PipelineConfiguration configuration,
+                FileProcessor fileProcessor,
+                ProcessingQueue queue,
+                FileSystemWatcher watcher,
+                ILogger pipelineLogger)
+            {
+                Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+                FileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
+                Queue = queue ?? throw new ArgumentNullException(nameof(queue));
+                Watcher = watcher ?? throw new ArgumentNullException(nameof(watcher));
+                PipelineLogger = pipelineLogger ?? throw new ArgumentNullException(nameof(pipelineLogger));
+                LastProcessed = DateTime.MinValue;
+            }
+
+            public void Dispose()
+            {
+                Watcher?.Dispose();
+            }
         }
     }
 
-    // Status classes remain the same...
+    /// <summary>
+    /// Pipeline status information for API responses
+    /// </summary>
     public class PipelineStatus
     {
-        public string Id { get; set; } = string.Empty;
+        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public bool IsActive { get; set; }
-        public int QueueLength { get; set; }
-        public int ActiveProcessing { get; set; }
-        public int TotalProcessed { get; set; }
-        public int TotalSuccessful { get; set; }
-        public int TotalFailed { get; set; }
-        public List<string> WatchedFolders { get; set; } = new();
-    }
-
-    public class PipelineDetailedStatus
-    {
-        public string Id { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string? Description { get; set; }
-        public bool IsActive { get; set; }
-        public PipelineConfiguration Configuration { get; set; } = new();
-        public QueueStatistics? QueueStatistics { get; set; }
-        public IReadOnlyList<ProcessingItemStatus> ActiveItems { get; set; } = new List<ProcessingItemStatus>();
+        public int QueueDepth { get; set; }
+        public int ProcessedCount { get; set; }
+        public int ErrorCount { get; set; }
+        public DateTime LastProcessed { get; set; }
+        public string WatchPath { get; set; } = string.Empty;
+        public string OutputPath { get; set; } = string.Empty;
     }
 }

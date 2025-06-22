@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\MappingEditorPage.xaml -->
-<!-- Version: 0.7.27 -->
-<!-- Description: Mapping Editor with Enhanced Import/Export Buttons -->
+<!-- Version: 0.7.28 -->
+<!-- Description: Mapping Editor with Unified Header Design -->
 
 <Page x:Class="CamBridge.Config.Views.MappingEditorPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -40,8 +40,8 @@
         <Style x:Key="MappingAreaStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="2"/>
             <Setter Property="Margin" Value="8"/>
             <Setter Property="MinHeight" Value="400"/>
             <Setter Property="AllowDrop" Value="True"/>
@@ -63,76 +63,61 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Padding="24,24,24,16">
-            <Grid>
+        <!-- Header - Unified Style -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <Grid Height="60">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel>
+                <StackPanel VerticalAlignment="Center" Margin="24,0,0,0">
                     <TextBlock Text="Mapping Editor"
-                               FontSize="32"
+                               FontSize="24"
                                FontWeight="SemiBold"/>
-                    <TextBlock Text="Configure field mappings between JPEG EXIF data and DICOM tags"
-                               FontSize="14"
-                               Opacity="0.7"
-                               Margin="0,4,0,0"/>
                 </StackPanel>
 
-                <!-- Enhanced Import/Export Buttons -->
-                <Border Grid.Column="1"
-                        BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                        BorderThickness="1,0,0,0"
-                        Padding="15,0,0,0">
-                    <StackPanel Orientation="Horizontal"
-                                VerticalAlignment="Center">
-                        <!-- Import Button - Enhanced -->
-                        <Button Command="{Binding ImportMappingsCommand}"
-                                Style="{StaticResource AccentButtonStyle}"
-                                ToolTip="Import mapping rules from JSON file (Ctrl+I)"
-                                Margin="0,0,5,0">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Download" Foreground="White"/>
-                                <TextBlock Text="Import" 
-                                           Margin="5,0,0,0" 
-                                           FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Button>
+                <!-- Action Buttons -->
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="0,0,24,0">
 
-                        <!-- Export Button - Enhanced -->
-                        <Button Command="{Binding ExportMappingsCommand}"
-                                ToolTip="Export current mapping rules to JSON file (Ctrl+E)"
-                                Margin="0,0,8,0">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Upload"/>
-                                <TextBlock Text="Export" 
-                                           Margin="5,0,0,0" 
-                                           FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Button>
+                    <!-- Import Button -->
+                    <Button Command="{Binding ImportMappingsCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            ToolTip="Import mapping rules from JSON file (Ctrl+I)"
+                            Margin="0,0,8,0"
+                            MinWidth="90">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Download" Margin="0,0,6,0"/>
+                            <TextBlock Text="Import"/>
+                        </StackPanel>
+                    </Button>
 
-                        <!-- Save Button -->
-                        <Button Command="{Binding SaveMappingsCommand}"
-                                Style="{StaticResource AccentButtonStyle}"
-                                ToolTip="Save mapping rules (Ctrl+S)">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Save" Foreground="White"/>
-                                <TextBlock Text="Save" 
-                                           Margin="5,0,0,0" 
-                                           FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Button>
+                    <!-- Export Button -->
+                    <Button Command="{Binding ExportMappingsCommand}"
+                            ToolTip="Export current mapping rules to JSON file (Ctrl+E)"
+                            Margin="0,0,8,0"
+                            MinWidth="90">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Upload" Margin="0,0,6,0"/>
+                            <TextBlock Text="Export"/>
+                        </StackPanel>
+                    </Button>
 
-                        <!-- Info text -->
-                        <TextBlock Text="Share mappings between installations"
-                                   VerticalAlignment="Center"
-                                   Opacity="0.7"
-                                   FontStyle="Italic"
-                                   Margin="15,0,0,0"/>
-                    </StackPanel>
-                </Border>
+                    <!-- Save Button -->
+                    <Button Command="{Binding SaveMappingsCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            ToolTip="Save mapping rules (Ctrl+S)"
+                            MinWidth="90">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Save" Margin="0,0,6,0"/>
+                            <TextBlock Text="Save"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -153,8 +138,10 @@
         <!-- Mapping Set Selection -->
         <Border Grid.Row="1"
                 Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                BorderThickness="0"
+                CornerRadius="2"
                 Padding="16"
-                Margin="8,0,8,8">
+                Margin="16,16,16,8">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -200,7 +187,7 @@
         </Border>
 
         <!-- Main Content -->
-        <Grid Grid.Row="2" Margin="8,0,8,8">
+        <Grid Grid.Row="2" Margin="16,0,16,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220" MinWidth="180"/>
                 <ColumnDefinition Width="Auto"/>
@@ -210,7 +197,8 @@
             <!-- Source Fields (EXIF) -->
             <Border Grid.Column="0"
                     Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-                    CornerRadius="8"
+                    CornerRadius="2"
+                    BorderThickness="0"
                     Padding="16">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -218,7 +206,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Text="Source Fields (EXIF/Barcode)"
+                    <TextBlock Text="Source Fields"
                                FontSize="16"
                                FontWeight="SemiBold"
                                Margin="0,0,0,12"/>
@@ -275,7 +263,12 @@
 
             <!-- Mapping Area -->
             <Border Grid.Column="2"
-                    Style="{StaticResource MappingAreaStyle}"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="2"
+                    Margin="8,0,0,0"
+                    AllowDrop="True"
                     DragOver="MappingArea_DragOver"
                     Drop="MappingArea_Drop">
                 <Grid>
@@ -296,12 +289,12 @@
                                    FontWeight="SemiBold"/>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <!-- Test Mapping Button - Made Prominent -->
+                            <!-- Test Mapping Button -->
                             <Button Command="{Binding TestMappingCommand}"
                                     ToolTip="Test mapping with sample data (F5)"
                                     Margin="0,0,8,0">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="▶️ " FontSize="14"/>
+                                    <TextBlock Text="▶ " FontSize="14"/>
                                     <TextBlock Text="Test"/>
                                 </StackPanel>
                             </Button>
@@ -433,9 +426,9 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <!-- Drag Info (no Add button!) -->
+                    <!-- Drag Info -->
                     <TextBlock Grid.Row="2"
-                               Text="💡 Drag fields from the left to create mappings | Press F5 to test"
+                               Text="💡 Drag fields from the left to create mappings • Press F5 to test"
                                FontSize="12"
                                Opacity="0.6"
                                Margin="0,12,0,16"

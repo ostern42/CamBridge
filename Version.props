@@ -1,23 +1,23 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.7.27 -->
-<!-- Modified: 2025-06-19 -->
+<!-- Version: 0.7.28 -->
+<!-- Modified: 2025-06-20 -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.7.27</VersionPrefix>
+		<VersionPrefix>0.7.28</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
 		<AssemblyVersion>0.7.0.0</AssemblyVersion>
 
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.7.27.0</FileVersion>
+		<FileVersion>0.7.28.0</FileVersion>
 
 		<!-- Informational version shown in logs and UI -->
-		<InformationalVersion>0.7.27 - Sprint 18 Hidden Treasures Activation</InformationalVersion>
+		<InformationalVersion>0.7.28 - Uniform Design Update</InformationalVersion>
 
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.7.27</PackageVersion>
+		<PackageVersion>0.7.28</PackageVersion>
 
 		<!-- Product information -->
 		<Product>CamBridge</Product>

@@ -1,6 +1,6 @@
-// src\CamBridge.Infrastructure\Services\ExifToolReader.cs
-// Version: 0.7.16 - Process Deadlock Fix
-// Description: EXIF metadata reader using ExifTool for Ricoh G900SE II
+// src/CamBridge.Infrastructure/Services/ExifToolReader.cs
+// Version: 0.7.28
+// Description: EXIF metadata reader with corrected log levels
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -56,13 +56,16 @@ namespace CamBridge.Infrastructure.Services
                 if (File.Exists(path))
                 {
                     _exifToolPath = path;
-                    _logger.LogInformation("Found ExifTool at: {Path}", path);
+                    // Changed to DEBUG - tool location is technical detail
+                    _logger.LogDebug("Found ExifTool at: {Path}", path);
                     break;
                 }
             }
 
             if (string.IsNullOrEmpty(_exifToolPath))
             {
+                // CRITICAL - without ExifTool, service cannot function!
+                _logger.LogCritical("ExifTool not found in any expected location - cannot process any files!");
                 throw new FileNotFoundException("ExifTool not found in any expected location");
             }
         }
@@ -86,7 +89,7 @@ namespace CamBridge.Infrastructure.Services
                 var output = await RunExifToolAsync(filePath);
                 var exifData = ParseExifToolOutput(output);
 
-                // Log what we found
+                // Log what we found - keep as INFO for business-relevant barcode data
                 if (exifData.TryGetValue("Barcode", out var barcode))
                 {
                     _logger.LogInformation("Found Ricoh barcode data: '{Barcode}'", barcode);
@@ -101,7 +104,7 @@ namespace CamBridge.Infrastructure.Services
                 if (exifData.TryGetValue("Barcode", out var barcodeValue))
                 {
                     barcodeData = barcodeValue;
-                    _logger.LogInformation("Found barcode data in Barcode field: '{BarcodeData}'", barcodeData);
+                    _logger.LogDebug("Found barcode data in Barcode field: '{BarcodeData}'", barcodeData);
                 }
                 else if (exifData.TryGetValue("UserComment", out var userCommentValue) &&
                          userCommentValue != "GCM_TAG" &&
@@ -109,7 +112,7 @@ namespace CamBridge.Infrastructure.Services
                 {
                     // Fallback to UserComment if it contains pipe-delimited data
                     barcodeData = userCommentValue;
-                    _logger.LogInformation("Found barcode data in UserComment field: '{BarcodeData}'", barcodeData);
+                    _logger.LogDebug("Found barcode data in UserComment field: '{BarcodeData}'", barcodeData);
                 }
                 else
                 {
@@ -251,7 +254,7 @@ namespace CamBridge.Infrastructure.Services
                     if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
                     {
                         // Skip keys that are just encoding artifacts
-                        if (key.Length == 1 && (key[0] == '�' || key[0] < 32 || key[0] > 126))
+                        if (key.Length == 1 && (key[0] == '\uFFFD' || key[0] < 32 || key[0] > 126))
                         {
                             _logger.LogDebug("Skipping invalid key: {Key} (char code: {Code})", key, (int)key[0]);
                             continue;
@@ -360,6 +363,7 @@ namespace CamBridge.Infrastructure.Services
                     studyDate: DateTime.Now
                 );
 
+                // Keep as INFO - successfully parsed patient data is business-relevant
                 _logger.LogInformation("Successfully parsed barcode: ExamId={ExamId}, Patient={PatientName}, Study={StudyDescription}",
                     examId, patientName, studyDescription);
 

@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\App.xaml -->
-<!-- Version: 0.6.5 -->
-<!-- Description: Application resources with global converter registration -->
+<!-- Version: 0.7.28 -->
+<!-- Description: Application resources with global converter registration including IntToVisibilityConverter -->
 
 <Application x:Class="CamBridge.Config.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -49,6 +49,7 @@
             <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
             <conv:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
             <conv:ZeroToVisibilityConverter x:Key="ZeroToVisibility"/>
+            <conv:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
             <conv:EnumToCollectionConverter x:Key="EnumToCollection"/>
             <conv:ServiceStatusToColorConverter x:Key="ServiceStatusToColor"/>
             <conv:TimeSpanToStringConverter x:Key="TimeSpanToString"/>

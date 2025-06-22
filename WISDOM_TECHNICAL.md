@@ -1,9 +1,9 @@
 # WISDOM_TECHNICAL.md - Technical Wisdom Distilled
-**Version**: 0.7.27  
+**Version**: 0.7.28  
 **Purpose**: HOW to build, fix, deploy, activate hidden features  
 **Philosophy**: KISS, Tab-Complete, Sources First, Pipeline Isolation  
-**Reality**: 74 Sessions + Sprint 18 treasure activation!
-**Updated**: 2025-06-20 Sprint 18 - Hidden Treasures + UI Polish
+**Reality**: 75 Sessions + Multi-Pipeline Logging Implementation!
+**Updated**: 2025-06-21 Sprint 19 - Professional Logging & Unicode Support
 
 ## 🎭 V.O.G.O.N. PROTOCOL
 
@@ -26,7 +26,7 @@ VOGON EXIT: End session properly
 Usage Examples:
   "VOGON INIT für Pipeline Isolation"
   "Mini-VOGON für Event Handler check"
-  "VOGON EXIT mit v0.7.27 release"
+  "VOGON EXIT mit v0.7.28 release"
 
 NEW - VOGON TREASURE HUNT:
   V - Verify: Search for TODOs and comments
@@ -51,6 +51,7 @@ Build: MSBuild with Version.props
 Deploy: PowerShell automation
 Dependencies: Direct (2 interfaces from 12+)
 Architecture: Pipeline-isolated processing
+Logging: Serilog with pipeline-specific logs ✓
 
 Hidden Systems Found:
   Notifications: Webhook + Email config ready
@@ -58,6 +59,116 @@ Hidden Systems Found:
   Monitoring: Health checks active
   Import/Export: JSON fully working ✓
   Auto-Backup: Silent on every save ✓
+  
+NEW Features (Sprint 19):
+  Multi-Pipeline Logging: Separate files per pipeline ✓
+  Unicode Support: Full GUI, sanitized filenames ✓
+  Log Viewer: Professional with multi-select ✓
+  Timestamp: MS precision, second display ✓
+```
+
+## 🌍 UNICODE & INTERNATIONALIZATION
+
+### Pipeline Naming Strategy
+```yaml
+GUI Support: Full Unicode everywhere
+  - Pipeline names: "Radiologie-Süd", "小児科", "Кардиология"
+  - Display: All Unicode characters supported
+  - Config storage: UTF-8 JSON
+
+File System Mapping:
+  Original: "A&E / Emergency"
+  Sanitized: "A_E_Emergency"
+  Filename: "pipeline_A_E_Emergency_20250621.log"
+  
+  Original: "Radiologie-Süd"
+  Sanitized: "Radiologie-Sued" (filesystem dependent)
+  Filename: "pipeline_Radiologie-Sued_20250621.log"
+
+Sanitization Rules:
+  - Replace Path.GetInvalidFileNameChars()
+  - Replace: / \ : * ? " < > | , . (space)
+  - With: _ (underscore)
+  - Max length: 100 chars (truncate + ...)
+  - Preserve Unicode if filesystem supports
+  
+Mapping Storage:
+  PipelineId ↔ OriginalName ↔ SanitizedName
+  Stored in: PipelineLogMapping.json
+  Used by: LogViewer for display
+```
+
+### Code Example
+```csharp
+private string SanitizeForFileName(string pipelineName)
+{
+    var invalid = Path.GetInvalidFileNameChars()
+        .Concat(new[] { ' ', '.', ',' }).ToArray();
+    
+    var sanitized = string.Join("_", pipelineName.Split(invalid));
+    
+    if (sanitized.Length > 100)
+        sanitized = sanitized.Substring(0, 97) + "...";
+        
+    return sanitized;
+}
+```
+
+## 📊 LOGGING ARCHITECTURE
+
+### Multi-Pipeline Logging Design
+```yaml
+File Structure:
+  %ProgramData%\CamBridge\Logs\
+    ├── service_20250621.log          # Global service log
+    ├── pipeline_Radiology_20250621.log
+    ├── pipeline_Emergency_20250621.log
+    └── pipeline_小児科_20250621.log   # Unicode if supported
+
+Log Routing:
+  - ALWAYS: Separate file per pipeline
+  - ALWAYS: Global service log
+  - OPTIONAL: Additional custom path (GUI setting)
+  
+Serilog Configuration:
+  - Dynamic sub-loggers per pipeline
+  - SourceContext: "Pipeline.{SanitizedName}"
+  - Automatic file creation on startup
+  - Rolling by day
+  
+Performance:
+  - Max 100+ pipelines supported
+  - Async logging with buffer
+  - Shared file access enabled
+  - 10MB max file size before rolling
+```
+
+### LogViewer Features
+```yaml
+Multi-Select Dropdown:
+  ☑ Service (Global)
+  ☑ Radiology
+  ☐ Emergency  
+  ☑ CardioMRT
+  
+Timestamp Strategy:
+  Storage: Full precision (HH:mm:ss.fff)
+  Display: Seconds only (HH:mm:ss)
+  Sorting: By full timestamp + line number
+  Result: Correct order even in bursts
+  
+Performance Optimizations:
+  - Tail mode: Last 1000 lines
+  - Buffer: Max 10,000 entries
+  - Virtual scrolling
+  - Lazy file loading
+  - Debounced updates
+  
+Search & Filter:
+  - Real-time text search
+  - Log level filters (Debug/Info/Warn/Error/Critical)
+  - Multi-file merge with sort
+  - Export filtered results
 ```
 
 ## 💻 ESSENTIAL COMMANDS (MUSCLE MEMORY!)
@@ -121,11 +232,13 @@ Get-EventLog -LogName Application -Source CamBridge* -Newest 20 |
 # 3. Run in console mode to see live errors
 .\4-console.ps1  # Shows real-time output!
 
-# NEW - After Sprint 18: Service install via UI!
-# No more command line needed!
+# NEW - Check pipeline-specific logs
+Get-ChildItem "$env:ProgramData\CamBridge\logs\pipeline_*.log" | 
+    Select-Object Name, LastWriteTime, Length
 
-# Monitor logs live
-Get-Content "$env:ProgramData\CamBridge\logs\service-*.log" -Tail 50 -Wait
+# Monitor logs live (with multi-select)
+$logs = @("service", "pipeline_Radiology", "pipeline_Emergency")
+Get-Content ($logs | %{"$env:ProgramData\CamBridge\logs\$($_)_$(Get-Date -f yyyyMMdd).log"}) -Tail 50 -Wait
 
 # Check configuration
 Test-Json -Path "$env:ProgramData\CamBridge\appsettings.json"
@@ -137,7 +250,7 @@ cat "$env:ProgramData\CamBridge\appsettings.json" | ConvertFrom-Json
 # Quick API health check
 Invoke-RestMethod "http://localhost:5111/api/status" | ConvertTo-Json -Depth 5
 
-# Specific endpoints (all working in v0.7.27)
+# Specific endpoints (all working in v0.7.28)
 $base = "http://localhost:5111/api"
 irm "$base/status"          # Full service status with pipelines
 irm "$base/pipelines"       # Just pipeline configs
@@ -149,16 +262,16 @@ irm "$base/status/health"   # Simple health check
 $pipelineId = "your-pipeline-guid-here"
 irm "$base/pipelines/$pipelineId"  # Detailed pipeline info!
 # Returns: Name, Status, QueueDepth, LastProcessed, ErrorCount, etc.
-# Example: irm "http://localhost:5111/api/pipelines/abc123-def456"
 
-# NEW ENDPOINTS (add in Sprint 19)
+# NEW ENDPOINTS (add in Sprint 20)
 irm "$base/pipelines/{id}/enable" -Method POST   # Enable pipeline
 irm "$base/pipelines/{id}/disable" -Method POST  # Disable pipeline
-irm "$base/statistics"      # Currently 404, implement in Sprint 19
+irm "$base/logs/{pipelineName}"     # Get recent log entries
+irm "$base/statistics"              # Currently 404, implement in Sprint 20
 
 # Check specific pipeline
 $status = irm "$base/status"
-$status.pipelines | Where-Object { $_.name -eq "Radiology" }
+$status.pipelines | Where-Object { $_.name -eq "Radiologie-Süd" }
 
 # Test pipeline processing
 $status.statistics          # Files processed, errors
@@ -190,28 +303,106 @@ $props = Select-String "public.*{ get; set; }" src\**\ViewModels\*.cs
 $bindings = Select-String "Binding.*}" src\**\*.xaml
 # Compare lists for unused properties
 
-# Find event definitions
-Select-String "event.*EventHandler" src\**\*.cs
+# Find pipeline logging configuration
+Select-String "UseCustomLogging|PipelineLog" src\**\*.cs
+Select-String "Logging" src\**\*.xaml | Where {$_ -match "Tab"}
 
-# Find complete but commented code blocks
-Select-String "^[\s]*//.*\{[\s]*$" src\**\*.cs -Context 0,20
-
-# Find config classes
-Select-String "class.*Settings|class.*Config" src\**\*.cs
-
-# NEW - Find hidden converters
-Select-String "class.*Converter" src\CamBridge.Config\Converters\*.cs |
-  ForEach-Object { $_.Line -match "class\s+(\w+)" | Out-Null; $matches[1] } |
-  ForEach-Object { 
-    $converter = $_
-    $used = Select-String $converter src\**\*.xaml
-    if (-not $used) { "UNUSED: $converter" }
-  }
+# NEW - Find Unicode in configs
+Select-String "[^\x00-\x7F]" *.json -Encoding UTF8
 ```
 
 ## 🎯 PATTERN MASTERY - FROM PAIN TO WISDOM
 
-### The Hidden Treasures Pattern ⭐ NEW!
+### The Multi-Pipeline Logging Pattern ⭐ NEW!
+```yaml
+Problem: One log file for all pipelines = chaos
+Old Way: Everything in service-{date}.log
+New Way: Automatic per-pipeline logs
+
+Implementation:
+  1. Each pipeline gets own logger with SourceContext
+  2. Serilog routes by SourceContext to files
+  3. LogViewer reads all pipeline_*.log files
+  4. Multi-select dropdown for mixing
+  
+Real Example:
+```
+```csharp
+// In PipelineManager:
+var pipelineLogger = _loggerFactory.CreateLogger($"Pipeline.{SanitizeName(config.Name)}");
+
+// Serilog routes automatically:
+// Pipeline.Radiology → pipeline_Radiology_20250621.log
+// Pipeline.Emergency → pipeline_Emergency_20250621.log
+
+// LogViewer:
+☑ Service (Global)     [14:23:45 INF] Service started
+☑ Radiology            [14:23:46 INF] Pipeline Radiology started
+☐ Emergency            
+☑ CardioMRT           [14:23:47 INF] Pipeline CardioMRT started
+
+// Result: Mixed view sorted by precise timestamp!
+```
+
+### The Unicode Filename Pattern ⭐ NEW!
+```csharp
+// Problem: "Radiologie-Süd/Test" crashes file system
+// Solution: Smart sanitization with mapping
+
+public class PipelineLogMapper
+{
+    private Dictionary<Guid, (string Original, string Sanitized)> _mappings;
+    
+    public string GetLogFileName(PipelineConfiguration config)
+    {
+        var sanitized = SanitizeForFileName(config.Name);
+        _mappings[config.Id] = (config.Name, sanitized);
+        return $"pipeline_{sanitized}_{DateTime.Now:yyyyMMdd}.log";
+    }
+    
+    public string GetOriginalName(string logFileName)
+    {
+        // Extract sanitized name from filename
+        var match = Regex.Match(logFileName, @"pipeline_(.+)_\d{8}\.log");
+        if (match.Success)
+        {
+            var sanitized = match.Groups[1].Value;
+            return _mappings.Values
+                .FirstOrDefault(m => m.Sanitized == sanitized)
+                .Original ?? sanitized;
+        }
+        return logFileName;
+    }
+}
+
+// Result: Full Unicode in UI, safe filenames on disk!
+```
+
+### The Timestamp Display Pattern ⭐ NEW!
+```csharp
+// Problem: Milliseconds clutter the display
+// But: Need MS precision for correct ordering
+// Solution: Store full, display simple
+
+public class LogEntry
+{
+    public DateTime TimestampPrecise { get; set; }  // 14:23:45.123
+    public string TimestampDisplay => 
+        TimestampPrecise.ToString("HH:mm:ss");      // 14:23:45
+        
+    // Sorting uses full precision:
+    entries.OrderBy(e => e.TimestampPrecise)
+           .ThenBy(e => e.SourceFile)
+           .ThenBy(e => e.LineNumber);
+           
+    // Display shows clean format:
+    // [14:23:45 INF] Message (not [14:23:45.123 INF])
+}
+
+// Result: Clean display, correct order!
+```
+
+### The Hidden Treasures Pattern ⭐ POWERFUL!
 ```yaml
 Problem: User needs feature X
 Old Way: Design and build from scratch (2 weeks)
@@ -224,36 +415,18 @@ Discovery Process:
   4. Find existing methods
   5. Often just needs UI!
 
-Real Example - Transform System:
-```
-```csharp
-// User: "We need data transformation preview"
-// Me: "Let me design a transform system..."
-// Then: "Wait, let me search first..."
-
-// Found in ValueTransform.cs:
-public enum ValueTransform
-{
-    None,
-    DateToDicom,      // Already implemented!
-    TimeToDicom,      // Already implemented!
-    MapGender,        // Already implemented!
-    ExtractDate,      // Already implemented!
-    // ... 7 more transforms ready to use!
-}
-
-// Found in DicomTagMapper.cs:
-public string ApplyTransform(string value, ValueTransform transform)
-{
-    return transform switch
-    {
-        ValueTransform.DateToDicom => ConvertDateToDicom(value),
-        ValueTransform.MapGender => MapGenderValue(value),
-        // ... all implemented!
-    };
-}
-
-// Result: Just needed UI dialog - 2 hours vs 2 weeks!
+Real Example - Logging Configuration:
+  User: "We need pipeline-specific logging"
+  Me: "Let me check what exists..."
+  
+  Found in PipelineConfigPage.xaml:
+    - Complete Logging tab ✓
+    - All UI controls ✓
+    - ViewModel properties ✓
+    
+  Missing: Just the backend connection!
+  
+  Result: 4 hours instead of 2 days!
 ```
 
 ### The Minimal Pattern ⭐ POWERFUL!
@@ -262,169 +435,95 @@ public string ApplyTransform(string value, ValueTransform transform)
 // Signal: "ich werde bald wahnsinnig"
 // Solution: DELETE complexity, write minimal
 
-// BEFORE - Dashboard with abstractions (not working)
-public class DashboardViewModel : ViewModelBase
+// BEFORE - LogViewer with complex loading (not working)
+public class LogViewerViewModel : ViewModelBase
 {
-    private readonly IApiService _apiService;
-    private readonly INavigationService _navigationService;
-    private readonly ILogger<DashboardViewModel> _logger;
+    private readonly ILogService _logService;
+    private readonly IFileWatcher _fileWatcher;
+    private readonly ILogParser _parser;
     
     public async Task InitializeAsync()
     {
         try
         {
-            await _navigationService.EnsureInitializedAsync();
-            var context = await _apiService.GetContextAsync();
-            await RefreshDataAsync(context);
+            await _logService.InitializeAsync();
+            var config = await _logService.GetConfigAsync();
+            await LoadLogsAsync(config);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initialize");
         }
     }
-    // ... 200+ lines of "proper" code
+    // ... 300+ lines of "proper" code
 }
 
 // AFTER - Direct and simple (WORKING!)
-public class DashboardViewModel : ViewModelBase
+public class LogViewerViewModel : ViewModelBase
 {
-    private readonly HttpClient _httpClient = new();
-    private readonly DispatcherTimer _timer;
+    private FileSystemWatcher? _watcher;
+    private long _lastPosition;
     
-    public DashboardViewModel()
-    {
-        // Timer starts immediately - no async init!
-        _timer = new DispatcherTimer 
-        { 
-            Interval = TimeSpan.FromSeconds(5) 
-        };
-        _timer.Tick += async (s, e) => await RefreshAsync();
-        _timer.Start();
-        
-        // Initial load
-        _ = RefreshAsync();
-    }
-    
-    private async Task RefreshAsync()
+    public async Task LoadLogFileAsync(string path)
     {
         try
         {
-            var json = await _httpClient.GetStringAsync(
-                "http://localhost:5111/api/status");
-            var status = JsonSerializer.Deserialize<StatusResponse>(
-                json, new JsonSerializerOptions 
-                { 
-                    PropertyNameCaseInsensitive = true 
-                });
+            // Just read the damn file!
+            var lines = await File.ReadAllLinesAsync(path);
+            var recent = lines.TakeLast(1000);
             
-            // Update UI properties
-            ServiceStatus = status.Service.Status;
-            PipelineStatuses = status.Pipelines;
+            foreach (var line in recent)
+            {
+                LogEntries.Add(ParseLine(line));
+            }
         }
-        catch { /* Silent fail, try next tick */ }
+        catch { /* Silent fail */ }
     }
 }
-// Result: Working in 15 minutes!
+// Result: Working in 30 minutes!
 ```
 
 ### Pipeline Isolation Pattern ⭐ CRITICAL FOR MEDICAL!
 ```csharp
-// WRONG - Singleton FileProcessor (Session 1-67)
+// WRONG - Shared logger for all pipelines
 public void ConfigureServices(IServiceCollection services)
 {
-    services.AddSingleton<FileProcessor>(); // SHARED STATE!
-    services.AddSingleton<ProcessingQueue>();
+    services.AddSingleton<ILogger<FileProcessor>>(); // SHARED!
 }
 
-// WRONG - Trying to inject pipeline config
-public class FileProcessor
-{
-    public FileProcessor(IConfiguration config) // Which pipeline?!
-    {
-        // Confusion and bugs
-    }
-}
+// WRONG - One log file for everything
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.File("log.txt")
+    .CreateLogger();
 
-// RIGHT - Per-pipeline instances (Session 68+)
+// RIGHT - Per-pipeline loggers and files (Session 75)
 public class PipelineManager
 {
     public async Task StartPipelineAsync(PipelineConfiguration config)
     {
-        // Each pipeline gets OWN instances
+        // Each pipeline gets OWN logger
+        var pipelineLogger = _loggerFactory.CreateLogger(
+            $"Pipeline.{SanitizeName(config.Name)}");
+        
+        // Automatic routing to separate file
+        // via Serilog SourceContext filtering
+        
         var fileProcessor = new FileProcessor(
-            _loggerFactory.CreateLogger<FileProcessor>(),
-            _exifToolReader,      // Shared service OK (readonly)
-            _dicomConverter,      // Shared service OK (readonly)
-            config,               // Pipeline-specific config!
-            _globalDicomSettings  // With pipeline overrides
+            pipelineLogger,           // Pipeline's own logger!
+            _exifToolReader,
+            _dicomConverter,
+            config,
+            _globalDicomSettings
         );
         
-        var queue = new ProcessingQueue(
-            _loggerFactory.CreateLogger<ProcessingQueue>(),
-            fileProcessor,        // Pipeline's own processor
-            config.ProcessingOptions
-        );
-        
-        var watcher = new FileSystemWatcher(config.WatchFolder)
-        {
-            Filter = "*.jpg",
-            NotifyFilter = NotifyFilters.FileName
-        };
-        
-        // Completely isolated pipeline!
+        // Completely isolated pipeline with own log!
         _pipelines[config.Id] = new PipelineContext(
-            fileProcessor, queue, watcher);
+            fileProcessor, queue, watcher, pipelineLogger);
     }
 }
 
-// Learning: Medical data MUST be isolated
-// No cross-contamination between departments!
-```
-
-### Event Handler Connection Pattern (Session 72)
-```csharp
-// PROBLEM: Drag&Drop not working
-// XAML looked correct:
-<ListBox x:Name="MappingRules" 
-         AllowDrop="True"
-         Drop="MappingRules_Drop"
-         DragOver="MappingRules_DragOver">
-
-// BUT: Code-behind was missing connections!
-// SOLUTION: Connect in constructor
-public MappingEditorPage()
-{
-    InitializeComponent();
-    DataContext = _viewModel;
-    
-    // CRITICAL: Connect drag&drop to source items!
-    Loaded += (s, e) =>
-    {
-        foreach (var item in SourceFieldsList.Items)
-        {
-            if (SourceFieldsList.ItemContainerGenerator
-                .ContainerFromItem(item) is ListBoxItem container)
-            {
-                container.MouseMove += SourceField_MouseMove;
-                container.GiveFeedback += SourceField_GiveFeedback;
-            }
-        }
-    };
-}
-
-private void SourceField_MouseMove(object sender, MouseEventArgs e)
-{
-    if (e.LeftButton == MouseButtonState.Pressed)
-    {
-        var item = (sender as ListBoxItem)?.DataContext as SourceField;
-        if (item != null)
-        {
-            var data = new DataObject(typeof(SourceField), item);
-            DragDrop.DoDragDrop((DependencyObject)sender, 
-                data, DragDropEffects.Copy);
-        }
-    }
-}
+// Learning: Medical data isolation extends to logs!
+// Radiology logs shouldn't mix with Emergency logs
 ```
 
 ## 🏴‍☠️ HIDDEN FEATURE ACTIVATION COOKBOOK
@@ -520,22 +619,20 @@ User value:
   - Recovery configured automatically
 ```
 
-### 🎯 Sprint 18 Status (Priority 1 COMPLETE, Priority 2.1 COMPLETE!)
+### 🎯 Sprint 19 Features (NEW!)
 ```yaml
-Priority 1 Results:
-  ❌ Daily Summary Service - Architectural mismatch
-  ✅ Hidden API Documented - /api/pipelines/{id}
-  ✅ Auto-Backup Visible - Users informed
-  ✅ Import/Export Prominent - With shortcuts
+Multi-Pipeline Logging:
+  ✅ Separate log file per pipeline
+  ✅ Automatic file creation
+  ✅ Unicode pipeline name support
+  ✅ LogViewer multi-select
+  ✅ Timestamp precision handling
   
-Priority 2 Progress:
-  ✅ Service Installer UI - No more command line!
-  ⏳ Test Mapping - Already visible from 1.4
-  ⏳ Pipeline Health Warnings - Next up
-  
-Current Score: 4 of 5 features activated!
-Time spent: ~90 minutes
-Value delivered: Massive!
+Still TODO:
+  ⏳ Pipeline-specific log settings (UI exists!)
+  ⏳ Custom log path configuration
+  ⏳ Log retention per pipeline
+  ⏳ Remote log viewing API
 ```
 
 ### 🚫 FALSE TREASURES - Complete but Incompatible
@@ -551,143 +648,15 @@ Time to fix: 2-4 hours
 Lesson: Not all "complete" code can be activated!
 ```
 
-#### Apply/Reset Pipeline Buttons
+#### Pipeline Logging Settings
 ```yaml
-Location: PipelineConfigViewModel commands
-Status: Commands exist but change tracking broken
-Problem: SelectedPipelineHasChanges never becomes true
-Reality: Individual pipeline tracking not working
-Solution: Removed - "Save All Pipelines" is clearer
-Lesson: Test UI functionality, not just existence!
-```
-
-### 🚀 INSTANT ACTIVATIONS (Under 5 Minutes Each!)
-
-#### 1. Daily Summary Service Activation ⏱️ 1 minute
-```csharp
-// Location: src\CamBridge.Service\Program.cs:232
-// Current state:
-// services.AddHostedService<DailySummaryService>();
-
-// ACTIVATION:
-services.AddHostedService<DailySummaryService>();  // Just uncomment!
-
-// Test:
-// 1. Rebuild & deploy: 1[TAB]
-// 2. Check logs next day at 8 AM
-// 3. See summary in Event Log (email stub for now)
-```
-
-#### 2. Service Installer UI
-```xml
-<!-- Location: src\CamBridge.Config\Views\ServiceControlPage.xaml -->
-<!-- Add after existing buttons (Line ~150): -->
-
-<Button Content="Install Service" 
-        Command="{Binding InstallServiceCommand}"
-        IsEnabled="{Binding IsServiceInstalled, Converter={StaticResource InverseBooleanConverter}}"
-        Margin="0,5,0,0" />
-        
-<Button Content="Uninstall Service"
-        Command="{Binding UninstallServiceCommand}" 
-        IsEnabled="{Binding IsServiceInstalled}"
-        Margin="0,5,0,0" />
-
-<!-- Commands already exist in ViewModel! -->
-<!-- ServiceManager.cs has complete implementation! -->
-<!-- Includes auto-recovery configuration! -->
-```
-
-#### 3. Show Hidden Import/Export
-```yaml
-Location: MappingEditorPage.xaml
-Current: Buttons exist but hard to find
-Fix: Add tooltips or make prominent
-<!-- Add to existing buttons: -->
-ToolTip="Import mapping rules from JSON file"
-ToolTip="Export current mapping rules to JSON"
-```
-
-### 🔧 QUICK WINS (Under 1 Hour Each)
-
-#### 4. Enable Runtime Pipeline Control
-```csharp
-// Location: src\CamBridge.Service\Program.cs
-// Add new endpoints after line 300:
-
-endpoints.MapPost("/api/pipelines/{id}/enable", async context =>
-{
-    var pipelineId = context.Request.RouteValues["id"]?.ToString();
-    var pipelineManager = context.RequestServices.GetService<PipelineManager>();
-    
-    if (string.IsNullOrEmpty(pipelineId) || pipelineManager == null)
-    {
-        context.Response.StatusCode = 400;
-        return;
-    }
-    
-    await pipelineManager.EnablePipelineAsync(pipelineId);
-    context.Response.StatusCode = 200;
-});
-
-endpoints.MapPost("/api/pipelines/{id}/disable", async context =>
-{
-    var pipelineId = context.Request.RouteValues["id"]?.ToString();
-    var pipelineManager = context.RequestServices.GetService<PipelineManager>();
-    
-    if (string.IsNullOrEmpty(pipelineId) || pipelineManager == null)
-    {
-        context.Response.StatusCode = 400;
-        return;
-    }
-    
-    await pipelineManager.DisablePipelineAsync(pipelineId);
-    context.Response.StatusCode = 200;
-});
-
-// Then add toggle buttons to Dashboard!
-```
-
-#### 5. Webhook Configuration UI
-```xml
-<!-- Add to NotificationSettings section in PipelineConfigPage.xaml -->
-<GroupBox Header="Webhook Notifications" Margin="0,10,0,0">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
-        <CheckBox Grid.Row="0" Content="Enable Webhooks"
-                  IsChecked="{Binding SelectedNotifications.Webhook.Enabled}" />
-                  
-        <TextBox Grid.Row="1" Margin="0,5,0,0"
-                 Text="{Binding SelectedNotifications.Webhook.Url}"
-                 ui:ControlHelper.PlaceholderText="https://hooks.slack.com/..." />
-                 
-        <ComboBox Grid.Row="2" Margin="0,5,0,0"
-                  ItemsSource="{x:Static local:HttpMethods}"
-                  SelectedItem="{Binding SelectedNotifications.Webhook.Method}" />
-    </Grid>
-</GroupBox>
-
-<!-- Webhook model already complete in CamBridgeSettingsV2! -->
-```
-
-#### 6. Show Auto-Backup Status
-```csharp
-// ConfigurationService already creates backups!
-// Just inform the user:
-
-// Add to SaveAllAsync in PipelineConfigViewModel:
-StatusMessage = "Configuration saved (backup created)";
-
-// Or add label to UI:
-<TextBlock Text="✓ Automatic backups enabled" 
-           Foreground="Green" 
-           FontSize="10"
-           Margin="5,0,0,0" />
+Location: PipelineConfigPage.xaml → Logging tab
+Status: Complete UI, no backend connection
+Problem: Properties exist but not saved/used
+Reality: Just UI theater currently
+Fix needed: Wire to PipelineConfiguration
+Time to fix: 1-2 hours
+Lesson: Always check the full stack!
 ```
 
 ## 🐛 CRITICAL FIXES - CATEGORIZED WISDOM
@@ -732,17 +701,6 @@ Fix #3: Enum Validation Saves Lives
   Debug: "The JSON value could not be converted"
   Root Cause: Invalid enum value in config
   
-  // Added validation:
-  private void ValidateEnumValues<T>(T value, string name) where T : Enum
-  {
-      if (!Enum.IsDefined(typeof(T), value))
-      {
-          var validValues = string.Join(", ", Enum.GetNames(typeof(T)));
-          throw new ConfigurationException(
-              $"Invalid {name}: '{value}'. Valid values: {validValues}");
-      }
-  }
-  
   Valid OutputOrganization: None, ByPatient, ByDate, ByPatientAndDate
   NOT: PatientName, Date, Patient (old values)
 ```
@@ -753,20 +711,6 @@ Fix #7-8: The Great Interface Purge
   Journey: 12+ interfaces → 2 interfaces
   Deleted: ~2000 lines of abstraction
   
-  // BEFORE (Session 1-50)
-  public interface IFileProcessor { }
-  public interface IExifReader { }
-  public interface IDicomConverter { }
-  public interface INotificationService { }
-  public interface IDeadLetterService { }
-  // ... 7 more unused interfaces
-  
-  // AFTER (Session 67+)
-  services.AddSingleton<ExifToolReader>();    // Direct!
-  services.AddSingleton<DicomConverter>();    // Direct!
-  services.AddSingleton<NotificationService>(); // Direct!
-  // Only 2 interfaces remain (for now)
-  
   Learning: Interfaces without multiple implementations = DELETE
 
 Fix #8: Pipeline Isolation Architecture
@@ -774,11 +718,14 @@ Fix #8: Pipeline Isolation Architecture
   Medical Risk: Department A seeing Department B data
   
   Solution: Each pipeline creates own FileProcessor
-  // See Pipeline Isolation Pattern above
+  Extension: Each pipeline gets own logger (Sprint 19)
   
-  Key Insight: Shared services OK if stateless/readonly
-  Pipeline-specific: FileProcessor, Queue, Watcher
-  Shared OK: ExifToolReader, DicomConverter (no state)
+  Key Insight: Isolation must be complete:
+    - Separate FileProcessor ✓
+    - Separate Queue ✓
+    - Separate Watcher ✓
+    - Separate Logger ✓ (NEW!)
+    - Separate Log Files ✓ (NEW!)
 ```
 
 ### Category 3: The Dashboard Debugging Saga
@@ -786,33 +733,6 @@ Fix #8: Pipeline Isolation Architecture
 Fix #9-12: Why Dashboard Wouldn't Work
   Total Debug Time: 3+ hours
   Frustration Level: "ich werde bald wahnsinnig"
-  
-  Problem Trail:
-  1. NavigationService created pages without ViewModels
-     Fix: Dependency injection in page constructors
-     
-  2. InitializeAsync never called
-     // WRONG - complex pattern
-     protected override async void OnDataContextChanged(...)
-     {
-         if (DataContext is DashboardViewModel vm)
-             await vm.InitializeAsync();
-     }
-     
-     // RIGHT - simple pattern
-     public DashboardViewModel()
-     {
-         _timer.Start(); // Start immediately!
-     }
-  
-  3. API case sensitivity
-     API sends: { "name": "radiology" }
-     Code expected: { "Name": "radiology" }
-     Fix: PropertyNameCaseInsensitive = true
-  
-  4. Complex abstractions hiding simple problems
-     Removed: IApiService, INavigationContext, etc
-     Result: 50 lines of working code
   
   Ultimate Learning: When one page works and another doesn't,
                    copy what works! Complex isn't better.
@@ -830,65 +750,36 @@ Fix #13-14: Converter & Navigation Issues
     Fix: Use correct converter for type
     Converter={StaticResource NullToVisibility}
     ConverterParameter=Inverse
-    
-  Navigation Dropdown:
-    Problem: Frame showing growing history dropdown
-    User: "diese komische tableiste nervt"
-    
-    Fix: Two-part solution
-    <!-- 1. Hide navigation UI -->
-    <Frame x:Name="ContentFrame" 
-           NavigationUIVisibility="Hidden"/>
-    
-    // 2. Clear history after navigation
-    private void NavigateToPage(Type pageType)
-    {
-        ContentFrame.Navigate(pageType);
-        while (ContentFrame.NavigationService.CanGoBack)
-            ContentFrame.NavigationService.RemoveBackEntry();
-    }
 
 Fix #17-21: XAML Property Support
   Run elements don't support Opacity:
     WRONG: <Run Text="→" Opacity="0.7"/>
     RIGHT: Put Opacity on TextBlock, not Run!
-    
-  Run elements are INLINE text only:
-    - No Opacity
-    - No Margin  
-    - No layout properties
-    - Just Text, Foreground, FontFamily, FontSize, FontWeight
-    
-  PlaceholderText needs prefix:
-    WRONG: <TextBox PlaceholderText="Enter..."/>
-    RIGHT: <TextBox ui:ControlHelper.PlaceholderText="Enter..."/>
-  
-  Dialog patterns differ:
-    Window: dialog.ShowDialog()
-    ContentDialog: await dialog.ShowAsync()
-    
-  Learning: XAML has specific rules - memorize them!
 ```
 
-### Category 5: Hidden Feature Issues
+### Category 5: Unicode & Internationalization (NEW!)
 ```yaml
-Fix #22: Webhook Headers Not Saved
-  Issue: Dictionary<string,string> serialization
-  Fix: Use custom converter or key-value pairs
+Fix #26: Pipeline Names with Special Characters
+  Issue: "Radiologie-Süd" crashes file creation
+  Root Cause: Invalid filename characters
   
-Fix #23: Email Password Storage
-  Issue: Plain text in config (commented "Should be encrypted")
-  Fix: Use DPAPI or certificate encryption
-  Time: 1 hour
+  Solution: Dual-name system
+    Display: Full Unicode
+    Filename: Sanitized ASCII
+    Mapping: Stored in memory/config
   
-Fix #24: Pipeline-Specific Settings Not Wired
-  Issue: Properties exist but not connected to pipeline
-  Fix: Add to PipelineConfiguration or use metadata
+  Code Pattern:
+    config.Name: "Radiologie-Süd"
+    Sanitized: "Radiologie-Sud"
+    Filename: "pipeline_Radiologie-Sud_20250621.log"
+    
+Fix #27: Multi-Language Log Mixing
+  Issue: Different encodings in same view
+  Solution: All logs UTF-8, sorted by binary timestamp
   
-Fix #25: Test Mapping Sample Data
-  Issue: Hardcoded test data
-  Fix: Load from actual recent processing
-  Or: Make test data configurable
+Fix #28: Path Length Limits
+  Issue: Long pipeline names exceed Windows 260 char limit
+  Solution: Truncate sanitized names to 100 chars
 ```
 
 ## 🏗️ BUILD & DEPLOY MASTERY
@@ -898,10 +789,10 @@ Fix #25: Test Mapping Sample Data
 <!-- Version.props - NEVER hardcode versions! -->
 <Project>
   <PropertyGroup>
-    <VersionPrefix>0.7.27</VersionPrefix>
-    <FileVersion>0.7.27.0</FileVersion>
+    <VersionPrefix>0.7.28</VersionPrefix>
+    <FileVersion>0.7.28.0</FileVersion>
     <AssemblyVersion>0.7.0.0</AssemblyVersion>
-    <InformationalVersion>0.7.27 - Sprint 18 Hidden Treasures Activation</InformationalVersion>
+    <InformationalVersion>0.7.28 - Multi-Pipeline Logging</InformationalVersion>
   </PropertyGroup>
 </Project>
 ```
@@ -931,7 +822,7 @@ public static string Version
             return fileVersion;
         }
         
-        return "0.7.27"; // Emergency fallback only
+        return "0.7.28"; // Emergency fallback only
     }
 }
 ```
@@ -959,7 +850,9 @@ Configuration & Data:
   ├── Mappings\             # DICOM mapping rules
   │   └── default.json
   └── Logs\                 # Service logs
-      └── service-20250618.log
+      ├── service_20250621.log
+      ├── pipeline_Radiology_20250621.log
+      └── pipeline_Emergency_20250621.log
 
 Watch Folders (Input):
   C:\CamBridge\Watch\
@@ -973,50 +866,12 @@ Output Folders:
   │   └── ByDate\
   └── Emergency\
 
-NEW - Backup Location:
-  %ProgramData%\CamBridge\
-  └── appsettings.json.backup_20250619_143022
-      # Auto-created on every save!
-```
-
-### Deployment Script Patterns
-```powershell
-# Build-CamBridge.ps1 excerpts
-param(
-    [string]$Action = "Build",
-    [switch]$NoZip
-)
-
-# Version management
-$versionProps = [xml](Get-Content ".\Version.props")
-$version = $versionProps.Project.PropertyGroup.VersionPrefix
-
-# Build with clean
-Write-Host "Building CamBridge v$version..." -ForegroundColor Cyan
-dotnet clean --verbosity minimal
-dotnet build --configuration Release --no-incremental
-
-# Deploy pattern
-if ($Action -eq "Deploy") {
-    # Stop service gracefully
-    if (Get-Service CamBridgeService -ErrorAction SilentlyContinue) {
-        Stop-Service CamBridgeService -Force
-        Start-Sleep -Seconds 2
-    }
-    
-    # Copy with backup
-    $backup = "C:\CamBridge\Backup\$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-    Copy-Item "C:\CamBridge\Service" $backup -Recurse
-    
-    # Deploy new files
-    Copy-Item ".\publish\*" "C:\CamBridge\Service\" -Recurse -Force
-    
-    # Start service
-    Start-Service CamBridgeService
-}
-
-# NEW - After Sprint 18: UI handles service install!
-# No more manual sc.exe commands needed!
+NEW - Log Structure:
+  %ProgramData%\CamBridge\Logs\
+  ├── service_20250621.log              # Global
+  ├── pipeline_Radiology_20250621.log    # Auto-created
+  ├── pipeline_Emergency_20250621.log    # Auto-created
+  └── pipeline_小児科_20250621.log       # Unicode OK!
 ```
 
 ## 🔨 DEBUGGING TOOLKIT
@@ -1032,13 +887,6 @@ netstat -ano | findstr :5111
 Get-EventLog -LogName Application -Source CamBridge* -Newest 20 |
     Format-Table TimeGenerated, EntryType, Message -AutoSize
 
-# Common errors and fixes:
-# "Port 5111 is already in use" → Kill other process
-# "Configuration section not found" → Add CamBridge wrapper
-# "Invalid enum value" → Check OutputOrganization values
-# "Access denied" → Run as administrator once
-# "Unable to resolve ProcessingQueue" → DailySummaryService issue!
-
 # 3. Validate configuration
 $config = Get-Content "$env:ProgramData\CamBridge\appsettings.json"
 $config | ConvertFrom-Json  # Will show parse errors
@@ -1047,137 +895,100 @@ $config | ConvertFrom-Json  # Will show parse errors
 Set-Location "C:\CamBridge\Service"
 .\CamBridge.Service.exe console
 
-# 5. Check permissions
+# 5. Check permissions (especially for logs)
 icacls "C:\CamBridge\Watch" /T
 icacls "$env:ProgramData\CamBridge" /T
+icacls "$env:ProgramData\CamBridge\Logs" /T
 
-# NEW - Check if daily summary is running
-Get-EventLog -LogName Application -Source CamBridge* |
-    Where-Object { $_.Message -like "*Daily Summary*" }
+# NEW - Check pipeline-specific logs
+Get-ChildItem "$env:ProgramData\CamBridge\Logs\pipeline_*.log" |
+    Select Name, Length, LastWriteTime |
+    Format-Table -AutoSize
+
+# NEW - Tail multiple logs simultaneously
+$logs = @("service", "pipeline_Radiology", "pipeline_Emergency")
+Get-Content ($logs | %{
+    "$env:ProgramData\CamBridge\Logs\$($_)_$(Get-Date -f yyyyMMdd).log"
+}) -Tail 20 -Wait
 ```
 
-### When Build Shows "Fixed" Errors
+### When Logs Show Unicode Issues
 ```powershell
-# The nuclear option - when build cache is corrupted
-# Use when: Build shows errors for code you KNOW is fixed
+# Check file encoding
+$file = "$env:ProgramData\CamBridge\Logs\pipeline_Radiologie-Süd_20250621.log"
+$bytes = [System.IO.File]::ReadAllBytes($file) | Select -First 3
+if ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+    "UTF-8 with BOM"
+} else {
+    "Check encoding!"
+}
 
-# 1. Close Visual Studio completely
-# 2. Clean EVERYTHING
-Remove-Item -Recurse -Force */obj, */bin, .vs
+# Find problematic pipeline names
+Get-ChildItem "$env:ProgramData\CamBridge\Logs\pipeline_*.log" |
+    Where {$_.Name -match "[^\x00-\x7F]"} |
+    Select Name
 
-# 3. Verify file actually saved
-Get-Content "src\CamBridge.Config\Pages\MappingEditorPage.xaml" | 
-    Select-String "NavigationUIVisibility"
-
-# 4. Search for all occurrences
-Get-ChildItem -Recurse -Include *.xaml,*.cs |
-    Select-String "OldPropertyName"
-
-# 5. Rebuild with no cache
-dotnet build --no-incremental --verbosity detailed
-
-# 6. If still failing, check for:
-# - Files open in another editor
-# - Source control conflicts
-# - Antivirus locking files
+# Test sanitization
+$name = "Radiologie-Süd/Test"
+$sanitized = $name -replace '[\\/:*?"<>|,. ]', '_'
+Write-Host "Original: $name"
+Write-Host "Sanitized: $sanitized"
 ```
 
-### When UI Doesn't Work - Checklist
+### LogViewer Performance Issues
 ```yaml
-Drag & Drop Not Working:
-  1. AllowDrop="True" on target?
-  2. Event handlers in XAML?
-  3. Handlers connected in code-behind?
-  4. Check ItemContainerGenerator timing
-  5. Use Loaded event for safety
+Symptom: Slow with many pipelines
+Check:
+  1. How many log files selected?
+  2. Total lines across all files?
+  3. Search pattern complexity?
+  
+Fix:
+  1. Limit initial selection
+  2. Use date filter
+  3. Optimize regex patterns
 
-Binding Not Updating:
-  1. INotifyPropertyChanged implemented?
-  2. SetProperty called?
-  3. Correct DataContext?
-  4. Check Output window for binding errors
-  5. Use Live Property Explorer
-
-Converter Issues:
-  1. Converter type matches data type?
-  2. ConverterParameter spelled correctly?
-  3. Converter in Resources?
-  4. Check Convert method signature
-
-Commands Not Firing:
-  1. RelayCommand attribute on method?
-  2. CanExecute returning true?
-  3. CommandParameter correct type?
-  4. DataContext has the command?
-
-Dialog Won't Show:
-  1. Window → ShowDialog()
-  2. ContentDialog → ShowAsync()
-  3. Owner set for modal?
-  4. Check thread (UI thread only)
-
-NEW - Hidden Features Not Working:
-  1. Is backend implementation complete?
-  2. Is ViewModel command created?
-  3. Is UI element bound correctly?
-  4. Is feature enabled in config?
-  5. Check Event Log for errors
-```
-
-### Performance Profiling Basics
-```csharp
-// Simple timing pattern
-var sw = Stopwatch.StartNew();
-await ProcessFileAsync(file);
-_logger.LogInformation("Processing took {Ms}ms", sw.ElapsedMilliseconds);
-
-// Memory check pattern
-var before = GC.GetTotalMemory(false);
-await ProcessLargeDataSet();
-var after = GC.GetTotalMemory(false);
-_logger.LogInformation("Memory used: {MB}MB", (after - before) / 1048576);
-
-// Channel monitoring
-_logger.LogInformation("Queue depth: {Count}", _channel.Reader.Count);
-
-// NEW - Pipeline health monitoring (already active!)
-if (failureRate > 0.5)
-    _logger.LogWarning("Pipeline {Name} has high failure rate: {Rate:P}", 
-        pipeline.Name, failureRate);
+PowerShell Test:
+  # Count total lines
+  $total = 0
+  Get-ChildItem "$env:ProgramData\CamBridge\Logs\*.log" | % {
+      $total += (Get-Content $_ | Measure-Object -Line).Lines
+  }
+  "Total lines: $total"
 ```
 
 ## 📊 METRICS & PATTERNS
 
 ### Evolution Metrics
 ```yaml
-What Changed (v0.1 → v0.7.27):
+What Changed (v0.1 → v0.7.28):
   Interfaces: 12+ → 2 (-85%)
   Build Time: 3min → 20sec (-89%)  
   Debug Time: Hours → Minutes (minimal pattern)
-  Code: 15,940 → 14,850 LOC (-7% but cleaner)
+  Code: 15,940 → 15,850 LOC (added logging)
   Complexity: High → Low (KISS wins)
   Features Hidden: Unknown → 30+ found!
-  Features Activated: 11 (transform) + 4 (Sprint 18)
+  Features Activated: 15 total
   User Satisfaction: Frustrated → Happy
+  Logging: 1 file → N files (isolated)
 
 Key Victories:
   - Tab-Complete: 90% less typing
   - Pipeline Isolation: Medical safety
   - Hidden Features: Weeks saved
-  - UI Simplification: 40% more space
-  - Sprint 18: No more CLI for service!
+  - UI Simplification: Consistent design
+  - Multi-Pipeline Logs: Debugging heaven
+  - Unicode Support: International ready
 
-NEW - Sprint 18 Results:
-  ✅ Hidden API Documented: /api/pipelines/{id}
-  ✅ Auto-Backup Display: Professionally integrated
-  ✅ Import/Export Visibility: Prominent with shortcuts
-  ✅ Service Installer UI: Complete, no CLI needed!
-  ✅ UI Polish: Fixed alien box, removed broken buttons
-  ❌ Daily Summary: Architectural mismatch
-  ❌ Apply/Reset: Change tracking broken
-  Sprint Value: 4 features + UI improvements!
-  Time: ~2 hours total
-  Lesson: Test functionality, not just code existence!
+NEW - Sprint 19 Results:
+  ✅ LogViewer: From basic to professional
+  ✅ Multi-Pipeline Logs: Automatic separation
+  ✅ Unicode Support: GUI + safe filenames
+  ✅ Timestamp Strategy: MS precision, clean display
+  ✅ UI Unification: 100% complete (except About)
+  Sprint Value: Major debugging improvement!
+  Time: ~4 hours total
+  Lesson: Sometimes rewrite > fix!
 ```
 
 ### Architecture Principles (Hard-Won)
@@ -1189,7 +1000,7 @@ NEW - Sprint 18 Results:
 2. Pipeline Isolation Required
    - Medical data must be separated
    - No shared mutable state
-   - Each pipeline independent
+   - Includes logging now!
    
 3. Single Source of Truth
    - ConfigurationPaths for all paths
@@ -1212,57 +1023,20 @@ NEW - Sprint 18 Results:
    - UI often lags behind
 
 NEW Principles:
-7. Implementation > Documentation
-   - Code is more complete than docs
-   - Features exist but unknown
-   - Always search before building
+7. Unicode Everywhere (GUI)
+   - Full support in display
+   - Smart sanitization for files
+   - Mapping preserves original
    
-8. Config > UI
-   - Config models are enterprise-ready
-   - UI is often incomplete
-   - Backend typically 95% done
+8. Logs Need Love Too
+   - Separate files per context
+   - Professional viewer essential
+   - Performance matters
    
-9. Test Functionality > Code Existence
-   - "Complete" doesn't mean "working"
-   - Always test activation
-   - Architecture matters!
-```
-
-### Technical Patterns for Hidden Feature Activation
-```csharp
-// Pattern 1: Commented service registration
-// Search: "//.*services\.Add.*"
-// Found: DailySummaryService, Statistics endpoint
-
-// Pattern 2: Complete implementation, no UI
-// Search ViewModels for unused commands:
-public IAsyncRelayCommand InstallServiceCommand { get; }  // No button!
-
-// Pattern 3: Config without UI
-public class WebhookSettings  // Complete but no UI!
-{
-    public bool Enabled { get; set; }
-    public string Url { get; set; }
-    public string Method { get; set; }
-    public Dictionary<string, string> Headers { get; set; }
-    public int RetryCount { get; set; }
-    // All properties ready!
-}
-
-// Pattern 4: Event handlers without subscribers
-public event EventHandler<FileProcessingEventArgs>? ProcessingStarted;
-public event EventHandler<FileProcessingEventArgs>? ProcessingCompleted;
-// Events fire but nobody listens!
-
-// Pattern 5: Hidden converters
-public class FileSizeConverter : IValueConverter  // Never used!
-{
-    public object Convert(object value, Type targetType, 
-        object parameter, CultureInfo culture)
-    {
-        // Complete implementation!
-    }
-}
+9. Timestamp Precision Matters
+   - Store precise, display simple
+   - Sorting needs full data
+   - UI needs clean view
 ```
 
 ## 🎯 QUICK REFERENCE CARD
@@ -1276,27 +1050,22 @@ git status                  # Check state
 1[TAB]                      # Deploy
 9[TAB]                      # Quick test
 
+# Check Logs
+Get-ChildItem "$env:ProgramData\CamBridge\Logs\*.log" -Recurse |
+    Where {$_.LastWriteTime -gt (Get-Date).AddHours(-1)} |
+    Select Name, Length, LastWriteTime
+
 # After Code Changes
 0[TAB]                      # Build
 9[TAB]                      # Test
 git add -A                  # Stage
 git commit -m "msg"         # Commit
 
-# Before Major Change
-git checkout -b feature/x   # New branch
-7[TAB]                      # Clean build
-00[TAB]                     # Full build
-
 # Debug Workflow
 4[TAB]                      # Console mode
 Get-EventLog ...            # Check errors
 2[TAB]                      # Open UI
-
-# NEW - Treasure Hunt Workflow
-Select-String "TODO" **\*.cs    # Find todos
-Select-String "public.*Command"  # Find commands
-# Compare with XAML bindings
-# Activate hidden features!
+# Check LogViewer!           # NEW option!
 ```
 
 ### Common Issues → Quick Fixes
@@ -1306,44 +1075,31 @@ Select-String "public.*Command"  # Find commands
   → Check Event Log
   → Validate config JSON
   → Run console mode
-  → Check if DailySummaryService issue
+  → Check log permissions (NEW!)
 
-"Dashboard empty":
-  → Check API response
-  → Verify port 5111
-  → Case-sensitive JSON?
-  → Try minimal pattern
+"Logs missing":
+  → Check %ProgramData%\CamBridge\Logs
+  → Verify pipeline names match
+  → Check file permissions
+  → Look for sanitized names
 
-"Drag & Drop broken":
-  → AllowDrop="True"?
-  → Handlers connected?
-  → Check Loaded event
-  → ItemContainerGenerator?
+"Unicode pipeline name issues":
+  → Check sanitized filename
+  → Verify UTF-8 encoding
+  → Look for mapping file
+  → Test with ASCII name
 
-"Build errors won't go away":
-  → Clean obj/bin folders
-  → Close all editors
-  → Check file saved
-  → dotnet build --no-incremental
+"LogViewer slow":
+  → Reduce selected pipelines
+  → Clear old logs
+  → Check file sizes
+  → Disable auto-scroll
 
 "Feature needed quickly":
   → Search existing code
   → Check for enums
   → Look for TODO comments
-  → Maybe already there!
-
-NEW - "Hidden feature not working":
-  → Is it commented out?
-  → Missing UI binding?
-  → Check ViewModel commands
-  → Enable in config?
-  → Architecture compatible?
-
-NEW - "Run element Opacity error":
-  → Opacity goes on TextBlock!
-  → Run is inline text only
-  → No layout props on Run
-  → Oliver reminds you!
+  → Check all tabs in UI!
 ```
 
 ## 🧙 TECHNICAL MANTRAS
@@ -1359,18 +1115,17 @@ NEW - "Run element Opacity error":
 *The code doesn't lie, your memory does*  
 *Check what exists before inventing*
 
-> "Run elements are INLINE only!"  
-*No Opacity on Run! No Margin on Run!*  
-*Opacity goes on TextBlock, not Run!*  
-*(Oliver reminds me every time)*
-
-> "Hidden treasures over new development"  
-*11 transforms were already there!*  
-*What else is implemented but hidden?*
-
 > "Pipeline isolation for medical safety"  
 *Each department completely separate*  
-*No data mixing, ever*
+*No data mixing, ever - including logs!*
+
+> "Unicode in UI, ASCII in files"  
+*Display beauty, store safely*  
+*Map between them always*
+
+> "Milliseconds sort, seconds display"  
+*Precision where needed, clarity where shown*  
+*Best of both worlds*
 
 > "The best debugger is the delete key"  
 *Less code = fewer places for bugs*  
@@ -1378,32 +1133,24 @@ NEW - "Run element Opacity error":
 
 **NEW MANTRAS:**
 
-> "The best code is already written"  
-*Check for implementations before creating new*  
-*Past-you was surprisingly thorough*
+> "Logs tell the story"  
+*But only if you can read them*  
+*Professional tools for professional work*
 
-> "UI is the missing link"  
-*Backend 95% complete, UI 60%*  
-*Connect the dots for instant features*
+> "Every pipeline deserves its own log"  
+*Mixing contexts creates confusion*  
+*Isolation brings clarity*
 
-> "Comments hide treasures"  
-*Every // TODO might be // DONE*  
-*Every commented line might work*
-
-> "One line can activate a feature"  
-*DailySummaryService one uncomment*  
-*Hidden endpoint just needs docs*
-
-> "Test functionality, not existence"  
-*Code can be complete but broken*  
-*Architecture matters for activation*
+> "Test with Unicode early"  
+*ASCII assumptions break globally*  
+*小児科 is a valid pipeline name!*
 
 ## 🚀 WISDOM NOTES
 
 ### What Works (Proven in Production)
 - Tab-Complete system (0[TAB] muscle memory)
 - Single config path (no confusion)
-- Pipeline isolation (medical safety)
+- Pipeline isolation (medical safety + logs)
 - Direct dependencies (clear, simple)
 - Minimal pattern (when debugging fails)
 - Hidden feature hunting (saves weeks)
@@ -1413,106 +1160,54 @@ NEW - "Run element Opacity error":
 - Health monitoring (runs in background)
 - Service Installer UI (no more CLI!)
 - Import/Export JSON (sharing configs)
+- Multi-Pipeline Logs (clarity in chaos)
+- Unicode Support (global ready)
+- Professional LogViewer (debugging heaven)
 
 ### Hard-Won Lessons
 1. **One wrong port = 3 sessions debugging**
-   - Always check port 5111 first
-   - It's always the simple things
-
 2. **InitializeAsync patterns = timing hell**
-   - Constructor initialization is simpler
-   - Avoid complex async patterns in UI
-
 3. **Too many interfaces = lost in own code**
-   - Direct dependencies are clearer
-   - Delete unused abstractions
-
 4. **User frustration = signal to simplify**
-   - "wahnsinnig" → time for minimal
-   - Complex solutions often ARE the problem
-
 5. **XAML has specific rules**
-   - Run ≠ TextBlock for properties
-   - Know your framework's limits
-
 6. **Past code often better than memory**
-   - Always check what exists
-   - Hidden features everywhere
-
 7. **Implementation phase was thorough**
-   - Developers built complete features
-   - UI phase was rushed
-   - Documentation weakest link
-
 8. **Activation is surprisingly easy**
-   - Most features need <1 hour
-   - Usually just UI binding
-   - Sometimes just uncommenting
-
 9. **Not all complete code works**
-   - DailySummaryService looks perfect
-   - But architecture incompatible
-   - Always test before celebrating
-
 10. **UI polish matters**
-    - Alien boxes confuse users
-    - Clean integration preferred
-    - Simple > Feature-rich
+11. **Logs need professional tools**
+12. **Unicode breaks assumptions**
+13. **Isolation must be complete**
 
 ### The Technical Evolution
 ```yaml
 Started with: "Interfaces make code professional"
 Learned that: "Direct dependencies make code clear"
 Discovered: "Hidden implementations save time"
-Now asking: "What else did past-me implement?"
-Latest: "Is it architecturally compatible?"
+Now know: "Complete isolation includes logs"
+Latest: "Unicode requires dual-name strategy"
 
 Key Realization:
   Good architecture isn't about patterns
   It's about solving the actual problem
   With the least complexity possible
   While maintaining safety (medical!)
-  And testing that it actually works!
+  And supporting global users!
   
 NEW Realization:
-  The system is more complete than it appears
-  UI activation is all that's needed
-  Hidden treasures are everywhere
-  But some treasures are fools gold
-  Test before celebrating!
-```
-
-### Hidden Feature Philosophy
-```yaml
-Old Thinking: "We need to build X"
-New Thinking: "Is X already built?"
-Newest: "Does X actually work?"
-
-Old Process: Design → Build → Test → Deploy
-New Process: Search → Find → Connect → Deploy
-Current: Search → Find → Test → Fix/Connect → Deploy
-
-Old Estimate: "2 weeks for webhooks"
-New Reality: "2 hours - it's all there!"
-Latest: "2 hours if it works, 4 if refactor needed"
-
-Key Learning:
-  Always search before building
-  Check ViewModels for commands
-  Read config classes completely
-  Try uncommenting things
-  TEST BEFORE CELEBRATING!
-  Hidden treasures are everywhere!
-  But not all treasure is gold!
+  Professional debugging tools matter
+  Logs are first-class citizens
+  Performance affects usability
+  Unicode is not optional
+  Multi-select is powerful!
 ```
 
 ---
 
-*Technical wisdom from 74 sessions of building, breaking, and fixing*  
-*Plus 1 epic treasure hunt that changed everything!*  
-*Plus Sprint 18 where we learned not all treasures work!*  
+*Technical wisdom from 75 sessions of building, breaking, and fixing*  
+*Plus Sprint 19's professional logging transformation!*  
 *Remember: The best code is code you don't have to write!*  
 *The second best is code you can delete!*  
-*The third best is code that's already written and actually works!* 🗑️💎
+*The third best is code that logs properly!* 🗑️💎📊
 
-*Complete Technical Reference - June 2025 - v0.7.27*
+*Complete Technical Reference - June 2025 - v0.7.28*

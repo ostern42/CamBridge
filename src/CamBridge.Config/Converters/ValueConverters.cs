@@ -12,6 +12,53 @@ using CamBridge.Core;
 namespace CamBridge.Config.Converters
 {
     /// <summary>
+    /// Converts integer to Visibility based on comparison with parameter
+    /// NEW in v0.7.28 for LogViewerPage
+    /// </summary>
+    public class IntToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            int intValue = 0;
+            int compareValue = 0;
+
+            // Convert value
+            if (value != null)
+            {
+                try
+                {
+                    intValue = System.Convert.ToInt32(value);
+                }
+                catch
+                {
+                    // Default to 0 if conversion fails
+                }
+            }
+
+            // Convert parameter
+            if (parameter != null)
+            {
+                try
+                {
+                    compareValue = System.Convert.ToInt32(parameter);
+                }
+                catch
+                {
+                    // Default to 0 if conversion fails
+                }
+            }
+
+            // Show when value equals compareValue
+            return intValue == compareValue ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
     /// Converts boolean values to Visibility
     /// </summary>
     public class BooleanToVisibilityConverter : IValueConverter

@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\PipelineConfigPage.xaml -->
-<!-- Version: 0.7.27 -->
-<!-- Description: Pipeline Configuration - With Auto-Backup Info Panel -->
+<!-- Version: 0.7.28 -->
+<!-- Description: Pipeline Configuration - Fixed Checkbox Spacing -->
 
 <Page x:Class="CamBridge.Config.Views.PipelineConfigPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -39,675 +39,697 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
         <Border Grid.Row="0"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                Padding="24,16">
-            <Grid>
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <Grid Height="60">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel>
                 <TextBlock Text="Pipeline Configuration"
-                           FontSize="28"
-                           FontWeight="SemiBold"/>
-                <!-- Subtle backup indicator -->
-                <TextBlock Text=" Auto-backup enabled  %ProgramData%\CamBridge\"
-                           Margin="0,4,0,0"
-                           FontSize="12"
-                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-            </StackPanel>
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="24,0,0,0"/>
 
-                <Button Grid.Column="1"
-                        Command="{Binding SaveAllCommand}"
-                        Style="{StaticResource AccentButtonStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Save All Pipelines" Margin="0,0,8,0"/>
-                        <TextBlock Text="(Ctrl+S)" Opacity="0.7" FontSize="12"/>
+                <StackPanel Grid.Column="1" 
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,0,24,0">
+                    <StackPanel Margin="0,0,16,0" 
+                                VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Pipelines.Count, StringFormat='{}{0} pipelines configured'}"
+                                   HorizontalAlignment="Right"
+                                   FontSize="11"
+                                   Opacity="0.7"/>
+                        <TextBlock HorizontalAlignment="Right"
+                                   FontSize="11"
+                                   Opacity="0.7">
+                            <Run Text="✓" Foreground="Green" FontSize="10"/>
+                            <Run Text=" Auto-backup enabled"/>
+                        </TextBlock>
                     </StackPanel>
-                </Button>
+
+                    <Button Command="{Binding SaveAllCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            MinWidth="140">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Save All Pipelines" Margin="0,0,8,0"/>
+                            <TextBlock Text="(Ctrl+S)" Opacity="0.7" FontSize="11"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 
         <!-- Main Content -->
         <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300" MinWidth="250"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <!-- Pipeline List -->
-            <Border Grid.Column="0"
-                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+            <!-- Pipeline Area -->
+            <Grid Grid.Row="0" Margin="16,16,16,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="320" MinWidth="280"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Pipeline List -->
+                <Border Grid.Column="0"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                    BorderThickness="0,0,1,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                    BorderThickness="1"
+                    CornerRadius="2">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                    <!-- List Header -->
-                    <Border Grid.Row="0"
+                        <!-- List Header -->
+                        <Border Grid.Row="0"
                             Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                            Padding="16,12">
-                        <TextBlock Text="Pipelines"
-                                   FontSize="16"
+                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="12,8">
+                            <TextBlock Text="Pipelines"
+                                   FontSize="14"
                                    FontWeight="SemiBold"/>
-                    </Border>
+                        </Border>
 
-                    <!-- Pipeline Items -->
-                    <ListBox Grid.Row="1"
+                        <!-- Pipeline Items -->
+                        <ListBox Grid.Row="1"
                              ItemsSource="{Binding Pipelines}"
                              SelectedItem="{Binding SelectedPipeline}"
                              BorderThickness="0"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
-                                <Setter Property="Padding" Value="16,12"/>
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
+                            <ListBox.Style>
+                                <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                </Style>
+                            </ListBox.Style>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
+                                    <Setter Property="Padding" Value="10,6"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <CheckBox Grid.Column="0"
+                                        <CheckBox Grid.Column="0"
                                               IsChecked="{Binding Enabled}"
-                                              Margin="0,0,12,0"
+                                              Margin="0,0,8,0"
                                               VerticalAlignment="Center"/>
 
-                                    <StackPanel Grid.Column="1">
-                                        <TextBlock Text="{Binding Name}"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding Description}"
-                                                   FontSize="12"
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Name}"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding WatchSettings.Path}"
+                                                   FontSize="11"
                                                    Opacity="0.7"
                                                    TextTrimming="CharacterEllipsis"
-                                                   Visibility="{Binding Description, Converter={StaticResource NullToVisibility}}"/>
-                                    </StackPanel>
+                                                   ToolTip="{Binding WatchSettings.Path}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
 
-                                    <TextBlock Grid.Column="2"
-                                               Text="{Binding ProcessedToday}"
-                                               FontSize="12"
-                                               Opacity="0.7"
-                                               VerticalAlignment="Center"
-                                               Visibility="{Binding ProcessedToday, Converter={StaticResource NullToVisibility}}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-
-                    <!-- Add Button -->
-                    <Border Grid.Row="2"
+                        <!-- Add Button -->
+                        <Border Grid.Row="2"
                             Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                            Padding="16">
-                        <Button Command="{Binding AddPipelineCommand}"
+                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                            BorderThickness="0,1,0,0"
+                            Padding="10">
+                            <Button Command="{Binding AddPipelineCommand}"
                                 HorizontalAlignment="Stretch">
-                            <TextBlock Text="+ Add Pipeline"/>
-                        </Button>
-                    </Border>
-                </Grid>
-            </Border>
+                                <TextBlock Text="+ Add Pipeline"/>
+                            </Button>
+                        </Border>
+                    </Grid>
+                </Border>
 
-            <!-- Splitter -->
-            <GridSplitter Grid.Column="1"
-                          Width="4"
+                <!-- Splitter -->
+                <GridSplitter Grid.Column="1"
+                          Width="2"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Stretch"
-                          Background="Transparent"/>
+                          Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                          Margin="8,0"/>
 
-            <!-- Pipeline Details -->
-            <Grid Grid.Column="2"
-                  Margin="24,0"
+                <!-- Pipeline Details -->
+                <Grid Grid.Column="2"
+                  Margin="8,0,0,0"
                   Visibility="{Binding SelectedPipeline, Converter={StaticResource NullToVisibility}}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                <!-- Pipeline Header -->
-                <Border Grid.Row="0" Padding="0,16,0,0">
-                    <Grid>
+                    <!-- Pipeline Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Text="{Binding SelectedPipeline.Name}"
-                                   FontSize="20"
-                                   FontWeight="SemiBold"/>
+                               FontSize="20"
+                               FontWeight="SemiBold"/>
 
                         <Button Grid.Column="1"
-                        Content="Delete Pipeline"
-                        Command="{Binding DeletePipelineCommand}"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Margin="10,0,0,0"
-                        Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}"/>
+                            Content="Delete Pipeline"
+                            Command="{Binding DeletePipelineCommand}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}"/>
                     </Grid>
-                </Border>
 
-                <!-- Configuration Tabs - FIXED: Removed TabControlHelper.TabStripPlacement -->
-                <TabControl Grid.Row="1"
-                            Margin="0,16,0,0"
-                            ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <!-- Configuration Tabs -->
+                    <TabControl Grid.Row="1"
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                Padding="0">
 
-                    <!-- General Tab -->
-                    <TabItem Header="General">
-                        <ScrollViewer Padding="16">
-                            <StackPanel>
-                                <TextBlock Text="Basic Configuration" Style="{StaticResource TabHeaderStyle}"/>
+                        <!-- General Tab -->
+                        <TabItem Header="General">
+                            <ScrollViewer Padding="12">
+                                <StackPanel>
+                                    <TextBlock Text="Basic Configuration" Style="{StaticResource TabHeaderStyle}"/>
 
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <TextBlock Grid.Row="0" Grid.Column="0"
-                                               Text="Pipeline Name:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1"
-                                             Text="{Binding SelectedPipeline.Name, UpdateSourceTrigger=PropertyChanged}"
-                                             Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="1" Grid.Column="0"
-                                               Text="Description:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1"
-                                             Text="{Binding SelectedPipeline.Description}"
-                                             TextWrapping="Wrap"
-                                             AcceptsReturn="True"
-                                             Height="60"
-                                             Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="2" Grid.Column="0"
-                                               Text="Active:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <CheckBox Grid.Row="2" Grid.Column="1"
-                                              IsChecked="{Binding SelectedPipeline.Enabled}"
-                                              Content="Enable this pipeline"
-                                              Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="3" Grid.Column="0"
-                                               Text="Mapping Set:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <ComboBox Grid.Row="3" Grid.Column="1"
-                                              ItemsSource="{Binding MappingSets}"
-                                              SelectedValue="{Binding SelectedPipeline.MappingSetId}"
-                                              SelectedValuePath="Id"
-                                              DisplayMemberPath="Name"
-                                              HorizontalAlignment="Stretch"/>
-                                </Grid>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-
-                    <!-- Folders Tab -->
-                    <TabItem Header="Folders">
-                        <ScrollViewer Padding="16">
-                            <StackPanel>
-                                <TextBlock Text="Folder Configuration" Style="{StaticResource TabHeaderStyle}"/>
-
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <TextBlock Grid.Row="0" Grid.Column="0"
-                                               Text="Watch Folder:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                                    <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0"
-                                                 Text="{Binding SelectedPipeline.WatchSettings.Path, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <Button Grid.Column="1"
-                                                Content="Browse..."
-                                                Width="80"
-                                                Margin="8,0,0,0"
-                                                Click="BrowseWatchFolder_Click"/>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="Pipeline Name:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="0" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.Name, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="Description:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.Description}"
+                                                 TextWrapping="Wrap"
+                                                 AcceptsReturn="True"
+                                                 Height="60"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="Active:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="2" Grid.Column="1"
+                                                  IsChecked="{Binding SelectedPipeline.Enabled}"
+                                                  Content="Enable this pipeline"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0"
+                                                   Text="Mapping Set:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="3" Grid.Column="1"
+                                                  ItemsSource="{Binding MappingSets}"
+                                                  SelectedValue="{Binding SelectedPipeline.MappingSetId}"
+                                                  SelectedValuePath="Id"
+                                                  DisplayMemberPath="Name"
+                                                  HorizontalAlignment="Stretch"/>
                                     </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0"
-                                               Text="File Pattern:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1"
-                                             Text="{Binding SelectedPipeline.WatchSettings.FilePattern}"
-                                             Margin="0,0,0,8"/>
+                        <!-- Folders Tab -->
+                        <TabItem Header="Folders">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="Folder Configuration" Style="{StaticResource TabHeaderStyle}"/>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0"
-                                               Text="Subdirectories:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <CheckBox Grid.Row="2" Grid.Column="1"
-                                              IsChecked="{Binding SelectedPipeline.WatchSettings.IncludeSubdirectories}"
-                                              Content="Include subdirectories"
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="Watch Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding SelectedPipeline.WatchSettings.Path, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseWatchFolder_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="File Pattern:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.WatchSettings.FilePattern}"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="Subdirectories:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="2" Grid.Column="1"
+                                                  IsChecked="{Binding SelectedPipeline.WatchSettings.IncludeSubdirectories}"
+                                                  Content="Include subdirectories"
+                                                  Margin="0,0,0,16"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0"
+                                                   Text="Output Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <Grid Grid.Row="3" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding SelectedPipeline.ProcessingOptions.ArchiveFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseOutputFolder_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0"
+                                                   Text="Error Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding SelectedPipeline.ProcessingOptions.ErrorFolder}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseErrorFolder_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="5" Grid.Column="0"
+                                                   Text="Dead Letter Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <Grid Grid.Row="5" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding SelectedPipeline.ProcessingOptions.DeadLetterFolder}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseDeadLetterFolder_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="6" Grid.Column="0"
+                                                   Text="Output Organization:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="6" Grid.Column="1"
+                                                  ItemsSource="{Binding OutputOrganizations}"
+                                                  SelectedItem="{Binding SelectedPipeline.ProcessingOptions.OutputOrganization}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- DICOM Tab -->
+                        <TabItem Header="DICOM">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="DICOM Overrides (Optional)" Style="{StaticResource TabHeaderStyle}"/>
+                                    <TextBlock Text="Leave empty to use global DICOM settings"
+                                               FontSize="12"
+                                               Opacity="0.7"
+                                               Margin="0,0,0,16"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="Institution Name:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="0" Grid.Column="1"
+                                                 Text="{Binding SelectedPipelineDicomOverrides.InstitutionName}"
+                                                 ui:ControlHelper.PlaceholderText="e.g. Radiology Department"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="Department:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1"
+                                                 Text="{Binding SelectedPipelineDicomOverrides.InstitutionDepartment}"
+                                                 ui:ControlHelper.PlaceholderText="e.g. Emergency Room"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="Station Name:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="2" Grid.Column="1"
+                                                 Text="{Binding SelectedPipelineDicomOverrides.StationName}"
+                                                 ui:ControlHelper.PlaceholderText="e.g. ER_WORKSTATION_01"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- Processing Tab -->
+                        <TabItem Header="Processing">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="Processing Options" Style="{StaticResource TabHeaderStyle}"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="File Delay (seconds):"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="0" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.WatchSettings.MinimumFileAgeSeconds}"
+                                                 HorizontalAlignment="Left"
+                                                 Width="120"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="Max Concurrent:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.ProcessingOptions.MaxConcurrentProcessing}"
+                                                 HorizontalAlignment="Left"
+                                                 Width="120"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="On Success:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="2" Grid.Column="1"
+                                                  ItemsSource="{Binding ProcessingActions}"
+                                                  SelectedItem="{Binding SelectedPipeline.ProcessingOptions.SuccessAction}"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0"
+                                                   Text="On Failure:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="3" Grid.Column="1"
+                                                  ItemsSource="{Binding ProcessingActions}"
+                                                  SelectedItem="{Binding SelectedPipeline.ProcessingOptions.FailureAction}"
+                                                  Margin="0,0,0,16"/>
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0"
+                                                   Text="Retry Options:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="4" Grid.Column="1"
+                                                  IsChecked="{Binding SelectedPipeline.ProcessingOptions.RetryOnFailure}"
+                                                  Content="Enable retry on failure"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="5" Grid.Column="0"
+                                                   Text="Max Retries:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="5" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.ProcessingOptions.MaxRetryAttempts}"
+                                                 HorizontalAlignment="Left"
+                                                 Width="120"
+                                                 IsEnabled="{Binding SelectedPipeline.ProcessingOptions.RetryOnFailure}"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="6" Grid.Column="0"
+                                                   Text="Backup Files:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="6" Grid.Column="1"
+                                                  IsChecked="{Binding SelectedPipeline.ProcessingOptions.CreateBackup}"
+                                                  Content="Create backup before processing"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="7" Grid.Column="0"
+                                                   Text="Process Existing:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="7" Grid.Column="1"
+                                                  IsChecked="{Binding SelectedPipeline.ProcessingOptions.ProcessExistingOnStartup}"
+                                                  Content="Process existing files on startup"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- Logging Tab -->
+                        <TabItem Header="Logging">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="Pipeline-specific Logging" Style="{StaticResource TabHeaderStyle}"/>
+                                    <TextBlock Text="Override global logging settings for this pipeline"
+                                               FontSize="12"
+                                               Opacity="0.7"
+                                               Margin="0,0,0,16"/>
+
+                                    <CheckBox Content="Use custom logging for this pipeline"
+                                              IsChecked="{Binding UseCustomLogging}"
                                               Margin="0,0,0,16"/>
 
-                                    <TextBlock Grid.Row="3" Grid.Column="0"
-                                               Text="Output Folder:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <Grid Grid.Row="3" Grid.Column="1" Margin="0,0,0,8">
+                                    <Grid IsEnabled="{Binding UseCustomLogging}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0"
-                                                 Text="{Binding SelectedPipeline.ProcessingOptions.ArchiveFolder, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <Button Grid.Column="1"
-                                                Content="Browse..."
-                                                Width="80"
-                                                Margin="8,0,0,0"
-                                                Click="BrowseOutputFolder_Click"/>
-                                    </Grid>
-
-                                    <TextBlock Grid.Row="4" Grid.Column="0"
-                                               Text="Error Folder:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
-                                        <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0"
-                                                 Text="{Binding SelectedPipeline.ProcessingOptions.ErrorFolder}"/>
-                                        <Button Grid.Column="1"
-                                                Content="Browse..."
-                                                Width="80"
-                                                Margin="8,0,0,0"
-                                                Click="BrowseErrorFolder_Click"/>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="Log Level:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="0" Grid.Column="1"
+                                                  ItemsSource="{Binding LogLevels}"
+                                                  SelectedItem="{Binding PipelineLogLevel}"
+                                                  HorizontalAlignment="Left"
+                                                  Width="200"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="Log Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <Grid Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding PipelineLogFolder}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseLogFolder_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="Retention Days:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="2" Grid.Column="1"
+                                                 Text="{Binding PipelineLogRetentionDays}"
+                                                 HorizontalAlignment="Left"
+                                                 Width="120"/>
                                     </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
 
-                                    <TextBlock Grid.Row="5" Grid.Column="0"
-                                               Text="Dead Letter Folder:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <Grid Grid.Row="5" Grid.Column="1" Margin="0,0,0,8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0"
-                                                 Text="{Binding SelectedPipeline.ProcessingOptions.DeadLetterFolder}"/>
-                                        <Button Grid.Column="1"
-                                                Content="Browse..."
-                                                Width="80"
-                                                Margin="8,0,0,0"
-                                                Click="BrowseDeadLetterFolder_Click"/>
-                                    </Grid>
+                        <!-- Notifications Tab -->
+                        <TabItem Header="Notifications">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="Pipeline-specific Notifications" Style="{StaticResource TabHeaderStyle}"/>
+                                    <TextBlock Text="Configure alerts and notifications for this pipeline"
+                                               FontSize="12"
+                                               Opacity="0.7"
+                                               Margin="0,0,0,16"/>
 
-                                    <TextBlock Grid.Row="6" Grid.Column="0"
-                                               Text="Output Organization:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <ComboBox Grid.Row="6" Grid.Column="1"
-                                              ItemsSource="{Binding OutputOrganizations}"
-                                              SelectedItem="{Binding SelectedPipeline.ProcessingOptions.OutputOrganization}"/>
-                                </Grid>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-
-                    <!-- DICOM Tab -->
-                    <TabItem Header="DICOM">
-                        <ScrollViewer Padding="16">
-                            <StackPanel>
-                                <TextBlock Text="DICOM Overrides (Optional)" Style="{StaticResource TabHeaderStyle}"/>
-                                <TextBlock Text="Leave empty to use global DICOM settings"
-                                           FontSize="12"
-                                           Opacity="0.7"
-                                           Margin="0,0,0,16"/>
-
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <TextBlock Grid.Row="0" Grid.Column="0"
-                                               Text="Institution Name:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1"
-                                             Text="{Binding SelectedPipelineDicomOverrides.InstitutionName}"
-                                             ui:ControlHelper.PlaceholderText="e.g. Radiology Department"
-                                             Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="1" Grid.Column="0"
-                                               Text="Department:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1"
-                                             Text="{Binding SelectedPipelineDicomOverrides.InstitutionDepartment}"
-                                             ui:ControlHelper.PlaceholderText="e.g. Emergency Room"
-                                             Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="2" Grid.Column="0"
-                                               Text="Station Name:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1"
-                                             Text="{Binding SelectedPipelineDicomOverrides.StationName}"
-                                             ui:ControlHelper.PlaceholderText="e.g. ER_WORKSTATION_01"/>
-                                </Grid>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-
-                    <!-- Processing Tab -->
-                    <TabItem Header="Processing">
-                        <ScrollViewer Padding="16">
-                            <StackPanel>
-                                <TextBlock Text="Processing Options" Style="{StaticResource TabHeaderStyle}"/>
-
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <TextBlock Grid.Row="0" Grid.Column="0"
-                                               Text="File Delay (seconds):"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1"
-                                             Text="{Binding SelectedPipeline.WatchSettings.MinimumFileAgeSeconds}"
-                                             HorizontalAlignment="Left"
-                                             Width="120"
-                                             Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="1" Grid.Column="0"
-                                               Text="Max Concurrent:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1"
-                                             Text="{Binding SelectedPipeline.ProcessingOptions.MaxConcurrentProcessing}"
-                                             HorizontalAlignment="Left"
-                                             Width="120"
-                                             Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="2" Grid.Column="0"
-                                               Text="On Success:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <ComboBox Grid.Row="2" Grid.Column="1"
-                                              ItemsSource="{Binding ProcessingActions}"
-                                              SelectedItem="{Binding SelectedPipeline.ProcessingOptions.SuccessAction}"
-                                              Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="3" Grid.Column="0"
-                                               Text="On Failure:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <ComboBox Grid.Row="3" Grid.Column="1"
-                                              ItemsSource="{Binding ProcessingActions}"
-                                              SelectedItem="{Binding SelectedPipeline.ProcessingOptions.FailureAction}"
+                                    <CheckBox Content="Override global notification settings"
+                                              IsChecked="{Binding UseCustomNotifications}"
                                               Margin="0,0,0,16"/>
 
-                                    <TextBlock Grid.Row="4" Grid.Column="0"
-                                               Text="Retry Options:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <CheckBox Grid.Row="4" Grid.Column="1"
-                                              IsChecked="{Binding SelectedPipeline.ProcessingOptions.RetryOnFailure}"
-                                              Content="Enable retry on failure"
-                                              Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="5" Grid.Column="0"
-                                               Text="Max Retries:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="5" Grid.Column="1"
-                                             Text="{Binding SelectedPipeline.ProcessingOptions.MaxRetryAttempts}"
-                                             HorizontalAlignment="Left"
-                                             Width="120"
-                                             IsEnabled="{Binding SelectedPipeline.ProcessingOptions.RetryOnFailure}"
-                                             Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="6" Grid.Column="0"
-                                               Text="Backup Files:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <CheckBox Grid.Row="6" Grid.Column="1"
-                                              IsChecked="{Binding SelectedPipeline.ProcessingOptions.CreateBackup}"
-                                              Content="Create backup before processing"
-                                              Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="7" Grid.Column="0"
-                                               Text="Process Existing:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <CheckBox Grid.Row="7" Grid.Column="1"
-                                              IsChecked="{Binding SelectedPipeline.ProcessingOptions.ProcessExistingOnStartup}"
-                                              Content="Process existing files on startup"/>
-                                </Grid>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-
-                    <!-- Logging Tab -->
-                    <TabItem Header="Logging">
-                        <ScrollViewer Padding="16">
-                            <StackPanel>
-                                <TextBlock Text="Pipeline-specific Logging" Style="{StaticResource TabHeaderStyle}"/>
-                                <TextBlock Text="Override global logging settings for this pipeline"
-                                           FontSize="12"
-                                           Opacity="0.7"
-                                           Margin="0,0,0,16"/>
-
-                                <CheckBox Content="Use custom logging for this pipeline"
-                                          IsChecked="{Binding UseCustomLogging}"
-                                          Margin="0,0,0,16"/>
-
-                                <Grid IsEnabled="{Binding UseCustomLogging}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <TextBlock Grid.Row="0" Grid.Column="0"
-                                               Text="Log Level:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <ComboBox Grid.Row="0" Grid.Column="1"
-                                              ItemsSource="{Binding LogLevels}"
-                                              SelectedItem="{Binding PipelineLogLevel}"
-                                              HorizontalAlignment="Left"
-                                              Width="200"
-                                              Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="1" Grid.Column="0"
-                                               Text="Log Folder:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <Grid Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
+                                    <Grid IsEnabled="{Binding UseCustomNotifications}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0"
-                                                 Text="{Binding PipelineLogFolder}"/>
-                                        <Button Grid.Column="1"
-                                                Content="Browse..."
-                                                Width="80"
-                                                Margin="8,0,0,0"
-                                                Click="BrowseLogFolder_Click"/>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="Email To:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="0" Grid.Column="1"
+                                                 Text="{Binding PipelineEmailTo}"
+                                                 ui:ControlHelper.PlaceholderText="dept@hospital.com;manager@hospital.com"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="Alert Level:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="1" Grid.Column="1"
+                                                  ItemsSource="{Binding NotificationLevels}"
+                                                  SelectedItem="{Binding PipelineAlertLevel}"
+                                                  HorizontalAlignment="Left"
+                                                  Width="200"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="Daily Summary:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="2" Grid.Column="1"
+                                                  IsChecked="{Binding PipelineSendDailySummary}"
+                                                  Content="Send daily processing summary"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0"
+                                                   Text="Alert on Errors:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="3" Grid.Column="1"
+                                                  IsChecked="{Binding PipelineAlertOnErrors}"
+                                                  Content="Send immediate alerts for errors"/>
                                     </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0"
-                                               Text="Retention Days:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1"
-                                             Text="{Binding PipelineLogRetentionDays}"
-                                             HorizontalAlignment="Left"
-                                             Width="120"/>
-                                </Grid>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
+                    </TabControl>
+                </Grid>
 
-                    <!-- Notifications Tab -->
-                    <TabItem Header="Notifications">
-                        <ScrollViewer Padding="16">
-                            <StackPanel>
-                                <TextBlock Text="Pipeline-specific Notifications" Style="{StaticResource TabHeaderStyle}"/>
-                                <TextBlock Text="Configure alerts and notifications for this pipeline"
-                                           FontSize="12"
-                                           Opacity="0.7"
-                                           Margin="0,0,0,16"/>
-
-                                <CheckBox Content="Override global notification settings"
-                                          IsChecked="{Binding UseCustomNotifications}"
-                                          Margin="0,0,0,16"/>
-
-                                <Grid IsEnabled="{Binding UseCustomNotifications}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <TextBlock Grid.Row="0" Grid.Column="0"
-                                               Text="Email To:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1"
-                                             Text="{Binding PipelineEmailTo}"
-                                             ui:ControlHelper.PlaceholderText="dept@hospital.com;manager@hospital.com"
-                                             Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="1" Grid.Column="0"
-                                               Text="Alert Level:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <ComboBox Grid.Row="1" Grid.Column="1"
-                                              ItemsSource="{Binding NotificationLevels}"
-                                              SelectedItem="{Binding PipelineAlertLevel}"
-                                              HorizontalAlignment="Left"
-                                              Width="200"
-                                              Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="2" Grid.Column="0"
-                                               Text="Daily Summary:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <CheckBox Grid.Row="2" Grid.Column="1"
-                                              IsChecked="{Binding PipelineSendDailySummary}"
-                                              Content="Send daily processing summary"
-                                              Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="3" Grid.Column="0"
-                                               Text="Alert on Errors:"
-                                               Style="{StaticResource SettingLabelStyle}"/>
-                                    <CheckBox Grid.Row="3" Grid.Column="1"
-                                              IsChecked="{Binding PipelineAlertOnErrors}"
-                                              Content="Send immediate alerts for errors"/>
-                                </Grid>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-
-                </TabControl>
-            </Grid>
-
-            <!-- No Selection Message - FIXED CONVERTER! -->
-            <Border Grid.Column="2"
-                    Visibility="{Binding SelectedPipeline, Converter={StaticResource NullToVisibility}, ConverterParameter=Inverse}"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center">
-                <StackPanel>
-                    <TextBlock Text="No Pipeline Selected"
-                               FontSize="20"
+                <!-- No Selection Message -->
+                <Grid Grid.Column="2"
+                  Margin="8,0,0,0"
+                  Visibility="{Binding SelectedPipeline, Converter={StaticResource NullToVisibility}, ConverterParameter=Inverse}"
+                  VerticalAlignment="Center"
+                  HorizontalAlignment="Center">
+                    <StackPanel MaxWidth="400">
+                        <TextBlock Text="No Pipeline Selected"
+                               FontSize="18"
                                Opacity="0.5"
                                HorizontalAlignment="Center"/>
-                    <TextBlock Text="Select a pipeline from the list or create a new one"
-                               FontSize="14"
+                        <TextBlock Text="Select a pipeline from the list or create a new one"
+                               FontSize="13"
                                Opacity="0.5"
                                Margin="0,8,0,0"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <!-- Status Bar -->
+            <Border Grid.Row="1"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                Height="28">
+                <Grid Margin="16,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Loading -->
+                    <ui:ProgressRing Grid.Column="0"
+                                 IsActive="{Binding IsLoading}"
+                                 Width="12"
+                                 Height="12"
+                                 Margin="0,0,8,0"
+                                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
+
+                    <!-- Status -->
+                    <TextBlock Grid.Column="1"
+                           Text="{Binding StatusMessage}"
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Opacity="0.8"
+                           Visibility="{Binding StatusMessage, Converter={StaticResource NullToVisibility}}"/>
+
+                    <!-- Changes -->
+                    <TextBlock Grid.Column="2"
+                           FontSize="11"
+                           Opacity="0.8"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibility}}">
+                    <Run Text="●" Foreground="Orange" FontSize="8"/>
+                    <Run Text=" Unsaved changes"/>
+                    </TextBlock>
+                </Grid>
             </Border>
         </Grid>
-
-        <!-- Status Bar -->
-        <Border Grid.Row="2"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                Padding="24,8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Loading Indicator -->
-                <ui:ProgressRing Grid.Column="0"
-                                 IsActive="{Binding IsLoading}"
-                                 Width="16"
-                                 Height="16"
-                                 Margin="0,0,8,0"/>
-
-                <!-- Status Message -->
-                <TextBlock Grid.Column="1"
-                           Text="{Binding StatusMessage}"
-                           VerticalAlignment="Center">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsError}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource SystemControlErrorTextForegroundBrush}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-
-                <!-- Changes Indicator -->
-                <TextBlock Grid.Column="2"
-                           Text="{Binding UnsavedChangesCount, StringFormat='{}{0} unsaved changes'}"
-                           FontStyle="Italic"
-                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                           VerticalAlignment="Center"
-                           Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibility}}"/>
-            </Grid>
-        </Border>
     </Grid>
 </Page>

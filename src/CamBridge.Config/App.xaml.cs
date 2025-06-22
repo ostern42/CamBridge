@@ -1,6 +1,6 @@
 // src\CamBridge.Config\App.xaml.cs
-// Version: 0.7.12
-// Description: Application entry point with WPF host
+// Version: 0.7.28
+// Description: Application entry point with LogViewer registration
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Threading;
 using CamBridge.Config.Services;
 using CamBridge.Config.ViewModels;
+using CamBridge.Config.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -106,16 +107,17 @@ namespace CamBridge.Config
                         client.Timeout = TimeSpan.FromSeconds(5);
                     });
 
-                    // ViewModels - Updated for Pipeline Architecture!
+                    // ViewModels - Updated with LogViewerViewModel
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ServiceControlViewModel>();
-                    services.AddTransient<PipelineConfigViewModel>();  // NEW! Replaces SettingsViewModel
+                    services.AddTransient<PipelineConfigViewModel>();
                     services.AddTransient<DeadLettersViewModel>();
                     services.AddTransient<MappingEditorViewModel>();
-                    // SettingsViewModel REMOVED - Zero Global Settings!
+                    services.AddTransient<LogViewerViewModel>(); // NEW!
 
-                    // Views - No registration needed, created directly
+                    // Views - Registration for LogViewerPage
+                    services.AddTransient<LogViewerPage>(); // NEW!
 
                     // Logging
                     services.AddLogging(configure =>

@@ -1,170 +1,189 @@
 <!-- src/CamBridge.Config/Views/ServiceControlPage.xaml -->
+<!-- Version: 0.7.28 -->
+<!-- Description: Service Control - Uniform Design without Borders -->
+
 <Page x:Class="CamBridge.Config.Views.ServiceControlPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.modernwpf.com/2019"
       Unloaded="Page_Unloaded">
 
-    <Grid Margin="24">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Text="Service Control" FontSize="32" FontWeight="SemiBold" Margin="0,0,0,20"/>
-
-        <!-- Admin Warning -->
-        <Border Grid.Row="1" Margin="0,0,0,16" Padding="16" CornerRadius="4"
-                Background="#FFF3CD" BorderBrush="#FFEAA7" BorderThickness="1"
-                Visibility="{Binding RequiresElevation, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <StackPanel Orientation="Horizontal">
-                <ui:SymbolIcon Symbol="Important" Margin="0,0,8,0"/>
-                <TextBlock Text="Administrator privileges required for service control" 
-                          VerticalAlignment="Center"/>
-            </StackPanel>
+        <!-- Header wie Mapping Editor -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <Grid Height="60">
+                <TextBlock Text="Service Control"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="24,0,0,0"/>
+            </Grid>
         </Border>
 
-        <!-- Service Status Card -->
-        <Border Grid.Row="2" CornerRadius="8" Margin="0,0,0,20"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                BorderThickness="1">
-            <Grid Margin="24">
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1">
+            <Grid Margin="16,16,16,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Status Display -->
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                    <Ellipse Width="16" Height="16" Margin="0,0,12,0">
-                        <Ellipse.Style>
-                            <Style TargetType="Ellipse">
-                                <Setter Property="Fill" Value="Gray"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding StatusColor}" Value="Green">
-                                        <Setter Property="Fill" Value="#28A745"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding StatusColor}" Value="Orange">
-                                        <Setter Property="Fill" Value="#FFC107"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding StatusColor}" Value="Red">
-                                        <Setter Property="Fill" Value="#DC3545"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Ellipse.Style>
-                    </Ellipse>
-                    <TextBlock Text="CamBridge Service Status:" FontSize="18" Margin="0,0,8,0"/>
-                    <TextBlock Text="{Binding StatusText}" FontSize="18" FontWeight="SemiBold"/>
-                </StackPanel>
+                <!-- Admin Warning -->
+                <Border Grid.Row="0" Margin="0,0,0,16" Padding="12" CornerRadius="2"
+                        Background="#FFF3CD" BorderThickness="0"
+                        Visibility="{Binding RequiresElevation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Important" Margin="0,0,8,0"/>
+                        <TextBlock Text="Administrator privileges required for service control" 
+                                  VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
 
-                <!-- Uptime Display -->
-                <TextBlock Grid.Row="1" Margin="28,0,0,16" FontSize="14" Opacity="0.7"
-                          Visibility="{Binding Uptime, Converter={StaticResource NullToVisibilityConverter}}">
-                    <Run Text="Uptime:"/>
-                    <Run Text="{Binding Uptime}"/>
-                </TextBlock>
+                <!-- Service Status Card -->
+                <Border Grid.Row="1" CornerRadius="2" Margin="0,0,0,16"
+                        Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                        BorderThickness="0">
+                    <Grid Margin="16,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                <!-- Control Buttons -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
-                    <!-- Install Service Button (NEW!) -->
-                    <Button Command="{Binding InstallServiceCommand}" 
-                            Visibility="{Binding IsServiceInstalled, 
-                                       Converter={StaticResource InverseBooleanToVisibilityConverter}}"
-                            Margin="0,0,8,0" MinWidth="140"
-                            Style="{StaticResource AccentButtonStyle}">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Add" Margin="0,0,8,0"/>
-                            <TextBlock Text="Install Service"/>
+                        <!-- Status Display -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Ellipse Width="16" Height="16" Margin="0,0,12,0">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="Gray"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StatusColor}" Value="Green">
+                                                <Setter Property="Fill" Value="#28A745"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusColor}" Value="Orange">
+                                                <Setter Property="Fill" Value="#FFC107"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusColor}" Value="Red">
+                                                <Setter Property="Fill" Value="#DC3545"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Text="CamBridge Service Status:" FontSize="16" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding StatusText}" FontSize="16" FontWeight="SemiBold"/>
                         </StackPanel>
-                    </Button>
 
-                    <Button Command="{Binding StartServiceCommand}" 
-                            IsEnabled="{Binding CanStart}"
-                            Margin="0,0,8,0" MinWidth="120">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Play" Margin="0,0,8,0"/>
-                            <TextBlock Text="Start Service"/>
+                        <!-- Uptime Display -->
+                        <TextBlock Grid.Row="1" Margin="28,0,0,16" FontSize="14" Opacity="0.7"
+                                  Visibility="{Binding Uptime, Converter={StaticResource NullToVisibilityConverter}}">
+                            <Run Text="Uptime:"/>
+                            <Run Text="{Binding Uptime}"/>
+                        </TextBlock>
+
+                        <!-- Control Buttons -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
+                            <!-- Install Service Button ✅ VORHANDEN! -->
+                            <Button Command="{Binding InstallServiceCommand}" 
+                                    Visibility="{Binding IsServiceInstalled, 
+                                               Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                    Margin="0,0,8,0" MinWidth="140"
+                                    Style="{StaticResource AccentButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Add" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Install Service"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding StartServiceCommand}" 
+                                    IsEnabled="{Binding CanStart}"
+                                    Margin="0,0,8,0" MinWidth="120">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Play" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Start Service"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding StopServiceCommand}"
+                                    IsEnabled="{Binding CanStop}"
+                                    Margin="0,0,8,0" MinWidth="120">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Stop" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Stop Service"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding RestartServiceCommand}"
+                                    IsEnabled="{Binding CanRestart}"
+                                    MinWidth="120">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Refresh" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Restart Service"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
-                    </Button>
 
-                    <Button Command="{Binding StopServiceCommand}"
-                            IsEnabled="{Binding CanStop}"
-                            Margin="0,0,8,0" MinWidth="120">
+                        <!-- Loading Indicator -->
+                        <ui:ProgressRing Grid.Row="2" IsActive="{Binding IsLoading}" 
+                                       Width="24" Height="24"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+
+                        <!-- Not Installed Message -->
+                        <TextBlock Grid.Row="3" Margin="0,16,0,0"
+                                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                  Visibility="{Binding IsServiceInstalled, 
+                                             Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                            <Run Text="The CamBridge Windows Service is not installed. Click"/>
+                            <Run Text="Install Service" FontWeight="SemiBold"/>
+                            <Run Text="above to install it."/>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+
+                <!-- Quick Actions -->
+                <Border Grid.Row="2" CornerRadius="2"
+                        Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                        BorderThickness="0">
+                    <StackPanel Margin="16,12">
+                        <TextBlock Text="Quick Actions" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+
                         <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Stop" Margin="0,0,8,0"/>
-                            <TextBlock Text="Stop Service"/>
+                            <Button Command="{Binding OpenServicesCommand}" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Setting" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Windows Services"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding OpenEventViewerCommand}" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Document" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Event Viewer"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Uninstall Button ✅ VORHANDEN! -->
+                            <Button Command="{Binding UninstallServiceCommand}"
+                                    Visibility="{Binding IsServiceInstalled, 
+                                               Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Delete" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Uninstall Service"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
-                    </Button>
-
-                    <Button Command="{Binding RestartServiceCommand}"
-                            IsEnabled="{Binding CanRestart}"
-                            MinWidth="120">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Refresh" Margin="0,0,8,0"/>
-                            <TextBlock Text="Restart Service"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-
-                <!-- Loading Indicator -->
-                <ui:ProgressRing Grid.Row="2" IsActive="{Binding IsLoading}" 
-                               Width="24" Height="24"
-                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
-
-                <!-- Not Installed Message - jetzt mit besserem Text -->
-                <TextBlock Grid.Row="3" Margin="0,16,0,0"
-                          Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                          Visibility="{Binding IsServiceInstalled, 
-                                     Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                    <Run Text="The CamBridge Windows Service is not installed. Click"/>
-                    <Run Text="Install Service" FontWeight="SemiBold"/>
-                    <Run Text="above to install it."/>
-                </TextBlock>
+                    </StackPanel>
+                </Border>
             </Grid>
-        </Border>
-
-        <!-- Quick Actions -->
-        <Border Grid.Row="3" CornerRadius="8"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                BorderThickness="1">
-            <StackPanel Margin="24">
-                <TextBlock Text="Quick Actions" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
-
-                <StackPanel Orientation="Horizontal">
-                    <Button Command="{Binding OpenServicesCommand}" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Setting" Margin="0,0,8,0"/>
-                            <TextBlock Text="Windows Services"/>
-                        </StackPanel>
-                    </Button>
-
-                    <Button Command="{Binding OpenEventViewerCommand}" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Document" Margin="0,0,8,0"/>
-                            <TextBlock Text="Event Viewer"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- Uninstall Button (NEW!) -->
-                    <Button Command="{Binding UninstallServiceCommand}"
-                            Visibility="{Binding IsServiceInstalled, 
-                                       Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Delete" Margin="0,0,8,0"/>
-                            <TextBlock Text="Uninstall Service"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </StackPanel>
-        </Border>
+        </ScrollViewer>
     </Grid>
 </Page>

@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\DeadLettersPage.xaml -->
-<!-- Version: 0.7.9 -->
-<!-- Description: Simple error folder viewer - KISS approach! Fixed for WPF -->
+<!-- Version: 0.7.28 -->
+<!-- Description: Error Files Page - Minimal design -->
 
 <Page x:Class="CamBridge.Config.Views.DeadLettersPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -13,82 +13,85 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="24,24,24,12">
-            <TextBlock Text="Error Files" 
-                       Style="{StaticResource TitleTextBlockStyle}" 
-                       Margin="0,0,0,8"/>
-            <TextBlock Opacity="0.7">
-                <Run Text="Error folder: "/>
-                <Run Text="{Binding ErrorFolder}" FontFamily="Consolas"/>
-            </TextBlock>
-        </StackPanel>
+        <Border Grid.Row="0"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <Grid Height="60">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-        <!-- Main Content -->
-        <Grid Grid.Row="1">
-            <StackPanel VerticalAlignment="Center" 
-                        HorizontalAlignment="Center">
+                <TextBlock Text="Error Management"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="24,0,0,0"/>
 
-                <!-- Folder Icon -->
-                <ui:SymbolIcon Symbol="Folder" 
-                               Width="64" 
-                               Height="64"
-                               HorizontalAlignment="Center"
-                               Margin="0,0,0,24"/>
-
-                <!-- Status Text -->
-                <TextBlock HorizontalAlignment="Center"
-                           TextAlignment="Center"
-                           Margin="0,0,0,24">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ErrorFileCount}" Value="0">
-                                    <Setter Property="Text" Value="No error files found"/>
-                                    <Setter Property="Foreground" Value="Green"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                            <Setter Property="Text" Value="{Binding ErrorFileCount, StringFormat='{}{0} error files found'}"/>
-                            <Setter Property="Foreground" Value="Orange"/>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-
-                <!-- Open Folder Button -->
-                <Button Command="{Binding OpenErrorFolderCommand}"
-                        HorizontalAlignment="Center"
-                        Margin="0,12,0,0">
-                    <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Symbol="OpenLocal" Margin="0,0,8,0"/>
-                        <TextBlock Text="Open Error Folder"/>
-                    </StackPanel>
-                </Button>
-
-                <!-- Info Text -->
-                <TextBlock Text="Failed files are moved here with .error.txt details"
-                           Opacity="0.6"
-                           HorizontalAlignment="Center"
-                           Margin="0,24,0,0"/>
-            </StackPanel>
-        </Grid>
-
-        <!-- Bottom Bar -->
-        <Border Grid.Row="2" 
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                Padding="24,12">
-            <Grid>
-                <TextBlock VerticalAlignment="Center">
-                    <Run Text="Simple error handling - no complex dead letter queue!"/>
-                    <Run Text="KISS" FontWeight="Bold" Foreground="{DynamicResource SystemControlHighlightAccentBrush}"/>
-                </TextBlock>
-
-                <Button Content="Refresh" 
+                <Button Grid.Column="1"
+                        Content="Refresh" 
                         Command="{Binding RefreshCommand}"
-                        HorizontalAlignment="Right"/>
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0,0,24,0"
+                        MinWidth="80"/>
             </Grid>
         </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="16,16,16,0">
+            <!-- Info Card Only -->
+            <Border VerticalAlignment="Top"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    BorderThickness="0"
+                    CornerRadius="2"
+                    Padding="16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ui:SymbolIcon Symbol="Folder" 
+                                   Width="48" 
+                                   Height="48"
+                                   Margin="0,0,16,0"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock FontSize="16" FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ErrorFileCount}" Value="0">
+                                            <Setter Property="Text" Value="No Error Files"/>
+                                            <Setter Property="Foreground" Value="#28A745"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                    <Setter Property="Text" Value="{Binding ErrorFileCount, StringFormat='{}{0} Error Files Found'}"/>
+                                    <Setter Property="Foreground" Value="#FFC107"/>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock FontSize="12" Opacity="0.7" Margin="0,4,0,0">
+                            <Run Text="Error folder: "/>
+                            <Run Text="{Binding ErrorFolder}" FontFamily="Consolas"/>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <Button Grid.Column="2"
+                            Command="{Binding OpenErrorFolderCommand}"
+                            VerticalAlignment="Center"
+                            MinWidth="140">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="OpenLocal" Margin="0,0,8,0"/>
+                            <TextBlock Text="Open Folder"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Page>

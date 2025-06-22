@@ -1,6 +1,6 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.7.17
-// Description: Windows service entry point with centralized config management + validation
+// Version: 0.7.28
+// Description: Windows service entry point with corrected log levels
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
@@ -8,6 +8,7 @@ using CamBridge.Core.Infrastructure;
 using CamBridge.Infrastructure;
 using CamBridge.Infrastructure.Services;
 using CamBridge.Service;
+using CamBridge.Service.Controllers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -17,6 +18,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
+using Serilog.Events;
+using Serilog.Filters;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -77,415 +80,273 @@ catch (Exception ex)
     serviceEventLog?.WriteEntry($"Error detecting service mode: {ex.Message}", EventLogEntryType.Error, 1004);
 }
 
-// Configure Serilog with centralized log path
+// Configure Serilog with TRUE multi-pipeline support
 try
 {
-    var logPath = Path.Combine(
-        ConfigurationPaths.GetLogsDirectory(),
-        "service-.log"
-    );
+    var baseLogPath = ConfigurationPaths.GetLogsDirectory();
 
-    Log.Logger = new LoggerConfiguration()
+    // Ensure logs directory exists
+    Directory.CreateDirectory(baseLogPath);
+
+    // Load config to get pipeline names
+    var configPath = ConfigurationPaths.GetPrimaryConfigPath();
+    var configuration = new ConfigurationBuilder()
+        .AddJsonFile(configPath, optional: true)
+        .Build();
+
+    var settings = new CamBridgeSettingsV2();
+    configuration.GetSection("CamBridge").Bind(settings);
+
+    var logConfig = new LoggerConfiguration()
         .MinimumLevel.Debug()
-        .WriteTo.File(
-            path: logPath,
-            rollingInterval: RollingInterval.Day,
-            retainedFileCountLimit: 30,
-            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}")
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+        .MinimumLevel.Override("System", LogEventLevel.Warning)
+        .Enrich.FromLogContext()
+
+        // Global service log - everything EXCEPT pipeline logs
+        .WriteTo.Logger(lc => lc
+            .Filter.ByExcluding(evt =>
+                evt.Properties.ContainsKey("SourceContext") &&
+                evt.Properties["SourceContext"].ToString().Contains("Pipeline."))
+            .WriteTo.File(
+                path: Path.Combine(baseLogPath, "service_.log"),
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30,
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+                shared: true))
+
+        // Event Log for service events
         .WriteTo.EventLog(ServiceInfo.ServiceName, "Application", manageEventSource: false)
+
+        // Console output when not running as service
         .WriteTo.Conditional(
             _ => !isService,
-            wt => wt.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
-        .CreateBootstrapLogger();
+            wt => wt.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"));
 
-    serviceEventLog?.WriteEntry($"Serilog configured. Logging to: {logPath}", EventLogEntryType.Information, 1005);
+    // Create a separate log file for each pipeline
+    if (settings?.Pipelines != null)
+    {
+        foreach (var pipeline in settings.Pipelines)
+        {
+            var sanitizedName = SanitizeForFileName(pipeline.Name);
+            var pipelineContext = $"Pipeline.{sanitizedName}";
+
+            logConfig.WriteTo.Logger(lc => lc
+                .Filter.ByIncludingOnly(evt =>
+                    evt.Properties.ContainsKey("SourceContext") &&
+                    evt.Properties["SourceContext"].ToString().Contains(pipelineContext))
+                .WriteTo.File(
+                    path: Path.Combine(baseLogPath, $"pipeline_{sanitizedName}_.log"),
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 30,
+                    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+                    shared: true));
+
+            // Changed to DEBUG level
+            Log.Debug("Configured logging for pipeline: {Pipeline} -> {LogFile}",
+                pipeline.Name, $"pipeline_{sanitizedName}_{{Date}}.log");
+        }
+    }
+
+    Log.Logger = logConfig.CreateLogger();
+
+    // Changed to DEBUG level
+    Log.Debug("Serilog configured with TRUE multi-pipeline support at {LogPath}", baseLogPath);
+    serviceEventLog?.WriteEntry($"Logging initialized with separate pipeline logs at: {baseLogPath}", EventLogEntryType.Information, 1005);
 }
 catch (Exception ex)
 {
     serviceEventLog?.WriteEntry($"Failed to configure Serilog: {ex.Message}", EventLogEntryType.Error, 1006);
+    throw;
 }
 
 try
 {
-    Log.Information("Starting {ServiceName} with Centralized Config...", ServiceInfo.GetFullVersionString());
+    Log.Information("=== CamBridge Service Starting ===");
+    Log.Information("Version: {Version}", ServiceInfo.GetFullVersionString());
     Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
-    Log.Information("Command line args: {Args}", string.Join(" ", args));
-
-    // Log configuration paths for diagnostics
-    Log.Information("Configuration Paths:\n{DiagnosticInfo}", ConfigurationPaths.GetDiagnosticInfo());
-
-    // CRITICAL: Initialize primary config if needed
-    var localConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-    if (ConfigurationPaths.InitializePrimaryConfig())
-    {
-        Log.Information("Initialized primary config from local template");
-        serviceEventLog?.WriteEntry("Copied default config to ProgramData", EventLogEntryType.Information, 1007);
-    }
-
-    // NEW in v0.7.17: Validate config and warn about issues
-    ConfigValidator.ValidateAndWarn(ConfigurationPaths.GetPrimaryConfigPath(), Log.Logger);
-
-    // CRITICAL FIX: Set working directory to service location (for relative paths like Tools\)
-    if (isService)
-    {
-        var serviceDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-        if (!string.IsNullOrEmpty(serviceDirectory))
-        {
-            Directory.SetCurrentDirectory(serviceDirectory);
-            Log.Information("Working directory set to: {Directory}", serviceDirectory);
-            serviceEventLog?.WriteEntry($"Working directory: {serviceDirectory}", EventLogEntryType.Information, 1009);
-        }
-    }
-
-    serviceEventLog?.WriteEntry("Host builder starting...", EventLogEntryType.Information, 1010);
 
     var builder = Host.CreateDefaultBuilder(args);
 
-    // Configure for Windows Service or Console
+    // Use proper configuration for service vs console
     if (isService)
     {
-        Log.Information("Configuring for Windows Service mode");
-        serviceEventLog?.WriteEntry("Configuring Windows Service support", EventLogEntryType.Information, 1011);
-
         builder.UseWindowsService(options =>
         {
             options.ServiceName = ServiceInfo.ServiceName;
         });
-
-        // Don't start web host immediately for service
-        builder.ConfigureServices((context, services) =>
-        {
-            services.Configure<HostOptions>(options =>
-            {
-                // Give service more time to start
-                options.ShutdownTimeout = TimeSpan.FromSeconds(30);
-            });
-        });
     }
 
-    // NO ENVIRONMENT SETTING! Always use Production behavior
-    // This prevents loading of appsettings.Development.json
-
-    builder.ConfigureAppConfiguration((context, config) =>
-    {
-        // Clear all default sources
-        config.Sources.Clear();
-
-        // Add ONLY the centralized config
-        var centralConfigPath = ConfigurationPaths.GetPrimaryConfigPath();
-
-        if (File.Exists(centralConfigPath))
+    builder
+        .UseSerilog() // Use Serilog as the logging provider
+        .ConfigureAppConfiguration((context, config) =>
         {
-            config.AddJsonFile(centralConfigPath, optional: false, reloadOnChange: true);
-            Log.Information("Loading configuration from: {Path}", centralConfigPath);
+            // Clear default sources to have full control
+            config.Sources.Clear();
+
+            // Use centralized configuration path
+            var configPath = ConfigurationPaths.GetPrimaryConfigPath();
+            Log.Debug("Loading configuration from: {ConfigPath}", configPath); // Changed to DEBUG
+
+            // Initialize config if needed
+            if (!File.Exists(configPath))
+            {
+                ConfigurationPaths.InitializePrimaryConfig();
+                Log.Warning("Configuration file not found. Created default at: {ConfigPath}", configPath);
+            }
+
+            // Load configuration from our single source
+            config.AddJsonFile(configPath, optional: false, reloadOnChange: true);
+
+            // Add environment variables for override capability
+            config.AddEnvironmentVariables("CAMBRIDGE_");
+
+            // Add command line args last (highest priority)
+            if (args != null)
+            {
+                config.AddCommandLine(args);
+            }
+        })
+        .ConfigureServices((context, services) =>
+        {
+            var configuration = context.Configuration;
+
+            // Configure settings with validation
+            services.Configure<CamBridgeSettingsV2>(options =>
+            {
+                var cambridgeSection = configuration.GetSection("CamBridge");
+                if (!cambridgeSection.Exists())
+                {
+                    throw new InvalidOperationException(
+                        "Configuration is missing required 'CamBridge' section. " +
+                        "Expected format: { \"CamBridge\": { \"Version\": \"2.0\", ... } }");
+                }
+
+                cambridgeSection.Bind(options);
+
+                // Validate configuration structure
+                ConfigValidator.ValidateSettings(options);
+
+                // Validate configuration file for enum values
+                var configPath = ConfigurationPaths.GetPrimaryConfigPath();
+                ConfigValidator.ValidateAndWarn(configPath, Log.Logger);
+            });
+
+            // Register notification settings separately
+            services.Configure<NotificationSettings>(configuration.GetSection("CamBridge:NotificationSettings"));
+
+            // Register core services
+            services.AddSingleton<ExifToolReader>();
+            services.AddSingleton<DicomConverter>();
+            services.AddSingleton<NotificationService>();
+
+            // PipelineManager as singleton - manages all pipelines
+            services.AddSingleton<PipelineManager>();
+
+            // Background services
+            services.AddHostedService<Worker>();
+            //services.AddHostedService<DailySummaryService>(); // Activated!
+
+            // Add health checks
+            services.AddHealthChecks()
+                .AddCheck<CamBridgeHealthCheck>("cambridge");
+
+            // Add IHttpClientFactory for better HTTP client management
+            services.AddHttpClient();
+        })
+        .ConfigureWebHostDefaults(webBuilder =>
+        {
+            webBuilder.UseKestrel()
+                .UseUrls("http://localhost:5111") // CRITICAL: Port 5111!
+                .Configure(app =>
+                {
+                    app.UseRouting();
+                    app.UseHealthChecks("/health");
+
+                    app.UseEndpoints(endpoints =>
+                    {
+                        // Service info endpoint
+                        endpoints.MapGet("/", async context =>
+                        {
+                            context.Response.ContentType = "application/json";
+                            var info = new
+                            {
+                                service = ServiceInfo.ServiceName,
+                                version = ServiceInfo.Version,
+                                status = "running",
+                                timestamp = DateTime.UtcNow
+                            };
+                            await context.Response.WriteAsJsonAsync(info);
+                        });
+
+                        // API endpoints
+                        endpoints.MapGet("/api/status", StatusController.GetStatus);
+                        endpoints.MapGet("/api/status/version", StatusController.GetVersion);
+                        endpoints.MapGet("/api/status/health", StatusController.GetHealth);
+                        endpoints.MapGet("/api/pipelines", StatusController.GetPipelines);
+                        endpoints.MapGet("/api/pipelines/{id}", StatusController.GetPipelineDetails);
+                        endpoints.MapGet("/api/statistics", StatusController.GetStatistics);
+                    });
+                });
+        });
+
+    var host = builder.Build();
+
+    // Test configuration loading (non-production diagnostic)
+    using (var scope = host.Services.CreateScope())
+    {
+        var settings = scope.ServiceProvider.GetService<IOptionsSnapshot<CamBridgeSettingsV2>>();
+        if (settings?.Value != null)
+        {
+            // Changed to DEBUG level
+            Log.Debug("Configuration loaded successfully:");
+            Log.Debug("  Version: {Version}", settings.Value.Version);
+            Log.Debug("  Pipelines: {Count}", settings.Value.Pipelines.Count);
+            Log.Debug("  Service Port: {Port}", settings.Value.Service?.ApiPort ?? 5111);
         }
         else
         {
-            // Create default config if missing
-            ConfigurationPaths.InitializePrimaryConfig();
-            config.AddJsonFile(centralConfigPath, optional: false, reloadOnChange: true);
-            Log.Warning("Created new configuration at: {Path}", centralConfigPath);
+            Log.Warning("Failed to load configuration!");
         }
+    }
 
-        // NO environment-specific configs!
-        // NO appsettings.Development.json!
-        // Just ONE config to rule them all!
-
-        // Optional: Add command line args for overrides
-        config.AddCommandLine(args);
-    });
-
-    // Configure Serilog from configuration
-    builder.UseSerilog((context, services, loggerConfiguration) =>
-    {
-        var logPath = Path.Combine(
-            ConfigurationPaths.GetLogsDirectory(),
-            "service-.log"
-        );
-
-        loggerConfiguration
-            .ReadFrom.Configuration(context.Configuration)
-            .ReadFrom.Services(services)
-            .Enrich.FromLogContext()
-            .Enrich.WithProperty("ApplicationName", "CamBridge")
-            .WriteTo.File(
-                path: logPath,
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 30,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}")
-            .WriteTo.EventLog(ServiceInfo.ServiceName, "Application", manageEventSource: false);
-
-        if (!isService)
-        {
-            loggerConfiguration.WriteTo.Console(
-                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}");
-        }
-    });
-
-    builder.ConfigureServices((context, services) =>
-    {
-        serviceEventLog?.WriteEntry("Configuring services...", EventLogEntryType.Information, 1013);
-
-        var configuration = context.Configuration;
-
-        // Core Infrastructure with Pipeline support
-        services.AddInfrastructure(configuration);
-
-        // Main Worker service
-        services.AddHostedService<Worker>();
-
-        // Health Checks
-        services.AddHealthChecks()
-            .AddCheck<CamBridgeHealthCheck>("cambridge");
-
-        // Daily Summary Service
-        // services.AddHostedService<DailySummaryService>();
-
-        // Web API
-        services.AddControllers();
-        services.AddCors(options =>
-        {
-            options.AddPolicy("ConfigUI", policy =>
-            {
-                policy.WithOrigins("http://localhost:*", "https://localhost:*")
-                      .AllowAnyMethod()
-                      .AllowAnyHeader()
-                      .AllowCredentials();
-            });
-        });
-
-        serviceEventLog?.WriteEntry("Services configured successfully", EventLogEntryType.Information, 1014);
-    });
-
-    // Configure Web Host
-    serviceEventLog?.WriteEntry("Configuring web host...", EventLogEntryType.Information, 1015);
-
-    builder.ConfigureWebHostDefaults(webBuilder =>
-    {
-        webBuilder.UseStartup<Startup>();
-        webBuilder.UseUrls($"http://localhost:{ServiceInfo.ApiPort}");
-
-        // For Windows Service, configure Kestrel to not wait for requests
-        if (isService)
-        {
-            webBuilder.ConfigureKestrel(serverOptions =>
-            {
-                serverOptions.AllowSynchronousIO = true;
-            });
-        }
-    });
-
-    serviceEventLog?.WriteEntry("Building host...", EventLogEntryType.Information, 1016);
-    var host = builder.Build();
-
-    
-
-    // Run the host
-    serviceEventLog?.WriteEntry("Starting host...", EventLogEntryType.Information, 1020);
     await host.RunAsync();
 }
 catch (Exception ex)
 {
+    var message = $"Fatal error: {ex.Message}";
     Log.Fatal(ex, "Application terminated unexpectedly");
-    serviceEventLog?.WriteEntry($"Service failed: {ex}", EventLogEntryType.Error, 1999);
+    serviceEventLog?.WriteEntry(message, EventLogEntryType.Error, 9999);
     return 1;
 }
 finally
 {
-    serviceEventLog?.WriteEntry("Service stopping", EventLogEntryType.Information, 1021);
+    Log.Information("=== CamBridge Service Stopped ===");
     Log.CloseAndFlush();
-    serviceEventLog?.Dispose();
 }
 
 return 0;
 
-// Startup class with pipeline support
-public class Startup
+// Helper method to sanitize pipeline names for file names
+static string SanitizeForFileName(string pipelineName)
 {
-    public IConfiguration Configuration { get; }
+    var invalid = Path.GetInvalidFileNameChars()
+        .Concat(new[] { ' ', '.', ',', '/', '\\', ':', '-' })
+        .Distinct()
+        .ToArray();
 
-    public Startup(IConfiguration configuration)
+    var sanitized = string.Join("_", pipelineName.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+
+    if (sanitized.Length > 100)
     {
-        Configuration = configuration;
+        sanitized = sanitized.Substring(0, 97) + "...";
     }
 
-    public void ConfigureServices(IServiceCollection services)
-    {
-        // Services are already configured in Program.cs
-    }
-
-    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-    {
-        // NO ENVIRONMENT-SPECIFIC BEHAVIOR!
-        // Always use production-like settings
-
-        app.UseRouting();
-        app.UseCors("ConfigUI");
-
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapControllers();
-            endpoints.MapHealthChecks("/health");
-
-            // Status endpoint with pipeline support
-            endpoints.MapGet("/api/status", async context =>
-            {
-                var pipelineManager = context.RequestServices.GetService<PipelineManager>();
-                var settingsV2 = context.RequestServices.GetService<IOptions<CamBridgeSettingsV2>>();
-
-                var pipelineStatuses = pipelineManager?.GetPipelineStatuses() ?? new Dictionary<string, PipelineStatus>();
-
-                // Calculate totals
-                var totalQueued = pipelineStatuses.Sum(p => p.Value.QueueLength);
-                var totalActive = pipelineStatuses.Sum(p => p.Value.ActiveProcessing);
-                var totalProcessed = pipelineStatuses.Sum(p => p.Value.TotalProcessed);
-                var totalSuccessful = pipelineStatuses.Sum(p => p.Value.TotalSuccessful);
-                var totalFailed = pipelineStatuses.Sum(p => p.Value.TotalFailed);
-                var successRate = totalProcessed > 0
-                    ? (double)totalSuccessful / totalProcessed * 100
-                    : 0;
-
-                var status = new
-                {
-                    ServiceStatus = "Running",
-                    Version = ServiceInfo.Version,
-                    Mode = Environment.UserInteractive ? "Console" : "Service",
-                    Uptime = DateTime.UtcNow - Program.ServiceStartTime,
-                    ConfigPath = ConfigurationPaths.GetPrimaryConfigPath(),
-                    ConfigExists = ConfigurationPaths.PrimaryConfigExists(),
-                    PipelineCount = pipelineStatuses.Count,
-                    ActivePipelines = pipelineStatuses.Count(p => p.Value.IsActive),
-                    QueueLength = totalQueued,
-                    ActiveProcessing = totalActive,
-                    TotalSuccessful = totalSuccessful,
-                    TotalFailed = totalFailed,
-                    SuccessRate = successRate,
-                    Pipelines = pipelineStatuses.Select(p => new
-                    {
-                        Id = p.Key,
-                        Name = p.Value.Name,
-                        IsActive = p.Value.IsActive,
-                        QueueLength = p.Value.QueueLength,
-                        ActiveProcessing = p.Value.ActiveProcessing,
-                        TotalProcessed = p.Value.TotalProcessed,
-                        TotalSuccessful = p.Value.TotalSuccessful,
-                        TotalFailed = p.Value.TotalFailed,
-                        WatchedFolders = p.Value.WatchedFolders
-                    }),
-                    Configuration = new
-                    {
-                        DefaultOutputFolder = settingsV2?.Value?.DefaultProcessingOptions?.ArchiveFolder,
-                        ExifToolPath = settingsV2?.Value?.ExifToolPath,
-                        Version = settingsV2?.Value?.Version
-                    }
-                };
-
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(status);
-            });
-
-            // NEW in v0.7.17: Simple version endpoint
-            endpoints.MapGet("/api/status/version", async context =>
-            {
-                var response = new
-                {
-                    version = ServiceInfo.Version,
-                    company = ServiceInfo.Company
-                };
-
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(response);
-            });
-
-            // NEW in v0.7.17: Health status endpoint
-            endpoints.MapGet("/api/status/health", async context =>
-            {
-                var pipelineManager = context.RequestServices.GetService<PipelineManager>();
-                var pipelineStatuses = pipelineManager?.GetPipelineStatuses() ?? new Dictionary<string, PipelineStatus>();
-
-                // Service is healthy if at least one pipeline is active
-                var hasActivePipeline = pipelineStatuses.Any(p => p.Value.IsActive);
-                var uptime = DateTime.UtcNow - Program.ServiceStartTime;
-
-                var healthStatus = new
-                {
-                    status = hasActivePipeline ? "Healthy" : "Degraded",
-                    timestamp = DateTime.UtcNow,
-                    uptime = uptime,
-                    activePipelines = pipelineStatuses.Count(p => p.Value.IsActive),
-                    totalPipelines = pipelineStatuses.Count,
-                    details = hasActivePipeline
-                        ? "Service is running with active pipelines"
-                        : "Service is running but no pipelines are active"
-                };
-
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(healthStatus);
-            });
-
-            // Pipeline-specific endpoints
-            endpoints.MapGet("/api/pipelines", async context =>
-            {
-                var pipelineManager = context.RequestServices.GetService<PipelineManager>();
-                var statuses = pipelineManager?.GetPipelineStatuses() ?? new Dictionary<string, PipelineStatus>();
-
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(statuses);
-            });
-
-            endpoints.MapGet("/api/pipelines/{id}", async context =>
-            {
-                var pipelineId = context.Request.RouteValues["id"]?.ToString();
-                if (string.IsNullOrEmpty(pipelineId))
-                {
-                    context.Response.StatusCode = 400;
-                    return;
-                }
-
-                var pipelineManager = context.RequestServices.GetService<PipelineManager>();
-                var details = pipelineManager?.GetPipelineDetails(pipelineId);
-
-                if (details == null)
-                {
-                    context.Response.StatusCode = 404;
-                    return;
-                }
-
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(details);
-            });
-
-            // Basic index page (always available)
-            endpoints.MapGet("/", async context =>
-            {
-                context.Response.ContentType = "text/html";
-                await context.Response.WriteAsync($@"
-                    <html>
-                    <head><title>{ServiceInfo.GetFullVersionString()}</title></head>
-                    <body style='font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px;'>
-                        <h1>CamBridge Service - Centralized Configuration</h1>
-                        <p><strong>Version:</strong> {ServiceInfo.Version}</p>
-                        <p><strong>Status:</strong> Service running with centralized config!</p>
-                        <p><strong>Config Path:</strong> {ConfigurationPaths.GetPrimaryConfigPath()}</p>
-                        <h2>API Endpoints</h2>
-                        <ul>
-                            <li>Health Check: <a href='/health'>/health</a></li>
-                            <li>Service Status: <a href='/api/status'>/api/status</a></li>
-                            <li>API Version: <a href='/api/status/version'>/api/status/version</a></li>
-                            <li>Health Status: <a href='/api/status/health'>/api/status/health</a></li>
-                            <li>Pipeline Status: <a href='/api/pipelines'>/api/pipelines</a></li>
-                        </ul>
-                        <hr/>
-                        <small>{ServiceInfo.Copyright}</small>
-                    </body>
-                    </html>");
-            });
-        });
-    }
+    return sanitized;
 }
 
-// Service start time storage
+// Static class to hold service start time
 public partial class Program
 {
-    public static DateTime ServiceStartTime { get; private set; }
+    public static DateTime ServiceStartTime { get; set; }
 }

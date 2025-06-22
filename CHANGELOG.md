@@ -9,6 +9,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # CHANGELOG
 
+# CHANGELOG
+
+All notable changes to CamBridge will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.7.28] - 2025-06-22
+### Added
+- **Professional Log Viewer** with comprehensive debugging capabilities
+  - Multi-pipeline log selection with dropdown checkboxes
+  - Real-time log level filtering (Debug/Info/Warning/Error/Critical)
+  - Live search functionality across all log entries
+  - Multi-line selection with copy support (Ctrl+C)
+  - Export capabilities (log, txt, CSV formats)
+  - Auto-scroll toggle for monitoring
+  - Performance optimized with virtual scrolling (10,000 entry buffer)
+  - Tail mode showing last 1,000 lines
+
+- **Multi-Pipeline Logging Architecture**
+  - Automatic per-pipeline log files: `pipeline_{Name}_YYYYMMDD.log`
+  - Service events in separate file: `service_YYYYMMDD.log`
+  - Serilog routing by SourceContext for automatic separation
+  - Support for 100+ concurrent pipelines
+  - Shared file access for concurrent readers
+
+- **Unicode Pipeline Name Support**
+  - Full Unicode support in GUI (Radiologie-Süd, 小児科, Кардиология)
+  - Smart filename sanitization for cross-platform compatibility
+  - Pipeline name mapping preserved for display
+
+### Changed
+- **BREAKING**: FileProcessor now requires `ILogger` instead of `ILogger<FileProcessor>` for pipeline-specific logging
+- **Corrected Service Log Levels** throughout the application:
+  - **DEBUG**: Configuration details, tool locations, performance metrics, file detection
+  - **INFO**: Business events (processing files, successful conversions, pipeline status)
+  - **WARNING**: Slow processing (>5s), high failure rates (>50%), large queues (>1000)
+  - **ERROR**: Recoverable failures with detailed context
+  - **CRITICAL**: Service-threatening issues (missing ExifTool, no folder access)
+- Timestamp strategy: Store with millisecond precision, display seconds only
+- Status reporting now only logs when there's actual activity
+
+### Fixed
+- Fixed shutdown error spam by properly handling `OperationCanceledException`
+- Fixed Unicode character literal compilation error in ExifToolReader
+- Fixed excessive DEBUG logging that cluttered business event visibility
+- Improved service startup/shutdown logging clarity
+
+### Technical Details
+- Dynamic Serilog configuration with SourceContext-based routing
+- Pipeline-specific logger instances created in PipelineManager
+- FileSystemWatcher for real-time log updates
+- Efficient file position tracking for incremental reads
+- Virtual panel scrolling for large log files
+
+### Sprint 19 Completion
+This release completes Sprint 19 objectives for professional debugging capabilities and service observability.
+
 ## [0.7.27] - 2025-06-20 - Sprint 18: Hidden Treasures Activation
 
 ### Added
