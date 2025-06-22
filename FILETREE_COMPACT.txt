@@ -46,7 +46,7 @@
 #   - TOOLS
 #
 # Total files: 267
-# Generated: 2025-06-22 22:15
+# Generated: 2025-06-22 23:44
 # System: nexus\oliver.stern@OSTE-ER-LAP01
 
 ## [CamBridge.Config]
@@ -161,7 +161,6 @@ src\CamBridge.Service\CamBridge.Service.csproj
 src\CamBridge.Service\CamBridgeHealthCheck.cs
 src\CamBridge.Service\ConfigValidator.cs
 src\CamBridge.Service\Controllers\StatusController.cs
-src\CamBridge.Service\DailySummaryService.cs
 src\CamBridge.Service\mappings.json
 src\CamBridge.Service\Program.cs
 src\CamBridge.Service\Properties\launchSettings.json
@@ -268,6 +267,7 @@ ExifToolQuickTest\ExifToolQuickTest.csproj
 ExifToolQuickTest\Program.cs
 ExifToolTest\ExifToolTest.csproj
 ExifToolTest\Program.cs
+FILETREE_COMPACT.txt
 Get-WisdomProjectTree.ps1
 Get-WisdomSources - Kopie.ps1
 Get-WisdomSources.ps1

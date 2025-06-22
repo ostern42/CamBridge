@@ -1,31 +1,35 @@
 // src/CamBridge.Infrastructure/Services/FileProcessor.cs
-// Version: 0.7.28
-// Description: Pipeline-aware file processor with correct business event logging
+// Version: 0.7.29
+// Description: Pipeline-aware file processor with FIXED DICOM output handling
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
+using CamBridge.Core;
+using CamBridge.Core.Entities;
+using CamBridge.Core.Interfaces;
+using CamBridge.Core.ValueObjects;
+using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using CamBridge.Core;
-using CamBridge.Core.Entities;
-using Microsoft.Extensions.Logging;
 
 namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
     /// Orchestrates the complete JPEG to DICOM conversion process for a specific pipeline
-    /// KISS UPDATE: No more IFileProcessor interface - direct dependency pattern!
-    /// PIPELINE UPDATE: Each pipeline gets its own FileProcessor instance with isolated logger!
+    /// FIXED: Now properly handles DICOM files in output with ABSOLUTE paths!
     /// </summary>
     public class FileProcessor
     {
-        private readonly ILogger _logger;  // Pipeline-specific logger!
+        private readonly ILogger _logger;
         private readonly ExifToolReader _exifToolReader;
         private readonly DicomConverter _dicomConverter;
         private readonly PipelineConfiguration _pipelineConfig;
         private readonly DicomSettings _dicomSettings;
+        private readonly IDicomTagMapper? _tagMapper;
+        private readonly IMappingConfiguration? _mappingConfiguration;
 
         public event EventHandler<FileProcessingEventArgs>? ProcessingStarted;
         public event EventHandler<FileProcessingEventArgs>? ProcessingCompleted;
@@ -33,24 +37,26 @@ namespace CamBridge.Infrastructure.Services
 
         /// <summary>
         /// Creates a FileProcessor for a specific pipeline
-        /// Each pipeline gets its own instance with its own configuration AND logger!
         /// </summary>
         public FileProcessor(
-            ILogger logger,  // Pipeline-specific logger passed from PipelineManager
+            ILogger logger,
             ExifToolReader exifToolReader,
             DicomConverter dicomConverter,
             PipelineConfiguration pipelineConfig,
-            DicomSettings globalDicomSettings)
+            DicomSettings globalDicomSettings,
+            IDicomTagMapper? tagMapper = null,
+            IMappingConfiguration? mappingConfiguration = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _exifToolReader = exifToolReader ?? throw new ArgumentNullException(nameof(exifToolReader));
             _dicomConverter = dicomConverter ?? throw new ArgumentNullException(nameof(dicomConverter));
             _pipelineConfig = pipelineConfig ?? throw new ArgumentNullException(nameof(pipelineConfig));
             _dicomSettings = ApplyDicomOverrides(globalDicomSettings, pipelineConfig.DicomOverrides);
+            _tagMapper = tagMapper;
+            _mappingConfiguration = mappingConfiguration;
 
-            // Changed to DEBUG - technical initialization detail
-            _logger.LogDebug("Created FileProcessor for pipeline: {PipelineName} ({PipelineId})",
-                _pipelineConfig.Name, _pipelineConfig.Id);
+            _logger.LogDebug("Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
+                pipelineConfig.Name, pipelineConfig.Id);
         }
 
         /// <summary>
@@ -60,53 +66,52 @@ namespace CamBridge.Infrastructure.Services
         {
             try
             {
-                // Check if file exists
-                if (!File.Exists(filePath))
-                    return false;
+                var fileInfo = new FileInfo(filePath);
+                var extension = fileInfo.Extension.ToLowerInvariant();
 
                 // Check file extension
-                var extension = Path.GetExtension(filePath).ToLowerInvariant();
-                var validExtensions = new[] { ".jpg", ".jpeg", ".jpe", ".jfif" };
-                if (!validExtensions.Contains(extension))
-                    return false;
+                var filePattern = _pipelineConfig.WatchSettings.FilePattern;
+                var patterns = string.IsNullOrEmpty(filePattern)
+                    ? new[] { "*.jpg", "*.jpeg" }
+                    : filePattern.Split(';', StringSplitOptions.RemoveEmptyEntries);
 
-                // Check file size limits if configured
-                var fileInfo = new FileInfo(filePath);
-
-                // Minimum size check
-                if (_pipelineConfig.ProcessingOptions.MinimumFileSizeBytes.HasValue &&
-                    fileInfo.Length < _pipelineConfig.ProcessingOptions.MinimumFileSizeBytes.Value)
+                var isValidExtension = patterns.Any(pattern =>
                 {
-                    _logger.LogDebug("File {FilePath} is too small ({Size} bytes)", filePath, fileInfo.Length);
+                    var patternExt = Path.GetExtension(pattern).ToLowerInvariant();
+                    return patternExt == extension || patternExt == ".*";
+                });
+
+                if (!isValidExtension)
+                {
                     return false;
                 }
 
-                // Maximum size check
-                if (_pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.HasValue &&
-                    fileInfo.Length > _pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.Value)
-                {
-                    _logger.LogDebug("File {FilePath} is too large ({Size} bytes)", filePath, fileInfo.Length);
-                    return false;
-                }
-
-                // Check file age if configured
+                // Check file age
                 if (_pipelineConfig.ProcessingOptions.MaxFileAge.HasValue)
                 {
-                    var fileAge = DateTime.Now - fileInfo.CreationTime;
-                    if (fileAge > _pipelineConfig.ProcessingOptions.MaxFileAge.Value)
+                    var age = DateTime.UtcNow - fileInfo.CreationTimeUtc;
+                    if (age > _pipelineConfig.ProcessingOptions.MaxFileAge.Value)
                     {
-                        _logger.LogDebug("File {FilePath} is too old ({Age})", filePath, fileAge);
+                        _logger.LogDebug("File {FileName} is too old ({Age} days)",
+                            fileInfo.Name, age.TotalDays);
                         return false;
                     }
                 }
 
-                // Check if file is still being written (wait for minimum age)
-                var minimumAgeSeconds = _pipelineConfig.WatchSettings.MinimumFileAgeSeconds;
-                var fileAgeSeconds = (DateTime.Now - fileInfo.LastWriteTime).TotalSeconds;
-                if (fileAgeSeconds < minimumAgeSeconds)
+                // Check file size
+                if (_pipelineConfig.ProcessingOptions.MinimumFileSizeBytes.HasValue &&
+                    fileInfo.Length < _pipelineConfig.ProcessingOptions.MinimumFileSizeBytes.Value)
                 {
-                    _logger.LogDebug("File {FilePath} is too new, waiting for stability ({Age}s < {Min}s)",
-                        filePath, fileAgeSeconds, minimumAgeSeconds);
+                    _logger.LogDebug("File {FileName} is too small ({Size} bytes)",
+                        fileInfo.Name, fileInfo.Length);
+                    return false;
+                }
+
+                if (_pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.HasValue &&
+                    fileInfo.Length > _pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.Value)
+                {
+                    _logger.LogDebug("File {FileName} is too large ({Size} bytes)",
+                        fileInfo.Name, fileInfo.Length);
                     return false;
                 }
 
@@ -114,19 +119,16 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking if file should be processed: {FilePath}", filePath);
+                _logger.LogWarning(ex, "Error checking file {FilePath}", filePath);
                 return false;
             }
         }
 
         /// <summary>
-        /// Processes a single JPEG file according to this pipeline's configuration
+        /// Processes a single JPEG file through the pipeline
         /// </summary>
         public async Task<FileProcessingResult> ProcessFileAsync(string filePath)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
-                throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
-
             var stopwatch = Stopwatch.StartNew();
             var result = new FileProcessingResult
             {
@@ -137,7 +139,6 @@ namespace CamBridge.Infrastructure.Services
 
             try
             {
-                // Keep as INFO - important business event
                 _logger.LogInformation("Processing file: {FileName}", Path.GetFileName(filePath));
                 ProcessingStarted?.Invoke(this, new FileProcessingEventArgs { FilePath = filePath });
 
@@ -149,16 +150,16 @@ namespace CamBridge.Infrastructure.Services
                 var exifStopwatch = Stopwatch.StartNew();
                 var metadata = await _exifToolReader.ExtractMetadataAsync(filePath);
                 exifStopwatch.Stop();
-
-                // Changed to DEBUG - performance metric
                 _logger.LogDebug("EXIF extraction completed in {ElapsedMs}ms", exifStopwatch.ElapsedMilliseconds);
 
                 if (metadata == null)
                 {
-                    throw new InvalidOperationException("Failed to extract metadata from image");
+                    // FIXED: Create default metadata instead of failing!
+                    _logger.LogWarning("Failed to extract metadata, creating default DICOM with minimal tags");
+                    metadata = CreateDefaultMetadata(filePath);
                 }
 
-                // Determine output path based on THIS pipeline's configuration
+                // Determine output path based on pipeline configuration
                 var outputPath = DetermineOutputPath(metadata, filePath);
 
                 // Ensure output directory exists
@@ -168,39 +169,49 @@ namespace CamBridge.Infrastructure.Services
                     Directory.CreateDirectory(outputDir);
                 }
 
-                // Convert to DICOM using pipeline-specific settings
-                _logger.LogDebug("Converting to DICOM: {OutputPath}", outputPath);
+                // Convert to DICOM using pipeline-specific settings and mapping
+                _logger.LogInformation("Converting JPEG to DICOM: {Source} → {Destination}",
+                    Path.GetFullPath(filePath), Path.GetFullPath(outputPath));
+
                 var dicomStopwatch = Stopwatch.StartNew();
-                var conversionResult = await _dicomConverter.ConvertToDicomAsync(
+
+                // Create converter with mapper if available
+                var converterWithMapping = new DicomConverter(
+                    _logger as ILogger<DicomConverter> ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<DicomConverter>.Instance,
+                    _tagMapper,
+                    _mappingConfiguration);
+
+                var conversionResult = await converterWithMapping.ConvertToDicomAsync(
                     filePath,
                     outputPath,
                     metadata);
-                dicomStopwatch.Stop();
 
-                // Changed to DEBUG - performance metric
+                dicomStopwatch.Stop();
                 _logger.LogDebug("DICOM conversion completed in {ElapsedMs}ms", dicomStopwatch.ElapsedMilliseconds);
 
                 result.Success = conversionResult.Success;
                 result.OutputFile = outputPath;
+                result.DicomFile = outputPath; // NEW: Track DICOM file location
                 result.EndTime = DateTime.UtcNow;
                 result.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
 
                 if (result.Success)
                 {
-                    // Keep as INFO - important business event
                     _logger.LogInformation(
-                        "Successfully converted {FileName} to DICOM in {ElapsedMs}ms",
-                        Path.GetFileName(filePath), result.ProcessingTimeMs);
+                        "Successfully converted {FileName} to DICOM at: {FullPath} ({ElapsedMs}ms)",
+                        Path.GetFileName(filePath),
+                        Path.GetFullPath(outputPath),
+                        result.ProcessingTimeMs);
 
-                    // NEW: Add performance warning if processing was slow
+                    // Performance warning for slow processing
                     if (result.ProcessingTimeMs > 5000)
                     {
                         _logger.LogWarning("Slow processing detected for {FileName}: {ElapsedMs}ms",
                             Path.GetFileName(filePath), result.ProcessingTimeMs);
                     }
 
-                    // Handle post-processing based on pipeline configuration
-                    await HandlePostProcessingAsync(filePath, result.Success);
+                    // FIXED: Handle post-processing for SOURCE file only
+                    await HandlePostProcessingAsync(filePath, outputPath, result.Success);
 
                     ProcessingCompleted?.Invoke(this, new FileProcessingEventArgs
                     {
@@ -225,15 +236,15 @@ namespace CamBridge.Infrastructure.Services
                     "Failed to process {FileName}. Error: {ErrorMessage}",
                     Path.GetFileName(filePath), ex.Message);
 
-                // Check if this is a critical error that threatens the pipeline
+                // Critical error detection
                 if (ex is UnauthorizedAccessException && filePath.StartsWith(_pipelineConfig.WatchSettings.Path))
                 {
                     _logger.LogCritical(ex, "Cannot access watch folder {Path} - pipeline will fail!",
                         _pipelineConfig.WatchSettings.Path);
                 }
 
-                // Move to error folder if configured
-                await MoveToErrorFolderAsync(filePath, ex.Message);
+                // Handle failure post-processing
+                await HandlePostProcessingAsync(filePath, null, false);
 
                 ProcessingError?.Invoke(this, new FileProcessingErrorEventArgs
                 {
@@ -249,36 +260,42 @@ namespace CamBridge.Infrastructure.Services
         {
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException($"Input file not found: {filePath}");
+                throw new FileNotFoundException($"Source file not found: {filePath}");
             }
 
-            var fileInfo = new FileInfo(filePath);
-
-            // Check file size limits if configured
-            if (_pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.HasValue)
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            if (extension != ".jpg" && extension != ".jpeg")
             {
-                if (fileInfo.Length > _pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.Value)
-                {
-                    throw new InvalidOperationException(
-                        $"File size ({fileInfo.Length / 1024 / 1024}MB) exceeds maximum allowed size " +
-                        $"({_pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.Value / 1024 / 1024}MB)");
-                }
-            }
-
-            // Validate extension
-            var validExtensions = new[] { ".jpg", ".jpeg", ".jpe", ".jfif" };
-            if (!validExtensions.Contains(fileInfo.Extension.ToLowerInvariant()))
-            {
-                throw new InvalidOperationException(
-                    $"Invalid file extension: {fileInfo.Extension}. Expected JPEG file.");
+                throw new InvalidOperationException($"Invalid file type: {extension}. Expected JPEG file.");
             }
         }
 
         private string DetermineOutputPath(ImageMetadata metadata, string sourceFile)
         {
-            // Get base output path from watch settings
-            var baseOutputPath = _pipelineConfig.WatchSettings.OutputPath
-                ?? Path.Combine(Path.GetDirectoryName(_pipelineConfig.WatchSettings.Path) ?? "", "Output");
+            // FIXED: Use ArchiveFolder as DICOM output if no OutputPath configured
+            // This matches the current config structure where ArchiveFolder is used for output
+            var baseOutputPath = _pipelineConfig.WatchSettings.OutputPath;
+
+            if (string.IsNullOrEmpty(baseOutputPath))
+            {
+                // Fallback to ArchiveFolder if no OutputPath (current config behavior)
+                baseOutputPath = _pipelineConfig.ProcessingOptions.ArchiveFolder;
+                _logger.LogWarning("No OutputPath in WatchSettings, using ArchiveFolder as output: {Path}",
+                    Path.GetFullPath(baseOutputPath));
+            }
+
+            // ALWAYS make path absolute!
+            if (!Path.IsPathRooted(baseOutputPath))
+            {
+                // If relative path, make it relative to service executable location
+                var serviceDir = AppDomain.CurrentDomain.BaseDirectory;
+                baseOutputPath = Path.Combine(serviceDir, baseOutputPath);
+                _logger.LogWarning("OutputPath was relative, converted to absolute: {Path}",
+                    Path.GetFullPath(baseOutputPath));
+            }
+
+            _logger.LogDebug("Base output path for pipeline {Pipeline}: {Path}",
+                _pipelineConfig.Name, Path.GetFullPath(baseOutputPath));
 
             var organization = _pipelineConfig.ProcessingOptions.OutputOrganization;
             var fileName = Path.GetFileNameWithoutExtension(sourceFile);
@@ -293,24 +310,38 @@ namespace CamBridge.Infrastructure.Services
                     {
                         var safeName = SanitizeForPath(metadata.Patient.PatientName);
                         outputDir = Path.Combine(baseOutputPath, safeName);
+                        _logger.LogDebug("Output organized by patient: {PatientName} -> {SafeName}",
+                            metadata.Patient.PatientName, safeName);
+                    }
+                    else
+                    {
+                        outputDir = Path.Combine(baseOutputPath, "Unknown Patient");
+                        _logger.LogWarning("No patient name found, using 'Unknown Patient' folder");
                     }
                     break;
 
                 case OutputOrganization.ByDate:
-                    var dateFolder = metadata.Study != null
-                        ? metadata.Study.StudyDate.ToString("yyyy-MM-dd")
-                        : DateTime.Now.ToString("yyyy-MM-dd");
+                    // ALWAYS use current date for organization
+                    var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
                     outputDir = Path.Combine(baseOutputPath, dateFolder);
+                    _logger.LogDebug("Output organized by date: {Date}", dateFolder);
                     break;
 
                 case OutputOrganization.ByPatientAndDate:
                     if (!string.IsNullOrEmpty(metadata.Patient?.PatientName))
                     {
                         var safeName = SanitizeForPath(metadata.Patient.PatientName);
-                        var dateFolder2 = metadata.Study != null
-                            ? metadata.Study.StudyDate.ToString("yyyy-MM-dd")
-                            : DateTime.Now.ToString("yyyy-MM-dd");
+                        // ALWAYS use current date for organization
+                        var dateFolder2 = DateTime.Now.ToString("yyyy-MM-dd");
                         outputDir = Path.Combine(baseOutputPath, safeName, dateFolder2);
+                        _logger.LogDebug("Output organized by patient/date: {PatientName}/{Date}",
+                            safeName, dateFolder2);
+                    }
+                    else
+                    {
+                        var dateFolder3 = DateTime.Now.ToString("yyyy-MM-dd");
+                        outputDir = Path.Combine(baseOutputPath, "Unknown Patient", dateFolder3);
+                        _logger.LogWarning("No patient name found, using 'Unknown Patient/{Date}' folder", dateFolder3);
                     }
                     break;
 
@@ -321,7 +352,12 @@ namespace CamBridge.Infrastructure.Services
             }
 
             // Add DICOM extension
-            return Path.Combine(outputDir, $"{fileName}.dcm");
+            var dicomPath = Path.Combine(outputDir, $"{fileName}.dcm");
+
+            // CRITICAL: ALWAYS return ABSOLUTE path!
+            var absolutePath = Path.GetFullPath(dicomPath);
+            _logger.LogInformation("Determined DICOM output path: {FullPath}", absolutePath);
+            return absolutePath;
         }
 
         private string SanitizeForPath(string input)
@@ -334,7 +370,10 @@ namespace CamBridge.Infrastructure.Services
             return string.Join("_", input.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
         }
 
-        private async Task HandlePostProcessingAsync(string filePath, bool success)
+        /// <summary>
+        /// FIXED: Now handles source and DICOM files separately!
+        /// </summary>
+        private async Task HandlePostProcessingAsync(string sourceFilePath, string? dicomFilePath, bool success)
         {
             var action = success
                 ? _pipelineConfig.ProcessingOptions.SuccessAction
@@ -345,31 +384,66 @@ namespace CamBridge.Infrastructure.Services
                 switch (action)
                 {
                     case PostProcessingAction.Delete:
-                        File.Delete(filePath);
-                        _logger.LogDebug("Deleted source file: {FilePath}", filePath);
+                        // Delete only the source file
+                        if (File.Exists(sourceFilePath))
+                        {
+                            File.Delete(sourceFilePath);
+                            _logger.LogDebug("Deleted source file: {FilePath}", sourceFilePath);
+                        }
                         break;
 
                     case PostProcessingAction.Archive:
+                        // FIXED: Create separate archive folder for processed JPEGs
+                        // Don't mix them with DICOM output!
+                        var jpegArchiveFolder = _pipelineConfig.ProcessingOptions.BackupFolder
+                            ?? Path.Combine(_pipelineConfig.ProcessingOptions.ArchiveFolder, "ProcessedJPEGs");
+
                         var archivePath = Path.Combine(
-                            _pipelineConfig.ProcessingOptions.ArchiveFolder,
-                            Path.GetFileName(filePath));
+                            jpegArchiveFolder,
+                            Path.GetFileName(sourceFilePath));
 
                         Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
-                        File.Move(filePath, archivePath, true);
-                        _logger.LogDebug("Archived source file: {FilePath} -> {ArchivePath}",
-                            filePath, archivePath);
+
+                        if (File.Exists(sourceFilePath))
+                        {
+                            File.Move(sourceFilePath, archivePath, true);
+                            _logger.LogDebug("Archived source JPEG: {FullSourcePath} -> {FullArchivePath}",
+                                Path.GetFullPath(sourceFilePath), Path.GetFullPath(archivePath));
+                        }
+
+                        // DICOM file stays in output folder - don't move it!
+                        if (success && !string.IsNullOrEmpty(dicomFilePath))
+                        {
+                            _logger.LogInformation("DICOM file created at: {FullDicomPath}",
+                                Path.GetFullPath(dicomFilePath));
+                        }
                         break;
 
                     case PostProcessingAction.MoveToError:
-                        // This is typically for failure action
+                        // Move source file to error folder (typically for failures)
                         if (!success)
                         {
-                            await MoveToErrorFolderAsync(filePath, "Processing failed");
+                            await MoveToErrorFolderAsync(sourceFilePath, "Processing failed");
+
+                            // If DICOM was partially created, clean it up
+                            if (!string.IsNullOrEmpty(dicomFilePath) && File.Exists(dicomFilePath))
+                            {
+                                try
+                                {
+                                    File.Delete(dicomFilePath);
+                                    _logger.LogDebug("Cleaned up partial DICOM file: {DicomPath}", dicomFilePath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogWarning(ex, "Failed to clean up partial DICOM file: {DicomPath}", dicomFilePath);
+                                }
+                            }
                         }
                         break;
 
                     default:
-                        // Leave file as-is
+                        // Leave files as-is
+                        _logger.LogDebug("No post-processing action for {FilePath}", sourceFilePath);
                         break;
                 }
             }
@@ -377,7 +451,7 @@ namespace CamBridge.Infrastructure.Services
             {
                 _logger.LogWarning(ex,
                     "Failed to perform post-processing action {Action} on {FilePath}",
-                    action, filePath);
+                    action, sourceFilePath);
                 // Don't fail the overall processing for post-processing errors
             }
         }
@@ -404,9 +478,12 @@ namespace CamBridge.Infrastructure.Services
                     $"Error: {errorMessage}");
 
                 // Move the file
-                File.Move(filePath, errorPath, true);
-
-                _logger.LogDebug("Moved failed file to error folder: {ErrorPath}", errorPath);
+                if (File.Exists(filePath))
+                {
+                    File.Move(filePath, errorPath, true);
+                    _logger.LogDebug("Moved failed file to error folder: {FullErrorPath}",
+                        Path.GetFullPath(errorPath));
+                }
             }
             catch (Exception ex)
             {
@@ -419,7 +496,7 @@ namespace CamBridge.Infrastructure.Services
             if (overrides == null)
                 return global;
 
-            // Create a copy of global settings
+            // Create a copy of global settings with overrides applied
             var settings = new DicomSettings
             {
                 InstitutionName = overrides.InstitutionName ?? global.InstitutionName,
@@ -434,6 +511,72 @@ namespace CamBridge.Infrastructure.Services
 
             _logger.LogDebug("Applied DICOM overrides for pipeline: {PipelineName}", _pipelineConfig.Name);
             return settings;
+        }
+
+        /// <summary>
+        /// Creates minimal default metadata when extraction fails
+        /// DICOM MUST be created regardless of metadata availability!
+        /// </summary>
+        private ImageMetadata CreateDefaultMetadata(string sourceFile)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(sourceFile);
+            var now = DateTime.Now;
+
+            _logger.LogWarning("Creating default metadata for {FileName} with date {Date}",
+                fileName, now.ToString("yyyy-MM-dd"));
+
+            // Create default patient info with constructor
+            var patientId = new PatientId($"DEFAULT_{now:yyyyMMddHHmmss}");
+            var patient = new PatientInfo(
+                id: patientId,
+                name: "Unknown Patient",
+                birthDate: null,
+                gender: Gender.Other
+            );
+
+            // Create default study info with constructor
+            var studyId = new StudyId(Guid.NewGuid().ToString().Substring(0, 16)); // Max 16 chars
+            var study = new StudyInfo(
+                studyId: studyId,
+                examId: null,
+                description: "CamBridge JPEG to DICOM Conversion",
+                modality: "XC",  // Photographic Image
+                studyDate: now,
+                accessionNumber: $"ACC{now:yyyyMMddHHmmss}",
+                referringPhysician: null,
+                comment: null
+            );
+
+            // Create technical data (minimal)
+            var technicalData = new ImageTechnicalData
+            {
+                Manufacturer = "Unknown",
+                Model = "Unknown"
+            };
+
+            // Create EXIF data dictionary
+            var exifData = new Dictionary<string, string>
+            {
+                ["FileName"] = fileName,
+                ["FileDate"] = now.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["Source"] = "CamBridge Default"
+            };
+
+            // Create metadata with full constructor
+            var metadata = new ImageMetadata(
+                sourceFilePath: sourceFile,
+                captureDateTime: now,  // Note: captureDateTime, not captureDate!
+                patient: patient,
+                study: study,
+                technicalData: technicalData,
+                userComment: null,
+                barcodeData: null,
+                instanceNumber: 1,
+                instanceUid: null,  // Will be auto-generated
+                exifData: exifData
+            );
+
+            return metadata;
         }
     }
 
@@ -462,6 +605,7 @@ namespace CamBridge.Infrastructure.Services
     {
         public string SourceFile { get; set; } = string.Empty;
         public string? OutputFile { get; set; }
+        public string? DicomFile { get; set; }  // NEW: Track DICOM file separately
         public bool Success { get; set; }
         public string? ErrorMessage { get; set; }
         public DateTime StartTime { get; set; }

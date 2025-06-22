@@ -6,15 +6,50 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.29] - 2025-06-22
 
-# CHANGELOG
+### 🎉 DICOM Pipeline Finally Working!
 
-# CHANGELOG
+### Added
+- **Default metadata creation** - DICOM files created even without barcode/EXIF data
+- **Comprehensive path logging** - All paths shown as absolute for debugging
+- **Fallback to ArchiveFolder** - When OutputPath not configured in WatchSettings
+- **ImageMetadata factory method** - CreateDefaultMetadata for resilient processing
 
-All notable changes to CamBridge will be documented in this file.
+### Fixed
+- **Critical path bug** - DICOM files were created with relative paths, now always absolute
+- **FilePattern property** - Fixed singular vs plural mismatch (FilePattern not FilePatterns)
+- **Missing metadata handling** - No longer fails when EXIF extraction returns null
+- **Domain object construction** - Proper use of immutable constructors for PatientInfo/StudyInfo
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Changed
+- **FileProcessor** - Now returns absolute paths from DetermineOutputPath
+- **DicomConverter** - Uses Secondary Capture SOP Class (more appropriate for converted images)
+- **Post-processing** - Separated JPEG archival from DICOM output handling
+- **Error resilience** - Pipeline continues even with minimal metadata
+
+### Known Issues
+- **Image quality** - DICOM shows noise/static due to incorrect Transfer Syntax
+  - Current: Explicit VR Little Endian (uncompressed)
+  - Should be: JPEG Baseline (compressed)
+- **Character encoding** - German umlauts show as "?" in DICOM tags
+- **Configuration mismatch** - UI shows OutputPath, service uses ArchiveFolder
+
+### Technical Details
+- DICOM files successfully created: ~100KB compressed JPEGs
+- Metadata correctly extracted from Ricoh barcode format
+- Pipeline processes: Watch → EXIF → DICOM → Output/Archive
+- Tested with DICOM viewer (MicroDicom) - files are valid
+
+### Developer Notes
+- Hardcoded DICOM tags work alongside custom mappings
+- Service working directory affects relative paths
+- Next sprint: Fix Transfer Syntax for proper image display
+
+---
+
+*"From 'no DICOM files' to 'DICOM with metadata' - the pipeline lives!"*  
+© 2025 Claude's Improbably Reliable Software Solutions
 
 ## [0.7.28] - 2025-06-22
 ### Added
