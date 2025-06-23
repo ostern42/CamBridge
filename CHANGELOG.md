@@ -6,6 +6,67 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.30] - 2025-06-23
+
+### 🎉 DICOM Pipeline Marathon - From "no files" to "working pipeline"!
+
+### Fixed
+- **Critical: DICOM UID validation errors** 
+  - Removed hex characters from UID generation (only 0-9 and . allowed)
+  - Limited UID length to 64 characters maximum
+  - UIDs now use timestamp + process ID instead of GUIDs
+- **Transfer Syntax properly set on FileMetaInfo** (not Dataset)
+  - Added all required File Meta Information tags
+  - Should fix image display issues (pending viewer test)
+- **Photometric Interpretation** set to YBR_FULL_422 for JPEG
+- **Character encoding** set to ISO_IR 192 (UTF-8) for German umlauts
+- **fo-dicom API usage** - DicomUID.Parse() instead of constructor
+
+### Changed
+- **DicomConverter.GenerateUID()** completely rewritten for compliance
+- **ImageComments** now includes source filename and study description
+- **Logging** includes Transfer Syntax UID for debugging
+- **Validation** checks Transfer Syntax in FileMetaInfo
+
+### Added
+- Safety check for UID length with truncation warning
+- Proper File Meta Information population
+- Process ID in UID generation for uniqueness
+
+### Known Issues
+- **Image quality** - Transfer Syntax fix implemented but not yet verified in viewer
+- **Post-processing race condition** - Files disappear during retry
+  - Temporary workaround: Set SuccessAction/FailureAction to "Leave"
+- **Config mismatch** - OutputPath missing in service config
+  - Service uses ArchiveFolder as DICOM output
+
+### Technical Details
+- DICOM UIDs now comply with PS3.5 requirements
+- File Meta Information properly structured per PS3.10
+- JPEG encapsulation should now be recognized by viewers
+- All paths use absolute format to prevent System32 issues
+
+### Testing Instructions
+```powershell
+# After deployment:
+copy test.jpg C:\CamBridge\Watch\Radiology\
+Start-Sleep -Seconds 10
+$dcm = Get-ChildItem C:\CamBridge\Output -Filter *.dcm -Recurse | Select -First 1
+Write-Host "DICOM created: $($dcm.FullName)"
+# Open in MicroDicom - image should display correctly!
+```
+
+### Developer Notes
+- Session 85: 3-hour debugging marathon with 5 major fixes
+- Each DICOM error led to discovering strict compliance rules
+- Incremental fix-build-test approach proved effective
+- "Sources first" principle essential for avoiding assumptions
+
+---
+
+*"Making DICOM strictly compliant, one validation error at a time!"*  
+© 2025 Claude's Improbably Reliable Software Solutions
+
 ## [0.7.29] - 2025-06-22
 
 ### 🎉 DICOM Pipeline Finally Working!

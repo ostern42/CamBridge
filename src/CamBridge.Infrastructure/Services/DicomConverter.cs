@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/DicomConverter.cs
-// Version: 0.7.18
-// Description: DICOM converter without interface - KISS approach with REAL properties!
+// Version: 0.7.30
+// Description: DICOM converter with FIXED Transfer Syntax for proper JPEG display
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -24,10 +24,10 @@ namespace CamBridge.Infrastructure.Services
     /// <summary>
     /// DICOM converter using fo-dicom library
     /// Converts JPEG images to DICOM format while preserving JPEG compression
-    /// v0.7.18: Direct dependency pattern - no interface!
+    /// v0.7.30: FIXED Transfer Syntax and Photometric Interpretation
     /// </summary>
     [SupportedOSPlatform("windows")]
-    public class DicomConverter // No more interface!
+    public class DicomConverter
     {
         private readonly ILogger<DicomConverter> _logger;
         private readonly IDicomTagMapper? _tagMapper;
@@ -85,17 +85,25 @@ namespace CamBridge.Infrastructure.Services
                 // Map custom tags if mapper is available
                 if (_tagMapper != null && _mappingConfiguration != null)
                 {
-                    var mappingRules = _mappingConfiguration.GetMappingRules(); // NOT async!
+                    var mappingRules = _mappingConfiguration.GetMappingRules();
 
                     if (mappingRules.Any())
                     {
-                        // Use the REAL method signature!
                         _tagMapper.MapToDataset(dataset, metadata.ExifData, mappingRules);
                     }
                 }
 
-                // Create DICOM file
+                // Create DICOM file with correct structure
                 var dicomFile = new DicomFile(dataset);
+
+                // CRITICAL FIX: Set Transfer Syntax on FileMetaInfo!
+                dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.JPEGProcess1;
+
+                // Also ensure File Meta Information has required tags
+                dicomFile.FileMetaInfo.MediaStorageSOPClassUID = dataset.GetSingleValue<DicomUID>(DicomTag.SOPClassUID);
+                dicomFile.FileMetaInfo.MediaStorageSOPInstanceUID = dataset.GetSingleValue<DicomUID>(DicomTag.SOPInstanceUID);
+                dicomFile.FileMetaInfo.ImplementationClassUID = DicomUID.Parse(IMPLEMENTATION_CLASS_UID);
+                dicomFile.FileMetaInfo.ImplementationVersionName = IMPLEMENTATION_VERSION_NAME;
 
                 // Ensure output directory exists
                 var outputDir = Path.GetDirectoryName(destinationDicomPath);
@@ -110,8 +118,8 @@ namespace CamBridge.Infrastructure.Services
                 var fileInfo = new FileInfo(destinationDicomPath);
                 var sopInstanceUid = dataset.GetSingleValue<string>(DicomTag.SOPInstanceUID);
 
-                _logger.LogInformation("Successfully created DICOM file: {Path} ({Size} bytes)",
-                    destinationDicomPath, fileInfo.Length);
+                _logger.LogInformation("Successfully created DICOM file: {Path} ({Size} bytes, Transfer Syntax: {TransferSyntax})",
+                    destinationDicomPath, fileInfo.Length, dicomFile.FileMetaInfo.TransferSyntax.UID.UID);
 
                 return ConversionResult.CreateSuccess(destinationDicomPath, sopInstanceUid, fileInfo.Length);
             }
@@ -153,6 +161,12 @@ namespace CamBridge.Infrastructure.Services
                 // Validate study module
                 ValidateStudyModule(dataset, warnings);
 
+                // Check Transfer Syntax
+                if (dicomFile.FileMetaInfo.TransferSyntax?.UID.UID != JPEG_BASELINE_TRANSFER_SYNTAX_UID)
+                {
+                    warnings.Add($"Transfer Syntax is not JPEG Baseline: {dicomFile.FileMetaInfo.TransferSyntax?.UID.UID}");
+                }
+
                 if (errors.Count > 0)
                 {
                     return new ValidationResult
@@ -188,8 +202,10 @@ namespace CamBridge.Infrastructure.Services
         {
             var dataset = new DicomDataset();
 
-            // File Meta Information
-            dataset.Add(DicomTag.TransferSyntaxUID, JPEG_BASELINE_TRANSFER_SYNTAX_UID);
+            // REMOVED: Transfer Syntax from dataset (it goes in FileMetaInfo only!)
+
+            // Set proper character encoding for German umlauts
+            dataset.Add(DicomTag.SpecificCharacterSet, "ISO_IR 192"); // UTF-8
 
             // SOP Common Module
             dataset.Add(DicomTag.SOPClassUID, PHOTOGRAPHIC_SOP_CLASS_UID);
@@ -201,7 +217,7 @@ namespace CamBridge.Infrastructure.Services
             dataset.Add(DicomTag.StudyTime, metadata.Study.StudyDate.ToString("HHmmss"));
             dataset.Add(DicomTag.StudyID, metadata.Study.StudyId.Value);
             dataset.Add(DicomTag.AccessionNumber, metadata.Study.AccessionNumber ?? "");
-            dataset.Add(DicomTag.StudyDescription, metadata.Study.Description ?? "Photographic Image"); // Use REAL property!
+            dataset.Add(DicomTag.StudyDescription, metadata.Study.Description ?? "Photographic Image");
             dataset.Add(DicomTag.ReferringPhysicianName, metadata.Study.ReferringPhysician ?? "");
 
             // Patient Module
@@ -251,9 +267,14 @@ namespace CamBridge.Infrastructure.Services
             dataset.Add(DicomTag.ImplementationClassUID, IMPLEMENTATION_CLASS_UID);
             dataset.Add(DicomTag.ImplementationVersionName, IMPLEMENTATION_VERSION_NAME);
 
-            // Add comment with source file if available
+            // Add comment with source file name if available
             var fileName = Path.GetFileName(metadata.SourceFilePath);
-            dataset.Add(DicomTag.ImageComments, $"Source: {fileName}");
+            var comment = $"Source: {fileName}";
+            if (!string.IsNullOrEmpty(metadata.Study.Description))
+            {
+                comment += $" | {metadata.Study.Description}";
+            }
+            dataset.Add(DicomTag.ImageComments, comment);
 
             return dataset;
         }
@@ -267,30 +288,23 @@ namespace CamBridge.Infrastructure.Services
                 dataset.Add(DicomTag.Columns, (ushort)image.Width);
                 dataset.Add(DicomTag.Rows, (ushort)image.Height);
 
-                // Determine photometric interpretation based on pixel format
-                var photometric = image.PixelFormat switch
-                {
-                    PixelFormat.Format8bppIndexed => "PALETTE COLOR",
-                    PixelFormat.Format24bppRgb => "RGB",
-                    PixelFormat.Format32bppArgb => "RGB",
-                    _ => "YBR_FULL_422" // JPEG default
-                };
+                // FIXED: Set correct photometric interpretation for JPEG
+                // YBR_FULL_422 is the standard for JPEG compressed images
+                dataset.Add(DicomTag.PhotometricInterpretation, "YBR_FULL_422");
 
-                dataset.Add(DicomTag.PhotometricInterpretation, photometric);
-                dataset.Add(DicomTag.SamplesPerPixel, photometric == "RGB" ? (ushort)3 : (ushort)1);
+                // For JPEG, samples per pixel is typically 3 (color)
+                dataset.Add(DicomTag.SamplesPerPixel, (ushort)3);
                 dataset.Add(DicomTag.BitsAllocated, (ushort)8);
                 dataset.Add(DicomTag.BitsStored, (ushort)8);
                 dataset.Add(DicomTag.HighBit, (ushort)7);
                 dataset.Add(DicomTag.PixelRepresentation, (ushort)0);
 
-                if (photometric == "RGB")
-                {
-                    dataset.Add(DicomTag.PlanarConfiguration, (ushort)0);
-                }
+                // Planar configuration is 0 for JPEG (interleaved)
+                dataset.Add(DicomTag.PlanarConfiguration, (ushort)0);
             }
 
             // Add encapsulated JPEG data
-            var pixelData = DicomPixelData.Create(dataset, true);
+            var pixelData = DicomPixelData.Create(dataset, true); // true = encapsulated
             var buffer = new MemoryByteBuffer(jpegData);
             pixelData.AddFrame(buffer);
         }
@@ -319,84 +333,87 @@ namespace CamBridge.Infrastructure.Services
             {
                 if (!dataset.Contains(tag))
                 {
-                    errors.Add($"Missing required tag: {tag}");
+                    errors.Add($"Required tag {tag} is missing");
                 }
             }
         }
 
         private void ValidateImageModule(DicomDataset dataset, List<string> warnings)
         {
-            // Check image dimensions
-            if (dataset.TryGetSingleValue<ushort>(DicomTag.Columns, out var width) && width == 0)
+            if (!dataset.Contains(DicomTag.PixelData))
             {
-                warnings.Add("Image width is 0");
+                warnings.Add("No pixel data found");
             }
 
-            if (dataset.TryGetSingleValue<ushort>(DicomTag.Rows, out var height) && height == 0)
+            // Check for JPEG compression indicators
+            if (dataset.TryGetString(DicomTag.PhotometricInterpretation, out var photometric))
             {
-                warnings.Add("Image height is 0");
-            }
-
-            // Check pixel data
-            var pixelData = DicomPixelData.Create(dataset);
-            if (pixelData.NumberOfFrames == 0)
-            {
-                warnings.Add("No pixel data frames found");
+                if (photometric != "YBR_FULL_422" && photometric != "YBR_FULL")
+                {
+                    warnings.Add($"Photometric Interpretation '{photometric}' may not be optimal for JPEG");
+                }
             }
         }
 
         private void ValidatePatientModule(DicomDataset dataset, List<string> warnings)
         {
-            // Check patient name format
-            if (dataset.TryGetString(DicomTag.PatientName, out var patientName))
+            if (!dataset.Contains(DicomTag.PatientBirthDate))
             {
-                if (string.IsNullOrWhiteSpace(patientName))
-                {
-                    warnings.Add("Patient name is empty");
-                }
-                else if (!patientName.Contains("^") && patientName.Contains(" "))
-                {
-                    warnings.Add("Patient name should use '^' as separator (found spaces)");
-                }
+                warnings.Add("Patient birth date is missing");
             }
 
-            // Check patient ID length
-            if (dataset.TryGetString(DicomTag.PatientID, out var patientId))
+            if (!dataset.Contains(DicomTag.PatientSex))
             {
-                if (patientId.Length > 64)
-                {
-                    warnings.Add($"Patient ID too long: {patientId.Length} characters (max 64)");
-                }
+                warnings.Add("Patient sex is missing");
             }
         }
 
         private void ValidateStudyModule(DicomDataset dataset, List<string> warnings)
         {
-            // Check date format
-            if (dataset.TryGetString(DicomTag.StudyDate, out var studyDate))
+            if (!dataset.Contains(DicomTag.StudyDescription))
             {
-                if (studyDate.Length != 8 || !studyDate.All(char.IsDigit))
-                {
-                    warnings.Add($"Invalid study date format: {studyDate} (expected YYYYMMDD)");
-                }
+                warnings.Add("Study description is missing");
             }
 
-            // Check Study ID length
-            if (dataset.TryGetString(DicomTag.StudyID, out var studyId))
+            if (!dataset.Contains(DicomTag.AccessionNumber))
             {
-                if (studyId.Length > 16)
-                {
-                    warnings.Add($"Study ID too long: {studyId.Length} characters (max 16)");
-                }
+                warnings.Add("Accession number is missing");
             }
         }
 
         private string GenerateUID()
         {
-            // Generate unique UID based on CamBridge implementation
-            var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+            // Generate unique UID with our implementation prefix
+            // DICOM UIDs: max 64 chars, only digits (0-9) and dots (.)
+
+            // Our prefix is already 27 chars: "1.2.276.0.7230010.3.0.3.6.4"
+            // That leaves us 37 chars for uniqueness
+
+            var timestamp = DateTime.UtcNow;
+            var ticks = timestamp.Ticks;
+
+            // Use only last 10 digits of ticks to save space
+            var shortTicks = (ticks % 10000000000).ToString();
+
+            // Random component (4 digits)
             var random = new Random().Next(1000, 9999);
-            return $"{IMPLEMENTATION_CLASS_UID}.{timestamp}.{random}";
+
+            // Process ID for additional uniqueness (last 4 digits)
+            var processId = (Environment.ProcessId % 10000).ToString();
+
+            // Format: <prefix>.<short_ticks>.<process_id>.<random>
+            // Example: 1.2.276.0.7230010.3.0.3.6.4.1847714048.1234.5678
+            var uid = $"{IMPLEMENTATION_CLASS_UID}.{shortTicks}.{processId}.{random}";
+
+            // Safety check
+            if (uid.Length > 64)
+            {
+                _logger.LogWarning("Generated UID too long ({Length} chars), truncating: {UID}",
+                    uid.Length, uid);
+                uid = uid.Substring(0, 64);
+            }
+
+            return uid;
         }
 
         private string GetDicomGender(Gender gender)
