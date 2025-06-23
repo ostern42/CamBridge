@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\PipelineConfigPage.xaml -->
-<!-- Version: 0.7.28 -->
-<!-- Description: Pipeline Configuration - Fixed Checkbox Spacing -->
+<!-- Version: 0.8.1 -->
+<!-- Description: Pipeline Configuration - With PACS Upload Tab -->
 
 <Page x:Class="CamBridge.Config.Views.PipelineConfigPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -399,6 +399,167 @@
                             </ScrollViewer>
                         </TabItem>
 
+                        <!-- PACS Upload Tab -->
+                        <TabItem Header="PACS Upload">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="PACS Upload Configuration" Style="{StaticResource TabHeaderStyle}"/>
+                                    <TextBlock Text="Automatically upload DICOM files to PACS after creation"
+                                               FontSize="12"
+                                               Opacity="0.7"
+                                               Margin="0,0,0,16"/>
+
+                                    <!-- Enable PACS -->
+                                    <CheckBox IsChecked="{Binding SelectedPipeline.PacsConfiguration.Enabled}"
+                                              Content="Enable automatic PACS upload after DICOM creation"
+                                              FontSize="14" FontWeight="SemiBold"
+                                              Margin="0,0,0,20"/>
+
+                                    <!-- Server Settings -->
+                                    <GroupBox Header="PACS Server Configuration" 
+                                              IsEnabled="{Binding SelectedPipeline.PacsConfiguration.Enabled}"
+                                              Margin="0,0,0,15">
+                                        <Grid Margin="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <TextBlock Grid.Row="0" Grid.Column="0" 
+                                                       Text="Host/IP:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="0" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.Host}"
+                                                     ui:ControlHelper.PlaceholderText="192.168.1.100 or pacs.hospital.local"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="1" Grid.Column="0" 
+                                                       Text="Port:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="1" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.Port}"
+                                                     ui:ControlHelper.PlaceholderText="104"
+                                                     HorizontalAlignment="Left"
+                                                     Width="100"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="2" Grid.Column="0" 
+                                                       Text="Called AE Title:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="2" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.CalledAeTitle}"
+                                                     ui:ControlHelper.PlaceholderText="PACS_SERVER"
+                                                     CharacterCasing="Upper"
+                                                     MaxLength="16"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="3" Grid.Column="0" 
+                                                       Text="Calling AE Title:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="3" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.CallingAeTitle}"
+                                                     ui:ControlHelper.PlaceholderText="CAMBRIDGE"
+                                                     CharacterCasing="Upper"
+                                                     MaxLength="16"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="4" Grid.Column="0" 
+                                                       Text="Timeout (seconds):" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="4" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.TimeoutSeconds}"
+                                                     HorizontalAlignment="Left"
+                                                     Width="100"/>
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <!-- Retry Settings -->
+                                    <GroupBox Header="Retry Configuration" 
+                                              IsEnabled="{Binding SelectedPipeline.PacsConfiguration.Enabled}"
+                                              Margin="0,0,0,15">
+                                        <Grid Margin="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <TextBlock Grid.Row="0" Grid.Column="0" 
+                                                       Text="Max Retry Attempts:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="0" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.MaxRetryAttempts}"
+                                                     HorizontalAlignment="Left"
+                                                     Width="100"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="1" Grid.Column="0" 
+                                                       Text="Retry Delay (seconds):" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="1" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.RetryDelaySeconds}"
+                                                     HorizontalAlignment="Left"
+                                                     Width="100"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="2" Grid.Column="0" 
+                                                       Text="Concurrent Uploads:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="2" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.MaxConcurrentUploads}"
+                                                     HorizontalAlignment="Left"
+                                                     Width="100"/>
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <!-- Test Connection -->
+                                    <Button Content="Test Connection (C-ECHO)"
+                                            Command="{Binding TestPacsConnectionCommand}"
+                                            IsEnabled="{Binding SelectedPipeline.PacsConfiguration.Enabled}"
+                                            HorizontalAlignment="Left"
+                                            Padding="20,8"
+                                            Margin="0,0,0,10"/>
+
+                                    <TextBlock Text="{Binding PacsTestResult}"
+                                               Foreground="{Binding PacsTestResultColor}"
+                                               FontWeight="SemiBold"
+                                               Margin="0,5,0,0"/>
+
+                                    <!-- Info Box -->
+                                    <Border Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="12"
+                                            Margin="0,20,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="ℹ PACS Upload Information" 
+                                                       FontWeight="SemiBold"
+                                                       Margin="0,0,0,8"/>
+                                            <TextBlock TextWrapping="Wrap" FontSize="12">
+                                                • DICOM files are uploaded immediately after successful creation<LineBreak/>
+                                                • Failed uploads are retried automatically based on retry settings<LineBreak/>
+                                                • AE Titles must be configured on the PACS server<LineBreak/>
+                                                • Standard DICOM port is 104 (may vary by installation)<LineBreak/>
+                                                • Test connection uses C-ECHO to verify connectivity
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
                         <!-- DICOM Tab -->
                         <TabItem Header="DICOM">
                             <ScrollViewer Padding="16">
@@ -725,7 +886,7 @@
                            Opacity="0.8"
                            VerticalAlignment="Center"
                            Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibility}}">
-                    <Run Text="●" Foreground="Orange" FontSize="8"/>
+                    <Run Text="•" Foreground="Orange" FontSize="8"/>
                     <Run Text=" Unsaved changes"/>
                     </TextBlock>
                 </Grid>

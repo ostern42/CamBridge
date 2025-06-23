@@ -1,24 +1,24 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.8.0 -->
+<!-- Version: 0.8.1 -->
 <!-- Modified: 2025-06-23 -->
-<!-- Purpose: DICOM C-STORE Implementation with PACS Upload -->
+<!-- Purpose: PACS UI Integration - Configuration Interface -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.8.0</VersionPrefix>
+		<VersionPrefix>0.8.1</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
 		<AssemblyVersion>0.8.0.0</AssemblyVersion>
 
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.8.0.0</FileVersion>
+		<FileVersion>0.8.1.0</FileVersion>
 
 		<!-- Informational version shown in logs and UI -->
-		<InformationalVersion>0.8.0 - PACS C-STORE Implementation</InformationalVersion>
+		<InformationalVersion>0.8.1 - PACS UI Configuration</InformationalVersion>
 
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.8.0</PackageVersion>
+		<PackageVersion>0.8.1</PackageVersion>
 
 		<!-- Product information -->
 		<Product>CamBridge</Product>
