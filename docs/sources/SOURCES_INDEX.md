@@ -1,5 +1,5 @@
 ﻿# CamBridge Sources Index
-Generated: 2025-06-15 00:33:22
+Generated: 2025-06-23 09:56:08
 Version: 0.7.11
 
 ## Purpose
@@ -7,10 +7,10 @@ These files contain the complete source code of CamBridge for efficient project 
 This enables token-efficient pattern matching and prevents code duplication.
 
 ## Files Generated
-- **SOURCES_CONFIG.txt** - CONFIG implementation (0.49 MB)
-- **SOURCES_CORE.txt** - CORE implementation (0.12 MB)
-- **SOURCES_INFRASTRUCTURE.txt** - INFRASTRUCTURE implementation (0.15 MB)
-- **SOURCES_SERVICE.txt** - SERVICE implementation (0.49 MB)
+- **SOURCES_CONFIG.txt** - CONFIG implementation (0.56 MB)
+- **SOURCES_CORE.txt** - CORE implementation (0.1 MB)
+- **SOURCES_INFRASTRUCTURE.txt** - INFRASTRUCTURE implementation (0.12 MB)
+- **SOURCES_SERVICE.txt** - SERVICE implementation (0.48 MB)
 
 ## Usage
 Upload these files to project knowledge for:
