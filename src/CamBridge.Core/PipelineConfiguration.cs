@@ -1,7 +1,7 @@
-﻿// src\CamBridge.Core\PipelineConfiguration.cs
-// Version: 0.7.28
-// Description: Pipeline configuration model with INotifyPropertyChanged support
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// src\CamBridge.Core\PipelineConfiguration.cs
+// Version: 0.8.0
+// Description: Pipeline configuration model with PACS support
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;
@@ -24,6 +24,7 @@ namespace CamBridge.Core
         private ProcessingOptions _processingOptions = new();
         private DicomOverrides? _dicomOverrides;
         private Guid? _mappingSetId;
+        private PacsConfiguration? _pacsConfiguration;
 
         /// <summary>
         /// Unique identifier for this pipeline
@@ -95,6 +96,15 @@ namespace CamBridge.Core
         {
             get => _mappingSetId;
             set { _mappingSetId = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// PACS upload configuration for this pipeline (optional)
+        /// </summary>
+        public PacsConfiguration? PacsConfiguration
+        {
+            get => _pacsConfiguration;
+            set { _pacsConfiguration = value; OnPropertyChanged(); }
         }
 
         /// <summary>
@@ -311,6 +321,132 @@ namespace CamBridge.Core
         /// Tags for categorization
         /// </summary>
         public List<string> Tags { get; set; } = new();
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// PACS (Picture Archiving and Communication System) configuration for automatic upload
+    /// </summary>
+    public class PacsConfiguration : INotifyPropertyChanged
+    {
+        private bool _enabled = false;
+        private string _host = string.Empty;
+        private int _port = 104;
+        private string _calledAeTitle = string.Empty;
+        private string _callingAeTitle = "CAMBRIDGE";
+        private int _timeoutSeconds = 30;
+        private int _maxConcurrentUploads = 1;
+        private bool _retryOnFailure = true;
+        private int _maxRetryAttempts = 3;
+        private int _retryDelaySeconds = 5;
+
+        /// <summary>
+        /// Enable automatic PACS upload after DICOM creation
+        /// </summary>
+        public bool Enabled
+        {
+            get => _enabled;
+            set { _enabled = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// PACS server hostname or IP address
+        /// </summary>
+        public string Host
+        {
+            get => _host;
+            set { _host = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// PACS server port (default: 104)
+        /// </summary>
+        public int Port
+        {
+            get => _port;
+            set { _port = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Called AE Title (PACS server's AE Title)
+        /// </summary>
+        public string CalledAeTitle
+        {
+            get => _calledAeTitle;
+            set { _calledAeTitle = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Calling AE Title (our AE Title)
+        /// </summary>
+        public string CallingAeTitle
+        {
+            get => _callingAeTitle;
+            set { _callingAeTitle = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Connection timeout in seconds
+        /// </summary>
+        public int TimeoutSeconds
+        {
+            get => _timeoutSeconds;
+            set { _timeoutSeconds = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum concurrent uploads per pipeline
+        /// </summary>
+        public int MaxConcurrentUploads
+        {
+            get => _maxConcurrentUploads;
+            set { _maxConcurrentUploads = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Enable retry on upload failure
+        /// </summary>
+        public bool RetryOnFailure
+        {
+            get => _retryOnFailure;
+            set { _retryOnFailure = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum retry attempts
+        /// </summary>
+        public int MaxRetryAttempts
+        {
+            get => _maxRetryAttempts;
+            set { _maxRetryAttempts = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Delay between retry attempts in seconds
+        /// </summary>
+        public int RetryDelaySeconds
+        {
+            get => _retryDelaySeconds;
+            set { _retryDelaySeconds = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Validate configuration
+        /// </summary>
+        public bool IsValid() =>
+            !string.IsNullOrWhiteSpace(Host) &&
+            Port > 0 &&
+            Port < 65536 &&
+            !string.IsNullOrWhiteSpace(CalledAeTitle) &&
+            !string.IsNullOrWhiteSpace(CallingAeTitle) &&
+            CalledAeTitle.Length <= 16 &&
+            CallingAeTitle.Length <= 16;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

@@ -1,29 +1,29 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.7.32 -->
+<!-- Version: 0.8.0 -->
 <!-- Modified: 2025-06-23 -->
-<!-- Purpose: ProcessingQueue retry fix & EXIF key mapping fixes -->
+<!-- Purpose: DICOM C-STORE Implementation with PACS Upload -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.7.32</VersionPrefix>
+		<VersionPrefix>0.8.0</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
-		<AssemblyVersion>0.7.0.0</AssemblyVersion>
+		<AssemblyVersion>0.8.0.0</AssemblyVersion>
 
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.7.32.0</FileVersion>
+		<FileVersion>0.8.0.0</FileVersion>
 
 		<!-- Informational version shown in logs and UI -->
-		<InformationalVersion>0.7.32 - Retry & EXIF Fixes</InformationalVersion>
+		<InformationalVersion>0.8.0 - PACS C-STORE Implementation</InformationalVersion>
 
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.7.32</PackageVersion>
+		<PackageVersion>0.8.0</PackageVersion>
 
 		<!-- Product information -->
 		<Product>CamBridge</Product>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>
-		<Copyright>Copyright © 2025 Claude's Improbably Reliable Software Solutions</Copyright>
+		<Copyright>Copyright &#169; 2025 Claude's Improbably Reliable Software Solutions</Copyright>
 
 		<!-- Build metadata -->
 		<RepositoryUrl>https://github.com/yourusername/CamBridge</RepositoryUrl>

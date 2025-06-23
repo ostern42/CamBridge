@@ -1,7 +1,7 @@
-﻿// src/CamBridge.Infrastructure/Services/PipelineManager.cs
-// Version: 0.7.28
-// Description: Orchestrates multiple processing pipelines with isolated logging and corrected log levels
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// src/CamBridge.Infrastructure/Services/PipelineManager.cs
+// Version: 0.8.0
+// Description: Orchestrates multiple processing pipelines with PACS upload support
+// Copyright: &#169; 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Concurrent;
@@ -19,26 +19,30 @@ using Microsoft.Extensions.Options;
 namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
-    /// Manages multiple processing pipelines with independent configurations, queues, watchers, FileProcessors, AND Loggers!
-    /// PIPELINE UPDATE: Each pipeline gets its own FileProcessor instance AND Logger!
+    /// Manages multiple processing pipelines with independent configurations, queues, watchers, FileProcessors, and PACS upload queues!
+    /// ENHANCED: Each pipeline can have its own PACS upload queue for automatic transmission
     /// </summary>
     public class PipelineManager : IDisposable
     {
         private readonly ILogger<PipelineManager> _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly IOptionsMonitor<CamBridgeSettingsV2> _settingsMonitor;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ConcurrentDictionary<string, PipelineContext> _pipelines = new();
         private readonly SemaphoreSlim _pipelineLock = new(1, 1);
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
         private bool _disposed;
 
         public PipelineManager(
             ILogger<PipelineManager> logger,
             IServiceProvider serviceProvider,
-            IOptionsMonitor<CamBridgeSettingsV2> settingsMonitor)
+            IOptionsMonitor<CamBridgeSettingsV2> settingsMonitor,
+            ILoggerFactory loggerFactory)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _settingsMonitor = settingsMonitor ?? throw new ArgumentNullException(nameof(settingsMonitor));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 
             // React to settings changes
             _settingsMonitor.OnChange(async settings =>
@@ -80,6 +84,8 @@ namespace CamBridge.Infrastructure.Services
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Stopping Pipeline Manager");
+
+            _cancellationTokenSource.Cancel();
 
             var stopTasks = _pipelines.Values
                 .Where(p => p.IsActive)
@@ -161,7 +167,9 @@ namespace CamBridge.Infrastructure.Services
                 ErrorCount = p.ErrorCount,
                 LastProcessed = p.LastProcessed,
                 WatchPath = p.Configuration.WatchSettings.Path,
-                OutputPath = p.Configuration.WatchSettings.OutputPath ?? ""
+                OutputPath = p.Configuration.WatchSettings.OutputPath ?? "",
+                PacsEnabled = p.Configuration.PacsConfiguration?.Enabled ?? false,
+                PacsQueueDepth = p.PacsQueue?.QueueLength ?? 0
             }).ToList();
         }
 
@@ -182,7 +190,9 @@ namespace CamBridge.Infrastructure.Services
                     ErrorCount = context.ErrorCount,
                     LastProcessed = context.LastProcessed,
                     WatchPath = context.Configuration.WatchSettings.Path,
-                    OutputPath = context.Configuration.WatchSettings.OutputPath ?? ""
+                    OutputPath = context.Configuration.WatchSettings.OutputPath ?? "",
+                    PacsEnabled = context.Configuration.PacsConfiguration?.Enabled ?? false,
+                    PacsQueueDepth = context.PacsQueue?.QueueLength ?? 0
                 };
             }
             return null;
@@ -202,28 +212,49 @@ namespace CamBridge.Infrastructure.Services
             try
             {
                 // Get services from DI
-                var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
                 var exifReader = _serviceProvider.GetRequiredService<ExifToolReader>();
                 var dicomConverter = _serviceProvider.GetRequiredService<DicomConverter>();
                 var globalDicomSettings = _settingsMonitor.CurrentValue.GlobalDicomSettings ?? new DicomSettings();
 
                 // CRITICAL: Create pipeline-specific logger with sanitized name
                 var sanitizedName = SanitizeForFileName(config.Name);
-                var pipelineLogger = loggerFactory.CreateLogger($"Pipeline.{sanitizedName}");
+                var pipelineLogger = _loggerFactory.CreateLogger($"Pipeline.{sanitizedName}");
 
-                // Create FileProcessor for THIS pipeline with pipeline-specific logger
+                // NEW: Create PACS upload queue if enabled
+                PacsUploadQueue? pacsQueue = null;
+                if (config.PacsConfiguration?.Enabled == true)
+                {
+                    var dicomStoreService = _serviceProvider.GetRequiredService<DicomStoreService>();
+                    var pacsQueueLogger = _loggerFactory.CreateLogger<PacsUploadQueue>();
+
+                    pacsQueue = new PacsUploadQueue(
+                        config,
+                        dicomStoreService,
+                        pacsQueueLogger
+                    );
+
+                    _logger.LogInformation("Created PACS upload queue for pipeline {Pipeline} → {Host}:{Port}",
+                        config.Name,
+                        config.PacsConfiguration.Host,
+                        config.PacsConfiguration.Port);
+                }
+
+                // Create FileProcessor for THIS pipeline with pipeline-specific logger AND PACS queue
                 var fileProcessor = new FileProcessor(
                     pipelineLogger,  // Use pipeline-specific logger!
                     exifReader,
                     dicomConverter,
                     config,
-                    globalDicomSettings
+                    globalDicomSettings,
+                    tagMapper: null,  // TODO: Wire up when mapping is needed
+                    mappingConfiguration: null,  // TODO: Wire up when mapping is needed
+                    pacsUploadQueue: pacsQueue  // NEW: Pass PACS queue to FileProcessor
                 );
 
                 // Create processing queue for this pipeline
                 var processingOptions = Microsoft.Extensions.Options.Options.Create(config.ProcessingOptions);
                 var queue = new ProcessingQueue(
-                    loggerFactory.CreateLogger<ProcessingQueue>(),
+                    _loggerFactory.CreateLogger<ProcessingQueue>(),
                     fileProcessor,
                     processingOptions
                 );
@@ -237,7 +268,8 @@ namespace CamBridge.Infrastructure.Services
                     fileProcessor,
                     queue,
                     watcher,
-                    pipelineLogger  // Store pipeline logger in context
+                    pipelineLogger,  // Store pipeline logger in context
+                    pacsQueue  // Store PACS queue in context
                 );
 
                 // Wire up file processor events
@@ -273,6 +305,27 @@ namespace CamBridge.Infrastructure.Services
                         await queue.ProcessQueueAsync(cancellationToken);
                     }, cancellationToken);
 
+                    // NEW: Start PACS queue processing if created
+                    if (pacsQueue != null)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                pipelineLogger.LogInformation("Starting PACS upload queue for pipeline: {PipelineName}", config.Name);
+                                await pacsQueue.ProcessQueueAsync(_cancellationTokenSource.Token);
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                pipelineLogger.LogDebug("PACS queue cancelled for pipeline {Pipeline}", config.Name);
+                            }
+                            catch (Exception ex)
+                            {
+                                pipelineLogger.LogError(ex, "PACS queue error for pipeline {Pipeline}", config.Name);
+                            }
+                        }, _cancellationTokenSource.Token);
+                    }
+
                     // Enable watcher
                     watcher.EnableRaisingEvents = true;
                     context.IsActive = true;
@@ -280,6 +333,14 @@ namespace CamBridge.Infrastructure.Services
                     // Keep as INFO - important business event
                     pipelineLogger.LogInformation("Pipeline {PipelineName} started successfully. Watching: {WatchPath}",
                         config.Name, config.WatchSettings.Path);
+
+                    if (pacsQueue != null)
+                    {
+                        pipelineLogger.LogInformation("PACS upload enabled for pipeline {PipelineName} → {Host}:{Port}",
+                            config.Name,
+                            config.PacsConfiguration!.Host,
+                            config.PacsConfiguration.Port);
+                    }
                 }
             }
             catch (Exception ex)
@@ -417,6 +478,7 @@ namespace CamBridge.Infrastructure.Services
 
             try
             {
+                _cancellationTokenSource.Cancel();
                 StopAsync(CancellationToken.None).GetAwaiter().GetResult();
 
                 foreach (var context in _pipelines.Values)
@@ -426,6 +488,7 @@ namespace CamBridge.Infrastructure.Services
 
                 _pipelines.Clear();
                 _pipelineLock?.Dispose();
+                _cancellationTokenSource?.Dispose();
             }
             catch (Exception ex)
             {
@@ -445,6 +508,7 @@ namespace CamBridge.Infrastructure.Services
             public ProcessingQueue Queue { get; }
             public FileSystemWatcher Watcher { get; }
             public ILogger PipelineLogger { get; }
+            public PacsUploadQueue? PacsQueue { get; }
             public bool IsActive { get; set; }
             public DateTime LastProcessed { get; set; }
             public int ProcessedCount { get; set; }
@@ -455,13 +519,15 @@ namespace CamBridge.Infrastructure.Services
                 FileProcessor fileProcessor,
                 ProcessingQueue queue,
                 FileSystemWatcher watcher,
-                ILogger pipelineLogger)
+                ILogger pipelineLogger,
+                PacsUploadQueue? pacsQueue = null)
             {
                 Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
                 FileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
                 Queue = queue ?? throw new ArgumentNullException(nameof(queue));
                 Watcher = watcher ?? throw new ArgumentNullException(nameof(watcher));
                 PipelineLogger = pipelineLogger ?? throw new ArgumentNullException(nameof(pipelineLogger));
+                PacsQueue = pacsQueue;
                 LastProcessed = DateTime.MinValue;
             }
 
@@ -486,5 +552,7 @@ namespace CamBridge.Infrastructure.Services
         public DateTime LastProcessed { get; set; }
         public string WatchPath { get; set; } = string.Empty;
         public string OutputPath { get; set; } = string.Empty;
+        public bool PacsEnabled { get; set; }
+        public int PacsQueueDepth { get; set; }
     }
 }

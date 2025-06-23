@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/ServiceCollectionExtensions.cs
-// Version: 0.7.31
-// Description: DI container configuration - Fixed ExifToolReader registration
+// Version: 0.8.0
+// Description: DI container configuration with DicomStoreService
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -10,7 +10,7 @@ using CamBridge.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-// using Microsoft.Extensions.Diagnostics.HealthChecks; // Might need this package
+using Microsoft.Extensions.Logging;
 
 namespace CamBridge.Infrastructure
 {
@@ -44,6 +44,9 @@ namespace CamBridge.Infrastructure
             });
 
             services.AddSingleton<DicomConverter>();
+
+            // Register DICOM Store Service for PACS upload
+            services.AddSingleton<DicomStoreService>();
 
             // FileProcessor is NO LONGER registered here!
             // It's created per-pipeline in PipelineManager!

@@ -1,0 +1,891 @@
+﻿################################################################################
+# CamBridge Sources - QRBRIDGE
+# Generated: 2025-06-23 20:28:25
+# Root Path: src\CamBridge.QRBridge
+# Description: QR code generation tool
+################################################################################
+
+## PROJECT SUMMARY
+Total Files: 8
+Total Lines: 812
+Total Size: 27,17 KB
+
+Files by Type:
+  .cs: 7 files
+  .csproj: 1 files
+
+## DIRECTORY STRUCTURE
+src\CamBridge.QRBridge/
++-- Constants/ (1 files)
++-- Forms/ (1 files)
++-- Services/ (2 files)
+
+## FILE CONTENTS
+
+================================================================================
+FILE: CamBridge.QRBridge.csproj
+--------------------------------------------------------------------------------
+Size: 1,65 KB | Lines: 47 | Modified: 2025-06-05 21:16:34
+================================================================================
+
+<!-- src/CamBridge.QRBridge/CamBridge.QRBridge.csproj -->
+<!-- Version: 0.5.33 -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWindowsForms>true</UseWindowsForms>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<StartupObject>CamBridge.QRBridge.Program</StartupObject>
+
+		<!-- Company info -->
+		<Company>Claude's Improbably Reliable Software Solutions</Company>
+		<Product>CamBridge QRBridge</Product>
+		<Copyright>© 2025 Claude's Improbably Reliable Software Solutions</Copyright>
+
+		<!-- Enable single file deployment -->
+		<PublishSingleFile>true</PublishSingleFile>
+		<SelfContained>true</SelfContained>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<PublishReadyToRun>true</PublishReadyToRun>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Reference to Core project for shared entities -->
+		<ProjectReference Include="..\CamBridge.Core\CamBridge.Core.csproj" />
+
+		<!-- QR Code generation library -->
+		<PackageReference Include="QRCoder" Version="1.4.3" />
+		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+
+		<!-- Logging -->
+		<PackageReference Include="Serilog" Version="3.1.1" />
+		<PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+
+		<!-- DI Container -->
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Entities\" />
+	</ItemGroup>
+
+</Project>
+
+================================================================================
+FILE: Constants/QRBridgeConstants.cs
+--------------------------------------------------------------------------------
+Size: 2,52 KB | Lines: 81 | Modified: 2025-06-23 11:53:05
+================================================================================
+
+// src/CamBridge.QRBridge/Constants/QRBridgeConstants.cs
+// Version: 0.7.8
+// Â© 2025 Claude's Improbably Reliable Software Solutions
+
+namespace CamBridge.QRBridge.Constants;
+
+/// <summary>
+/// Constants for QRBridge application
+/// </summary>
+public static class QRBridgeConstants
+{
+    /// <summary>
+    /// Application information
+    /// </summary>
+    public static class Application
+    {
+        public const string Name = "CamBridge QRBridge";
+        public const string Version = "0.7.8";
+        public const string Description = "Modern QR Code Generator for Ricoh Cameras";
+    }
+
+    /// <summary>
+    /// UI related constants
+    /// </summary>
+    public static class UI
+    {
+        public const int QRCodeSize = 400;
+        public const int FormWidth = 450;
+        public const int FormHeight = 520;
+        public const int CountdownInterval = 1000; // 1 second
+        public const string CountdownFormat = "Fenster schlieÃŸt in {0} Sekunden...";
+        public const string WindowTitle = "CamBridge QRBridge - QR Code";
+    }
+
+    /// <summary>
+    /// Colors (using CamBridge standard colors)
+    /// </summary>
+    public static class Colors
+    {
+        public static readonly Color Background = Color.FromArgb(45, 45, 48);
+        public static readonly Color Foreground = Color.White;
+        public static readonly Color Accent = Color.FromArgb(0, 122, 204);
+        public static readonly Color Success = Color.FromArgb(76, 175, 80);
+        public static readonly Color Error = Color.FromArgb(244, 67, 54);
+    }
+
+    /// <summary>
+    /// Command line argument names
+    /// </summary>
+    public static class Arguments
+    {
+        public const string ExamId = "examid";
+        public const string Name = "name";
+        public const string BirthDate = "birthdate";
+        public const string Gender = "gender";
+        public const string Comment = "comment";
+        public const string Timeout = "timeout";
+        public const string Help = "help";
+    }
+
+    /// <summary>
+    /// Default values
+    /// </summary>
+    public static class Defaults
+    {
+        public const int TimeoutSeconds = 10;
+        public const string DateFormat = "yyyy-MM-dd";
+    }
+
+    /// <summary>
+    /// Exit codes
+    /// </summary>
+    public static class ExitCodes
+    {
+        public const int Success = 0;
+        public const int InvalidArguments = 1;
+        public const int GenerationError = 2;
+        public const int UnhandledException = 99;
+    }
+}
+
+
+================================================================================
+FILE: Forms/QRDisplayForm.cs
+--------------------------------------------------------------------------------
+Size: 6,28 KB | Lines: 206 | Modified: 2025-06-23 11:53:05
+================================================================================
+
+// src/CamBridge.QRBridge/Forms/QRDisplayForm.cs
+// Version: 0.5.33
+// Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System.Drawing.Drawing2D;
+using CamBridge.Core.Entities;
+using CamBridge.QRBridge.Constants;
+using CamBridge.QRBridge.Services;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.QRBridge.Forms;
+
+/// <summary>
+/// Windows Form for displaying QR codes with countdown timer
+/// </summary>
+public partial class QRDisplayForm : Form
+{
+    private readonly ILogger<QRDisplayForm> _logger;
+    private readonly IQRCodeService _qrCodeService;
+    private readonly QRCodeRequest _request;
+    private readonly System.Windows.Forms.Timer _countdownTimer;
+    private int _remainingSeconds;
+    private Bitmap? _qrCodeBitmap;
+
+    // UI Controls
+    private PictureBox _qrCodePictureBox;
+    private Label _patientLabel;
+    private Label _examIdLabel;
+    private Label _commentLabel;
+    private Label _countdownLabel;
+    private Panel _infoPanel;
+
+    public QRDisplayForm(
+        ILogger<QRDisplayForm> logger,
+        IQRCodeService qrCodeService,
+        QRCodeRequest request)
+    {
+        _logger = logger;
+        _qrCodeService = qrCodeService;
+        _request = request;
+        _remainingSeconds = request.TimeoutSeconds;
+
+        _countdownTimer = new System.Windows.Forms.Timer();
+        _countdownTimer.Interval = QRBridgeConstants.UI.CountdownInterval;
+        _countdownTimer.Tick += CountdownTimer_Tick;
+
+        InitializeComponent();
+        GenerateAndDisplayQRCode();
+    }
+
+    private void InitializeComponent()
+    {
+        // Form settings
+        Text = QRBridgeConstants.UI.WindowTitle;
+        Size = new Size(QRBridgeConstants.UI.FormWidth, QRBridgeConstants.UI.FormHeight);
+        StartPosition = FormStartPosition.CenterScreen;
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        MaximizeBox = false;
+        MinimizeBox = false;
+        BackColor = QRBridgeConstants.Colors.Background;
+
+        // Create controls
+        _qrCodePictureBox = new PictureBox
+        {
+            Size = new Size(QRBridgeConstants.UI.QRCodeSize, QRBridgeConstants.UI.QRCodeSize),
+            Location = new Point(25, 10),
+            BackColor = Color.White,
+            SizeMode = PictureBoxSizeMode.Zoom
+        };
+
+        _infoPanel = new Panel
+        {
+            Location = new Point(25, 420),
+            Size = new Size(400, 60),
+            BackColor = Color.FromArgb(60, 60, 60)
+        };
+
+        _patientLabel = CreateLabel(10, 5, 380);
+        _examIdLabel = CreateLabel(10, 23, 380);
+        _commentLabel = CreateLabel(10, 41, 380);
+
+        _countdownLabel = new Label
+        {
+            Location = new Point(25, 485),
+            Size = new Size(400, 20),
+            ForeColor = QRBridgeConstants.Colors.Accent,
+            BackColor = Color.Transparent,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+        };
+
+        // Add controls
+        _infoPanel.Controls.AddRange(new Control[] { _patientLabel, _examIdLabel, _commentLabel });
+        Controls.AddRange(new Control[] { _qrCodePictureBox, _infoPanel, _countdownLabel });
+
+        // Set initial text
+        UpdateLabels();
+    }
+
+    private Label CreateLabel(int x, int y, int width)
+    {
+        return new Label
+        {
+            Location = new Point(x, y),
+            Size = new Size(width, 16),
+            ForeColor = QRBridgeConstants.Colors.Foreground,
+            BackColor = Color.Transparent,
+            Font = new Font("Segoe UI", 9F),
+            AutoEllipsis = true
+        };
+    }
+
+    private void UpdateLabels()
+    {
+        _patientLabel.Text = $"Patient: {_request.Patient.Name}";
+        _examIdLabel.Text = $"Untersuchung: {_request.Study.ExamId}";
+        _commentLabel.Text = $"Kommentar: {_request.Comment ?? "-"}";
+        UpdateCountdown();
+    }
+
+    private void UpdateCountdown()
+    {
+        _countdownLabel.Text = string.Format(
+            QRBridgeConstants.UI.CountdownFormat,
+            _remainingSeconds);
+    }
+
+    private void GenerateAndDisplayQRCode()
+    {
+        try
+        {
+            _logger.LogInformation("Generating QR code for display");
+
+            _qrCodeBitmap = _qrCodeService.GenerateQRCode(_request);
+            _qrCodePictureBox.Image = _qrCodeBitmap;
+
+            _logger.LogInformation("QR code displayed successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate QR code");
+
+            // Show error message
+            _qrCodePictureBox.BackColor = QRBridgeConstants.Colors.Error;
+            var errorLabel = new Label
+            {
+                Text = "Fehler beim Generieren des QR-Codes!",
+                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            _qrCodePictureBox.Controls.Add(errorLabel);
+        }
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+
+        // Start countdown timer
+        _countdownTimer.Start();
+
+        // Bring to front
+        TopMost = true;
+        TopMost = false;
+        Focus();
+    }
+
+    private void CountdownTimer_Tick(object? sender, EventArgs e)
+    {
+        _remainingSeconds--;
+        UpdateCountdown();
+
+        if (_remainingSeconds <= 0)
+        {
+            _countdownTimer.Stop();
+            _logger.LogInformation("Countdown completed, closing form");
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        base.OnFormClosed(e);
+
+        _countdownTimer?.Dispose();
+        _qrCodeBitmap?.Dispose();
+
+        _logger.LogInformation("QR display form closed");
+    }
+
+    // Allow closing with ESC key
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (keyData == Keys.Escape)
+        {
+            _logger.LogInformation("User pressed ESC, closing form");
+            Close();
+            return true;
+        }
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+}
+
+
+================================================================================
+FILE: obj/Release/net8.0-windows/win-x64/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+--------------------------------------------------------------------------------
+Size: 198 bytes | Lines: 5 | Modified: 2025-06-23 19:50:05
+================================================================================
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v8.0", FrameworkDisplayName = ".NET 8.0")]
+
+
+================================================================================
+FILE: obj/Release/net8.0-windows/win-x64/CamBridge.QRBridge.AssemblyInfo.cs
+--------------------------------------------------------------------------------
+Size: 1,57 KB | Lines: 29 | Modified: 2025-06-23 19:50:05
+================================================================================
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     Dieser Code wurde von einem Tool generiert.
+//     Laufzeitversion:4.0.30319.42000
+//
+//     Ã„nderungen an dieser Datei kÃ¶nnen falsches Verhalten verursachen und gehen verloren, wenn
+//     der Code erneut generiert wird.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Claude\'s Improbably Reliable Software Solutions")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
+[assembly: System.Reflection.AssemblyCopyrightAttribute("Â© 2025 Claude\'s Improbably Reliable Software Solutions")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.8.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.8.0+a2bed238060f0dad03d59d67aabd71062e685301")]
+[assembly: System.Reflection.AssemblyProductAttribute("CamBridge QRBridge")]
+[assembly: System.Reflection.AssemblyTitleAttribute("CamBridge.QRBridge")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.8.0.0")]
+[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/yourusername/CamBridge")]
+[assembly: System.Resources.NeutralResourcesLanguageAttribute("en-US")]
+[assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows7.0")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows7.0")]
+
+// Von der MSBuild WriteCodeFragment-Klasse generiert.
+
+
+
+================================================================================
+FILE: Program.cs
+--------------------------------------------------------------------------------
+Size: 4,65 KB | Lines: 136 | Modified: 2025-06-23 11:53:05
+================================================================================
+
+// src/CamBridge.QRBridge/Program.cs
+// Version: 0.7.8
+// Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System.Text;
+using System.Windows.Forms;
+using CamBridge.QRBridge.Constants;
+using CamBridge.QRBridge.Forms;
+using CamBridge.QRBridge.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using CamBridge.Core.Infrastructure;  // FÃ¼r ConfigurationPaths
+
+namespace CamBridge.QRBridge;
+
+/// <summary>
+/// Entry point for CamBridge QRBridge application
+/// </summary>
+internal static class Program
+{
+    /// <summary>
+    /// The main entry point for the application.
+    /// </summary>
+    [STAThread]
+    static int Main(string[] args)
+    {
+        // Set UTF-8 encoding for console (only if console available)
+        try
+        {
+            if (Environment.UserInteractive && !Console.IsOutputRedirected)
+            {
+                Console.OutputEncoding = Encoding.UTF8;
+                Console.InputEncoding = Encoding.UTF8;
+            }
+        }
+        catch
+        {
+            // Ignore - WinForms apps don't have console
+        }
+
+        // Configure Serilog
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Console()
+            .WriteTo.File(
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "qrbridge-.log"),
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 7)
+            .CreateLogger();
+
+        try
+        {
+            Log.Information("CamBridge QRBridge v{Version} starting", QRBridgeConstants.Application.Version);
+            Log.Debug("Arguments: {Args}", string.Join(" ", args));
+
+            // Enable visual styles for Windows Forms
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
+
+            // Build host
+            var host = CreateHostBuilder(args).Build();
+
+            // Get services
+            var argumentParser = host.Services.GetRequiredService<ArgumentParser>();
+            var qrCodeService = host.Services.GetRequiredService<IQRCodeService>();
+            var loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
+
+            // Parse arguments
+            var (success, request, error) = argumentParser.Parse(args);
+
+            if (!success || request == null)
+            {
+                // Handle help text or errors
+                if (error?.Contains("Usage:") ?? false)
+                {
+                    // It's help text
+                    MessageBox.Show(error, "CamBridge QRBridge Help",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    // It's an error
+                    MessageBox.Show(error, "CamBridge QRBridge Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                return QRBridgeConstants.ExitCodes.InvalidArguments;
+            }
+
+            // Create and show form
+            var formLogger = loggerFactory.CreateLogger<QRDisplayForm>();
+            using var form = new QRDisplayForm(formLogger, qrCodeService, request);
+
+            Application.Run(form);
+
+            Log.Information("QRBridge completed successfully");
+            return QRBridgeConstants.ExitCodes.Success;
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Unhandled exception in QRBridge");
+
+            // Show error in MessageBox for WinForms
+            MessageBox.Show($"Fatal Error: {ex.Message}\n\nDetails:\n{ex}",
+                "CamBridge QRBridge - Fatal Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+
+            return QRBridgeConstants.ExitCodes.UnhandledException;
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
+    }
+
+    static IHostBuilder CreateHostBuilder(string[] args) =>
+        Host.CreateDefaultBuilder(args)
+            .UseSerilog()
+            .ConfigureServices((hostContext, services) =>
+            {
+                // Register services
+                services.AddSingleton<IQRCodeService, QRCodeService>();
+                services.AddSingleton<ArgumentParser>();
+
+                // Register logging
+                services.AddLogging(configure =>
+                {
+                    configure.ClearProviders();
+                    configure.AddSerilog();
+                });
+            });
+}
+
+
+================================================================================
+FILE: Services/ArgumentParser.cs
+--------------------------------------------------------------------------------
+Size: 6,44 KB | Lines: 186 | Modified: 2025-06-23 11:53:05
+================================================================================
+
+// src/CamBridge.QRBridge/Services/ArgumentParser.cs
+// Version: 0.5.33
+// Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System.Globalization;
+using CamBridge.Core.Entities;
+using CamBridge.Core.ValueObjects;
+using CamBridge.QRBridge.Constants;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.QRBridge.Services;
+
+/// <summary>
+/// Parses command line arguments into a QRCodeRequest
+/// </summary>
+public class ArgumentParser
+{
+    private readonly ILogger<ArgumentParser> _logger;
+
+    public ArgumentParser(ILogger<ArgumentParser> logger)
+    {
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Parses command line arguments into a QRCodeRequest
+    /// </summary>
+    public (bool success, QRCodeRequest? request, string? error) Parse(string[] args)
+    {
+        _logger.LogDebug("Parsing {Count} arguments", args.Length);
+
+        if (args.Length == 0 || args.Any(a => a == "-" + QRBridgeConstants.Arguments.Help || a == "--" + QRBridgeConstants.Arguments.Help))
+        {
+            return (false, null, GetHelpText());
+        }
+
+        try
+        {
+            var arguments = ParseArguments(args);
+
+            // Validate required fields
+            if (!arguments.ContainsKey(QRBridgeConstants.Arguments.ExamId))
+            {
+                return (false, null, "ERROR: -examid is required");
+            }
+
+            if (!arguments.ContainsKey(QRBridgeConstants.Arguments.Name))
+            {
+                return (false, null, "ERROR: -name is required");
+            }
+
+            // Parse values
+            var name = arguments[QRBridgeConstants.Arguments.Name];
+            var birthDate = ParseBirthDate(arguments);
+            var gender = ParseGender(arguments);
+            var examId = arguments[QRBridgeConstants.Arguments.ExamId];
+
+            // Create patient info with PatientId
+            var patientId = new PatientId($"QR-{DateTime.Now:yyyyMMddHHmmss}");
+            var patient = new PatientInfo(patientId, name, birthDate, gender);
+
+            // Create study info with StudyId
+            var studyId = StudyId.CreateFromExamId(examId);
+            var study = new StudyInfo(
+                studyId,                                                           // studyId
+                examId,                                                            // examId
+                arguments.GetValueOrDefault(QRBridgeConstants.Arguments.Comment), // description
+                "OT"                                                               // modality
+            );
+
+            // Parse optional fields
+            var comment = arguments.GetValueOrDefault(QRBridgeConstants.Arguments.Comment);
+            var timeout = ParseTimeout(arguments);
+
+            var request = new QRCodeRequest(patient, study, comment, timeout);
+
+            _logger.LogInformation("Successfully parsed arguments for patient: {Name}", patient.Name);
+
+            return (true, request, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to parse arguments");
+            return (false, null, $"ERROR: {ex.Message}");
+        }
+    }
+
+    private Dictionary<string, string> ParseArguments(string[] args)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i].StartsWith("-"))
+            {
+                var key = args[i].TrimStart('-').ToLower();
+                var value = (i + 1 < args.Length && !args[i + 1].StartsWith("-"))
+                    ? args[++i]
+                    : string.Empty;
+
+                result[key] = value;
+                _logger.LogDebug("Parsed argument: {Key} = {Value}", key, value);
+            }
+        }
+
+        return result;
+    }
+
+    private DateTime? ParseBirthDate(Dictionary<string, string> arguments)
+    {
+        if (!arguments.TryGetValue(QRBridgeConstants.Arguments.BirthDate, out var dateStr))
+            return null;
+
+        if (DateTime.TryParseExact(dateStr, QRBridgeConstants.Defaults.DateFormat,
+            CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            return date;
+        }
+
+        // Try other common formats
+        if (DateTime.TryParse(dateStr, out date))
+        {
+            return date;
+        }
+
+        _logger.LogWarning("Failed to parse birth date: {DateString}", dateStr);
+        return null;
+    }
+
+    private Gender ParseGender(Dictionary<string, string> arguments)
+    {
+        if (!arguments.TryGetValue(QRBridgeConstants.Arguments.Gender, out var genderStr))
+            return Gender.Other;
+
+        var firstChar = genderStr.ToUpper().FirstOrDefault();
+
+        return firstChar switch
+        {
+            'M' => Gender.Male,
+            'F' => Gender.Female,
+            'W' => Gender.Female, // German: Weiblich
+            _ => Gender.Other
+        };
+    }
+
+    private int ParseTimeout(Dictionary<string, string> arguments)
+    {
+        if (!arguments.TryGetValue(QRBridgeConstants.Arguments.Timeout, out var timeoutStr))
+            return QRBridgeConstants.Defaults.TimeoutSeconds;
+
+        if (int.TryParse(timeoutStr, out var timeout) && timeout > 0)
+            return timeout;
+
+        _logger.LogWarning("Invalid timeout value: {Value}, using default", timeoutStr);
+        return QRBridgeConstants.Defaults.TimeoutSeconds;
+    }
+
+    private string GetHelpText()
+    {
+        return $@"
+CamBridge QRBridge v{QRBridgeConstants.Application.Version}
+{QRBridgeConstants.Application.Description}
+Â© 2025 Claude's Improbably Reliable Software Solutions
+
+Usage: CamBridge.QRBridge.exe -examid <ID> -name <NAME> [options]
+
+Required Arguments:
+  -examid <ID>        Examination/Study ID
+  -name <NAME>        Patient name (Last, First)
+
+Optional Arguments:
+  -birthdate <DATE>   Birth date (yyyy-MM-dd format)
+  -gender <M/F/O>     Gender (M=Male, F=Female, O=Other)
+  -comment <TEXT>     Additional comment
+  -timeout <SECONDS>  Window timeout (default: {QRBridgeConstants.Defaults.TimeoutSeconds})
+  -help               Show this help
+
+Example:
+  CamBridge.QRBridge.exe -examid ""EX001"" -name ""MÃ¼ller, Hans"" -birthdate ""1985-03-15"" -gender ""M"" -comment ""Thorax PA""
+
+Note: The QR code will be displayed for the specified timeout period.
+      UTF-8 encoding is used for all text to support international characters.
+";
+    }
+}
+
+
+================================================================================
+FILE: Services/QRCodeService.cs
+--------------------------------------------------------------------------------
+Size: 3,86 KB | Lines: 122 | Modified: 2025-06-23 11:53:05
+================================================================================
+
+// src/CamBridge.QRBridge/Services/QRCodeService.cs
+// Version: 0.5.33
+// Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System.Text;
+using CamBridge.Core.Entities;
+using Microsoft.Extensions.Logging;
+using QRCoder;
+
+namespace CamBridge.QRBridge.Services;
+
+/// <summary>
+/// Interface for QR code generation service
+/// </summary>
+public interface IQRCodeService
+{
+    /// <summary>
+    /// Generates a QR code bitmap from the request
+    /// </summary>
+    Bitmap GenerateQRCode(QRCodeRequest request);
+
+    /// <summary>
+    /// Generates QR code as PNG byte array
+    /// </summary>
+    byte[] GenerateQRCodeBytes(QRCodeRequest request);
+}
+
+/// <summary>
+/// Service for generating QR codes with explicit UTF-8 encoding
+/// </summary>
+public class QRCodeService : IQRCodeService, IDisposable
+{
+    private readonly ILogger<QRCodeService> _logger;
+    private readonly QRCodeGenerator _qrGenerator;
+
+    public QRCodeService(ILogger<QRCodeService> logger)
+    {
+        _logger = logger;
+        _qrGenerator = new QRCodeGenerator();
+    }
+
+    /// <summary>
+    /// Generates a QR code bitmap from the request
+    /// </summary>
+    public Bitmap GenerateQRCode(QRCodeRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Generating QR code for patient: {PatientName}", request.Patient.Name);
+
+            // Format the data for QR code
+            var qrData = request.FormatForQRCode();
+            _logger.LogDebug("QR data formatted: {Data}", qrData);
+
+            // EXPLICIT UTF-8 ENCODING - This is the key!
+            var utf8Bytes = Encoding.UTF8.GetBytes(qrData);
+            _logger.LogDebug("UTF-8 byte count: {Count}", utf8Bytes.Length);
+
+            // Generate QR code from UTF-8 bytes
+            using var qrCodeData = _qrGenerator.CreateQrCode(utf8Bytes, QRCodeGenerator.ECCLevel.M);
+            using var qrCode = new QRCode(qrCodeData);
+
+            // Create bitmap with proper size
+            var bitmap = qrCode.GetGraphic(
+                pixelsPerModule: 10,
+                darkColor: Color.Black,
+                lightColor: Color.White,
+                drawQuietZones: true
+            );
+
+            _logger.LogInformation("QR code generated successfully. Size: {Width}x{Height}",
+                bitmap.Width, bitmap.Height);
+
+            return bitmap;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate QR code");
+            throw new InvalidOperationException("QR code generation failed", ex);
+        }
+    }
+
+    /// <summary>
+    /// Generates QR code as PNG byte array for API usage
+    /// </summary>
+    public byte[] GenerateQRCodeBytes(QRCodeRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Generating QR code bytes for patient: {PatientName}", request.Patient.Name);
+
+            var qrData = request.FormatForQRCode();
+
+            // EXPLICIT UTF-8 ENCODING
+            var utf8Bytes = Encoding.UTF8.GetBytes(qrData);
+
+            using var qrCodeData = _qrGenerator.CreateQrCode(utf8Bytes, QRCodeGenerator.ECCLevel.M);
+            using var qrCode = new PngByteQRCode(qrCodeData);
+
+            var pngBytes = qrCode.GetGraphic(
+                pixelsPerModule: 10,
+                darkColorRgba: new byte[] { 0, 0, 0, 255 },     // Black
+                lightColorRgba: new byte[] { 255, 255, 255, 255 } // White
+            );
+
+            _logger.LogInformation("QR code PNG generated. Size: {Size} bytes", pngBytes.Length);
+
+            return pngBytes;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate QR code bytes");
+            throw new InvalidOperationException("QR code generation failed", ex);
+        }
+    }
+
+    public void Dispose()
+    {
+        _qrGenerator?.Dispose();
+    }
+}
+

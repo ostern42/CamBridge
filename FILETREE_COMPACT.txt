@@ -1,0 +1,343 @@
+﻿# AN MEIN ZUKUENFTIGES ICH: WISDOM CLAUDE
+# =======================================
+# 
+# Dies ist deine Projekt-Struktur-Referenz!
+# 
+# WARUM DU DAS BRAUCHST:
+# Wir haben schon mehrfach Dateien doppelt erstellt.
+# Besonders Program.cs - die gibt's in fast jedem Projekt!
+# 
+# SO NUTZT DU DAS:
+# 1. Vor JEDER Datei-Erstellung hier nachschauen
+# 2. Die Dateien sind nach [PROJEKT] gruppiert
+# 3. Nutze IMMER den vollen Pfad aus dieser Liste
+# 
+# UNSER HEADER-STANDARD (seit v0.5.27):
+# Jede Datei beginnt mit:
+# // src\CamBridge.Service\Program.cs
+# // Version: 0.8.0
+# // Description: Windows service entry point
+# 
+# Der Pfad MUSS mit dieser Liste uebereinstimmen!
+# 
+# MERKE DIR:
+# - [CamBridge.Service] und [CamBridge.QRBridge] haben BEIDE Program.cs!
+# - Config hat die ganzen XAML Views
+# - Core hat die Entities und Interfaces
+# - Infrastructure hat die Services
+# 
+# POWERSHELL ONE-LINER TRICK:
+# User mag One-Liner! Wenn du Files brauchst:
+# @('file1.cs','file2.cs','file3.cs') | %{ echo "=== $_ ==="; cat $_ } > output.txt
+# 
+# NEUE QUICK-CHECKS:
+# .\Get-WisdomFileTree.ps1 -ShowProgramCs   # Zeigt alle Program.cs
+# .\Get-WisdomFileTree.ps1 -ShowDuplicates  # Zeigt doppelte Namen
+# 
+# Projekte in dieser Liste:
+#   - CamBridge.Config
+#   - CamBridge.Core
+#   - CamBridge.Infrastructure
+#   - CamBridge.PipelineTest [TEST]
+#   - CamBridge.QRBridge
+#   - CamBridge.Service
+#   - CamBridge.TestConsole [TEST]
+#   - ROOT
+#   - TOOLS
+#
+# Total files: 274
+# Generated: 2025-06-23 23:08
+# System: nexus\oliver.stern@OSTE-ER-LAP01
+
+## [CamBridge.Config]
+src\CamBridge.Config\App.xaml
+src\CamBridge.Config\App.xaml.cs
+src\CamBridge.Config\CamBridge.Config.csproj
+src\CamBridge.Config\Converters\ValueConverters.cs
+src\CamBridge.Config\Dialogs\DicomTagBrowserDialog.xaml
+src\CamBridge.Config\Dialogs\DicomTagBrowserDialog.xaml.cs
+src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml
+src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs
+src\CamBridge.Config\Extensions\MappingConfigurationExtensions.cs
+src\CamBridge.Config\Extensions\MappingRuleExtensions.cs
+src\CamBridge.Config\Helpers\PasswordBoxHelper.cs
+src\CamBridge.Config\MainWindow.xaml
+src\CamBridge.Config\MainWindow.xaml.cs
+src\CamBridge.Config\Models\DeadLetterModels.cs
+src\CamBridge.Config\Models\ServiceStatusModel.cs
+src\CamBridge.Config\Properties\launchSettings.json
+src\CamBridge.Config\Services\ConfigurationService.cs
+src\CamBridge.Config\Services\HttpApiService.cs
+src\CamBridge.Config\Services\IApiService.cs
+src\CamBridge.Config\Services\IConfigurationService.cs
+src\CamBridge.Config\Services\INavigationService.cs
+src\CamBridge.Config\Services\IServiceManager.cs
+src\CamBridge.Config\Services\ISettingsService.cs
+src\CamBridge.Config\Services\NavigationService.cs
+src\CamBridge.Config\Services\ServiceManager.cs
+src\CamBridge.Config\ViewModels\DashboardViewModel.cs
+src\CamBridge.Config\ViewModels\DeadLettersViewModel.cs
+src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
+src\CamBridge.Config\ViewModels\MainViewModel.cs
+src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs
+src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs
+src\CamBridge.Config\ViewModels\PipelineStatusViewModel.cs
+src\CamBridge.Config\ViewModels\RecentActivityViewModel.cs
+src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs
+src\CamBridge.Config\ViewModels\ServiceControlViewModelExtension.cs
+src\CamBridge.Config\ViewModels\ViewModelBase.cs
+src\CamBridge.Config\Views\AboutPage.xaml
+src\CamBridge.Config\Views\AboutPage.xaml.cs
+src\CamBridge.Config\Views\DashboardPage.xaml
+src\CamBridge.Config\Views\DashboardPage.xaml.cs
+src\CamBridge.Config\Views\DeadLettersPage.xaml
+src\CamBridge.Config\Views\DeadLettersPage.xaml.cs
+src\CamBridge.Config\Views\LogViewerPage.xaml
+src\CamBridge.Config\Views\LogViewerPage.xaml.cs
+src\CamBridge.Config\Views\MappingEditorPage.xaml
+src\CamBridge.Config\Views\MappingEditorPage.xaml.cs
+src\CamBridge.Config\Views\PipelineConfigPage.xaml
+src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
+src\CamBridge.Config\Views\ServiceControlPage.xaml
+src\CamBridge.Config\Views\ServiceControlPage.xaml.cs
+src\CamBridge.Config\Views\VogonPoetryWindow.xaml
+src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs
+
+## [CamBridge.Core]
+src\CamBridge.Core\CamBridge.Core.csproj
+src\CamBridge.Core\CamBridgeSettingsV2.cs
+src\CamBridge.Core\ConfigurationPaths.cs
+src\CamBridge.Core\CustomMappingConfiguration.cs
+src\CamBridge.Core\DeadLetterStatistics.cs
+src\CamBridge.Core\Entities\ImageMetadata.cs
+src\CamBridge.Core\Entities\ImageTechnicalData.cs
+src\CamBridge.Core\Entities\PatientInfo.cs
+src\CamBridge.Core\Entities\ProcessingResult.cs
+src\CamBridge.Core\Entities\QRCodeRequest.cs
+src\CamBridge.Core\Entities\StudyInfo.cs
+src\CamBridge.Core\Interfaces\IDicomTagMapper.cs
+src\CamBridge.Core\Interfaces\IMappingConfiguration.cs
+src\CamBridge.Core\MappingRule.cs
+src\CamBridge.Core\PipelineConfiguration.cs
+src\CamBridge.Core\ProcessingOptions.cs
+src\CamBridge.Core\ProcessingSummary.cs
+src\CamBridge.Core\SystemSettings.cs
+src\CamBridge.Core\UserPreferences.cs
+src\CamBridge.Core\ValueObjects\DicomTag.cs
+src\CamBridge.Core\ValueObjects\ExifTag.cs
+src\CamBridge.Core\ValueObjects\PatientId.cs
+src\CamBridge.Core\ValueObjects\StudyId.cs
+src\CamBridge.Core\ValueTransform.cs
+
+## [CamBridge.Infrastructure]
+src\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj
+src\CamBridge.Infrastructure\GlobalUsings.cs
+src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs
+src\CamBridge.Infrastructure\Services\DicomConverter.cs
+src\CamBridge.Infrastructure\Services\DicomStoreService.cs
+src\CamBridge.Infrastructure\Services\DicomTagMapper.cs
+src\CamBridge.Infrastructure\Services\ExifToolReader.cs
+src\CamBridge.Infrastructure\Services\FileProcessor.cs
+src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs
+src\CamBridge.Infrastructure\Services\NotificationService.cs
+src\CamBridge.Infrastructure\Services\PacsUploadQueue.cs
+src\CamBridge.Infrastructure\Services\PipelineManager.cs
+src\CamBridge.Infrastructure\Services\ProcessingQueue.cs
+
+## [CamBridge.PipelineTest [TEST]]
+tests\CamBridge.PipelineTest\CamBridge.PipelineTest.csproj
+tests\CamBridge.PipelineTest\Program.cs
+
+## [CamBridge.QRBridge]
+src\CamBridge.QRBridge\CamBridge.QRBridge.csproj
+src\CamBridge.QRBridge\Constants\QRBridgeConstants.cs
+src\CamBridge.QRBridge\Forms\QRDisplayForm.cs
+src\CamBridge.QRBridge\GlobalUsings.cs
+src\CamBridge.QRBridge\Program.cs
+src\CamBridge.QRBridge\Services\ArgumentParser.cs
+src\CamBridge.QRBridge\Services\QRCodeService.cs
+
+## [CamBridge.Service]
+src\CamBridge.Service\appsettings.json
+src\CamBridge.Service\CamBridge.Service.csproj
+src\CamBridge.Service\CamBridgeHealthCheck.cs
+src\CamBridge.Service\ConfigValidator.cs
+src\CamBridge.Service\Controllers\StatusController.cs
+src\CamBridge.Service\mappings.json
+src\CamBridge.Service\Program.cs
+src\CamBridge.Service\Properties\launchSettings.json
+src\CamBridge.Service\ServiceInfo.cs
+src\CamBridge.Service\Tools\exiftool.exe
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\B\B.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Compress\Raw\Bzip2\Bzip2.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Compress\Raw\Lzma\Lzma.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Compress\Raw\Zlib\Zlib.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\CryptX\CryptX.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Cwd\Cwd.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Data\Dumper\Dumper.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Digest\MD5\MD5.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Digest\SHA\SHA.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Encode\Encode.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Fcntl\Fcntl.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\File\Glob\Glob.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\IO\Compress\Brotli\Brotli.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\IO\IO.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\List\Util\Util.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Math\BigInt\FastCalc\FastCalc.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Math\BigInt\GMP\GMP.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\MIME\Base64\Base64.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\mro\mro.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\PerlIO\scalar\scalar.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\POSIX\POSIX.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\re\re.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Socket\Socket.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Storable\Storable.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Time\HiRes\HiRes.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Time\Piece\Piece.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Unicode\LineBreak\LineBreak.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Win32\API\API.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Win32\FindFile\FindFile.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Win32\Win32.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\lib\auto\Win32API\File\File.xs.dll
+src\CamBridge.Service\Tools\exiftool_files\libgcc_s_seh-1.dll
+src\CamBridge.Service\Tools\exiftool_files\liblzma-5__.dll
+src\CamBridge.Service\Tools\exiftool_files\libstdc++-6.dll
+src\CamBridge.Service\Tools\exiftool_files\libwinpthread-1.dll
+src\CamBridge.Service\Tools\exiftool_files\perl.exe
+src\CamBridge.Service\Tools\exiftool_files\perl532.dll
+src\CamBridge.Service\Tools\exiftool_files\readme_windows.txt
+src\CamBridge.Service\Tools\exiftool_files\windows_exiftool.txt
+src\CamBridge.Service\Worker.cs
+
+## [CamBridge.TestConsole [TEST]]
+tests\CamBridge.TestConsole\CamBridge.TestConsole.csproj
+tests\CamBridge.TestConsole\mappings.json
+tests\CamBridge.TestConsole\Program.cs
+
+## [ROOT]
+_archive\old_collectors\collect-sources.bat
+_archive\old_collectors\collect-sources-balanced.bat
+_archive\old_collectors\collect-sources-gui-config.bat
+_archive\old_collectors\collect-sources-mapping-editor.bat
+_archive\old_collectors\collect-sources-test.bat
+_archive\old_docs\cambridge-entwicklungsplan-v2.md
+_archive\README_ARCHIVE.md
+00-build-zip.ps1
+0-build.ps1
+0-build-no-qr.ps1
+1-deploy-update.ps1
+2-config.ps1
+3-service.ps1
+4-console.ps1
+5-test-api.ps1
+6-logs.ps1
+7-clean.ps1
+8-status.ps1
+99-testit-full.ps1
+9-testit.ps1
+Build-QRBridgeUltraSlim.ps1
+CamBridge.ParserDebug\CamBridge.ParserDebug.csproj
+CamBridge.ParserDebug\Program.cs
+CamBridge.ParserDebug\Properties\launchSettings.json
+CamBridge.ServiceDebug.csproj
+CamBridge.ServiceDebug\CamBridge.ServiceDebug.csproj
+CamBridge.ServiceDebug\Program.cs
+CamBridge.sln
+CAMBRIDGE_OVERVIEW.md
+CHANGELOG.md
+Cleanup-DeadLetter.ps1
+COLLECTOR_README.md
+config-analysis.txt
+ConnectionTest\ConnectionTest.cs
+ConnectionTest\ConnectionTest.csproj
+CORE_ESSENTIALS.txt
+Create-DeploymentPackage - 250609.ps1
+Create-DeploymentPackage - 250610.ps1
+Create-DeploymentPackage - Kopie.ps1
+Create-DeploymentPackage.ps1
+Create-NumberedTools.ps1
+current-build-error-files.txt
+current-sources.txt
+dead-letter-surgery-files.txt
+Directory.Build.props
+docs\sources\SOURCES_CONFIG.txt
+docs\sources\SOURCES_CORE.txt
+docs\sources\SOURCES_INDEX.md
+docs\sources\SOURCES_INFRASTRUCTURE.txt
+docs\sources\SOURCES_QRBRIDGE.txt
+docs\sources\SOURCES_SERVICE.txt
+Emergency-Fix-CamBridge.ps1
+ExifToolQuickTest\exif_output.json
+ExifToolQuickTest\ExifToolQuickTest.csproj
+ExifToolQuickTest\Program.cs
+ExifToolTest\ExifToolTest.csproj
+ExifToolTest\Program.cs
+FILETREE_COMPACT.txt
+Get-WisdomProjectTree.ps1
+Get-WisdomSources.ps1
+Get-WisdomSources_Dynamic.ps1
+h-help.ps1
+INFRASTRUCTURE_MODIFY.txt
+Migrate-CamBridgeConfig.ps1
+Program.cs
+PROJECT_WISDOM.md
+qrbridge-constants.txt
+README-Deployment.md
+service-manager.ps1
+ShowVersion.targets
+test-api.ps1
+Test-CompletePipeline.ps1
+Test-QRBridge.ps1
+ui-files-session90.txt
+Version.props
+version-deadletter-files.txt
+WISDOM_ARCHITECTURE.md
+WISDOM_CLAUDE - 250614.md
+WISDOM_CLAUDE.md
+WISDOM_META.md
+WISDOM_PO.md
+WISDOM_TECHNICAL - 250614.md
+WISDOM_TECHNICAL.md
+
+## [TOOLS]
+Tools\exiftool.exe
+Tools\exiftool_files\lib\auto\B\B.xs.dll
+Tools\exiftool_files\lib\auto\Compress\Raw\Bzip2\Bzip2.xs.dll
+Tools\exiftool_files\lib\auto\Compress\Raw\Lzma\Lzma.xs.dll
+Tools\exiftool_files\lib\auto\Compress\Raw\Zlib\Zlib.xs.dll
+Tools\exiftool_files\lib\auto\CryptX\CryptX.xs.dll
+Tools\exiftool_files\lib\auto\Cwd\Cwd.xs.dll
+Tools\exiftool_files\lib\auto\Data\Dumper\Dumper.xs.dll
+Tools\exiftool_files\lib\auto\Digest\MD5\MD5.xs.dll
+Tools\exiftool_files\lib\auto\Digest\SHA\SHA.xs.dll
+Tools\exiftool_files\lib\auto\Encode\Encode.xs.dll
+Tools\exiftool_files\lib\auto\Fcntl\Fcntl.xs.dll
+Tools\exiftool_files\lib\auto\File\Glob\Glob.xs.dll
+Tools\exiftool_files\lib\auto\IO\Compress\Brotli\Brotli.xs.dll
+Tools\exiftool_files\lib\auto\IO\IO.xs.dll
+Tools\exiftool_files\lib\auto\List\Util\Util.xs.dll
+Tools\exiftool_files\lib\auto\Math\BigInt\FastCalc\FastCalc.xs.dll
+Tools\exiftool_files\lib\auto\Math\BigInt\GMP\GMP.xs.dll
+Tools\exiftool_files\lib\auto\MIME\Base64\Base64.xs.dll
+Tools\exiftool_files\lib\auto\mro\mro.xs.dll
+Tools\exiftool_files\lib\auto\PerlIO\scalar\scalar.xs.dll
+Tools\exiftool_files\lib\auto\POSIX\POSIX.xs.dll
+Tools\exiftool_files\lib\auto\re\re.xs.dll
+Tools\exiftool_files\lib\auto\Socket\Socket.xs.dll
+Tools\exiftool_files\lib\auto\Storable\Storable.xs.dll
+Tools\exiftool_files\lib\auto\Time\HiRes\HiRes.xs.dll
+Tools\exiftool_files\lib\auto\Time\Piece\Piece.xs.dll
+Tools\exiftool_files\lib\auto\Unicode\LineBreak\LineBreak.xs.dll
+Tools\exiftool_files\lib\auto\Win32\API\API.xs.dll
+Tools\exiftool_files\lib\auto\Win32\FindFile\FindFile.xs.dll
+Tools\exiftool_files\lib\auto\Win32\Win32.xs.dll
+Tools\exiftool_files\lib\auto\Win32API\File\File.xs.dll
+Tools\exiftool_files\libgcc_s_seh-1.dll
+Tools\exiftool_files\liblzma-5__.dll
+Tools\exiftool_files\libstdc++-6.dll
+Tools\exiftool_files\libwinpthread-1.dll
+Tools\exiftool_files\perl.exe
+Tools\exiftool_files\perl532.dll
+Tools\exiftool_files\readme_windows.txt
+Tools\exiftool_files\windows_exiftool.txt
+

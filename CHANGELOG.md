@@ -6,6 +6,76 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# Changelog Entry for v0.8.0
+
+## [0.8.0] - 2025-06-23
+
+### 🎉 Added
+
+#### PACS Upload Support (C-STORE)
+- **DicomStoreService**: New service for DICOM C-STORE operations to PACS servers
+  - Supports connection testing via C-ECHO
+  - Configurable timeout and retry logic
+  - Currently implemented as STUB for testing
+- **PacsUploadQueue**: Per-pipeline queue for reliable PACS uploads
+  - Automatic retry with configurable attempts (default: 3)
+  - Exponential backoff between retries
+  - In-memory error tracking for failed uploads
+  - Runs asynchronously without blocking pipeline processing
+- **PacsConfiguration**: New configuration section per pipeline
+  - Host/Port settings for PACS server
+  - AE Title configuration (Called/Calling)
+  - Enable/disable per pipeline
+  - Retry and timeout settings
+
+#### Backend Integration
+- **FileProcessor**: Enhanced to queue DICOM files for PACS upload after successful conversion
+- **PipelineManager**: Creates and manages PACS upload queues per pipeline
+- **PipelineStatus**: Extended with PACS status information (enabled, queue depth)
+
+### 🔧 Changed
+- **Version.props**: Fixed XML encoding issue with copyright symbol (© → &#169;)
+- **ServiceCollectionExtensions**: Added DicomStoreService registration
+- Pipeline processing now supports optional PACS upload as final step
+
+### 🏗️ Infrastructure
+- Prepared for fo-dicom 5.2.2 C-STORE implementation
+- STUB implementation allows full testing without PACS server
+- Logging enhanced to track PACS operations per pipeline
+
+### 📝 Configuration Example
+```json
+{
+  "PacsConfiguration": {
+    "Enabled": true,
+    "Host": "192.168.1.100",
+    "Port": 104,
+    "CalledAeTitle": "PACS_SERVER",
+    "CallingAeTitle": "CAMBRIDGE",
+    "TimeoutSeconds": 30,
+    "MaxRetryAttempts": 3,
+    "RetryDelaySeconds": 5
+  }
+}
+```
+
+### 🚧 Work in Progress
+- UI for PACS configuration (coming in next session)
+- Real C-STORE implementation to replace STUBs
+- Connection test functionality in Config Tool
+
+### 🐛 Known Issues
+- None at this time (STUB implementation)
+
+### 💡 Notes
+- PACS upload is optional and disabled by default
+- Failed uploads don't block pipeline processing
+- Each pipeline can have different PACS destinations
+- Full backward compatibility maintained
+
+---
+*Backend implementation complete. UI integration pending for full feature availability.*
+
 ## [0.7.32] - 2025-06-23
 
 ### 🔧 Fixed

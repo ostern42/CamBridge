@@ -1,7 +1,7 @@
-﻿// src/CamBridge.Infrastructure/Services/FileProcessor.cs
-// Version: 0.7.29
-// Description: Pipeline-aware file processor with FIXED DICOM output handling
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// src/CamBridge.Infrastructure/Services/FileProcessor.cs
+// Version: 0.8.0
+// Description: Pipeline-aware file processor with PACS upload queue integration
+// Copyright: &#169; 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
 using CamBridge.Core.Entities;
@@ -19,7 +19,7 @@ namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
     /// Orchestrates the complete JPEG to DICOM conversion process for a specific pipeline
-    /// FIXED: Now properly handles DICOM files in output with ABSOLUTE paths!
+    /// ENHANCED: Now supports automatic PACS upload via queue after successful conversion
     /// </summary>
     public class FileProcessor
     {
@@ -30,13 +30,14 @@ namespace CamBridge.Infrastructure.Services
         private readonly DicomSettings _dicomSettings;
         private readonly IDicomTagMapper? _tagMapper;
         private readonly IMappingConfiguration? _mappingConfiguration;
+        private readonly PacsUploadQueue? _pacsUploadQueue;
 
         public event EventHandler<FileProcessingEventArgs>? ProcessingStarted;
         public event EventHandler<FileProcessingEventArgs>? ProcessingCompleted;
         public event EventHandler<FileProcessingErrorEventArgs>? ProcessingError;
 
         /// <summary>
-        /// Creates a FileProcessor for a specific pipeline
+        /// Creates a FileProcessor for a specific pipeline with optional PACS upload support
         /// </summary>
         public FileProcessor(
             ILogger logger,
@@ -45,7 +46,8 @@ namespace CamBridge.Infrastructure.Services
             PipelineConfiguration pipelineConfig,
             DicomSettings globalDicomSettings,
             IDicomTagMapper? tagMapper = null,
-            IMappingConfiguration? mappingConfiguration = null)
+            IMappingConfiguration? mappingConfiguration = null,
+            PacsUploadQueue? pacsUploadQueue = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _exifToolReader = exifToolReader ?? throw new ArgumentNullException(nameof(exifToolReader));
@@ -54,9 +56,16 @@ namespace CamBridge.Infrastructure.Services
             _dicomSettings = ApplyDicomOverrides(globalDicomSettings, pipelineConfig.DicomOverrides);
             _tagMapper = tagMapper;
             _mappingConfiguration = mappingConfiguration;
+            _pacsUploadQueue = pacsUploadQueue;
 
             _logger.LogDebug("Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
                 pipelineConfig.Name, pipelineConfig.Id);
+
+            if (_pacsUploadQueue != null)
+            {
+                _logger.LogInformation("PACS upload queue attached to pipeline: {PipelineName}",
+                    pipelineConfig.Name);
+            }
         }
 
         /// <summary>
@@ -170,7 +179,7 @@ namespace CamBridge.Infrastructure.Services
                 }
 
                 // Convert to DICOM using pipeline-specific settings and mapping
-                _logger.LogInformation("Converting JPEG to DICOM: {Source} â†’ {Destination}",
+                _logger.LogInformation("Converting JPEG to DICOM: {Source} → {Destination}",
                     Path.GetFullPath(filePath), Path.GetFullPath(outputPath));
 
                 var dicomStopwatch = Stopwatch.StartNew();
@@ -208,6 +217,25 @@ namespace CamBridge.Infrastructure.Services
                     {
                         _logger.LogWarning("Slow processing detected for {FileName}: {ElapsedMs}ms",
                             Path.GetFileName(filePath), result.ProcessingTimeMs);
+                    }
+
+                    // NEW: Queue for PACS upload if enabled
+                    if (_pacsUploadQueue != null && _pipelineConfig.PacsConfiguration?.Enabled == true)
+                    {
+                        try
+                        {
+                            await _pacsUploadQueue.EnqueueAsync(conversionResult.DicomFilePath!);
+                            _logger.LogInformation("DICOM queued for PACS upload: {File} → {Host}:{Port}",
+                                Path.GetFileName(conversionResult.DicomFilePath),
+                                _pipelineConfig.PacsConfiguration.Host,
+                                _pipelineConfig.PacsConfiguration.Port);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to queue DICOM for PACS upload: {File}",
+                                Path.GetFileName(conversionResult.DicomFilePath));
+                            // Don't fail the overall processing if PACS queue fails
+                        }
                     }
 
                     // FIXED: Handle post-processing for SOURCE file only
