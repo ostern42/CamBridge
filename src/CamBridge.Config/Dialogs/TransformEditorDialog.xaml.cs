@@ -1,6 +1,6 @@
-// src/CamBridge.Config/Dialogs/TransformEditorDialog.xaml.cs
+﻿// src/CamBridge.Config/Dialogs/TransformEditorDialog.xaml.cs
 // Version: 0.7.26
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
 using CamBridge.Core.ValueObjects;
@@ -283,7 +283,7 @@ namespace CamBridge.Config.Dialogs
                     "DateTimeOriginal" => DateTime.Now.ToString("yyyy:MM:dd HH:mm:ss"),
                     "name" => "Schmidt, Maria",
                     "examid" => "EX002",
-                    "comment" => "Röntgen Thorax",
+                    "comment" => "RÃ¶ntgen Thorax",
                     _ => "Sample Text"
                 },
                 _ => PreviewInput // Keep existing input
@@ -308,7 +308,7 @@ namespace CamBridge.Config.Dialogs
             }
 
             // Check for common encoding indicators
-            bool hasUmlauts = PreviewInput.Any(c => "äöüÄÖÜß".Contains(c));
+            bool hasUmlauts = PreviewInput.Any(c => "Ã¤Ã¶Ã¼Ã„Ã–ÃœÃŸ".Contains(c));
             bool hasExtendedAscii = PreviewInput.Any(c => c > 127);
 
             if (hasExtendedAscii && !hasUmlauts)
@@ -407,12 +407,12 @@ namespace CamBridge.Config.Dialogs
             if (PreviewOutput.Contains('?') && !PreviewInput.Contains('?'))
             {
                 ShowEncodingWarning = true;
-                EncodingWarning = "⚠ Character encoding issue detected - some characters may be lost in DICOM conversion";
+                EncodingWarning = "âš  Character encoding issue detected - some characters may be lost in DICOM conversion";
             }
             else if (PreviewOutput.Any(c => c > 255))
             {
                 ShowEncodingWarning = true;
-                EncodingWarning = "⚠ Output contains Unicode characters that may not be supported in DICOM ISO_IR 100";
+                EncodingWarning = "âš  Output contains Unicode characters that may not be supported in DICOM ISO_IR 100";
             }
         }
 
@@ -473,7 +473,7 @@ namespace CamBridge.Config.Dialogs
                     "DateTimeOriginal" => DateTime.Now.ToString("yyyy:MM:dd HH:mm:ss"),
                     "name" => "Schmidt, Maria",
                     "examid" => "EX002",
-                    "comment" => "Röntgen Thorax\r\nAP-Aufnahme",
+                    "comment" => "RÃ¶ntgen Thorax\r\nAP-Aufnahme",
                     _ => "Sample Text"
                 }
             };

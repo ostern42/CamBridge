@@ -1,7 +1,7 @@
-// src\CamBridge.Config\ViewModels\DashboardViewModel.cs
+﻿// src\CamBridge.Config\ViewModels\DashboardViewModel.cs
 // Version: 0.7.21
 // Description: MINIMAL Dashboard - Just show if service is running!
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.ObjectModel;

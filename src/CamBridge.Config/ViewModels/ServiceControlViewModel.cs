@@ -1,4 +1,4 @@
-// src/CamBridge.Config/ViewModels/ServiceControlViewModel.cs
+﻿// src/CamBridge.Config/ViewModels/ServiceControlViewModel.cs
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;

@@ -1,7 +1,7 @@
-// src/CamBridge.Infrastructure/Services/NotificationService.cs
+﻿// src/CamBridge.Infrastructure/Services/NotificationService.cs
 // Version: 0.7.18
 // Description: Ultra-minimal notification service - KISS approach without interface!
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Linq;

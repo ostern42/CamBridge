@@ -1,4 +1,4 @@
-namespace CamBridge.Core
+﻿namespace CamBridge.Core
 {
     /// <summary>
     /// Enum for value transform types used in mapping rules

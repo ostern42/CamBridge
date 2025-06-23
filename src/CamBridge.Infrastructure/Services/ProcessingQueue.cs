@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/ProcessingQueue.cs
-// Version: 0.7.28
-// Description: Thread-safe queue with pipeline-specific FileProcessor and EnqueueAsync!
+// Version: 0.7.31
+// Description: Thread-safe queue with duplicate detection fix
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -17,26 +17,35 @@ namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
     /// Thread-safe queue for managing file processing with retry logic
-    /// PIPELINE UPDATE: Uses pipeline-specific FileProcessor directly!
+    /// FIXED: Prevents duplicate processing of successfully completed files
     /// </summary>
     public class ProcessingQueue
     {
         private readonly ILogger<ProcessingQueue> _logger;
-        private readonly FileProcessor _fileProcessor; // Direct dependency!
+        private readonly FileProcessor _fileProcessor;
         private readonly ProcessingOptions _options;
         private readonly ConcurrentQueue<ProcessingItem> _queue = new();
         private readonly ConcurrentDictionary<string, ProcessingItem> _activeItems = new();
         private readonly SemaphoreSlim _processingSlots;
-        private readonly object _statsLock = new();
-        private readonly Dictionary<string, int> _errorCounts = new();
+        private readonly CancellationTokenSource _cancellationSource = new();
+        private Task? _processingTask;
 
+        // FIX: Track processed and enqueued files to prevent duplicates
+        private readonly HashSet<string> _processedFiles = new();
+        private readonly HashSet<string> _enqueuedFiles = new();
+        private readonly object _trackingLock = new object();
+
+        // Statistics
         private int _totalProcessed;
         private int _totalSuccessful;
         private int _totalFailed;
-        private DateTime _startTime = DateTime.UtcNow;
+        private readonly DateTime _startTime = DateTime.UtcNow;
+        private readonly ConcurrentDictionary<string, int> _errorCounts = new();
+        private readonly object _statsLock = new object();
 
+        // Public statistics properties
         public int QueueLength => _queue.Count;
-        public int ActiveProcessing => _activeItems.Count;
+        public int ActiveCount => _activeItems.Count;
         public int TotalProcessed => _totalProcessed;
         public int TotalSuccessful => _totalSuccessful;
         public int TotalFailed => _totalFailed;
@@ -67,25 +76,35 @@ namespace CamBridge.Infrastructure.Services
             if (string.IsNullOrWhiteSpace(filePath))
                 return false;
 
-            // Check if already in queue or being processed
-            if (_activeItems.ContainsKey(filePath))
+            lock (_trackingLock)
             {
-                _logger.LogDebug("File {FilePath} is already being processed", filePath);
-                return false;
+                // FIX: Check if already successfully processed
+                if (_processedFiles.Contains(filePath))
+                {
+                    _logger.LogDebug("File {FilePath} already processed, ignoring duplicate event", filePath);
+                    return false;
+                }
+
+                // FIX: Check if already in queue
+                if (_enqueuedFiles.Contains(filePath))
+                {
+                    _logger.LogDebug("File {FilePath} already in queue, ignoring duplicate event", filePath);
+                    return false;
+                }
+
+                // Check if already being processed
+                if (_activeItems.ContainsKey(filePath))
+                {
+                    _logger.LogDebug("File {FilePath} is currently being processed", filePath);
+                    return false;
+                }
+
+                // Add to tracking
+                _enqueuedFiles.Add(filePath);
             }
 
-            if (_queue.Any(item => item.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
-            {
-                _logger.LogDebug("File {FilePath} is already in queue", filePath);
-                return false;
-            }
-
-            // Check if file should be processed using THIS pipeline's FileProcessor
-            if (!_fileProcessor.ShouldProcessFile(filePath))
-            {
-                _logger.LogDebug("File {FilePath} does not meet processing criteria", filePath);
-                return false;
-            }
+            // Check file size constraints if needed
+            // TODO: Add MinFileSizeBytes/MaxFileSizeBytes to ProcessingOptions if needed
 
             var item = new ProcessingItem(filePath);
             _queue.Enqueue(item);
@@ -101,7 +120,6 @@ namespace CamBridge.Infrastructure.Services
         /// </summary>
         public Task<bool> EnqueueAsync(string filePath, CancellationToken cancellationToken = default)
         {
-            // Simply wrap the synchronous TryEnqueue method
             var result = TryEnqueue(filePath);
             return Task.FromResult(result);
         }
@@ -109,51 +127,89 @@ namespace CamBridge.Infrastructure.Services
         /// <summary>
         /// Processes items from the queue
         /// </summary>
-        public async Task ProcessQueueAsync(CancellationToken cancellationToken)
+        public async Task ProcessAsync(CancellationToken cancellationToken)
         {
-            var tasks = new List<Task>();
+            _logger.LogInformation("Processing queue started");
 
-            while (!cancellationToken.IsCancellationRequested)
+            try
             {
-                // Clean up completed tasks
-                tasks.RemoveAll(t => t.IsCompleted);
-
-                // Try to dequeue and process
-                if (_queue.TryDequeue(out var item))
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    // Wait for available processing slot
-                    await _processingSlots.WaitAsync(cancellationToken);
+                    if (_queue.TryDequeue(out var item))
+                    {
+                        await _processingSlots.WaitAsync(cancellationToken);
 
-                    // Start processing task
-                    var task = ProcessItemAsync(item, cancellationToken);
-                    tasks.Add(task);
-                }
-                else
-                {
-                    // No items in queue, wait a bit
-                    await Task.Delay(100, cancellationToken);
+                        // Fire and forget - process in background
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await ProcessItemAsync(item, cancellationToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Unexpected error in background processing");
+                            }
+                        }, cancellationToken);
+                    }
+                    else
+                    {
+                        // No items to process, wait a bit
+                        await Task.Delay(100, cancellationToken);
+                    }
                 }
             }
-
-            // Wait for all remaining tasks to complete on shutdown
-            if (tasks.Count > 0)
+            finally
             {
-                _logger.LogInformation("Waiting for {Count} active processing tasks to complete", tasks.Count);
-                await Task.WhenAll(tasks);
+                _logger.LogInformation("Processing queue stopped");
             }
         }
 
         /// <summary>
-        /// Gets current queue statistics
+        /// Compatibility wrapper for PipelineManager that expects ProcessQueueAsync
         /// </summary>
-        public QueueStatistics GetStatistics()
+        public Task ProcessQueueAsync(CancellationToken cancellationToken)
+        {
+            return ProcessAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Starts the background processing
+        /// </summary>
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _processingTask = ProcessAsync(_cancellationSource.Token);
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Stops the background processing
+        /// </summary>
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            _cancellationSource.Cancel();
+
+            try
+            {
+                await _processingTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when canceling
+            }
+        }
+
+        /// <summary>
+        /// Gets current statistics
+        /// </summary>
+        public ProcessingStatistics GetStatistics()
         {
             lock (_statsLock)
             {
-                return new QueueStatistics
+                return new ProcessingStatistics
                 {
                     QueueLength = QueueLength,
-                    ActiveProcessing = ActiveProcessing,
+                    ActiveCount = ActiveCount,
                     TotalProcessed = TotalProcessed,
                     TotalSuccessful = TotalSuccessful,
                     TotalFailed = TotalFailed,
@@ -165,44 +221,6 @@ namespace CamBridge.Infrastructure.Services
                         .ToDictionary(x => x.Key, x => x.Value)
                 };
             }
-        }
-
-        /// <summary>
-        /// Gets daily summary for notifications
-        /// </summary>
-        public ProcessingSummary GetDailySummary()
-        {
-            var stats = GetStatistics();
-
-            return new ProcessingSummary
-            {
-                Date = DateTime.Today,
-                TotalProcessed = stats.TotalProcessed,
-                Successful = stats.TotalSuccessful,
-                Failed = stats.TotalFailed,
-                ProcessingTimeSeconds = stats.UpTime.TotalSeconds,
-                TopErrors = stats.TopErrors,
-                Uptime = stats.UpTime
-            };
-        }
-
-        /// <summary>
-        /// Gets items currently being processed
-        /// </summary>
-        public IReadOnlyList<ProcessingItemStatus> GetActiveItems()
-        {
-            return _activeItems.Values
-                .Select(item => new ProcessingItemStatus
-                {
-                    FilePath = item.FilePath,
-                    StartTime = item.StartTime,
-                    AttemptCount = item.AttemptCount,
-                    Duration = item.StartTime.HasValue
-                        ? DateTime.UtcNow - item.StartTime.Value
-                        : TimeSpan.Zero
-                })
-                .ToList()
-                .AsReadOnly();
         }
 
         private async Task ProcessItemAsync(ProcessingItem item, CancellationToken cancellationToken)
@@ -235,14 +253,35 @@ namespace CamBridge.Infrastructure.Services
                     }
                 }
 
-                if (!result.Success && ShouldRetry(item))
+                if (result.Success)
+                {
+                    // FIX: Mark as successfully processed
+                    lock (_trackingLock)
+                    {
+                        _processedFiles.Add(item.FilePath);
+                        _enqueuedFiles.Remove(item.FilePath);
+
+                        // Cleanup old entries if too many (prevent memory leak)
+                        if (_processedFiles.Count > 10000)
+                        {
+                            _logger.LogInformation("Cleaning up processed files tracking (>10000 entries)");
+                            _processedFiles.Clear();
+                        }
+                    }
+                }
+                else if (ShouldRetry(item))
                 {
                     // Schedule retry
                     await ScheduleRetryAsync(item, cancellationToken);
                 }
-                else if (!result.Success)
+                else
                 {
-                    // KISS: File already moved to error folder by FileProcessor!
+                    // Final failure - remove from tracking
+                    lock (_trackingLock)
+                    {
+                        _enqueuedFiles.Remove(item.FilePath);
+                    }
+
                     _logger.LogError("Failed to process {FilePath} after {Attempts} attempts: {Error}",
                         item.FilePath, item.AttemptCount, result.ErrorMessage);
                 }
@@ -264,7 +303,12 @@ namespace CamBridge.Infrastructure.Services
                 }
                 else
                 {
-                    // Log final failure - file should already be in error folder
+                    // Final failure - remove from tracking
+                    lock (_trackingLock)
+                    {
+                        _enqueuedFiles.Remove(item.FilePath);
+                    }
+
                     _logger.LogError("Failed to process {FilePath} after {Attempts} attempts",
                         item.FilePath, item.AttemptCount);
                 }
@@ -343,27 +387,23 @@ namespace CamBridge.Infrastructure.Services
     }
 
     // Statistics classes remain the same...
-    public class QueueStatistics
+    public class ProcessingStatistics
     {
-        public int QueueLength { get; init; }
-        public int ActiveProcessing { get; init; }
-        public int TotalProcessed { get; init; }
-        public int TotalSuccessful { get; init; }
-        public int TotalFailed { get; init; }
-        public TimeSpan UpTime { get; init; }
-        public double ProcessingRate { get; init; }
-        public Dictionary<string, int> TopErrors { get; init; } = new();
-
-        public double SuccessRate => TotalProcessed > 0
-            ? (double)TotalSuccessful / TotalProcessed * 100
-            : 0;
+        public int QueueLength { get; set; }
+        public int ActiveCount { get; set; }
+        public int TotalProcessed { get; set; }
+        public int TotalSuccessful { get; set; }
+        public int TotalFailed { get; set; }
+        public TimeSpan UpTime { get; set; }
+        public double ProcessingRate { get; set; }
+        public Dictionary<string, int> TopErrors { get; set; } = new();
     }
 
     public class ProcessingItemStatus
     {
-        public string FilePath { get; init; } = string.Empty;
-        public DateTime? StartTime { get; init; }
-        public int AttemptCount { get; init; }
-        public TimeSpan Duration { get; init; }
+        public string FilePath { get; set; } = string.Empty;
+        public DateTime? StartTime { get; set; }
+        public int AttemptCount { get; set; }
+        public TimeSpan Duration { get; set; }
     }
 }

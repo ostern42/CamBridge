@@ -1,7 +1,7 @@
-// src\CamBridge.Config\Models\DeadLetterModels.cs
+﻿// src\CamBridge.Config\Models\DeadLetterModels.cs
 // Version: 0.7.1
 // Description: Dead letter queue models for API communication
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;

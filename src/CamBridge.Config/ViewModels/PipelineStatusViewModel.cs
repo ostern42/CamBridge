@@ -1,4 +1,4 @@
-/**************************************************************************
+﻿/**************************************************************************
 *  PipelineStatusViewModel.cs                                             *
 *  PATH: src\CamBridge.Config\ViewModels\PipelineStatusViewModel.cs      *
 *  VERSION: 0.7.11 | SIZE: ~2.5KB | MODIFIED: 2025-06-13                 *

@@ -1,4 +1,4 @@
-// src\CamBridge.Config\Services\NavigationService.cs
+﻿// src\CamBridge.Config\Services\NavigationService.cs
 // Version: 0.7.28
 // Description: Navigation service with LogViewer page added
 

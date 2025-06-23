@@ -1,7 +1,7 @@
-// src/CamBridge.Service/CamBridgeHealthCheck.cs
+﻿// src/CamBridge.Service/CamBridgeHealthCheck.cs
 // Version: 0.7.28
 // Description: Health check implementation using PipelineManager and direct NotificationService
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;

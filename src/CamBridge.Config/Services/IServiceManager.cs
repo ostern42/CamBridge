@@ -1,4 +1,4 @@
-// src/CamBridge.Config/Services/IServiceManager.cs
+﻿// src/CamBridge.Config/Services/IServiceManager.cs
 using System;
 using System.Threading.Tasks;
 

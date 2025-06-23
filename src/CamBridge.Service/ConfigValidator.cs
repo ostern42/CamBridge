@@ -1,7 +1,7 @@
-// src/CamBridge.Service/ConfigValidator.cs
+﻿// src/CamBridge.Service/ConfigValidator.cs
 // Version: 0.7.28
 // Description: Validates configuration and warns about invalid values
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;
@@ -155,11 +155,11 @@ namespace CamBridge.Service
                 // Output all warnings
                 if (warnings.Any())
                 {
-                    logger.Warning("⚠️ CONFIGURATION WARNINGS ⚠️");
+                    logger.Warning("âš ï¸ CONFIGURATION WARNINGS âš ï¸");
                     logger.Warning("============================");
                     foreach (var warning in warnings)
                     {
-                        logger.Warning("⚠️ {Warning}", warning);
+                        logger.Warning("âš ï¸ {Warning}", warning);
                     }
                     logger.Warning("============================");
                     logger.Warning("Service will continue but some pipelines may not load correctly!");
@@ -167,7 +167,7 @@ namespace CamBridge.Service
                 }
                 else
                 {
-                    logger.Information("✅ Configuration validation passed - no issues found");
+                    logger.Information("âœ… Configuration validation passed - no issues found");
                 }
             }
             catch (Exception ex)

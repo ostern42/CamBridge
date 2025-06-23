@@ -1,4 +1,4 @@
-// src\CamBridge.Config\ViewModels\ServiceControlViewModelExtension.cs
+﻿// src\CamBridge.Config\ViewModels\ServiceControlViewModelExtension.cs
 // Version: 0.5.26
 // Extension methods for ServiceControlViewModel
 

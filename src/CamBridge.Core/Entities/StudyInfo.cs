@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using CamBridge.Core.ValueObjects;
 
 namespace CamBridge.Core.Entities

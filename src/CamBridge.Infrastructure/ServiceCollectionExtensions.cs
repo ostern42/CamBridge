@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/ServiceCollectionExtensions.cs
-// Version: 0.7.20
-// Description: DI container configuration - FileProcessor now created per pipeline!
+// Version: 0.7.31
+// Description: DI container configuration - Fixed ExifToolReader registration
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -33,7 +33,16 @@ namespace CamBridge.Infrastructure
             services.Configure<NotificationSettings>(configuration.GetSection("CamBridge:Notifications"));
 
             // Register shared services (used by all pipelines)
-            services.AddSingleton<ExifToolReader>();
+            // FIX: ExifToolReader needs the path from configuration!
+            services.AddSingleton<ExifToolReader>(sp =>
+            {
+                var settings = sp.GetRequiredService<IOptionsMonitor<CamBridgeSettingsV2>>().CurrentValue;
+                return new ExifToolReader(
+                    sp.GetRequiredService<ILogger<ExifToolReader>>(),
+                    settings.ExifToolPath ?? "Tools\\exiftool.exe"
+                );
+            });
+
             services.AddSingleton<DicomConverter>();
 
             // FileProcessor is NO LONGER registered here!

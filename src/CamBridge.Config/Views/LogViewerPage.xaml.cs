@@ -1,4 +1,4 @@
-// src\CamBridge.Config\Views\LogViewerPage.xaml.cs
+﻿// src\CamBridge.Config\Views\LogViewerPage.xaml.cs
 // Version: 0.7.28
 // Description: Enhanced code-behind with multi-line selection support
 

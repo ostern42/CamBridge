@@ -1,5 +1,5 @@
 ﻿# CamBridge Sources - CORE
-# Generated: 2025-06-23 09:56:08
+# Generated: 2025-06-23 12:05:12
 # Version: 0.7.11
 # Purpose: Complete source code for project knowledge
 # Token-efficient access to all implementations
@@ -2565,11 +2565,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Claude\'s Improbably Reliable Software Solutions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Â© 2025 Claude\'s Improbably Reliable Software Solutions")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.30.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.30+bb6c6b0cc9dbd04b818eea63b09a9eb46ee0d1e3")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.31.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.31+e7873098f649cfa3ffbefe150a974cd143848671")]
 [assembly: System.Reflection.AssemblyProductAttribute("CamBridge Medical Image Converter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CamBridge.Core")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.7.30.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.7.31.0")]
 [assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/yourusername/CamBridge")]
 [assembly: System.Resources.NeutralResourcesLanguageAttribute("en-US")]
 
@@ -2607,11 +2607,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Claude\'s Improbably Reliable Software Solutions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Â© 2025 Claude\'s Improbably Reliable Software Solutions")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.30.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.30+bb6c6b0cc9dbd04b818eea63b09a9eb46ee0d1e3")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("0.7.31.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.7.31+e7873098f649cfa3ffbefe150a974cd143848671")]
 [assembly: System.Reflection.AssemblyProductAttribute("CamBridge Medical Image Converter")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CamBridge.Core")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.7.30.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("0.7.31.0")]
 [assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/yourusername/CamBridge")]
 [assembly: System.Resources.NeutralResourcesLanguageAttribute("en-US")]
 

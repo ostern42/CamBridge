@@ -1,4 +1,4 @@
-// src/CamBridge.Config/ViewModels/DeadLettersViewModel.cs
+﻿// src/CamBridge.Config/ViewModels/DeadLettersViewModel.cs
 // Version: 0.7.8
 // Description: SIMPLE error folder viewer - KISS approach!
 

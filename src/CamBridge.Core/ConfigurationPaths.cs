@@ -1,4 +1,4 @@
-/**************************************************************************
+﻿/**************************************************************************
 *  ConfigurationPaths.cs                                                  *
 *  PATH: src\CamBridge.Core\Infrastructure\ConfigurationPaths.cs         *
 *  VERSION: 0.7.13 | SIZE: ~12KB | MODIFIED: 2025-06-14                  *

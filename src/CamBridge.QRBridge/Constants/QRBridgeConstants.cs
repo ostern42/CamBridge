@@ -1,6 +1,6 @@
-// src/CamBridge.QRBridge/Constants/QRBridgeConstants.cs
+﻿// src/CamBridge.QRBridge/Constants/QRBridgeConstants.cs
 // Version: 0.7.8
-// © 2025 Claude's Improbably Reliable Software Solutions
+// Â© 2025 Claude's Improbably Reliable Software Solutions
 
 namespace CamBridge.QRBridge.Constants;
 
@@ -28,7 +28,7 @@ public static class QRBridgeConstants
         public const int FormWidth = 450;
         public const int FormHeight = 520;
         public const int CountdownInterval = 1000; // 1 second
-        public const string CountdownFormat = "Fenster schließt in {0} Sekunden...";
+        public const string CountdownFormat = "Fenster schlieÃŸt in {0} Sekunden...";
         public const string WindowTitle = "CamBridge QRBridge - QR Code";
     }
 

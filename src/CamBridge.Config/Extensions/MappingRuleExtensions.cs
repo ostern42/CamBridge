@@ -1,6 +1,6 @@
-// File: src/CamBridge.Config/Extensions/MappingRuleExtensions.cs
+﻿// File: src/CamBridge.Config/Extensions/MappingRuleExtensions.cs
 // Version: 0.6.2
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 // Modified: 2025-06-07
 // Status: Development/Local
 
@@ -15,7 +15,7 @@ namespace CamBridge.Config.Extensions
     public static class MappingRuleExtensions
     {
         // HINWEIS: Die ApplyTransform Methode ist jetzt direkt in MappingRule.cs implementiert!
-        // Diese Klasse könnte gelöscht werden, oder wir behalten sie für andere UI-spezifische Extensions
+        // Diese Klasse kÃ¶nnte gelÃ¶scht werden, oder wir behalten sie fÃ¼r andere UI-spezifische Extensions
 
         /// <summary>
         /// Gets a display-friendly description of the transform
@@ -68,7 +68,7 @@ namespace CamBridge.Config.Extensions
             if (!string.IsNullOrWhiteSpace(rule.Name))
                 return rule.Name;
 
-            return $"{rule.SourceType}.{rule.SourceField} → {rule.DicomTag}";
+            return $"{rule.SourceType}.{rule.SourceField} â†’ {rule.DicomTag}";
         }
     }
 }

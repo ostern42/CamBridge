@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using CamBridge.Core.ValueObjects;
 
@@ -87,7 +87,7 @@ namespace CamBridge.Core.Entities
 
             return genderStr.ToUpperInvariant() switch
             {
-                "M" or "MALE" or "MANN" or "MÄNNLICH" => Gender.Male,
+                "M" or "MALE" or "MANN" or "MÃ„NNLICH" => Gender.Male,
                 "F" or "FEMALE" or "FRAU" or "WEIBLICH" => Gender.Female,
                 _ => Gender.Other
             };

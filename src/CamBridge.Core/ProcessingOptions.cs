@@ -1,4 +1,4 @@
-// src\CamBridge.Core\ProcessingOptions.cs
+﻿// src\CamBridge.Core\ProcessingOptions.cs
 // Version: 0.6.5
 // Description: Processing options with INotifyPropertyChanged support
 

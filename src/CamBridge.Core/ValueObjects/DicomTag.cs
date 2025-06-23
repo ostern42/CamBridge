@@ -1,4 +1,4 @@
-namespace CamBridge.Core.ValueObjects
+﻿namespace CamBridge.Core.ValueObjects
 {
     /// <summary>
     /// Represents a DICOM tag with group and element numbers

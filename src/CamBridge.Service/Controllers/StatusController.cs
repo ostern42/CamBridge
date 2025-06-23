@@ -1,7 +1,7 @@
-// src\CamBridge.Service\Controllers\StatusController.cs
+﻿// src\CamBridge.Service\Controllers\StatusController.cs
 // Version: 0.7.28
 // Description: Service status API controller with static methods for minimal API
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

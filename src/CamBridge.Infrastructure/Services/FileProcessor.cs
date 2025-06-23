@@ -1,7 +1,7 @@
-// src/CamBridge.Infrastructure/Services/FileProcessor.cs
+﻿// src/CamBridge.Infrastructure/Services/FileProcessor.cs
 // Version: 0.7.29
 // Description: Pipeline-aware file processor with FIXED DICOM output handling
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
 using CamBridge.Core.Entities;
@@ -170,7 +170,7 @@ namespace CamBridge.Infrastructure.Services
                 }
 
                 // Convert to DICOM using pipeline-specific settings and mapping
-                _logger.LogInformation("Converting JPEG to DICOM: {Source} → {Destination}",
+                _logger.LogInformation("Converting JPEG to DICOM: {Source} â†’ {Destination}",
                     Path.GetFullPath(filePath), Path.GetFullPath(outputPath));
 
                 var dicomStopwatch = Stopwatch.StartNew();

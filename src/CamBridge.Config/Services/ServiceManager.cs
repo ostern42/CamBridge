@@ -1,4 +1,4 @@
-// src/CamBridge.Config/Services/ServiceManager.cs
+﻿// src/CamBridge.Config/Services/ServiceManager.cs
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -108,7 +108,7 @@ namespace CamBridge.Config.Services
                         foreach (var path in searchPaths)
                         {
                             var exists = File.Exists(path);
-                            errorMsg.AppendLine($"  {(exists ? "✓" : "✗")} {path}");
+                            errorMsg.AppendLine($"  {(exists ? "âœ“" : "âœ—")} {path}");
                         }
 
                         throw new FileNotFoundException(errorMsg.ToString());

@@ -1,9 +1,9 @@
 # WISDOM_TECHNICAL.md - Technical Wisdom Distilled
-**Version**: 0.7.28  
+**Version**: 0.7.32  
 **Purpose**: HOW to build, fix, deploy, activate hidden features  
 **Philosophy**: KISS, Tab-Complete, Sources First, Pipeline Isolation  
-**Reality**: 75 Sessions + Multi-Pipeline Logging Implementation!
-**Updated**: 2025-06-21 Sprint 19 - Professional Logging & Unicode Support
+**Reality**: 87 Sessions + DICOM Pipeline Complete!
+**Updated**: 2025-06-23 Sessions 85-87 - From "no files" to "DICOM viewers work!"
 
 ## 🎭 V.O.G.O.N. PROTOCOL
 
@@ -26,7 +26,7 @@ VOGON EXIT: End session properly
 Usage Examples:
   "VOGON INIT für Pipeline Isolation"
   "Mini-VOGON für Event Handler check"
-  "VOGON EXIT mit v0.7.28 release"
+  "VOGON EXIT mit v0.7.32 release"
 
 NEW - VOGON TREASURE HUNT:
   V - Verify: Search for TODOs and comments
@@ -59,12 +59,15 @@ Hidden Systems Found:
   Monitoring: Health checks active
   Import/Export: JSON fully working ✓
   Auto-Backup: Silent on every save ✓
+  ProcessingQueue: HashSet deduplication ✓ (Session 87!)
   
-NEW Features (Sprint 19):
-  Multi-Pipeline Logging: Separate files per pipeline ✓
-  Unicode Support: Full GUI, sanitized filenames ✓
-  Log Viewer: Professional with multi-select ✓
-  Timestamp: MS precision, second display ✓
+Working Features (Sessions 85-87):
+  JPEG Detection: FileSystemWatcher ✓
+  EXIF Extraction: With prefix handling ✓
+  DICOM Creation: Full pipeline ✓
+  UID Generation: Compliant format ✓
+  Transfer Syntax: Proper JPEG encoding ✓
+  Viewer Support: MicroDicom opens files! ✓
 ```
 
 ## 🌍 UNICODE & INTERNATIONALIZATION
@@ -250,7 +253,7 @@ cat "$env:ProgramData\CamBridge\appsettings.json" | ConvertFrom-Json
 # Quick API health check
 Invoke-RestMethod "http://localhost:5111/api/status" | ConvertTo-Json -Depth 5
 
-# Specific endpoints (all working in v0.7.28)
+# Specific endpoints (all working in v0.7.32)
 $base = "http://localhost:5111/api"
 irm "$base/status"          # Full service status with pipelines
 irm "$base/pipelines"       # Just pipeline configs
@@ -262,12 +265,6 @@ irm "$base/status/health"   # Simple health check
 $pipelineId = "your-pipeline-guid-here"
 irm "$base/pipelines/$pipelineId"  # Detailed pipeline info!
 # Returns: Name, Status, QueueDepth, LastProcessed, ErrorCount, etc.
-
-# NEW ENDPOINTS (add in Sprint 20)
-irm "$base/pipelines/{id}/enable" -Method POST   # Enable pipeline
-irm "$base/pipelines/{id}/disable" -Method POST  # Disable pipeline
-irm "$base/logs/{pipelineName}"     # Get recent log entries
-irm "$base/statistics"              # Currently 404, implement in Sprint 20
 
 # Check specific pipeline
 $status = irm "$base/status"
@@ -309,6 +306,15 @@ Select-String "Logging" src\**\*.xaml | Where {$_ -match "Tab"}
 
 # NEW - Find Unicode in configs
 Select-String "[^\x00-\x7F]" *.json -Encoding UTF8
+
+# EXIF Debugging (Session 87!)
+.\Tools\exiftool.exe -j -a -G1 -s "image.jpg" | ConvertFrom-Json | 
+    Select-Object -ExpandProperty 0 | Get-Member -MemberType NoteProperty
+
+# Find exact property names
+Get-Content src\CamBridge.Core\Entities\ImageTechnicalData.cs | 
+    Select-String "public.*\?.*{.*get" | 
+    ForEach { $_ -replace '.*public\s+(\w+\??)\s+(\w+).*', '$1 $2' }
 ```
 
 ## 🎯 PATTERN MASTERY - FROM PAIN TO WISDOM
@@ -342,6 +348,96 @@ var pipelineLogger = _loggerFactory.CreateLogger($"Pipeline.{SanitizeName(config
 ☑ CardioMRT           [14:23:47 INF] Pipeline CardioMRT started
 
 // Result: Mixed view sorted by precise timestamp!
+```
+
+### The EXIF Key Fallback Pattern ⭐ (Session 87!)
+```csharp
+// Problem: ExifTool with -G1 adds prefixes to keys
+// Solution: Check multiple variants
+
+// ALWAYS check with and without prefix
+var barcodeData = exifData.TryGetValue("RMETA:Barcode", out var data) || 
+                  exifData.TryGetValue("Barcode", out data) 
+                  ? data : null;
+
+var width = GetIntValue(exifData, 
+    "File:ImageWidth",      // Primary with prefix
+    "ExifIFD:ExifImageWidth", // Alternative with prefix
+    "ImageWidth",           // Fallback without prefix
+    "ExifImageWidth"        // Alternative without prefix
+);
+```
+
+### The Property Name Verification Pattern ⭐ (Session 87!)
+```csharp
+// ALWAYS verify exact property names before using!
+// ImageTechnicalData has:
+//   - ImageWidth (NOT Width!)
+//   - ImageHeight (NOT Height!)
+//   - Manufacturer (NOT CameraManufacturer!)
+
+// WRONG:
+technicalData.Width = width;  // CS0117: no definition for 'Width'
+
+// RIGHT:
+technicalData.ImageWidth = width;  // ✅
+```
+
+### The DICOM UID Generation Pattern ⭐ (Sessions 85-86!)
+```csharp
+// Problem: UIDs with hex chars or too long
+// Solution: Strict compliance
+
+// Rules:
+// 1. Only digits (0-9) and dots (.)
+// 2. Max 64 characters total
+// 3. No negative numbers
+// 4. Must be globally unique
+
+private string GenerateUID()
+{
+    var shortTicks = (DateTime.UtcNow.Ticks % 10000000000).ToString();
+    var processId = (Environment.ProcessId % 10000).ToString();
+    var random = new Random().Next(1000, 9999);
+    var uid = $"{IMPLEMENTATION_CLASS_UID}.{shortTicks}.{processId}.{random}";
+    
+    if (uid.Length > 64)
+    {
+        _logger.LogWarning("UID too long, truncating: {UID}", uid);
+        uid = uid.Substring(0, 64);
+    }
+        
+    return uid;
+}
+```
+
+### The DICOM Dataset Creation Pattern ⭐⭐ (Session 86!)
+```csharp
+// CRITICAL: Dataset creation determines pixel data encoding!
+
+// WRONG: Create dataset, then set transfer syntax later
+var dataset = new DicomDataset();  // ❌ Results in explicit length!
+// ... add tags ...
+// Later: dicomFile.FileMetaInfo.TransferSyntax = ...
+
+// RIGHT: Create dataset WITH transfer syntax
+var dataset = new DicomDataset(DicomTransferSyntax.JPEGProcess1);  // ✅
+// fo-dicom knows from start: This will be JPEG compressed!
+// Automatically uses undefined length for pixel data
+```
+
+### The DI Registration with Config Pattern ⭐ (Session 87!)
+```csharp
+// When constructor needs config values:
+services.AddSingleton<ExifToolReader>(sp =>
+{
+    var settings = sp.GetRequiredService<IOptionsMonitor<CamBridgeSettingsV2>>()
+        .CurrentValue;
+    return new ExifToolReader(
+        sp.GetRequiredService<ILogger<ExifToolReader>>(),
+        settings.ExifToolPath ?? "Tools\\exiftool.exe"
+    );
+});
 ```
 
 ### The Unicode Filename Pattern ⭐ NEW!
@@ -415,18 +511,18 @@ Discovery Process:
   4. Find existing methods
   5. Often just needs UI!
 
-Real Example - Logging Configuration:
-  User: "We need pipeline-specific logging"
-  Me: "Let me check what exists..."
+Real Example - ProcessingQueue Deduplication (Session 87):
+  User: "Files processed multiple times!"
+  Me: "Let me check ProcessingQueue..."
   
-  Found in PipelineConfigPage.xaml:
-    - Complete Logging tab ✓
-    - All UI controls ✓
-    - ViewModel properties ✓
+  Found in ProcessingQueue.cs:
+    - HashSet<string> _processedFiles ✓
+    - HashSet<string> _enqueuedFiles ✓
+    - Complete deduplication logic ✓
     
-  Missing: Just the backend connection!
+  Missing: Nothing! Already implemented!
   
-  Result: 4 hours instead of 2 days!
+  Result: 0 hours instead of rewriting!
 ```
 
 ### The Minimal Pattern ⭐ POWERFUL!
@@ -619,6 +715,21 @@ User value:
   - Recovery configured automatically
 ```
 
+### 🎯 Session 87 Discovery
+```yaml
+ProcessingQueue Deduplication:
+  ✅ HashSet tracking already implemented
+  ✅ Prevents duplicate file processing
+  ✅ Handles FileSystemWatcher multi-events
+  ✅ No changes needed - just works!
+  
+Discovery Process:
+  1. User reported retry spam
+  2. Searched for "duplicate", "processed"
+  3. Found complete implementation
+  4. Just needed to understand it!
+```
+
 ### 🎯 Sprint 19 Features (NEW!)
 ```yaml
 Multi-Pipeline Logging:
@@ -782,6 +893,110 @@ Fix #28: Path Length Limits
   Solution: Truncate sanitized names to 100 chars
 ```
 
+### Category 6: DICOM Pipeline Fixes (Sessions 85-87) ⭐
+```yaml
+Fix #29: DICOM Relative Path Bug
+  Symptom: "Source file not found" after successful processing
+  Debug Time: Initially thought complex retry issue
+  Root Cause: DICOM created with relative paths, service runs from System32
+  
+  PROBLEM: return dicomPath;  // "Schmidt, Maria\2025-06-23\file.dcm"
+  SOLUTION: return Path.GetFullPath(dicomPath);  // "C:\CamBridge\Output\..."
+  
+  Learning: Windows Services working directory = System32!
+
+Fix #30: UID Hex Characters
+  Symptom: "does not validate VR UI" in DICOM validation
+  Root Cause: UIDs contained hex characters (a-f) from GUID
+  
+  PROBLEM: guid.ToString("N").Substring(0, 8); // "bb7e1567"
+  SOLUTION: Convert to numeric only using BitConverter
+  
+  Learning: DICOM UIDs = digits + dots ONLY!
+
+Fix #31: UID Length Exceeded
+  Symptom: UID validation error
+  Root Cause: UIDs > 64 characters (was 69!)
+  
+  Solution: Shorter components with modulo
+  Learning: Every DICOM rule is strict!
+
+Fix #32: Transfer Syntax on FileMetaInfo
+  Symptom: Transfer syntax not recognized
+  Root Cause: Set on Dataset instead of FileMetaInfo
+  
+  WRONG: dataset.Add(DicomTag.TransferSyntaxUID, ...)
+  RIGHT: dicomFile.FileMetaInfo.TransferSyntax = ...
+  
+  Learning: Location matters in DICOM!
+
+Fix #33: Post-Processing Race Condition
+  Symptom: "Source file not found" during retry
+  Root Cause: SuccessAction "Archive" moves file before retry
+  
+  Solution: Set to "Leave" for testing
+  Learning: Consider full flow, not just success path
+
+Fix #34: JPEG Encapsulation Undefined Length ⭐⭐
+  Symptom: "Found explicit length Pixel Data in compressed Transfer Syntax"
+  Debug Time: 30 minutes with dcmdump
+  Root Cause: Dataset created without transfer syntax
+  
+  WRONG: var dataset = new DicomDataset();
+  RIGHT: var dataset = new DicomDataset(DicomTransferSyntax.JPEGProcess1);
+  
+  Learning: fo-dicom needs to know transfer syntax AT CREATION!
+
+Fix #35: ImageTechnicalData Property Names ⭐
+  Symptom: CS0117 "no definition for 'Width'"
+  Debug Time: 45 minutes!
+  Root Cause: Property is ImageWidth not Width
+  
+  WRONG: technicalData.Width = width;
+  RIGHT: technicalData.ImageWidth = width;
+  
+  Learning: EXACT property names matter!
+
+Fix #36: Immutable Domain Objects
+  Symptom: Cannot use object initializers
+  Root Cause: Domain objects have constructor-only init
+  
+  Solution: Use constructors with parameters
+  Learning: Check how objects are designed!
+
+Fix #37: ProcessingQueue Retry Spam
+  Symptom: "Source file not found" 80 seconds later
+  Root Cause: FileSystemWatcher fires multiple events
+  
+  Solution: Already implemented with HashSets!
+  Learning: Check existing code first!
+
+Fix #38: EXIF Barcode Not Detected
+  Symptom: Patient shown as "Unknown Patient"
+  Root Cause: ExifTool -G1 adds "RMETA:" prefix
+  
+  WRONG: exifData.TryGetValue("Barcode", ...)
+  RIGHT: Check both "RMETA:Barcode" and "Barcode"
+  
+  Learning: ExifTool output format varies!
+
+Fix #39: DICOM 0x0 Pixel Dimensions
+  Symptom: DICOM viewers show error
+  Root Cause: Multiple issues:
+    1. ExifTool returns "File:ImageWidth"
+    2. ImageTechnicalData has ImageWidth property
+    3. Method GetIntValue needs this.
+  
+  Learning: Stack of small issues = big problem!
+
+Fix #40: JSON Number Parsing
+  Symptom: "element has type 'Number', expected 'String'"
+  Root Cause: ExifTool JSON has numeric values
+  
+  Solution: Handle all JsonValueKind types
+  Learning: Always handle all JSON types!
+```
+
 ## 🏗️ BUILD & DEPLOY MASTERY
 
 ### Version Management - Single Source of Truth
@@ -789,10 +1004,10 @@ Fix #28: Path Length Limits
 <!-- Version.props - NEVER hardcode versions! -->
 <Project>
   <PropertyGroup>
-    <VersionPrefix>0.7.28</VersionPrefix>
-    <FileVersion>0.7.28.0</FileVersion>
+    <VersionPrefix>0.7.32</VersionPrefix>
+    <FileVersion>0.7.32.0</FileVersion>
     <AssemblyVersion>0.7.0.0</AssemblyVersion>
-    <InformationalVersion>0.7.28 - Multi-Pipeline Logging</InformationalVersion>
+    <InformationalVersion>0.7.32 - ProcessingQueue retry fix & EXIF key mapping</InformationalVersion>
   </PropertyGroup>
 </Project>
 ```
@@ -822,7 +1037,7 @@ public static string Version
             return fileVersion;
         }
         
-        return "0.7.28"; // Emergency fallback only
+        return "0.7.32"; // Emergency fallback only
     }
 }
 ```
@@ -935,6 +1150,42 @@ Write-Host "Original: $name"
 Write-Host "Sanitized: $sanitized"
 ```
 
+### DICOM Debugging (Sessions 85-87) ⭐
+```powershell
+# Check for UID errors in logs
+Select-String "does not validate VR UI" -Path *.log
+
+# Validate DICOM file structure
+$dcm = Get-ChildItem -Path C:\CamBridge\Output -Filter *.dcm -Recurse | Select -First 1
+if ($dcm) {
+    Write-Host "Size: $($dcm.Length) bytes"
+    # If > 50KB, likely has image data
+    # If < 10KB, likely missing pixel data
+    
+    # Use dcmdump for details
+    dcmdump $dcm.FullName 2>&1 | Select-String "Error|Warning"
+    # No output = good!
+    
+    # Check transfer syntax
+    dcmdump $dcm.FullName | Select-String "0002,0010"
+    # Should show: (0002,0010) UI =JPEGBaseline
+    
+    # Check pixel data encoding
+    dcmdump $dcm.FullName 2>&1 | Select-String "7FE0,0010"
+    # Good: (7FE0,0010) OB (PixelSequence #=1)  # u/l
+    # Bad:  (7FE0,0010) OB =PixelData           # explicit length!
+}
+
+# Quick EXIF debug
+.\Tools\exiftool.exe -j -a -G1 -s "test.jpg" > exif-debug.json
+cat exif-debug.json | ConvertFrom-Json | ConvertTo-Json -Depth 10
+
+# Find specific EXIF field
+.\Tools\exiftool.exe -j -a -G1 -s "test.jpg" | 
+    ConvertFrom-Json | Select -ExpandProperty 0 | 
+    Select "*Barcode*", "*Width*", "*Height*"
+```
+
 ### LogViewer Performance Issues
 ```yaml
 Symptom: Slow with many pipelines
@@ -961,7 +1212,7 @@ PowerShell Test:
 
 ### Evolution Metrics
 ```yaml
-What Changed (v0.1 → v0.7.28):
+What Changed (v0.1 → v0.7.32):
   Interfaces: 12+ → 2 (-85%)
   Build Time: 3min → 20sec (-89%)  
   Debug Time: Hours → Minutes (minimal pattern)
@@ -971,6 +1222,7 @@ What Changed (v0.1 → v0.7.28):
   Features Activated: 15 total
   User Satisfaction: Frustrated → Happy
   Logging: 1 file → N files (isolated)
+  DICOM Pipeline: Not working → Fully functional!
 
 Key Victories:
   - Tab-Complete: 90% less typing
@@ -979,16 +1231,18 @@ Key Victories:
   - UI Simplification: Consistent design
   - Multi-Pipeline Logs: Debugging heaven
   - Unicode Support: International ready
+  - DICOM Creation: Viewers work!
 
-NEW - Sprint 19 Results:
-  ✅ LogViewer: From basic to professional
-  ✅ Multi-Pipeline Logs: Automatic separation
-  ✅ Unicode Support: GUI + safe filenames
-  ✅ Timestamp Strategy: MS precision, clean display
-  ✅ UI Unification: 100% complete (except About)
-  Sprint Value: Major debugging improvement!
-  Time: ~4 hours total
-  Lesson: Sometimes rewrite > fix!
+NEW - Sessions 85-87 Results:
+  ✅ DICOM Pipeline: Complete end-to-end
+  ✅ EXIF Extraction: Prefix handling mastered
+  ✅ Property Mapping: Exact names documented
+  ✅ ProcessingQueue: Dedup already there!
+  ✅ Path Issues: All absolute now
+  ✅ Transfer Syntax: Proper JPEG handling
+  Sprint Value: Major milestone reached!
+  Time: ~10 hours across 3 sessions
+  Lesson: Incremental fixes work!
 ```
 
 ### Architecture Principles (Hard-Won)
@@ -1037,6 +1291,21 @@ NEW Principles:
    - Store precise, display simple
    - Sorting needs full data
    - UI needs clean view
+
+10. Exact Names Matter (Session 87!)
+    - Property names are contracts
+    - EXIF keys may have prefixes
+    - Check sources for truth
+
+11. Initialization Determines Behavior
+    - DICOM dataset creation critical
+    - Transfer syntax at creation time
+    - Not fixable later!
+
+12. Incremental Fixes Work
+    - One bug at a time
+    - Build-test-fix cycle
+    - Each error is progress
 ```
 
 ## 🎯 QUICK REFERENCE CARD
@@ -1066,6 +1335,13 @@ git commit -m "msg"         # Commit
 Get-EventLog ...            # Check errors
 2[TAB]                      # Open UI
 # Check LogViewer!           # NEW option!
+
+# DICOM Pipeline Test (NEW!)
+copy test.jpg C:\CamBridge\Watch\Radiology\
+Start-Sleep -Seconds 10
+$dcm = Get-ChildItem C:\CamBridge\Output -Filter *.dcm -Recurse | Select -First 1
+Write-Host "DICOM created: $($dcm.FullName)"
+# Open in MicroDicom!
 ```
 
 ### Common Issues → Quick Fixes
@@ -1100,6 +1376,24 @@ Get-EventLog ...            # Check errors
   → Check for enums
   → Look for TODO comments
   → Check all tabs in UI!
+
+"DICOM not created": ⭐ NEW!
+  → Check logs for path
+  → Verify absolute paths
+  → Check Event Log
+  → Run console mode
+
+"Patient data missing": ⭐ NEW!
+  → Check EXIF output format
+  → Look for RMETA:Barcode
+  → Verify property names
+  → Test with exiftool directly
+
+"DICOM viewers fail": ⭐ NEW!
+  → Check file size (>50KB?)
+  → Use dcmdump for validation
+  → Check transfer syntax
+  → Verify pixel data encoding
 ```
 
 ## 🧙 TECHNICAL MANTRAS
@@ -1145,6 +1439,22 @@ Get-EventLog ...            # Check errors
 *ASCII assumptions break globally*  
 *小児科 is a valid pipeline name!*
 
+> "Property names are contracts"  
+*ImageWidth not Width*  
+*Exact names or build errors!*
+
+> "EXIF keys may have prefixes"  
+*RMETA:Barcode not just Barcode*  
+*Check all variants!*
+
+> "Initialization determines behavior"  
+*DICOM dataset creation critical*  
+*Can't fix it later!*
+
+> "Each error message is progress"  
+*From UID errors to pixel data*  
+*Incremental fixes win!*
+
 ## 🚀 WISDOM NOTES
 
 ### What Works (Proven in Production)
@@ -1163,6 +1473,9 @@ Get-EventLog ...            # Check errors
 - Multi-Pipeline Logs (clarity in chaos)
 - Unicode Support (global ready)
 - Professional LogViewer (debugging heaven)
+- DICOM Pipeline (fully functional!) ⭐
+- ProcessingQueue Dedup (already there!)
+- EXIF Prefix Handling (RMETA: etc.)
 
 ### Hard-Won Lessons
 1. **One wrong port = 3 sessions debugging**
@@ -1178,6 +1491,12 @@ Get-EventLog ...            # Check errors
 11. **Logs need professional tools**
 12. **Unicode breaks assumptions**
 13. **Isolation must be complete**
+14. **Property names must be exact!** (Session 87)
+15. **EXIF output varies by flags** (Session 87)
+16. **Relative paths + services = trouble** (Session 85)
+17. **DICOM rules are strict** (Sessions 85-86)
+18. **Dataset creation critical** (Session 86)
+19. **Incremental fixes work** (Sessions 85-87)
 
 ### The Technical Evolution
 ```yaml
@@ -1186,6 +1505,9 @@ Learned that: "Direct dependencies make code clear"
 Discovered: "Hidden implementations save time"
 Now know: "Complete isolation includes logs"
 Latest: "Unicode requires dual-name strategy"
+Session 85: "Paths must be absolute in services"
+Session 86: "DICOM initialization determines all"
+Session 87: "Exact names prevent 45-minute bugs"
 
 Key Realization:
   Good architecture isn't about patterns
@@ -1193,6 +1515,7 @@ Key Realization:
   With the least complexity possible
   While maintaining safety (medical!)
   And supporting global users!
+  And being exact with details!
   
 NEW Realization:
   Professional debugging tools matter
@@ -1200,14 +1523,23 @@ NEW Realization:
   Performance affects usability
   Unicode is not optional
   Multi-select is powerful!
+  Property names are critical!
+  EXIF keys need careful handling!
+  DICOM compliance is strict!
+  
+LATEST Realization:
+  Every bug teaches something valuable
+  Incremental progress beats big bangs
+  The pipeline finally works!
 ```
 
 ---
 
-*Technical wisdom from 75 sessions of building, breaking, and fixing*  
-*Plus Sprint 19's professional logging transformation!*  
+*Technical wisdom from 87 sessions of building, breaking, and fixing*  
+*Plus Sessions 85-87's DICOM pipeline completion!*  
 *Remember: The best code is code you don't have to write!*  
 *The second best is code you can delete!*  
-*The third best is code that logs properly!* 🗑️💎📊
+*The third best is code that logs properly!*  
+*The fourth best is code with exact property names!* 🗑️💎📊✨
 
-*Complete Technical Reference - June 2025 - v0.7.28*
+*Complete Technical Reference - June 2025 - v0.7.32*

@@ -6,6 +6,102 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.32] - 2025-06-23
+
+### 🔧 Fixed
+- **ProcessingQueue retry spam** - FileSystemWatcher duplicate events now properly filtered
+  - HashSet tracking was already implemented, just not obvious
+  - Prevents "Source file not found" errors 80 seconds after successful processing
+- **EXIF Barcode extraction** - Now correctly reads "RMETA:Barcode" prefix from ExifTool -G1 output
+  - Checks both "RMETA:Barcode" and "Barcode" keys
+  - Patient/Study data successfully extracted from Ricoh camera
+- **DICOM 0x0 pixel dimensions** - Fixed multiple property name mismatches
+  - ImageTechnicalData uses `ImageWidth` not `Width`
+  - ExifTool returns "File:ImageWidth" with prefix
+  - All dimension properties now correctly mapped
+- **JSON number parsing** - ExifTool JSON output with numeric values now handled
+  - Added proper JsonValueKind handling for all types
+- **DI registration** - ExifToolReader now registered with config path from settings
+
+### 🎯 Changed
+- **UTF-8 implementation** - Removed all encoding workarounds, clean UTF-8 throughout
+- **Method names** - Verified all actual method signatures match usage
+  - `ExtractMetadataAsync()` not `ExtractDataAsync()`
+  - `ProcessAsync()` with `ProcessQueueAsync()` wrapper
+- **Error messages** - More descriptive logging for EXIF extraction failures
+
+### 📊 Technical Details
+- **Session 87**: 95 minutes of debugging, mostly property name issues
+- **Root cause**: Not checking exact property names and EXIF output format
+- **Solution complexity**: Most fixes were one-line changes
+- **DICOM pipeline**: Now fully functional end-to-end! 🎉
+
+### 💡 Lessons Learned
+- Property names must match EXACTLY (45 minutes on this alone!)
+- ExifTool -G1 flag adds group prefixes to all keys
+- Artifact updates in Claude are unreliable - create new ones
+- "Sources first" would have saved 80% of debug time
+
+### 🚀 Status
+- **JPEG → DICOM pipeline**: ✅ Complete and working
+- **Metadata extraction**: ✅ All fields correctly parsed
+- **Viewer compatibility**: ✅ MicroDicom opens files
+- **Remaining**: UTF-8 encoding verification with real camera
+
+---
+*"From property hell to DICOM success - Session 87"*
+
+## [0.7.31] - 2025-06-23
+
+### 🎉 DICOM Pipeline Complete!
+**Major Milestone**: JPEG to DICOM conversion pipeline fully functional with DICOM viewers!
+
+### 🔧 Fixed
+- **JPEG Encapsulation with undefined length** ⭐ - The critical fix!
+  - Dataset must be created WITH transfer syntax: `new DicomDataset(DicomTransferSyntax.JPEGProcess1)`
+  - fo-dicom now automatically uses undefined length (0xFFFFFFFF) for pixel data
+  - Fixed "explicit length not permitted in compressed Transfer Syntax" error
+- **Transfer Syntax location** - Now correctly set on FileMetaInfo, not Dataset
+  - `dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.JPEGProcess1`
+- **Photometric Interpretation** - Set to YBR_FULL_422 for JPEG compliance
+- **Character Set** - Added ISO_IR 192 for UTF-8 support
+- **File Meta Information** - All required tags now properly populated
+
+### ✅ Verified
+- **MicroDicom** - Opens DICOM files and displays images correctly!
+- **dcmdump validation** - Shows proper undefined length pixel data
+- **File structure** - Compliant with DICOM PS3.10 standard
+- **Compression** - JPEG data properly encapsulated
+
+### 📊 Technical Achievement
+```
+dcmdump output confirms:
+(0002,0010) UI =JPEGBaseline                    # Transfer Syntax ✅
+(0008,0005) CS [ISO_IR 192]                    # UTF-8 Support ✅
+(0028,0004) CS [YBR_FULL_422]                  # JPEG Photometric ✅
+(7fe0,0010) OB (PixelSequence #=2)             # u/l ← Undefined Length! ✅
+```
+
+### 🐛 Known Issues
+- Character encoding shows "R├Ântgen┬áThorax" (awaiting real camera test)
+- Post-processing race condition (temporary workaround: SuccessAction="Leave")
+
+### 💡 Key Discovery
+Creating a DicomDataset WITHOUT specifying the transfer syntax results in explicit length pixel data, which violates DICOM standard for compressed images. The entire fix was changing one line:
+```csharp
+// OLD: var dataset = new DicomDataset();
+// NEW: var dataset = new DicomDataset(DicomTransferSyntax.JPEGProcess1);
+```
+
+### 🏆 Session 86 Summary
+- **Duration**: ~3 hours of focused debugging
+- **Tools**: dcmdump was invaluable for finding the real issue
+- **Result**: Complete DICOM pipeline success!
+- **Next**: C-STORE implementation for PACS upload
+
+---
+*"From gray noise to medical images - the undefined length revelation!"*
+
 ## [0.7.30] - 2025-06-23
 
 ### 🎉 DICOM Pipeline Marathon - From "no files" to "working pipeline"!

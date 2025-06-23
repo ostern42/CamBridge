@@ -1,7 +1,7 @@
-// src\CamBridge.Config\App.xaml.cs
+﻿// src\CamBridge.Config\App.xaml.cs
 // Version: 0.7.28
 // Description: Application entry point with LogViewer registration
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Diagnostics;

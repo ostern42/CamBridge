@@ -1,6 +1,6 @@
-// src/CamBridge.Config/Converters/ValueConverters.cs
+﻿// src/CamBridge.Config/Converters/ValueConverters.cs
 // Version: 0.7.25
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Globalization;
@@ -525,21 +525,21 @@ namespace CamBridge.Config.Converters
             {
                 return transform switch
                 {
-                    ValueTransform.None => "→",
-                    ValueTransform.DateToDicom => "📅→",
-                    ValueTransform.TimeToDicom => "⏰→",
-                    ValueTransform.DateTimeToDicom => "📅⏰→",
-                    ValueTransform.MapGender => "♂♀→",
-                    ValueTransform.RemovePrefix => "✂→",
-                    ValueTransform.ExtractDate => "📅←",
-                    ValueTransform.ExtractTime => "⏰←",
-                    ValueTransform.ToUpperCase => "A→",
-                    ValueTransform.ToLowerCase => "a→",
-                    ValueTransform.Trim => "⎵→",
-                    _ => "→"
+                    ValueTransform.None => "â†’",
+                    ValueTransform.DateToDicom => "ðŸ“…â†’",
+                    ValueTransform.TimeToDicom => "â°â†’",
+                    ValueTransform.DateTimeToDicom => "ðŸ“…â°â†’",
+                    ValueTransform.MapGender => "â™‚â™€â†’",
+                    ValueTransform.RemovePrefix => "âœ‚â†’",
+                    ValueTransform.ExtractDate => "ðŸ“…â†",
+                    ValueTransform.ExtractTime => "â°â†",
+                    ValueTransform.ToUpperCase => "Aâ†’",
+                    ValueTransform.ToLowerCase => "aâ†’",
+                    ValueTransform.Trim => "âŽµâ†’",
+                    _ => "â†’"
                 };
             }
-            return "→";
+            return "â†’";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

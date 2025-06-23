@@ -1,7 +1,7 @@
-// src/CamBridge.Config/Services/IApiService.cs
+﻿// src/CamBridge.Config/Services/IApiService.cs
 // Version: 0.7.8
 // Description: Interface for CamBridge Service API - KISS without DeadLetter!
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;

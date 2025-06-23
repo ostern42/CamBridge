@@ -1,4 +1,4 @@
-// src\CamBridge.Config\Helpers\PasswordBoxHelper.cs
+﻿// src\CamBridge.Config\Helpers\PasswordBoxHelper.cs
 // Version: 0.5.26
 // Helper for binding PasswordBox (which doesn't support direct binding)
 

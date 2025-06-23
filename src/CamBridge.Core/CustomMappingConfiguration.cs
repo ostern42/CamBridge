@@ -1,4 +1,4 @@
-namespace CamBridge.Core
+﻿namespace CamBridge.Core
 {
     /// <summary>
     /// Custom mapping configuration (stub for compatibility)

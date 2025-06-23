@@ -1,7 +1,7 @@
-// src\CamBridge.Config\Models\ServiceStatusModel.cs
+﻿// src\CamBridge.Config\Models\ServiceStatusModel.cs
 // Version: 0.7.28
 // Description: Service status model matching the actual API response
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;

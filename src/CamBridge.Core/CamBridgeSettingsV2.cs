@@ -1,7 +1,7 @@
-// src\CamBridge.Core\CamBridgeSettingsV2.cs
+﻿// src\CamBridge.Core\CamBridgeSettingsV2.cs
 // Version: 0.7.28
 // Description: Version 2 settings with pipeline architecture - CLEAN!
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;

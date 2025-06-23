@@ -1,7 +1,7 @@
-// src/CamBridge.Infrastructure/Services/PipelineManager.cs
+﻿// src/CamBridge.Infrastructure/Services/PipelineManager.cs
 // Version: 0.7.28
 // Description: Orchestrates multiple processing pipelines with isolated logging and corrected log levels
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Concurrent;

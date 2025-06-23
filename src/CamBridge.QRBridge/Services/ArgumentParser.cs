@@ -1,6 +1,6 @@
-// src/CamBridge.QRBridge/Services/ArgumentParser.cs
+﻿// src/CamBridge.QRBridge/Services/ArgumentParser.cs
 // Version: 0.5.33
-// © 2025 Claude's Improbably Reliable Software Solutions
+// Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System.Globalization;
 using CamBridge.Core.Entities;
@@ -160,7 +160,7 @@ public class ArgumentParser
         return $@"
 CamBridge QRBridge v{QRBridgeConstants.Application.Version}
 {QRBridgeConstants.Application.Description}
-© 2025 Claude's Improbably Reliable Software Solutions
+Â© 2025 Claude's Improbably Reliable Software Solutions
 
 Usage: CamBridge.QRBridge.exe -examid <ID> -name <NAME> [options]
 
@@ -176,7 +176,7 @@ Optional Arguments:
   -help               Show this help
 
 Example:
-  CamBridge.QRBridge.exe -examid ""EX001"" -name ""Müller, Hans"" -birthdate ""1985-03-15"" -gender ""M"" -comment ""Thorax PA""
+  CamBridge.QRBridge.exe -examid ""EX001"" -name ""MÃ¼ller, Hans"" -birthdate ""1985-03-15"" -gender ""M"" -comment ""Thorax PA""
 
 Note: The QR code will be displayed for the specified timeout period.
       UTF-8 encoding is used for all text to support international characters.

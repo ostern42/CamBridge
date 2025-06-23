@@ -1,6 +1,6 @@
-// src/CamBridge.QRBridge/GlobalUsings.cs
+﻿// src/CamBridge.QRBridge/GlobalUsings.cs
 // Version: 0.5.33
-// © 2025 Claude's Improbably Reliable Software Solutions
+// Â© 2025 Claude's Improbably Reliable Software Solutions
 
 global using System;
 global using System.Drawing;

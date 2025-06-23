@@ -1,7 +1,7 @@
-// src\CamBridge.Core\UserPreferences.cs
+﻿// src\CamBridge.Core\UserPreferences.cs
 // Version: 0.7.3
 // Description: Per-user UI preferences
-// © 2025 Claude's Improbably Reliable Software Solutions
+// Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;

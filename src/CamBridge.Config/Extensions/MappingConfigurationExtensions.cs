@@ -1,6 +1,6 @@
-// File: src/CamBridge.Config/Extensions/MappingConfigurationExtensions.cs
+﻿// File: src/CamBridge.Config/Extensions/MappingConfigurationExtensions.cs
 // Version: 0.5.24
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 // Modified: 2025-06-04
 // Status: Development/Local
 

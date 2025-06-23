@@ -1,4 +1,4 @@
-// src\CamBridge.Config\MainWindow.xaml.cs
+﻿// src\CamBridge.Config\MainWindow.xaml.cs
 // Version: 0.7.23
 // Description: Main window code-behind with navigation history fix
 

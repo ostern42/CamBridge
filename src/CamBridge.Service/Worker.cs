@@ -1,7 +1,7 @@
-// src/CamBridge.Service/Worker.cs
+﻿// src/CamBridge.Service/Worker.cs
 // Version: 0.7.28
 // Description: Main worker service with fixed shutdown handling
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Diagnostics;

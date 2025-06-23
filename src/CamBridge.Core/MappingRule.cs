@@ -1,4 +1,4 @@
-// src\CamBridge.Core\MappingRule.cs
+﻿// src\CamBridge.Core\MappingRule.cs
 // Version: 0.6.2
 // Description: DICOM mapping rule configuration
 

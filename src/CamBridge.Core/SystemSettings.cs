@@ -1,7 +1,7 @@
-// src\CamBridge.Core\SystemSettings.cs
+﻿// src\CamBridge.Core\SystemSettings.cs
 // Version: 0.7.3
 // Description: System-wide settings (Service + Config Tool)
-// © 2025 Claude's Improbably Reliable Software Solutions
+// Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;

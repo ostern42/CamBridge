@@ -1,7 +1,7 @@
-// src\CamBridge.Config\Views\DeadLettersPage.xaml.cs
+﻿// src\CamBridge.Config\Views\DeadLettersPage.xaml.cs
 // Version: 0.7.8
 // Description: Simple error folder page - KISS approach!
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Config.ViewModels;
 using Microsoft.Extensions.DependencyInjection;

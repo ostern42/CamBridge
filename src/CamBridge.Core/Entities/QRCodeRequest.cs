@@ -1,6 +1,6 @@
-// src/CamBridge.Core/Entities/QRCodeRequest.cs
+﻿// src/CamBridge.Core/Entities/QRCodeRequest.cs
 // Version: 0.5.33
-// © 2025 Claude's Improbably Reliable Software Solutions
+// Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core.ValueObjects;
 

@@ -1,7 +1,7 @@
 // src/CamBridge.Service/Program.cs
 // Version: 0.7.28
 // Description: Windows service entry point with corrected log levels
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
 using CamBridge.Core.Infrastructure;
@@ -236,9 +236,17 @@ try
             services.Configure<NotificationSettings>(configuration.GetSection("CamBridge:NotificationSettings"));
 
             // Register core services
-            services.AddSingleton<ExifToolReader>();
             services.AddSingleton<DicomConverter>();
             services.AddSingleton<NotificationService>();
+            // Register ExifToolReader with path from configuration
+            services.AddSingleton<ExifToolReader>(sp =>
+            {
+                var settings = sp.GetRequiredService<IOptionsMonitor<CamBridgeSettingsV2>>().CurrentValue;
+                return new ExifToolReader(
+                    sp.GetRequiredService<ILogger<ExifToolReader>>(),
+                    settings.ExifToolPath ?? "Tools\\exiftool.exe"
+                );
+            });
 
             // PipelineManager as singleton - manages all pipelines
             services.AddSingleton<PipelineManager>();

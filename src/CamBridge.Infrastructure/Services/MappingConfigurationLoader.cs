@@ -1,6 +1,6 @@
-// File: src/CamBridge.Infrastructure/Services/MappingConfigurationLoader.cs
+﻿// File: src/CamBridge.Infrastructure/Services/MappingConfigurationLoader.cs
 // Version: 0.5.25
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 // Modified: 2025-06-04
 // Status: Development/Local - FREEZE BUG FIXED
 

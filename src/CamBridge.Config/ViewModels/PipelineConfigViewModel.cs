@@ -1,4 +1,4 @@
-// src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs
+﻿// src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs
 // Version: 0.7.27
 // Description: Pipeline Configuration ViewModel - Improved Status & Layout
 

@@ -1,4 +1,4 @@
-/**************************************************************************
+﻿/**************************************************************************
 *  RecentActivityViewModel.cs                                             *
 *  PATH: src\CamBridge.Config\ViewModels\RecentActivityViewModel.cs      *
 *  VERSION: 0.7.11 | SIZE: ~1.3KB | MODIFIED: 2025-06-13                 *
@@ -43,7 +43,7 @@ namespace CamBridge.Config.ViewModels
             set => SetProperty(ref _pipelineName, value);
         }
 
-        public string StatusIcon => IsSuccess ? "✓" : "✗";
+        public string StatusIcon => IsSuccess ? "âœ“" : "âœ—";
         public string StatusColor => IsSuccess ? "#4CAF50" : "#F44336";
     }
 }

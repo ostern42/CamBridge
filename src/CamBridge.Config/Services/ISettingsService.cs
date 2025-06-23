@@ -1,7 +1,7 @@
-// src\CamBridge.Config\Services\ISettingsService.cs
+﻿// src\CamBridge.Config\Services\ISettingsService.cs
 // Version: 0.7.3
 // Description: Multi-layer settings service interface
-// © 2025 Claude's Improbably Reliable Software Solutions
+// Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;

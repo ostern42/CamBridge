@@ -1,7 +1,7 @@
-// src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
+﻿// src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
 // Version: 0.7.28
 // Description: Professional log viewer with multi-pipeline support, Unicode handling, and real-time updates
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Config.Services;
 using CamBridge.Core;
@@ -96,7 +96,7 @@ namespace CamBridge.Config.ViewModels
             // Initialize timer for auto-refresh
             _refreshTimer = new Timer(OnRefreshTimer, null, Timeout.Infinite, Timeout.Infinite);
 
-            // Set default filter values - ALLE AN für sinnvolle Defaults!
+            // Set default filter values - ALLE AN fÃ¼r sinnvolle Defaults!
             ShowDebug = false;  // Debug meist zu viel
             ShowInformation = true;
             ShowWarning = true;
@@ -204,7 +204,7 @@ namespace CamBridge.Config.ViewModels
                 // Load available pipelines
                 await LoadAvailablePipelinesAsync();
 
-                // PipelineSelections sollte bereits "Service (Global)" als ausgewählt haben!
+                // PipelineSelections sollte bereits "Service (Global)" als ausgewÃ¤hlt haben!
                 // (Das passiert in LoadAvailablePipelinesAsync mit IsSelected = true)
 
                 // Update count display
@@ -271,7 +271,7 @@ namespace CamBridge.Config.ViewModels
 
             var filtered = CombinedLogEntries.AsEnumerable();
 
-            // Apply level filters - wenn KEINS ausgewählt, zeige ALLE!
+            // Apply level filters - wenn KEINS ausgewÃ¤hlt, zeige ALLE!
             var anyLevelSelected = ShowDebug || ShowInformation || ShowWarning || ShowError || ShowCritical;
 
             _logger.LogDebug("Level filter state: Debug={Debug}, Info={Info}, Warn={Warn}, Error={Error}, Critical={Critical}, Any={Any}",
@@ -286,7 +286,7 @@ namespace CamBridge.Config.ViewModels
                     (ShowError && e.Level == LogLevel.Error) ||
                     (ShowCritical && e.Level == LogLevel.Critical));
             }
-            // Wenn keine Level ausgewählt → zeige alle!
+            // Wenn keine Level ausgewÃ¤hlt â†’ zeige alle!
 
             // Apply search filter
             if (!string.IsNullOrWhiteSpace(SearchText))
@@ -625,7 +625,7 @@ namespace CamBridge.Config.ViewModels
             {
                 // Serilog format: [HH:mm:ss LVL] Message
                 // Example: [14:23:45 INF] Pipeline Radiology started
-                // Flexibleres Pattern für verschiedene Level-Längen (INF, INFO, ERR, ERROR etc.)
+                // Flexibleres Pattern fÃ¼r verschiedene Level-LÃ¤ngen (INF, INFO, ERR, ERROR etc.)
                 var match = Regex.Match(line, @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+(.+)$");
 
                 if (match.Success)

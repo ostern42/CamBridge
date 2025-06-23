@@ -1,6 +1,6 @@
-// src/CamBridge.Config/Dialogs/DicomTagBrowserDialog.xaml.cs
+﻿// src/CamBridge.Config/Dialogs/DicomTagBrowserDialog.xaml.cs
 // Version: 0.7.25
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 // Enhanced with NEMA-compliant descriptions
 
 using System;

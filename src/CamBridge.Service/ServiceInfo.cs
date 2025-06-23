@@ -1,7 +1,7 @@
-// src/CamBridge.Service/ServiceInfo.cs
+﻿// src/CamBridge.Service/ServiceInfo.cs
 // Version: 0.7.15
 // Description: Central service version and metadata information
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System.Diagnostics;
 using System.Reflection;
@@ -80,7 +80,7 @@ namespace CamBridge.Service
         /// <summary>
         /// Copyright notice
         /// </summary>
-        public const string Copyright = "© 2025 Claude's Improbably Reliable Software Solutions";
+        public const string Copyright = "Â© 2025 Claude's Improbably Reliable Software Solutions";
 
         /// <summary>
         /// Company name from version information

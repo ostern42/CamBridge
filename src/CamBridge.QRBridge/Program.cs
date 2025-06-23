@@ -1,6 +1,6 @@
-// src/CamBridge.QRBridge/Program.cs
+﻿// src/CamBridge.QRBridge/Program.cs
 // Version: 0.7.8
-// © 2025 Claude's Improbably Reliable Software Solutions
+// Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System.Text;
 using System.Windows.Forms;
@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using CamBridge.Core.Infrastructure;  // Für ConfigurationPaths
+using CamBridge.Core.Infrastructure;  // FÃ¼r ConfigurationPaths
 
 namespace CamBridge.QRBridge;
 

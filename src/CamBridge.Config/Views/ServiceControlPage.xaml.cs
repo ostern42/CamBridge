@@ -1,4 +1,4 @@
-// src\CamBridge.Config\Views\ServiceControlPage.xaml.cs
+﻿// src\CamBridge.Config\Views\ServiceControlPage.xaml.cs
 // Version: 0.5.26 - Fixed: Using Cleanup() instead of Dispose()
 
 using CamBridge.Config.ViewModels;

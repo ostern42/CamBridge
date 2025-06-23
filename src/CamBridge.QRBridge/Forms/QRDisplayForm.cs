@@ -1,6 +1,6 @@
-// src/CamBridge.QRBridge/Forms/QRDisplayForm.cs
+﻿// src/CamBridge.QRBridge/Forms/QRDisplayForm.cs
 // Version: 0.5.33
-// © 2025 Claude's Improbably Reliable Software Solutions
+// Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System.Drawing.Drawing2D;
 using CamBridge.Core.Entities;

@@ -1,4 +1,4 @@
-// src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs
+﻿// src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs
 // Version: 0.5.26
 // Fixed: Nullable warnings resolved
 

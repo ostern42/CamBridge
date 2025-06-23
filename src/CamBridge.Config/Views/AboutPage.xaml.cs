@@ -1,4 +1,4 @@
-// src\CamBridge.Config\Views\AboutPage.xaml.cs
+﻿// src\CamBridge.Config\Views\AboutPage.xaml.cs
 // Version: 0.7.8
 // Description: About page with enhanced Marvin quotes and version display
 

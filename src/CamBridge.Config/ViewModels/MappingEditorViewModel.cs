@@ -1,6 +1,6 @@
-// src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
+﻿// src/CamBridge.Config/ViewModels/MappingEditorViewModel.cs
 // Version: 0.7.26
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 // Modified: 2025-06-18
 // Status: Development/Local - Transform Editor Enhanced
 
@@ -757,17 +757,17 @@ namespace CamBridge.Config.ViewModels
                         if (testData.TryGetValue(rule.SourceField, out var sourceValue))
                         {
                             var transformedValue = rule.ApplyTransform(sourceValue);
-                            results.AppendLine($"✔ {rule.SourceField} → {rule.DicomTag}: '{transformedValue}'");
+                            results.AppendLine($"âœ” {rule.SourceField} â†’ {rule.DicomTag}: '{transformedValue}'");
                             successCount++;
                         }
                         else
                         {
-                            results.AppendLine($"⚠ {rule.SourceField}: No test data available");
+                            results.AppendLine($"âš  {rule.SourceField}: No test data available");
                         }
                     }
                     catch (Exception ex)
                     {
-                        results.AppendLine($"✗ {rule.SourceField}: Error - {ex.Message}");
+                        results.AppendLine($"âœ— {rule.SourceField}: Error - {ex.Message}");
                         errorCount++;
                     }
                 }

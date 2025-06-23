@@ -1,7 +1,7 @@
-// src\CamBridge.Config\Services\ConfigurationService.cs
+﻿// src\CamBridge.Config\Services\ConfigurationService.cs
 // Version: 0.7.17
 // Description: Configuration service with enum validation
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;
@@ -90,7 +90,7 @@ namespace CamBridge.Config.Services
                     // NEW in 0.7.17: Validate all enum values in pipelines
                     ValidateEnumValues(settings);
 
-                    Debug.WriteLine($"✅ Loaded settings from CamBridge section");
+                    Debug.WriteLine($"âœ… Loaded settings from CamBridge section");
                     Debug.WriteLine($"   Version: {settings.Version}");
                     Debug.WriteLine($"   Pipelines: {settings.Pipelines.Count}");
                     Debug.WriteLine($"   MappingSets: {settings.MappingSets.Count}");
@@ -103,12 +103,12 @@ namespace CamBridge.Config.Services
                     var config = JsonSerializer.Deserialize<T>(json, _jsonOptions);
                     if (config != null)
                     {
-                        Debug.WriteLine($"✅ Loaded {typeof(T).Name} successfully");
+                        Debug.WriteLine($"âœ… Loaded {typeof(T).Name} successfully");
                         return config;
                     }
                 }
 
-                Debug.WriteLine("❌ Failed to deserialize config");
+                Debug.WriteLine("âŒ Failed to deserialize config");
                 return null;
             }
             catch (JsonException jsonEx)
@@ -173,7 +173,7 @@ namespace CamBridge.Config.Services
                 }
             }
 
-            Debug.WriteLine("✅ All enum values validated successfully");
+            Debug.WriteLine("âœ… All enum values validated successfully");
         }
 
         public async Task SaveConfigurationAsync<T>(T configuration) where T : class
@@ -226,7 +226,7 @@ namespace CamBridge.Config.Services
                     var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
                     await File.WriteAllTextAsync(_configPath, json);
 
-                    Debug.WriteLine($"✅ Config saved with CamBridge wrapper ({json.Length} characters)");
+                    Debug.WriteLine($"âœ… Config saved with CamBridge wrapper ({json.Length} characters)");
                     Debug.WriteLine($"   Pipelines saved: {v2Settings.Pipelines.Count}");
                 }
                 else
@@ -234,7 +234,7 @@ namespace CamBridge.Config.Services
                     // Generic save (shouldn't happen in normal use)
                     var json = JsonSerializer.Serialize(configuration, _jsonOptions);
                     await File.WriteAllTextAsync(_configPath, json);
-                    Debug.WriteLine($"✅ Config saved successfully ({json.Length} characters)");
+                    Debug.WriteLine($"âœ… Config saved successfully ({json.Length} characters)");
                 }
             }
             catch (Exception ex)
