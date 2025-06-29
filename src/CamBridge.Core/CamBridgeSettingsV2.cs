@@ -1,12 +1,13 @@
-﻿// src\CamBridge.Core\CamBridgeSettingsV2.cs
-// Version: 0.7.28
-// Description: Version 2 settings with pipeline architecture - CLEAN!
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// src\CamBridge.Core\CamBridgeSettingsV2.cs
+// Version: 0.8.6
+// Description: Version 2 settings with pipeline architecture and hierarchical logging support
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using CamBridge.Core.Enums; // FIXED: Use LogVerbosity from Enums namespace
 
 namespace CamBridge.Core
 {
@@ -86,9 +87,6 @@ namespace CamBridge.Core
             }
         }
     }
-
-    // All other classes remain the same (DicomSettings, LoggingSettings, etc.)
-    // Except FolderConfiguration is REMOVED!
 
     /// <summary>
     /// DICOM-specific settings
@@ -173,7 +171,7 @@ namespace CamBridge.Core
     }
 
     /// <summary>
-    /// Windows Service specific settings
+    /// Windows Service specific settings with enhanced logging control
     /// </summary>
     public class ServiceSettings
     {
@@ -206,6 +204,12 @@ namespace CamBridge.Core
         /// API port for web interface
         /// </summary>
         public int ApiPort { get; set; } = 5111;
+
+        /// <summary>
+        /// Global log verbosity level for all pipelines
+        /// Controls how much detail is logged during processing
+        /// </summary>
+        public LogVerbosity LogVerbosity { get; set; } = LogVerbosity.Detailed;
     }
 
     /// <summary>
@@ -273,8 +277,6 @@ namespace CamBridge.Core
         /// </summary>
         public NotificationRules Rules { get; set; } = new();
     }
-
-    // Rest of the notification classes remain unchanged...
 
     public class EmailSettings
     {

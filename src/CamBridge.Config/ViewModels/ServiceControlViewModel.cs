@@ -1,17 +1,26 @@
-﻿// src/CamBridge.Config/ViewModels/ServiceControlViewModel.cs
+// src/CamBridge.Config/ViewModels/ServiceControlViewModel.cs
+// Version: 0.8.6
+// Modified: Session 96 - Making Logs Great Again!
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using CamBridge.Config.Services;
+using CamBridge.Core;
+using CamBridge.Core.Logging;
+using CamBridge.Core.Enums;
+
 
 namespace CamBridge.Config.ViewModels
 {
     public partial class ServiceControlViewModel : ViewModelBase
     {
         private readonly IServiceManager _serviceManager;
+        private readonly IConfigurationService _configurationService;
         private Timer? _statusTimer;
 
         [ObservableProperty]
@@ -41,9 +50,44 @@ namespace CamBridge.Config.ViewModels
         [ObservableProperty]
         private bool requiresElevation = false;
 
-        public ServiceControlViewModel(IServiceManager serviceManager)
+        // Service Settings Properties
+        [ObservableProperty]
+        private List<string> logVerbosityOptions = new() { "Minimal", "Normal", "Detailed", "Debug" };
+
+        [ObservableProperty]
+        private string selectedLogVerbosity = "Detailed"; // Default from sprint plan
+
+        [ObservableProperty]
+        private int apiPort = 5111;
+
+        [ObservableProperty]
+        private int startupDelaySeconds = 5;
+
+        [ObservableProperty]
+        private int fileProcessingDelayMs = 500;
+
+        [ObservableProperty]
+        private bool settingsChanged = false;
+
+        [ObservableProperty]
+        private string estimatedLogSize = "~1.75 MB/day";
+
+        [ObservableProperty]
+        private string filesProcessedToday = "0";
+
+        [ObservableProperty]
+        private string estimatedDailyLogSize = "0 KB";
+
+        // Store original values to detect changes
+        private string _originalLogVerbosity = "Detailed";
+        private int _originalApiPort = 5111;
+        private int _originalStartupDelaySeconds = 5;
+        private int _originalFileProcessingDelayMs = 500;
+
+        public ServiceControlViewModel(IServiceManager serviceManager, IConfigurationService configurationService)
         {
             _serviceManager = serviceManager ?? throw new ArgumentNullException(nameof(serviceManager));
+            _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
 
             // Start monitoring
             _ = InitializeAsync();
@@ -54,6 +98,9 @@ namespace CamBridge.Config.ViewModels
             // Check if running as admin
             RequiresElevation = !_serviceManager.IsRunningAsAdministrator();
 
+            // Load service settings
+            await LoadServiceSettingsAsync();
+
             // Initial status check
             await RefreshStatusAsync();
 
@@ -63,6 +110,156 @@ namespace CamBridge.Config.ViewModels
                 null,
                 TimeSpan.FromSeconds(1),
                 TimeSpan.FromSeconds(2));
+        }
+
+        private async Task LoadServiceSettingsAsync()
+        {
+            try
+            {
+                // Load the configuration using the correct type
+                var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>();
+
+                if (settings?.Service != null)
+                {
+                    // API Port
+                    ApiPort = settings.Service.ApiPort;
+                    _originalApiPort = settings.Service.ApiPort;
+
+                    // Startup Delay
+                    StartupDelaySeconds = settings.Service.StartupDelaySeconds;
+                    _originalStartupDelaySeconds = settings.Service.StartupDelaySeconds;
+
+                    // File Processing Delay
+                    FileProcessingDelayMs = settings.Service.FileProcessingDelayMs;
+                    _originalFileProcessingDelayMs = settings.Service.FileProcessingDelayMs;
+
+                    // Log Verbosity - convert enum to string
+                    SelectedLogVerbosity = settings.Service.LogVerbosity.ToString();
+                    _originalLogVerbosity = settings.Service.LogVerbosity.ToString();
+                }
+                UpdateEstimatedLogSize();
+                CheckForChanges();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load service settings: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        private async Task SaveServiceSettingsAsync()
+        {
+            IsLoading = true;
+
+            try
+            {
+                // Load current settings
+                var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>()
+                               ?? new CamBridgeSettingsV2();
+
+                // Ensure Service section exists
+                settings.Service ??= new ServiceSettings();
+
+                // Update service settings
+                settings.Service.ApiPort = ApiPort;
+                settings.Service.StartupDelaySeconds = StartupDelaySeconds;
+                settings.Service.FileProcessingDelayMs = FileProcessingDelayMs;
+
+                // Convert string back to enum
+                if (Enum.TryParse<LogVerbosity>(SelectedLogVerbosity, out var verbosity))
+                {
+                    settings.Service.LogVerbosity = verbosity;
+                }
+                else
+                {
+                    settings.Service.LogVerbosity = LogVerbosity.Detailed; // Default
+                }
+
+                // Save back
+                await _configurationService.SaveConfigurationAsync(settings);
+
+                // Update original values
+                _originalApiPort = ApiPort;
+                _originalStartupDelaySeconds = StartupDelaySeconds;
+                _originalFileProcessingDelayMs = FileProcessingDelayMs;
+                _originalLogVerbosity = SelectedLogVerbosity;
+
+                CheckForChanges();
+
+                MessageBox.Show(
+                    "Service settings have been saved successfully.\n\n" +
+                    "Please restart the CamBridge Service for the changes to take effect.",
+                    "Settings Saved",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                // If service is running, suggest restart
+                if (ServiceStatus == ServiceStatus.Running)
+                {
+                    var result = MessageBox.Show(
+                        "The service is currently running. Would you like to restart it now to apply the new settings?",
+                        "Restart Service?",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        await RestartServiceAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save service settings: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        partial void OnSelectedLogVerbosityChanged(string value)
+        {
+            UpdateEstimatedLogSize();
+            CheckForChanges();
+        }
+
+        partial void OnApiPortChanged(int value)
+        {
+            CheckForChanges();
+        }
+
+        partial void OnStartupDelaySecondsChanged(int value)
+        {
+            CheckForChanges();
+        }
+
+        partial void OnFileProcessingDelayMsChanged(int value)
+        {
+            CheckForChanges();
+        }
+
+        private void UpdateEstimatedLogSize()
+        {
+            EstimatedLogSize = SelectedLogVerbosity switch
+            {
+                "Minimal" => "~150 KB/day",
+                "Normal" => "~750 KB/day",
+                "Detailed" => "~1.75 MB/day",
+                "Debug" => "~3.5 MB/day",
+                _ => "Unknown"
+            };
+        }
+
+        private void CheckForChanges()
+        {
+            SettingsChanged =
+                SelectedLogVerbosity != _originalLogVerbosity ||
+                ApiPort != _originalApiPort ||
+                StartupDelaySeconds != _originalStartupDelaySeconds ||
+                FileProcessingDelayMs != _originalFileProcessingDelayMs;
         }
 
         [RelayCommand]
@@ -96,10 +293,15 @@ namespace CamBridge.Config.ViewModels
                         var uptimeSpan = DateTime.Now - startTime.Value;
                         Uptime = FormatUptime(uptimeSpan);
                     }
+
+                    // Update statistics (mock for now - could query API later)
+                    await UpdateStatisticsAsync();
                 }
                 else
                 {
                     Uptime = null;
+                    FilesProcessedToday = "0";
+                    EstimatedDailyLogSize = "0 KB";
                 }
             }
             catch (Exception ex)
@@ -107,6 +309,47 @@ namespace CamBridge.Config.ViewModels
                 StatusText = $"Error: {ex.Message}";
                 StatusColor = "Red";
             }
+        }
+
+        private async Task UpdateStatisticsAsync()
+        {
+            try
+            {
+                // TODO: Query the service API for real statistics
+                // For now, use mock data
+                var random = new Random();
+                var filesProcessed = random.Next(100, 500);
+                FilesProcessedToday = filesProcessed.ToString();
+
+                // Calculate estimated log size based on files and verbosity
+                var bytesPerFile = SelectedLogVerbosity switch
+                {
+                    "Minimal" => 300,
+                    "Normal" => 1500,
+                    "Detailed" => 3500,
+                    "Debug" => 7000,
+                    _ => 3500
+                };
+
+                var totalBytes = filesProcessed * bytesPerFile;
+                EstimatedDailyLogSize = FormatFileSize(totalBytes);
+            }
+            catch
+            {
+                // Ignore statistics errors
+            }
+        }
+
+        private string FormatFileSize(long bytes)
+        {
+            if (bytes < 1024)
+                return $"{bytes} B";
+            else if (bytes < 1024 * 1024)
+                return $"{bytes / 1024.0:F1} KB";
+            else if (bytes < 1024 * 1024 * 1024)
+                return $"{bytes / (1024.0 * 1024.0):F1} MB";
+            else
+                return $"{bytes / (1024.0 * 1024.0 * 1024.0):F1} GB";
         }
 
         [RelayCommand]

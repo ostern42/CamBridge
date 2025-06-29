@@ -1,33 +1,45 @@
-﻿# WISDOM FILE TREE v0.8.5
-**Generated**: 2025-06-29 17:44  
-**Total Files**: 203  
+﻿# WISDOM FILE TREE v0.8.6
+**Generated**: 2025-06-29 21:29  
+**Total Files**: 209  
 **Your Daily Code Dashboard** - Everything important at a glance!
 
 ## RECENTLY MODIFIED (Last 7 days)
 
 ### Today [HOT]
+- **Version.props**
+- **src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs** [MONSTER] [Classes: ServiceControlViewModel]
+- **src\CamBridge.Config\Views\ServiceControlPage.xaml.cs** [Classes: ServiceControlPage]
+- **src\CamBridge.Infrastructure\Services\PipelineManager.cs** [MONSTER] [Classes: PipelineManager, PipelineStatus]
+- **src\CamBridge.Infrastructure\Services\PacsUploadQueue.cs** [Classes: PacsUploadQueue]
+- **src\CamBridge.Core\Enums\LogVerbosity.cs**
+- **src\CamBridge.Config\Views\ServiceControlPage.xaml**
+- **service_control_sources.txt**
+- **FILETREE_WISDOM.md**
+- **session96-servicecontrol-sources.txt**
+- **src\CamBridge.Core\CamBridgeSettingsV2.cs** [Classes: CamBridgeSettingsV2, DicomSettings, LoggingSettings, ServiceSettings, NotificationSettings, EmailSettings, EventLogSettings, WebhookSettings, NotificationRules, NotificationTriggers, DailySummarySettings, BatchNotificationSettings]
+- **src\CamBridge.Core\Logging\LogContext.cs** [Classes: LogContext]
+- **src\CamBridge.Infrastructure\Services\FileProcessor.cs** [MONSTER] [Classes: FileProcessor, FileProcessingEventArgs, FileProcessingErrorEventArgs, FileProcessingResult]
+- **session96-log-sources.txt**
+- **CHANGELOG.md**
+- **src\CamBridge.Config\Converters\ValueConverters.cs** [MONSTER] [Classes: IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter]
+- **session95-colors-sources.txt**
 - **src\CamBridge.Config\Views\DashboardPage.xaml**
 - **src\CamBridge.Config\ViewModels\PacsConfigViewModel.cs** [Classes: PacsConfigViewModel]
 - **src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs** [Classes: PipelineConfigPage]
 - **src\CamBridge.Config\Views\PipelineConfigPage.xaml**
-- **src\CamBridge.Config\Converters\ValueConverters.cs** [MONSTER] [Classes: IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter]
 - **session95-ui-sources.txt**
 - **src\CamBridge.Config\App.xaml.cs** [Classes: App]
 - **src\CamBridge.Config\Services\PipelineSettingsService.cs** [Classes: PipelineSettingsService]
 - **src\CamBridge.Config\Services\IPipelineSettingsService.cs** [Classes: ValidationResult]
 - **src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs** [MONSTER] [Classes: PipelineConfigViewModel]
-- **Version.props**
 - **refactoring-sources-95.txt**
 - **CamBridge.sln**
-- **CHANGELOG.md**
 - **WISDOM_DEBT.md**
 
 ### This Week
-- src\CamBridge.Infrastructure\Services\PacsUploadQueue.cs *(4 days ago)*
-- src\CamBridge.Infrastructure\Services\DicomStoreService.cs *(4 days ago)*
+- src\CamBridge.Infrastructure\Services\DicomStoreService.cs *(5 days ago)*
 - src\CamBridge.Service\Program.cs *(5 days ago)*
 - WISDOM_TECHNICAL_PATTERNS.txt *(5 days ago)*
-- FILETREE_WISDOM.md *(5 days ago)*
 - WISDOM_TECHNICAL_FIXES.md *(5 days ago)*
 - WISDOM_META.md *(5 days ago)*
 - WISDOM_TECHNICAL_APIS.md *(5 days ago)*
@@ -37,8 +49,6 @@
 - tests\CamBridge.PacsTest\Program.cs *(5 days ago)*
 - tests\CamBridge.PacsTest\CamBridge.PacsTest.csproj *(5 days ago)*
 - src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs *(5 days ago)*
-- src\CamBridge.Infrastructure\Services\PipelineManager.cs *(6 days ago)*
-- src\CamBridge.Infrastructure\Services\FileProcessor.cs *(6 days ago)*
 - src\CamBridge.Core\PipelineConfiguration.cs *(6 days ago)*
 - docs\sources\SOURCES_INDEX.md *(6 days ago)*
 - docs\sources\SOURCES_QRBRIDGE.txt *(6 days ago)*
@@ -90,9 +100,7 @@
 - src\CamBridge.Core\DeadLetterStatistics.cs *(6 days ago)*
 - src\CamBridge.Core\CustomMappingConfiguration.cs *(6 days ago)*
 - src\CamBridge.Core\ConfigurationPaths.cs *(6 days ago)*
-- src\CamBridge.Core\CamBridgeSettingsV2.cs *(6 days ago)*
 - src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs *(6 days ago)*
-- src\CamBridge.Config\Views\ServiceControlPage.xaml.cs *(6 days ago)*
 - src\CamBridge.Config\Views\MappingEditorPage.xaml.cs *(6 days ago)*
 - src\CamBridge.Config\Views\LogViewerPage.xaml.cs *(6 days ago)*
 - src\CamBridge.Config\Views\DeadLettersPage.xaml.cs *(6 days ago)*
@@ -100,7 +108,6 @@
 - src\CamBridge.Config\Views\AboutPage.xaml.cs *(6 days ago)*
 - src\CamBridge.Config\ViewModels\ViewModelBase.cs *(6 days ago)*
 - src\CamBridge.Config\ViewModels\ServiceControlViewModelExtension.cs *(6 days ago)*
-- src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs *(6 days ago)*
 - src\CamBridge.Config\ViewModels\RecentActivityViewModel.cs *(6 days ago)*
 - src\CamBridge.Config\ViewModels\PipelineStatusViewModel.cs *(6 days ago)*
 - src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs *(6 days ago)*
@@ -126,7 +133,6 @@
 - src\CamBridge.Config\Dialogs\DicomTagBrowserDialog.xaml.cs *(6 days ago)*
 - src\CamBridge.Config\MainWindow.xaml.cs *(6 days ago)*
 - src\CamBridge.Config\Views\LogViewerPage.xaml *(7 days ago)*
-- src\CamBridge.Config\MainWindow.xaml *(7 days ago)*
 
 ## MONSTER FILES (Need Refactoring!)
 
@@ -134,15 +140,15 @@ File | Lines | Classes | Status
 -----|-------|---------|--------
 src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs | **1190** | MappingEditorViewModel, SourceFieldInfo, MappingRuleViewModel | CRITICAL
 src\CamBridge.Config\ViewModels\LogViewerViewModel.cs | **899** | FilePositionInfo, PipelineSelection, LogViewerViewModel, LogEntry | HIGH
-src\CamBridge.Infrastructure\Services\FileProcessor.cs | **645** | FileProcessor, FileProcessingEventArgs, FileProcessingErrorEventArgs, FileProcessingResult | MEDIUM
+src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs | **775** | ServiceControlViewModel | HIGH
+src\CamBridge.Infrastructure\Services\FileProcessor.cs | **707** | FileProcessor, FileProcessingEventArgs, FileProcessingErrorEventArgs, FileProcessingResult | HIGH
 CamBridge.ParserDebug\Program.cs | **610** | - | MEDIUM
-src\CamBridge.Config\Converters\ValueConverters.cs | **593** | IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter | MEDIUM
+src\CamBridge.Config\Converters\ValueConverters.cs | **596** | IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter | MEDIUM
 src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs | **579** | PipelineConfigViewModel | MEDIUM
-src\CamBridge.Infrastructure\Services\PipelineManager.cs | **559** | PipelineManager, PipelineStatus | MEDIUM
-src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs | **534** | ServiceControlViewModel | MEDIUM
+src\CamBridge.Infrastructure\Services\PipelineManager.cs | **538** | PipelineManager, PipelineStatus | MEDIUM
 src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | TransformEditorDialog | MEDIUM
 
-**Total Monster Lines**: 6133 lines to refactor!
+**Total Monster Lines**: 6418 lines to refactor!
 
 ## QUICK CLASS FINDER
 
@@ -295,6 +301,9 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 **src\CamBridge.Core\Interfaces\IMappingConfiguration.cs**
   - Interfaces: IMappingConfiguration
 
+**src\CamBridge.Core\Logging\LogContext.cs**
+  - Classes: LogContext
+
 **src\CamBridge.Core\MappingRule.cs**
   - Classes: MappingRule
 
@@ -338,7 +347,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
   - Classes: NotificationService
 
 **src\CamBridge.Infrastructure\Services\PacsUploadQueue.cs**
-  - Classes: PacsUploadItem, PacsUploadError, PacsUploadQueue
+  - Classes: PacsUploadQueue
 
 **src\CamBridge.Infrastructure\Services\PipelineManager.cs**
   - Classes: PipelineManager, PipelineStatus
@@ -376,7 +385,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 ## PROJECT STRUCTURE
 
 ### [CamBridge.Config]
-*55 files, 9206 lines, 73 classes*
+*55 files, 9450 lines, 73 classes*
  **WARNING: 6 monster files**
 
 - src\CamBridge.Config\App.xaml
@@ -415,7 +424,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs [TODAY] [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\PipelineStatusViewModel.cs [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\RecentActivityViewModel.cs [HAS-CLASSES]
-- src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs [MONSTER] [HAS-CLASSES]
+- src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs [TODAY] [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\ServiceControlViewModelExtension.cs
 - src\CamBridge.Config\ViewModels\ViewModelBase.cs [HAS-CLASSES]
 - src\CamBridge.Config\Views\AboutPage.xaml
@@ -430,16 +439,16 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.Config\Views\MappingEditorPage.xaml.cs [HAS-CLASSES]
 - src\CamBridge.Config\Views\PipelineConfigPage.xaml [TODAY]
 - src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs [TODAY] [HAS-CLASSES]
-- src\CamBridge.Config\Views\ServiceControlPage.xaml
-- src\CamBridge.Config\Views\ServiceControlPage.xaml.cs [HAS-CLASSES]
+- src\CamBridge.Config\Views\ServiceControlPage.xaml [TODAY]
+- src\CamBridge.Config\Views\ServiceControlPage.xaml.cs [TODAY] [HAS-CLASSES]
 - src\CamBridge.Config\Views\VogonPoetryWindow.xaml
 - src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs [HAS-CLASSES]
 
 ### [CamBridge.Core]
-*24 files, 2863 lines, 35 classes*
+*26 files, 3131 lines, 36 classes*
 
 - src\CamBridge.Core\CamBridge.Core.csproj
-- src\CamBridge.Core\CamBridgeSettingsV2.cs [HAS-CLASSES]
+- src\CamBridge.Core\CamBridgeSettingsV2.cs [TODAY] [HAS-CLASSES]
 - src\CamBridge.Core\ConfigurationPaths.cs
 - src\CamBridge.Core\CustomMappingConfiguration.cs [HAS-CLASSES]
 - src\CamBridge.Core\DeadLetterStatistics.cs [HAS-CLASSES]
@@ -449,8 +458,10 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.Core\Entities\ProcessingResult.cs [HAS-CLASSES]
 - src\CamBridge.Core\Entities\QRCodeRequest.cs
 - src\CamBridge.Core\Entities\StudyInfo.cs [HAS-CLASSES]
+- src\CamBridge.Core\Enums\LogVerbosity.cs [TODAY]
 - src\CamBridge.Core\Interfaces\IDicomTagMapper.cs
 - src\CamBridge.Core\Interfaces\IMappingConfiguration.cs
+- src\CamBridge.Core\Logging\LogContext.cs [TODAY] [HAS-CLASSES]
 - src\CamBridge.Core\MappingRule.cs [HAS-CLASSES]
 - src\CamBridge.Core\PipelineConfiguration.cs [HAS-CLASSES]
 - src\CamBridge.Core\ProcessingOptions.cs [HAS-CLASSES]
@@ -464,7 +475,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.Core\ValueTransform.cs
 
 ### [CamBridge.Infrastructure]
-*13 files, 3999 lines, 21 classes*
+*13 files, 3919 lines, 19 classes*
  **WARNING: 2 monster files**
 
 - src\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj
@@ -474,11 +485,11 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.Infrastructure\Services\DicomStoreService.cs [HAS-CLASSES]
 - src\CamBridge.Infrastructure\Services\DicomTagMapper.cs [HAS-CLASSES]
 - src\CamBridge.Infrastructure\Services\ExifToolReader.cs [HAS-CLASSES]
-- src\CamBridge.Infrastructure\Services\FileProcessor.cs [MONSTER] [HAS-CLASSES]
+- src\CamBridge.Infrastructure\Services\FileProcessor.cs [TODAY] [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs [HAS-CLASSES]
 - src\CamBridge.Infrastructure\Services\NotificationService.cs [HAS-CLASSES]
-- src\CamBridge.Infrastructure\Services\PacsUploadQueue.cs [HAS-CLASSES]
-- src\CamBridge.Infrastructure\Services\PipelineManager.cs [MONSTER] [HAS-CLASSES]
+- src\CamBridge.Infrastructure\Services\PacsUploadQueue.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Infrastructure\Services\PipelineManager.cs [TODAY] [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Infrastructure\Services\ProcessingQueue.cs [HAS-CLASSES]
 
 ### [CamBridge.PacsTest] [TEST]
@@ -528,7 +539,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - tests\CamBridge.TestConsole\Program.cs [HAS-CLASSES]
 
 ### [ROOT]
-*83 files, 1144 lines, 2 classes*
+*87 files, 1144 lines, 2 classes*
 
 - _archive\old_collectors\collect-sources.bat
 - _archive\old_collectors\collect-sources-balanced.bat
@@ -583,7 +594,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - ExifToolQuickTest\Program.cs
 - ExifToolTest\ExifToolTest.csproj
 - ExifToolTest\Program.cs
-- FILETREE_WISDOM.md
+- FILETREE_WISDOM.md [TODAY]
 - Get-WisdomProjectTree - 250624.ps1
 - Get-WisdomProjectTree.ps1
 - Get-WisdomSources.ps1
@@ -595,8 +606,12 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - qrbridge-constants.txt
 - README-Deployment.md
 - refactoring-sources-95.txt [TODAY]
+- service_control_sources.txt [TODAY]
 - service-manager.ps1
+- session95-colors-sources.txt [TODAY]
 - session95-ui-sources.txt [TODAY]
+- session96-log-sources.txt [TODAY]
+- session96-servicecontrol-sources.txt [TODAY]
 - ShowVersion.targets
 - test-api.ps1
 - Test-CompletePipeline.ps1
@@ -624,13 +639,13 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 
 Metric | Value
 -------|-------
-Total Files | **203**
-Total Lines of Code | **19959**
-Files Modified Today | **15**
-Files Modified This Week | **119**
+Total Files | **209**
+Total Lines of Code | **20391**
+Files Modified Today | **29**
+Files Modified This Week | **125**
 Monster Files (>500 lines) | **9**
 Test Files | **7**
-Total Classes Found | **139**
+Total Classes Found | **138**
 Total Interfaces Found | **9**
 
 ## WISDOM TIPS

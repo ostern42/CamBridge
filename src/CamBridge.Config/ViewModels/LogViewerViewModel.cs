@@ -1,11 +1,13 @@
-﻿// src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
-// Version: 0.7.28
-// Description: Professional log viewer with multi-pipeline support, Unicode handling, and real-time updates
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
+// Version: 0.8.6
+// Description: Enhanced log viewer with correlation ID support, tree view, and hierarchical display
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Config.Services;
 using CamBridge.Core;
 using CamBridge.Core.Infrastructure;
+using CamBridge.Core.Logging;
+using CamBridge.Core.Enums;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -25,6 +27,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+
 
 namespace CamBridge.Config.ViewModels
 {
@@ -55,7 +58,7 @@ namespace CamBridge.Config.ViewModels
     }
 
     /// <summary>
-    /// ViewModel for the professional log viewer with multi-pipeline support
+    /// Enhanced ViewModel for the log viewer with correlation ID support
     /// </summary>
     public partial class LogViewerViewModel : ViewModelBase
     {
@@ -85,6 +88,7 @@ namespace CamBridge.Config.ViewModels
             LogEntries = new ObservableCollection<LogEntry>();
             FilteredCombinedEntries = new ObservableCollection<LogEntry>();
             CombinedLogEntries = new ObservableCollection<LogEntry>();
+            CorrelationGroups = new ObservableCollection<CorrelationGroup>();
             AvailablePipelines = new ObservableCollection<string>();
             PipelineSelections = new ObservableCollection<PipelineSelection>();
 
@@ -92,17 +96,21 @@ namespace CamBridge.Config.ViewModels
             RefreshCommand = new AsyncRelayCommand(RefreshLogsAsync);
             ClearLogCommand = new RelayCommand(ClearLogs);
             ExportLogCommand = new AsyncRelayCommand(ExportLogsAsync);
+            ToggleTreeViewCommand = new RelayCommand(() => IsTreeViewEnabled = !IsTreeViewEnabled);
+            ExpandAllCommand = new RelayCommand(ExpandAll);
+            CollapseAllCommand = new RelayCommand(CollapseAll);
 
             // Initialize timer for auto-refresh
             _refreshTimer = new Timer(OnRefreshTimer, null, Timeout.Infinite, Timeout.Infinite);
 
-            // Set default filter values - ALLE AN fÃ¼r sinnvolle Defaults!
+            // Set default filter values
             ShowDebug = false;  // Debug meist zu viel
             ShowInformation = true;
             ShowWarning = true;
             ShowError = true;
             ShowCritical = true;
             IsAutoScrollEnabled = false; // Default OFF to prevent flicker
+            IsTreeViewEnabled = true; // Default to tree view for correlation
         }
 
         #region Properties
@@ -118,6 +126,9 @@ namespace CamBridge.Config.ViewModels
         private ObservableCollection<LogEntry> combinedLogEntries;
 
         [ObservableProperty]
+        private ObservableCollection<CorrelationGroup> correlationGroups;
+
+        [ObservableProperty]
         private ObservableCollection<string> availablePipelines;
 
         [ObservableProperty]
@@ -125,30 +136,39 @@ namespace CamBridge.Config.ViewModels
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(FilteredCombinedEntries))]
+        [NotifyPropertyChangedFor(nameof(CorrelationGroups))]
         private string? searchText;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(FilteredCombinedEntries))]
+        [NotifyPropertyChangedFor(nameof(CorrelationGroups))]
         private bool showDebug;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(FilteredCombinedEntries))]
+        [NotifyPropertyChangedFor(nameof(CorrelationGroups))]
         private bool showInformation;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(FilteredCombinedEntries))]
+        [NotifyPropertyChangedFor(nameof(CorrelationGroups))]
         private bool showWarning;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(FilteredCombinedEntries))]
+        [NotifyPropertyChangedFor(nameof(CorrelationGroups))]
         private bool showError;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(FilteredCombinedEntries))]
+        [NotifyPropertyChangedFor(nameof(CorrelationGroups))]
         private bool showCritical;
 
         [ObservableProperty]
         private bool isAutoScrollEnabled;
+
+        [ObservableProperty]
+        private bool isTreeViewEnabled;
 
         [ObservableProperty]
         private bool isLoading;
@@ -165,7 +185,10 @@ namespace CamBridge.Config.ViewModels
         [ObservableProperty]
         private DateTime lastUpdateTime = DateTime.Now;
 
-        public int DisplayedLineCount => FilteredCombinedEntries?.Count ?? 0;
+        public int DisplayedLineCount =>
+            IsTreeViewEnabled
+                ? CorrelationGroups?.Sum(g => g.TotalEntries) ?? 0
+                : FilteredCombinedEntries?.Count ?? 0;
 
         public int SelectedPipelineCount => PipelineSelections?.Count(p => p.IsSelected) ?? 0;
 
@@ -190,6 +213,9 @@ namespace CamBridge.Config.ViewModels
         public IAsyncRelayCommand RefreshCommand { get; }
         public IRelayCommand ClearLogCommand { get; }
         public IAsyncRelayCommand ExportLogCommand { get; }
+        public IRelayCommand ToggleTreeViewCommand { get; }
+        public IRelayCommand ExpandAllCommand { get; }
+        public IRelayCommand CollapseAllCommand { get; }
 
         #endregion
 
@@ -199,13 +225,10 @@ namespace CamBridge.Config.ViewModels
         {
             try
             {
-                _logger.LogInformation("Initializing LogViewerViewModel");
+                _logger.LogInformation("Initializing Enhanced LogViewerViewModel");
 
                 // Load available pipelines
                 await LoadAvailablePipelinesAsync();
-
-                // PipelineSelections sollte bereits "Service (Global)" als ausgewÃ¤hlt haben!
-                // (Das passiert in LoadAvailablePipelinesAsync mit IsSelected = true)
 
                 // Update count display
                 OnPropertyChanged(nameof(SelectedPipelineCount));
@@ -271,11 +294,8 @@ namespace CamBridge.Config.ViewModels
 
             var filtered = CombinedLogEntries.AsEnumerable();
 
-            // Apply level filters - wenn KEINS ausgewÃ¤hlt, zeige ALLE!
+            // Apply level filters
             var anyLevelSelected = ShowDebug || ShowInformation || ShowWarning || ShowError || ShowCritical;
-
-            _logger.LogDebug("Level filter state: Debug={Debug}, Info={Info}, Warn={Warn}, Error={Error}, Critical={Critical}, Any={Any}",
-                ShowDebug, ShowInformation, ShowWarning, ShowError, ShowCritical, anyLevelSelected);
 
             if (anyLevelSelected)
             {
@@ -286,7 +306,6 @@ namespace CamBridge.Config.ViewModels
                     (ShowError && e.Level == LogLevel.Error) ||
                     (ShowCritical && e.Level == LogLevel.Critical));
             }
-            // Wenn keine Level ausgewÃ¤hlt â†’ zeige alle!
 
             // Apply search filter
             if (!string.IsNullOrWhiteSpace(SearchText))
@@ -295,9 +314,9 @@ namespace CamBridge.Config.ViewModels
                 filtered = filtered.Where(e =>
                     e.Message.ToLowerInvariant().Contains(searchLower) ||
                     e.LevelText.ToLowerInvariant().Contains(searchLower) ||
-                    e.Source.ToLowerInvariant().Contains(searchLower));
-
-                _logger.LogDebug("Search filter applied: '{Search}'", SearchText);
+                    e.Source.ToLowerInvariant().Contains(searchLower) ||
+                    (e.CorrelationId?.ToLowerInvariant().Contains(searchLower) ?? false) ||
+                    (e.Stage?.ToString().ToLowerInvariant().Contains(searchLower) ?? false));
             }
 
             // Update filtered collection
@@ -308,6 +327,130 @@ namespace CamBridge.Config.ViewModels
             foreach (var entry in filteredList)
             {
                 FilteredCombinedEntries.Add(entry);
+            }
+
+            // Update correlation groups if tree view is enabled
+            if (IsTreeViewEnabled)
+            {
+                UpdateCorrelationGroups(filteredList);
+            }
+        }
+
+        private void UpdateCorrelationGroups(List<LogEntry> entries)
+        {
+            CorrelationGroups.Clear();
+
+            // Group by correlation ID
+            var groups = entries
+                .Where(e => !string.IsNullOrEmpty(e.CorrelationId))
+                .GroupBy(e => e.CorrelationId!)
+                .OrderByDescending(g => g.Max(e => e.Timestamp));
+
+            foreach (var group in groups)
+            {
+                var correlationGroup = new CorrelationGroup
+                {
+                    CorrelationId = group.Key,
+                    StartTime = group.Min(e => e.Timestamp),
+                    EndTime = group.Max(e => e.Timestamp),
+                    Pipeline = group.First().Pipeline ?? "Unknown",
+                    IsExpanded = false // Default collapsed
+                };
+
+                // Build stage hierarchy
+                var stages = new Dictionary<ProcessingStage, StageGroup>();
+
+                foreach (var entry in group.OrderBy(e => e.Timestamp))
+                {
+                    if (entry.Stage.HasValue)
+                    {
+                        if (!stages.ContainsKey(entry.Stage.Value))
+                        {
+                            stages[entry.Stage.Value] = new StageGroup
+                            {
+                                Stage = entry.Stage.Value,
+                                StartTime = entry.Timestamp,
+                                IsExpanded = false
+                            };
+                        }
+
+                        stages[entry.Stage.Value].Entries.Add(entry);
+                        stages[entry.Stage.Value].EndTime = entry.Timestamp;
+                    }
+                    else
+                    {
+                        // Add entries without stage directly to correlation group
+                        correlationGroup.UngroupedEntries.Add(entry);
+                    }
+                }
+
+                // Add stages to correlation group
+                foreach (var stage in stages.Values.OrderBy(s => s.StartTime))
+                {
+                    correlationGroup.Stages.Add(stage);
+                }
+
+                // Determine overall status
+                if (stages.ContainsKey(ProcessingStage.Error))
+                {
+                    correlationGroup.Status = ProcessingStatus.Failed;
+                }
+                else if (stages.ContainsKey(ProcessingStage.Complete))
+                {
+                    correlationGroup.Status = ProcessingStatus.Completed;
+                }
+                else
+                {
+                    correlationGroup.Status = ProcessingStatus.InProgress;
+                }
+
+                CorrelationGroups.Add(correlationGroup);
+            }
+
+            // Add entries without correlation ID
+            var uncorrelatedEntries = entries.Where(e => string.IsNullOrEmpty(e.CorrelationId)).ToList();
+            if (uncorrelatedEntries.Any())
+            {
+                var uncorrelatedGroup = new CorrelationGroup
+                {
+                    CorrelationId = "Uncorrelated",
+                    StartTime = uncorrelatedEntries.Min(e => e.Timestamp),
+                    EndTime = uncorrelatedEntries.Max(e => e.Timestamp),
+                    Pipeline = "Various",
+                    IsExpanded = false,
+                    Status = ProcessingStatus.Unknown
+                };
+
+                foreach (var entry in uncorrelatedEntries.OrderBy(e => e.Timestamp))
+                {
+                    uncorrelatedGroup.UngroupedEntries.Add(entry);
+                }
+
+                CorrelationGroups.Add(uncorrelatedGroup);
+            }
+        }
+
+        private void ExpandAll()
+        {
+            foreach (var group in CorrelationGroups)
+            {
+                group.IsExpanded = true;
+                foreach (var stage in group.Stages)
+                {
+                    stage.IsExpanded = true;
+                }
+            }
+        }
+
+        private void CollapseAll()
+        {
+            foreach (var group in CorrelationGroups)
+            {
+                group.IsExpanded = false;
+                foreach (var stage in group.Stages)
+                {
+                    stage.IsExpanded = false;
+                }
             }
         }
 
@@ -353,17 +496,6 @@ namespace CamBridge.Config.ViewModels
                 var logPath = ConfigurationPaths.GetLogsDirectory();
                 if (Directory.Exists(logPath))
                 {
-                    // Check for old combined pipelines log
-                    if (File.Exists(Path.Combine(logPath, $"pipelines_{DateTime.Now:yyyyMMdd}.log")))
-                    {
-                        PipelineSelections.Add(new PipelineSelection
-                        {
-                            Name = "All Pipelines (Legacy)",
-                            SanitizedName = "pipelines",
-                            IsSelected = false
-                        });
-                    }
-
                     var pipelineLogFiles = Directory.GetFiles(logPath, "pipeline_*.log")
                         .Select(Path.GetFileNameWithoutExtension)
                         .Where(f => f != null && f.StartsWith("pipeline_"))
@@ -414,6 +546,7 @@ namespace CamBridge.Config.ViewModels
                 if (!selectedPipelines.Any())
                 {
                     CombinedLogEntries.Clear();
+                    CorrelationGroups.Clear();
                     CurrentLogFiles = "No pipelines selected";
                     return;
                 }
@@ -530,92 +663,6 @@ namespace CamBridge.Config.ViewModels
             return entries;
         }
 
-        private async Task ReadTailAsync(string logPath, int lineCount)
-        {
-            try
-            {
-                var lines = new List<string>();
-
-                using (var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var reader = new StreamReader(fs, Encoding.UTF8))
-                {
-                    // Efficient tail reading
-                    var buffer = new Queue<string>(lineCount);
-                    string? line;
-
-                    while ((line = await reader.ReadLineAsync()) != null)
-                    {
-                        if (buffer.Count >= lineCount)
-                            buffer.Dequeue();
-                        buffer.Enqueue(line);
-                    }
-
-                    lines.AddRange(buffer);
-                    _filePositions[logPath] = fs.Position;
-                }
-
-                // Parse and add entries
-                LogEntries.Clear();
-                foreach (var line in lines)
-                {
-                    var entry = ParseLogLine(line);
-                    if (entry != null)
-                        LogEntries.Add(entry);
-                }
-
-                TotalLineCount = LogEntries.Count;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to read tail of log file: {LogPath}", logPath);
-            }
-        }
-
-        private async Task ReadNewLinesAsync(string logPath, long lastPosition)
-        {
-            try
-            {
-                using (var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                {
-                    // If file was truncated, reset
-                    if (fs.Length < lastPosition)
-                    {
-                        await ReadTailAsync(logPath, TailLineCount);
-                        return;
-                    }
-
-                    fs.Seek(lastPosition, SeekOrigin.Begin);
-                    using (var reader = new StreamReader(fs, Encoding.UTF8))
-                    {
-                        string? line;
-                        var newEntries = new List<LogEntry>();
-
-                        while ((line = await reader.ReadLineAsync()) != null)
-                        {
-                            var entry = ParseLogLine(line);
-                            if (entry != null)
-                                newEntries.Add(entry);
-                        }
-
-                        // Add new entries and maintain max count
-                        foreach (var entry in newEntries)
-                        {
-                            LogEntries.Add(entry);
-                            if (LogEntries.Count > MaxDisplayedEntries)
-                                LogEntries.RemoveAt(0);
-                        }
-
-                        _filePositions[logPath] = fs.Position;
-                        TotalLineCount = LogEntries.Count;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to read new lines from log file: {LogPath}", logPath);
-            }
-        }
-
         private LogEntry? ParseLogLine(string line)
         {
             if (string.IsNullOrWhiteSpace(line))
@@ -623,18 +670,54 @@ namespace CamBridge.Config.ViewModels
 
             try
             {
-                // Serilog format: [HH:mm:ss LVL] Message
-                // Example: [14:23:45 INF] Pipeline Radiology started
-                // Flexibleres Pattern fÃ¼r verschiedene Level-LÃ¤ngen (INF, INFO, ERR, ERROR etc.)
-                var match = Regex.Match(line, @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+(.+)$");
+                // First try to parse enhanced format with correlation ID
+                // Pattern: [{Timestamp}] [{CorrelationId}] [{Stage}] {Message} [{Pipeline}] [{Duration}ms]
+                var enhancedMatch = Regex.Match(line,
+                    @"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\] \[([^\]]+)\] \[([^\]]+)\] (.+?) \[([^\]]+)\](?: \[(\d+)ms\])?$");
 
-                if (match.Success)
+                if (enhancedMatch.Success)
                 {
-                    var timeStr = match.Groups[1].Value;
-                    var levelStr = match.Groups[2].Value;
-                    var message = match.Groups[3].Value;
+                    var timestamp = DateTime.Parse(enhancedMatch.Groups[1].Value);
+                    var correlationId = enhancedMatch.Groups[2].Value;
+                    var stageStr = enhancedMatch.Groups[3].Value;
+                    var message = enhancedMatch.Groups[4].Value;
+                    var pipeline = enhancedMatch.Groups[5].Value;
+                    var durationMs = enhancedMatch.Groups[6].Success ? int.Parse(enhancedMatch.Groups[6].Value) : (int?)null;
 
-                    // Parse timestamp - handle with or without milliseconds
+                    // Parse stage
+                    ProcessingStage? stage = null;
+                    if (Enum.TryParse<ProcessingStage>(stageStr, true, out var parsedStage))
+                    {
+                        stage = parsedStage;
+                    }
+
+                    // Determine log level from stage or message content
+                    var level = DetermineLogLevel(stage, message);
+
+                    return new LogEntry
+                    {
+                        Timestamp = timestamp,
+                        Level = level,
+                        Message = message,
+                        RawLine = line,
+                        CorrelationId = correlationId,
+                        Stage = stage,
+                        Pipeline = pipeline,
+                        DurationMs = durationMs
+                    };
+                }
+
+                // Fallback to standard Serilog format
+                // Example: [14:23:45 INF] Pipeline Radiology started
+                var standardMatch = Regex.Match(line, @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+(.+)$");
+
+                if (standardMatch.Success)
+                {
+                    var timeStr = standardMatch.Groups[1].Value;
+                    var levelStr = standardMatch.Groups[2].Value;
+                    var message = standardMatch.Groups[3].Value;
+
+                    // Parse timestamp
                     DateTime timestamp;
                     if (timeStr.Contains('.'))
                     {
@@ -658,40 +741,16 @@ namespace CamBridge.Config.ViewModels
                         RawLine = line
                     };
                 }
-                else
+
+                // Fallback for non-standard format
+                _logger.LogDebug("Could not parse log line format: {Line}", line);
+                return new LogEntry
                 {
-                    // Try alternative format without brackets
-                    // Example: 2025-06-22 14:23:45 [INF] Message
-                    match = Regex.Match(line, @"^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+\[(\w{3})\]\s+(.+)$");
-
-                    if (match.Success)
-                    {
-                        var dateTimeStr = match.Groups[1].Value;
-                        var levelStr = match.Groups[2].Value;
-                        var message = match.Groups[3].Value;
-
-                        var timestamp = DateTime.Parse(dateTimeStr);
-                        var level = ParseLogLevel(levelStr);
-
-                        return new LogEntry
-                        {
-                            Timestamp = timestamp,
-                            Level = level,
-                            Message = message,
-                            RawLine = line
-                        };
-                    }
-
-                    // Fallback for non-standard format
-                    _logger.LogDebug("Could not parse log line format: {Line}", line);
-                    return new LogEntry
-                    {
-                        Timestamp = DateTime.Now,
-                        Level = LogLevel.Information,
-                        Message = line,
-                        RawLine = line
-                    };
-                }
+                    Timestamp = DateTime.Now,
+                    Level = LogLevel.Information,
+                    Message = line,
+                    RawLine = line
+                };
             }
             catch (Exception ex)
             {
@@ -705,6 +764,28 @@ namespace CamBridge.Config.ViewModels
                     RawLine = line
                 };
             }
+        }
+
+        private LogLevel DetermineLogLevel(ProcessingStage? stage, string message)
+        {
+            // Check stage first
+            if (stage == ProcessingStage.Error)
+                return LogLevel.Error;
+
+            // Check message content
+            if (message.Contains("error", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("failed", StringComparison.OrdinalIgnoreCase))
+                return LogLevel.Error;
+
+            if (message.Contains("warning", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("slow", StringComparison.OrdinalIgnoreCase))
+                return LogLevel.Warning;
+
+            if (message.Contains("debug", StringComparison.OrdinalIgnoreCase))
+                return LogLevel.Debug;
+
+            // Default to Information
+            return LogLevel.Information;
         }
 
         private LogLevel ParseLogLevel(string levelStr)
@@ -725,6 +806,7 @@ namespace CamBridge.Config.ViewModels
             LogEntries.Clear();
             CombinedLogEntries.Clear();
             FilteredCombinedEntries.Clear();
+            CorrelationGroups.Clear();
             TotalLineCount = 0;
             _filePositions.Clear();
         }
@@ -861,10 +943,15 @@ namespace CamBridge.Config.ViewModels
             ApplyFilters();
             OnPropertyChanged(nameof(SelectedLevelCount));
         }
+
+        partial void OnIsTreeViewEnabledChanged(bool value)
+        {
+            ApplyFilters();
+        }
     }
 
     /// <summary>
-    /// Represents a single log entry with metadata
+    /// Enhanced log entry with correlation support
     /// </summary>
     public class LogEntry
     {
@@ -872,7 +959,13 @@ namespace CamBridge.Config.ViewModels
         public LogLevel Level { get; set; }
         public string Message { get; set; } = string.Empty;
         public string? RawLine { get; set; }
-        public string Source { get; set; } = string.Empty; // Which pipeline this came from
+        public string Source { get; set; } = string.Empty; // Which log file this came from
+
+        // Enhanced properties for correlation
+        public string? CorrelationId { get; set; }
+        public ProcessingStage? Stage { get; set; }
+        public string? Pipeline { get; set; }
+        public int? DurationMs { get; set; }
 
         // UI Helper Properties
         public string LevelText => Level switch
@@ -894,5 +987,97 @@ namespace CamBridge.Config.ViewModels
             LogLevel.Critical => "#8B0000",    // Dark Red
             _ => "#000000"
         };
+
+        public string StageIcon => Stage switch
+        {
+            ProcessingStage.FileDetected => "📁",
+            ProcessingStage.ExifExtraction => "📷",
+            ProcessingStage.TagMapping => "🔄",
+            ProcessingStage.DicomConversion => "🏥",
+            ProcessingStage.PostProcessing => "📋",
+            ProcessingStage.PacsUpload => "☁️",
+            ProcessingStage.Complete => "✅",
+            ProcessingStage.Error => "❌",
+            _ => "📝"
+        };
+
+        public string FormattedDuration => DurationMs.HasValue ? $"{DurationMs}ms" : "";
+    }
+
+    /// <summary>
+    /// Represents a group of log entries with the same correlation ID
+    /// </summary>
+    public class CorrelationGroup : ObservableObject
+    {
+        private bool _isExpanded;
+
+        public string CorrelationId { get; set; } = string.Empty;
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public string Pipeline { get; set; } = string.Empty;
+        public ProcessingStatus Status { get; set; }
+        public ObservableCollection<StageGroup> Stages { get; } = new();
+        public ObservableCollection<LogEntry> UngroupedEntries { get; } = new();
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set => SetProperty(ref _isExpanded, value);
+        }
+
+        public TimeSpan Duration => EndTime - StartTime;
+        public string DurationText => $"{Duration.TotalMilliseconds:0}ms";
+        public int TotalEntries => Stages.Sum(s => s.Entries.Count) + UngroupedEntries.Count;
+
+        public string StatusIcon => Status switch
+        {
+            ProcessingStatus.Completed => "✅",
+            ProcessingStatus.Failed => "❌",
+            ProcessingStatus.InProgress => "⏳",
+            _ => "❓"
+        };
+
+        public string StatusColor => Status switch
+        {
+            ProcessingStatus.Completed => "#4CAF50",
+            ProcessingStatus.Failed => "#F44336",
+            ProcessingStatus.InProgress => "#FFA500",
+            _ => "#808080"
+        };
+    }
+
+    /// <summary>
+    /// Represents a group of log entries for a specific processing stage
+    /// </summary>
+    public class StageGroup : ObservableObject
+    {
+        private bool _isExpanded;
+
+        public ProcessingStage Stage { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public ObservableCollection<LogEntry> Entries { get; } = new();
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set => SetProperty(ref _isExpanded, value);
+        }
+
+        public TimeSpan Duration => EndTime - StartTime;
+        public string DurationText => $"{Duration.TotalMilliseconds:0}ms";
+
+        public string StageIcon => Entries.FirstOrDefault()?.StageIcon ?? "📝";
+    }
+
+    /// <summary>
+    /// Processing status for correlation groups
+    /// </summary>
+    public enum ProcessingStatus
+    {
+        Unknown,
+        InProgress,
+        Completed,
+        Failed
     }
 }

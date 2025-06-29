@@ -1,11 +1,12 @@
-﻿// src\CamBridge.Config\Views\ServiceControlPage.xaml.cs
-// Version: 0.5.26 - Fixed: Using Cleanup() instead of Dispose()
+// src/CamBridge.Config/Views/ServiceControlPage.xaml.cs
+// Version: 0.8.6
+// Modified: Session 96 - Fixed DI parameters
 
-using CamBridge.Config.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
+using CamBridge.Config.ViewModels;
 
 namespace CamBridge.Config.Views
 {
@@ -20,7 +21,6 @@ namespace CamBridge.Config.Views
         {
             InitializeComponent();
 
-            // Get ViewModel from DI container
             try
             {
                 var app = Application.Current as App;
@@ -28,33 +28,33 @@ namespace CamBridge.Config.Views
                 {
                     _viewModel = app.Host.Services.GetRequiredService<ServiceControlViewModel>();
                     DataContext = _viewModel;
-
                     System.Diagnostics.Debug.WriteLine("ServiceControlViewModel loaded from DI container");
                 }
                 else
                 {
                     // Fallback if DI not available
                     var serviceManager = new Services.ServiceManager();
-                    _viewModel = new ServiceControlViewModel(serviceManager);
-                    DataContext = _viewModel;
+                    var configurationService = new Services.ConfigurationService();
 
-                    System.Diagnostics.Debug.WriteLine("ServiceControlViewModel created manually (fallback)");
+                    _viewModel = new ServiceControlViewModel(serviceManager, configurationService);
+                    DataContext = _viewModel;
+                    System.Diagnostics.Debug.WriteLine("ServiceControlViewModel created with fallback");
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error creating ServiceControlViewModel: {ex.Message}");
+                MessageBox.Show(
+                    "Failed to initialize Service Control page. Some features may not be available.",
+                    "Initialization Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
         }
 
-        // Fixed: Using Cleanup() instead of Dispose()
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
-            // Cleanup the ViewModel
             _viewModel?.Cleanup();
-            _viewModel = null;
-
-            System.Diagnostics.Debug.WriteLine("ServiceControlPage cleanup completed");
         }
     }
 }

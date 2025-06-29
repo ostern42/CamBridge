@@ -1,6 +1,7 @@
 <!-- src/CamBridge.Config/Views/ServiceControlPage.xaml -->
-<!-- Version: 0.7.28 -->
-<!-- Description: Service Control - Uniform Design without Borders -->
+<!-- Version: 0.8.6 -->
+<!-- Description: Service Control with Global Service Settings -->
+<!-- Modified: Session 96 - Making Logs Great Again! -->
 
 <Page x:Class="CamBridge.Config.Views.ServiceControlPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -30,6 +31,7 @@
         <ScrollViewer Grid.Row="1">
             <Grid Margin="16,16,16,0">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -149,8 +151,134 @@
                     </Grid>
                 </Border>
 
+                <!-- Service Settings Card - NEW! -->
+                <Border Grid.Row="2" CornerRadius="2" Margin="0,0,0,16"
+                        Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                        BorderThickness="0">
+                    <Expander Header="Service Settings" IsExpanded="True" Margin="16,12">
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Log Verbosity -->
+                            <TextBlock Grid.Row="0" Grid.Column="0" 
+                                      Text="Log Verbosity:" 
+                                      VerticalAlignment="Center" 
+                                      Margin="0,0,0,12"/>
+                            <ComboBox Grid.Row="0" Grid.Column="1" 
+                                     ItemsSource="{Binding LogVerbosityOptions}"
+                                     SelectedItem="{Binding SelectedLogVerbosity}"
+                                     Width="200" HorizontalAlignment="Left"
+                                     Margin="0,0,0,12"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" 
+                                      Text="{Binding EstimatedLogSize}" 
+                                      Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                      VerticalAlignment="Center" 
+                                      Margin="12,0,0,12"/>
+
+                            <!-- API Port -->
+                            <TextBlock Grid.Row="1" Grid.Column="0" 
+                                      Text="API Port:" 
+                                      VerticalAlignment="Center" 
+                                      Margin="0,0,0,12"/>
+                            <ui:NumberBox Grid.Row="1" Grid.Column="1"
+                                         Value="{Binding ApiPort}"
+                                         Minimum="1024" Maximum="65535"
+                                         SpinButtonPlacementMode="Inline"
+                                         Width="200" HorizontalAlignment="Left"
+                                         Margin="0,0,0,12"/>
+
+                            <!-- Startup Delay -->
+                            <TextBlock Grid.Row="2" Grid.Column="0" 
+                                      Text="Startup Delay:" 
+                                      VerticalAlignment="Center" 
+                                      Margin="0,0,0,12"/>
+                            <StackPanel Grid.Row="2" Grid.Column="1" 
+                                       Orientation="Horizontal" 
+                                       Margin="0,0,0,12">
+                                <Slider Value="{Binding StartupDelaySeconds}"
+                                       Minimum="0" Maximum="60"
+                                       TickFrequency="5"
+                                       IsSnapToTickEnabled="True"
+                                       Width="150"/>
+                                <TextBlock Text="{Binding StartupDelaySeconds, StringFormat='{}{0} seconds'}"
+                                          VerticalAlignment="Center"
+                                          Margin="12,0,0,0"
+                                          MinWidth="70"/>
+                            </StackPanel>
+
+                            <!-- File Processing Delay -->
+                            <TextBlock Grid.Row="3" Grid.Column="0" 
+                                      Text="File Processing Delay:" 
+                                      VerticalAlignment="Center" 
+                                      Margin="0,0,0,12"/>
+                            <StackPanel Grid.Row="3" Grid.Column="1" 
+                                       Orientation="Horizontal" 
+                                       Margin="0,0,0,12">
+                                <Slider Value="{Binding FileProcessingDelayMs}"
+                                       Minimum="0" Maximum="5000"
+                                       TickFrequency="500"
+                                       IsSnapToTickEnabled="True"
+                                       Width="150"/>
+                                <TextBlock Text="{Binding FileProcessingDelayMs, StringFormat='{}{0} ms'}"
+                                          VerticalAlignment="Center"
+                                          Margin="12,0,0,0"
+                                          MinWidth="70"/>
+                            </StackPanel>
+
+                            <!-- Live Statistics Info -->
+                            <Border Grid.Row="4" Grid.ColumnSpan="3" 
+                                   Margin="0,12,0,12" Padding="12" 
+                                   CornerRadius="2"
+                                   Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                                <StackPanel>
+                                    <TextBlock Text="Current Log Statistics" 
+                                              FontWeight="SemiBold" 
+                                              Margin="0,0,0,8"/>
+                                    <TextBlock TextWrapping="Wrap"
+                                              Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}">
+                                        <Run Text="Files processed today:"/>
+                                        <Run Text="{Binding FilesProcessedToday}" FontWeight="SemiBold"/>
+                                        <Run Text=" | Estimated daily log size:"/>
+                                        <Run Text="{Binding EstimatedDailyLogSize}" FontWeight="SemiBold"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Save Button -->
+                            <Button Grid.Row="5" Grid.Column="1" 
+                                   Command="{Binding SaveServiceSettingsCommand}"
+                                   HorizontalAlignment="Left"
+                                   MinWidth="120">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Save" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Apply Settings"/>
+                                </StackPanel>
+                            </Button>
+
+                            <TextBlock Grid.Row="5" Grid.Column="2"
+                                      Text="Service restart required"
+                                      Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                      VerticalAlignment="Center"
+                                      Visibility="{Binding SettingsChanged, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                      Margin="12,0,0,0"/>
+                        </Grid>
+                    </Expander>
+                </Border>
+
                 <!-- Quick Actions -->
-                <Border Grid.Row="2" CornerRadius="2"
+                <Border Grid.Row="3" CornerRadius="2"
                         Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                         BorderThickness="0">
                     <StackPanel Margin="16,12">

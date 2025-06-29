@@ -8,6 +8,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # CHANGELOG Entry
 
+## [0.8.6] - 2025-06-29 - Making Logs Great Again! 🪵✨
+
+### Added
+- **Hierarchical Logging System** with correlation IDs for end-to-end file tracking
+  - New `LogContext` class provides structured logging with automatic timing
+  - `ProcessingStage` enum tracks pipeline stages (FileDetected → Complete/Error)
+  - Correlation ID format: `[F{timestamp}-{filename}]` for unique file identification
+  - Stage timing automatically logged: `[{Duration}ms]`
+- **LogVerbosity Configuration** (4 levels):
+  - `Minimal`: Start/End only (~150 KB/day)
+  - `Normal`: + Key events (~750 KB/day)
+  - `Detailed`: + All stages (~1.75 MB/day) **[DEFAULT]**
+  - `Debug`: + Raw data (~3.5 MB/day)
+- **Enhanced LogViewer UI** (tree view ready):
+  - Tree/Flat view toggle button
+  - Correlation grouping support
+  - Stage-based hierarchical display
+  - Expand/Collapse all functionality
+  - Visual stage indicators (📁📷🔄🏥☁️✅❌)
+
+### Changed
+- FileProcessor now uses LogContext for all logging operations
+- PipelineManager passes LogVerbosity from Service settings to FileProcessor
+- Log format: `[{Timestamp}] [{CorrelationId}] [{Stage}] {Message} [{Pipeline}] [{Duration}ms]`
+- Moved enums to dedicated namespace `CamBridge.Core.Enums`
+
+### Fixed
+- Duplicate enum definitions causing CS0104 ambiguous reference errors
+- Missing using directives in ViewModels for ProcessingStage and LogVerbosity
+- Copyright symbols (Â© → ©) in all source files
+
+### Known Issues
+- Backup/Delete timing issue - Delete disabled as workaround (using "Leave" option)
+- BackupFolder configuration not visible in GUI
+- Tree view parsing implementation pending (UI skeleton ready)
+
+### Technical Notes
+- Sessions 96-97: Complete logging infrastructure overhaul
+- Ready for tree view implementation in Session 98
+- All file processing now tracked with correlation IDs
+- Performance impact minimal even at Debug verbosity
+
 ## [0.8.5] - 2025-06-29 - The Great ViewModel Refactoring!
 
 ### Changed

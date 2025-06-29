@@ -1,34 +1,27 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.8.5 -->
-<!-- Modified: 2025-06-25 -->
-<!-- Purpose: Session 95 - The Great ViewModel Refactoring! -->
+<!-- Version: 0.8.6 -->
+<!-- Modified: 2025-06-29 -->
+<!-- Purpose: Session 96 - Making Logs Great Again! Hierarchical logging with correlation IDs -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.8.5</VersionPrefix>
+		<VersionPrefix>0.8.6</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
-
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
 		<AssemblyVersion>0.8.0.0</AssemblyVersion>
-
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.8.5.0</FileVersion>
-
+		<FileVersion>0.8.6.0</FileVersion>
 		<!-- Informational version shown in logs and UI -->
-		<InformationalVersion>0.8.5 - The Great ViewModel Refactoring!</InformationalVersion>
-
+		<InformationalVersion>0.8.6 - Making Logs Great Again!</InformationalVersion>
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.8.5</PackageVersion>
-
+		<PackageVersion>0.8.6</PackageVersion>
 		<!-- Product information -->
 		<Product>CamBridge</Product>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>
 		<Copyright>Copyright © 2025 Claude's Improbably Reliable Software Solutions</Copyright>
-
 		<!-- Build metadata -->
 		<RepositoryUrl>https://github.com/yourusername/CamBridge</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-
 		<!-- Generate assembly info from these properties -->
 		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 		<GenerateAssemblyFileVersionAttribute>true</GenerateAssemblyFileVersionAttribute>

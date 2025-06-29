@@ -1,7 +1,7 @@
 // src/CamBridge.Infrastructure/Services/PipelineManager.cs
 // Version: 0.8.0
 // Description: Orchestrates multiple processing pipelines with PACS upload support
-// Copyright: &#169; 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Concurrent;
@@ -214,7 +214,11 @@ namespace CamBridge.Infrastructure.Services
                 // Get services from DI
                 var exifReader = _serviceProvider.GetRequiredService<ExifToolReader>();
                 var dicomConverter = _serviceProvider.GetRequiredService<DicomConverter>();
-                var globalDicomSettings = _settingsMonitor.CurrentValue.GlobalDicomSettings ?? new DicomSettings();
+
+                // Get settings for LogVerbosity
+                var settings = _settingsMonitor.CurrentValue;
+                var globalDicomSettings = settings.GlobalDicomSettings ?? new DicomSettings();
+                var logVerbosity = settings.Service.LogVerbosity; // FIXED: Get LogVerbosity from settings!
 
                 // CRITICAL: Create pipeline-specific logger with sanitized name
                 var sanitizedName = SanitizeForFileName(config.Name);
@@ -239,7 +243,7 @@ namespace CamBridge.Infrastructure.Services
                         config.PacsConfiguration.Port);
                 }
 
-                // Create FileProcessor for THIS pipeline with pipeline-specific logger AND PACS queue
+                // Create FileProcessor for THIS pipeline with pipeline-specific logger AND PACS queue AND LogVerbosity
                 var fileProcessor = new FileProcessor(
                     pipelineLogger,  // Use pipeline-specific logger!
                     exifReader,
@@ -248,7 +252,8 @@ namespace CamBridge.Infrastructure.Services
                     globalDicomSettings,
                     tagMapper: null,  // TODO: Wire up when mapping is needed
                     mappingConfiguration: null,  // TODO: Wire up when mapping is needed
-                    pacsUploadQueue: pacsQueue  // NEW: Pass PACS queue to FileProcessor
+                    pacsUploadQueue: pacsQueue,  // NEW: Pass PACS queue to FileProcessor
+                    logVerbosity: logVerbosity    // FIXED: Pass LogVerbosity from settings!
                 );
 
                 // Create processing queue for this pipeline
@@ -304,27 +309,6 @@ namespace CamBridge.Infrastructure.Services
                         pipelineLogger.LogDebug("Starting processing queue for pipeline: {PipelineName}", config.Name);
                         await queue.ProcessQueueAsync(cancellationToken);
                     }, cancellationToken);
-
-                    // NEW: Start PACS queue processing if created
-                    if (pacsQueue != null)
-                    {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                pipelineLogger.LogInformation("Starting PACS upload queue for pipeline: {PipelineName}", config.Name);
-                                await pacsQueue.ProcessQueueAsync(_cancellationTokenSource.Token);
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                pipelineLogger.LogDebug("PACS queue cancelled for pipeline {Pipeline}", config.Name);
-                            }
-                            catch (Exception ex)
-                            {
-                                pipelineLogger.LogError(ex, "PACS queue error for pipeline {Pipeline}", config.Name);
-                            }
-                        }, _cancellationTokenSource.Token);
-                    }
 
                     // Enable watcher
                     watcher.EnableRaisingEvents = true;

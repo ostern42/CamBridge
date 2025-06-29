@@ -1,12 +1,14 @@
 // src/CamBridge.Infrastructure/Services/FileProcessor.cs
-// Version: 0.8.0
-// Description: Pipeline-aware file processor with PACS upload queue integration
-// Copyright: &#169; 2025 Claude's Improbably Reliable Software Solutions
+// Version: 0.8.6
+// Description: Pipeline-aware file processor with LogContext integration
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
 using CamBridge.Core.Entities;
 using CamBridge.Core.Interfaces;
 using CamBridge.Core.ValueObjects;
+using CamBridge.Core.Logging;
+using CamBridge.Core.Enums; // FIXED: Import LogVerbosity from correct namespace
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -19,7 +21,7 @@ namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
     /// Orchestrates the complete JPEG to DICOM conversion process for a specific pipeline
-    /// ENHANCED: Now supports automatic PACS upload via queue after successful conversion
+    /// ENHANCED: Now uses LogContext for structured hierarchical logging
     /// </summary>
     public class FileProcessor
     {
@@ -31,6 +33,7 @@ namespace CamBridge.Infrastructure.Services
         private readonly IDicomTagMapper? _tagMapper;
         private readonly IMappingConfiguration? _mappingConfiguration;
         private readonly PacsUploadQueue? _pacsUploadQueue;
+        private readonly LogVerbosity _logVerbosity;
 
         public event EventHandler<FileProcessingEventArgs>? ProcessingStarted;
         public event EventHandler<FileProcessingEventArgs>? ProcessingCompleted;
@@ -47,7 +50,8 @@ namespace CamBridge.Infrastructure.Services
             DicomSettings globalDicomSettings,
             IDicomTagMapper? tagMapper = null,
             IMappingConfiguration? mappingConfiguration = null,
-            PacsUploadQueue? pacsUploadQueue = null)
+            PacsUploadQueue? pacsUploadQueue = null,
+            LogVerbosity logVerbosity = LogVerbosity.Detailed)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _exifToolReader = exifToolReader ?? throw new ArgumentNullException(nameof(exifToolReader));
@@ -57,6 +61,7 @@ namespace CamBridge.Infrastructure.Services
             _tagMapper = tagMapper;
             _mappingConfiguration = mappingConfiguration;
             _pacsUploadQueue = pacsUploadQueue;
+            _logVerbosity = logVerbosity;
 
             _logger.LogDebug("Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
                 pipelineConfig.Name, pipelineConfig.Id);
@@ -67,6 +72,305 @@ namespace CamBridge.Infrastructure.Services
                     pipelineConfig.Name);
             }
         }
+
+        /// <summary>
+        /// Processes a single JPEG file through the pipeline using LogContext
+        /// </summary>
+        public async Task<FileProcessingResult> ProcessFileAsync(string filePath)
+        {
+            // Generate correlation ID and create LogContext
+            var correlationId = GenerateCorrelationId(filePath);
+            var logContext = _logger.CreateContext(correlationId, _pipelineConfig.Name, _logVerbosity);
+
+            var result = new FileProcessingResult
+            {
+                SourceFile = filePath,
+                StartTime = DateTime.UtcNow,
+                PipelineId = _pipelineConfig.Id,
+                CorrelationId = correlationId
+            };
+
+            try
+            {
+                using (logContext.BeginStage(ProcessingStage.FileDetected, $"Processing file: {Path.GetFileName(filePath)}"))
+                {
+                    ProcessingStarted?.Invoke(this, new FileProcessingEventArgs
+                    {
+                        FilePath = filePath,
+                        CorrelationId = correlationId,
+                        PipelineName = _pipelineConfig.Name,
+                        Stage = ProcessingStage.FileDetected
+                    });
+
+                    // Validate input file
+                    ValidateInputFile(filePath);
+                }
+
+                // Extract EXIF data with timing
+                ImageMetadata? metadata;
+                using (logContext.BeginStage(ProcessingStage.ExifExtraction, "Extracting EXIF metadata"))
+                {
+                    metadata = await _exifToolReader.ExtractMetadataAsync(filePath);
+
+                    if (metadata == null)
+                    {
+                        logContext.LogWarning("Failed to extract metadata, creating default DICOM with minimal tags");
+                        metadata = CreateDefaultMetadata(filePath);
+                    }
+                    else if (metadata.Patient != null)
+                    {
+                        logContext.LogInformation($"Patient: {metadata.Patient.PatientName}");
+                    }
+                }
+
+                // Apply tag mapping if configured
+                if (_tagMapper != null && _mappingConfiguration != null)
+                {
+                    using (logContext.BeginStage(ProcessingStage.TagMapping, "Applying tag mapping rules"))
+                    {
+                        var mappingRules = _mappingConfiguration.GetMappingRules();
+                        if (mappingRules.Any())
+                        {
+                            logContext.LogDebug($"Applying {mappingRules.Count()} mapping rules");
+                        }
+                    }
+                }
+
+                // Determine output path based on pipeline configuration
+                var outputPath = DetermineOutputPath(metadata, filePath);
+
+                // Ensure output directory exists
+                var outputDir = Path.GetDirectoryName(outputPath);
+                if (!string.IsNullOrEmpty(outputDir))
+                {
+                    Directory.CreateDirectory(outputDir);
+                }
+
+                // Convert to DICOM with timing
+                ConversionResult conversionResult;
+                using (logContext.BeginStage(ProcessingStage.DicomConversion, $"Converting to DICOM: {Path.GetFileName(outputPath)}"))
+                {
+                    // Create converter with mapper if available
+                    var converterWithMapping = new DicomConverter(
+                        _logger as ILogger<DicomConverter> ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<DicomConverter>.Instance,
+                        _tagMapper,
+                        _mappingConfiguration);
+
+                    conversionResult = await converterWithMapping.ConvertToDicomAsync(
+                        filePath,
+                        outputPath,
+                        metadata);
+                }
+
+                result.Success = conversionResult.Success;
+                result.OutputFile = outputPath;
+                result.DicomFile = outputPath;
+                result.EndTime = DateTime.UtcNow;
+                result.ProcessingTimeMs = (long)(result.EndTime - result.StartTime).TotalMilliseconds;
+
+                if (result.Success)
+                {
+                    // Queue for PACS upload if enabled
+                    if (_pacsUploadQueue != null && _pipelineConfig.PacsConfiguration?.Enabled == true)
+                    {
+                        using (logContext.BeginStage(ProcessingStage.PacsUpload, $"Queueing for PACS upload to {_pipelineConfig.PacsConfiguration.Host}:{_pipelineConfig.PacsConfiguration.Port}"))
+                        {
+                            try
+                            {
+                                await _pacsUploadQueue.EnqueueAsync(conversionResult.DicomFilePath!, correlationId);
+                            }
+                            catch (Exception ex)
+                            {
+                                logContext.LogError(ex, "Failed to queue DICOM for PACS upload");
+                                // Don't fail the overall processing if PACS queue fails
+                            }
+                        }
+                    }
+
+                    // Handle post-processing
+                    using (logContext.BeginStage(ProcessingStage.PostProcessing, "Performing post-processing"))
+                    {
+                        await HandlePostProcessingAsync(filePath, outputPath, result.Success, logContext);
+                    }
+
+                    // Final success log
+                    using (logContext.BeginStage(ProcessingStage.Complete, $"Successfully processed {Path.GetFileName(filePath)}"))
+                    {
+                        // Performance warning for slow processing
+                        if (result.ProcessingTimeMs > 5000)
+                        {
+                            logContext.LogWarning($"Slow processing detected: {result.ProcessingTimeMs}ms");
+                        }
+
+                        ProcessingCompleted?.Invoke(this, new FileProcessingEventArgs
+                        {
+                            FilePath = filePath,
+                            OutputPath = outputPath,
+                            CorrelationId = correlationId,
+                            PipelineName = _pipelineConfig.Name,
+                            Stage = ProcessingStage.Complete
+                        });
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"DICOM conversion failed: {conversionResult.ErrorMessage}");
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                result.EndTime = DateTime.UtcNow;
+                result.ProcessingTimeMs = (long)(result.EndTime - result.StartTime).TotalMilliseconds;
+
+                using (logContext.BeginStage(ProcessingStage.Error, $"Processing failed: {ex.Message}"))
+                {
+                    logContext.LogError(ex, $"Failed to process {Path.GetFileName(filePath)}");
+
+                    // Critical error detection
+                    if (ex is UnauthorizedAccessException && filePath.StartsWith(_pipelineConfig.WatchSettings.Path))
+                    {
+                        _logger.LogCritical(ex, "[{CorrelationId}] [Error] Cannot access watch folder {Path} - pipeline will fail! [{Pipeline}]",
+                            correlationId, _pipelineConfig.WatchSettings.Path, _pipelineConfig.Name);
+                    }
+
+                    // Handle failure post-processing
+                    await HandlePostProcessingAsync(filePath, null, false, logContext);
+
+                    ProcessingError?.Invoke(this, new FileProcessingErrorEventArgs
+                    {
+                        FilePath = filePath,
+                        Error = ex,
+                        CorrelationId = correlationId,
+                        PipelineName = _pipelineConfig.Name,
+                        Stage = ProcessingStage.Error
+                    });
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Handles post-processing with LogContext
+        /// </summary>
+        private async Task HandlePostProcessingAsync(string sourceFilePath, string? dicomFilePath, bool success, LogContext logContext)
+        {
+            var action = success
+                ? _pipelineConfig.ProcessingOptions.SuccessAction
+                : _pipelineConfig.ProcessingOptions.FailureAction;
+
+            try
+            {
+                logContext.LogDebug($"Performing {action} on source file");
+
+                switch (action)
+                {
+                    case PostProcessingAction.Delete:
+                        // Delete only the source file
+                        if (File.Exists(sourceFilePath))
+                        {
+                            File.Delete(sourceFilePath);
+                            logContext.LogDebug("Deleted source file");
+                        }
+                        break;
+
+                    case PostProcessingAction.Archive:
+                        var jpegArchiveFolder = _pipelineConfig.ProcessingOptions.BackupFolder
+                            ?? Path.Combine(_pipelineConfig.ProcessingOptions.ArchiveFolder, "ProcessedJPEGs");
+
+                        var archivePath = Path.Combine(
+                            jpegArchiveFolder,
+                            Path.GetFileName(sourceFilePath));
+
+                        Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
+
+                        if (File.Exists(sourceFilePath))
+                        {
+                            File.Move(sourceFilePath, archivePath, true);
+                            logContext.LogDebug($"Archived source JPEG to {Path.GetFullPath(archivePath)}");
+                        }
+
+                        // DICOM file stays in output folder
+                        if (success && !string.IsNullOrEmpty(dicomFilePath))
+                        {
+                            logContext.LogInformation($"DICOM file created at: {Path.GetFullPath(dicomFilePath)}");
+                        }
+                        break;
+
+                    case PostProcessingAction.MoveToError:
+                        // Move source file to error folder (typically for failures)
+                        if (!success)
+                        {
+                            await MoveToErrorFolderAsync(sourceFilePath, "Processing failed", logContext);
+
+                            // If DICOM was partially created, clean it up
+                            if (!string.IsNullOrEmpty(dicomFilePath) && File.Exists(dicomFilePath))
+                            {
+                                try
+                                {
+                                    File.Delete(dicomFilePath);
+                                    logContext.LogDebug("Cleaned up partial DICOM file");
+                                }
+                                catch (Exception ex)
+                                {
+                                    logContext.LogWarning($"Failed to clean up partial DICOM: {ex.Message}");
+                                }
+                            }
+                        }
+                        break;
+
+                    default:
+                        // Leave files as-is
+                        logContext.LogDebug("No post-processing action");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                logContext.LogWarning($"Failed to perform {action}: {ex.Message}");
+                // Don't fail the overall processing for post-processing errors
+            }
+        }
+
+        private async Task MoveToErrorFolderAsync(string filePath, string errorMessage, LogContext logContext)
+        {
+            try
+            {
+                var errorFolder = _pipelineConfig.ProcessingOptions.ErrorFolder;
+                Directory.CreateDirectory(errorFolder);
+
+                var errorFileName = $"{Path.GetFileNameWithoutExtension(filePath)}" +
+                                   $"_{DateTime.Now:yyyyMMdd_HHmmss}" +
+                                   $"{Path.GetExtension(filePath)}";
+
+                var errorPath = Path.Combine(errorFolder, errorFileName);
+
+                // Write error info file
+                var errorInfoPath = Path.ChangeExtension(errorPath, ".error.txt");
+                await File.WriteAllTextAsync(errorInfoPath,
+                    $"Error Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                    $"Pipeline: {_pipelineConfig.Name}\n" +
+                    $"Source File: {filePath}\n" +
+                    $"Correlation ID: {logContext.CorrelationId}\n" +
+                    $"Error: {errorMessage}");
+
+                // Move the file
+                if (File.Exists(filePath))
+                {
+                    File.Move(filePath, errorPath, true);
+                    logContext.LogDebug("Moved failed file to error folder");
+                }
+            }
+            catch (Exception ex)
+            {
+                logContext.LogError(ex, "Failed to move file to error folder");
+            }
+        }
+
+        // Rest of the methods remain the same...
 
         /// <summary>
         /// Determines if a file should be processed based on pipeline configuration
@@ -133,155 +437,17 @@ namespace CamBridge.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// Processes a single JPEG file through the pipeline
-        /// </summary>
-        public async Task<FileProcessingResult> ProcessFileAsync(string filePath)
+        private string GenerateCorrelationId(string filePath)
         {
-            var stopwatch = Stopwatch.StartNew();
-            var result = new FileProcessingResult
-            {
-                SourceFile = filePath,
-                StartTime = DateTime.UtcNow,
-                PipelineId = _pipelineConfig.Id
-            };
+            // Format: F{HHmmssff}-{FilePrefix8}
+            // Example: F10234512-IMG_1234
+            var timestamp = DateTime.Now.ToString("HHmmssff");
+            var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+            var filePrefix = fileNameWithoutExt.Length > 8
+                ? fileNameWithoutExt.Substring(0, 8)
+                : fileNameWithoutExt;
 
-            try
-            {
-                _logger.LogInformation("Processing file: {FileName}", Path.GetFileName(filePath));
-                ProcessingStarted?.Invoke(this, new FileProcessingEventArgs { FilePath = filePath });
-
-                // Validate input file
-                ValidateInputFile(filePath);
-
-                // Extract EXIF data
-                _logger.LogDebug("Extracting EXIF data from {FilePath}", filePath);
-                var exifStopwatch = Stopwatch.StartNew();
-                var metadata = await _exifToolReader.ExtractMetadataAsync(filePath);
-                exifStopwatch.Stop();
-                _logger.LogDebug("EXIF extraction completed in {ElapsedMs}ms", exifStopwatch.ElapsedMilliseconds);
-
-                if (metadata == null)
-                {
-                    // FIXED: Create default metadata instead of failing!
-                    _logger.LogWarning("Failed to extract metadata, creating default DICOM with minimal tags");
-                    metadata = CreateDefaultMetadata(filePath);
-                }
-
-                // Determine output path based on pipeline configuration
-                var outputPath = DetermineOutputPath(metadata, filePath);
-
-                // Ensure output directory exists
-                var outputDir = Path.GetDirectoryName(outputPath);
-                if (!string.IsNullOrEmpty(outputDir))
-                {
-                    Directory.CreateDirectory(outputDir);
-                }
-
-                // Convert to DICOM using pipeline-specific settings and mapping
-                _logger.LogInformation("Converting JPEG to DICOM: {Source} → {Destination}",
-                    Path.GetFullPath(filePath), Path.GetFullPath(outputPath));
-
-                var dicomStopwatch = Stopwatch.StartNew();
-
-                // Create converter with mapper if available
-                var converterWithMapping = new DicomConverter(
-                    _logger as ILogger<DicomConverter> ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<DicomConverter>.Instance,
-                    _tagMapper,
-                    _mappingConfiguration);
-
-                var conversionResult = await converterWithMapping.ConvertToDicomAsync(
-                    filePath,
-                    outputPath,
-                    metadata);
-
-                dicomStopwatch.Stop();
-                _logger.LogDebug("DICOM conversion completed in {ElapsedMs}ms", dicomStopwatch.ElapsedMilliseconds);
-
-                result.Success = conversionResult.Success;
-                result.OutputFile = outputPath;
-                result.DicomFile = outputPath; // NEW: Track DICOM file location
-                result.EndTime = DateTime.UtcNow;
-                result.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
-
-                if (result.Success)
-                {
-                    _logger.LogInformation(
-                        "Successfully converted {FileName} to DICOM at: {FullPath} ({ElapsedMs}ms)",
-                        Path.GetFileName(filePath),
-                        Path.GetFullPath(outputPath),
-                        result.ProcessingTimeMs);
-
-                    // Performance warning for slow processing
-                    if (result.ProcessingTimeMs > 5000)
-                    {
-                        _logger.LogWarning("Slow processing detected for {FileName}: {ElapsedMs}ms",
-                            Path.GetFileName(filePath), result.ProcessingTimeMs);
-                    }
-
-                    // NEW: Queue for PACS upload if enabled
-                    if (_pacsUploadQueue != null && _pipelineConfig.PacsConfiguration?.Enabled == true)
-                    {
-                        try
-                        {
-                            await _pacsUploadQueue.EnqueueAsync(conversionResult.DicomFilePath!);
-                            _logger.LogInformation("DICOM queued for PACS upload: {File} → {Host}:{Port}",
-                                Path.GetFileName(conversionResult.DicomFilePath),
-                                _pipelineConfig.PacsConfiguration.Host,
-                                _pipelineConfig.PacsConfiguration.Port);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed to queue DICOM for PACS upload: {File}",
-                                Path.GetFileName(conversionResult.DicomFilePath));
-                            // Don't fail the overall processing if PACS queue fails
-                        }
-                    }
-
-                    // FIXED: Handle post-processing for SOURCE file only
-                    await HandlePostProcessingAsync(filePath, outputPath, result.Success);
-
-                    ProcessingCompleted?.Invoke(this, new FileProcessingEventArgs
-                    {
-                        FilePath = filePath,
-                        OutputPath = outputPath
-                    });
-                }
-                else
-                {
-                    throw new InvalidOperationException(
-                        $"DICOM conversion failed: {conversionResult.ErrorMessage}");
-                }
-            }
-            catch (Exception ex)
-            {
-                result.Success = false;
-                result.ErrorMessage = ex.Message;
-                result.EndTime = DateTime.UtcNow;
-                result.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
-
-                _logger.LogError(ex,
-                    "Failed to process {FileName}. Error: {ErrorMessage}",
-                    Path.GetFileName(filePath), ex.Message);
-
-                // Critical error detection
-                if (ex is UnauthorizedAccessException && filePath.StartsWith(_pipelineConfig.WatchSettings.Path))
-                {
-                    _logger.LogCritical(ex, "Cannot access watch folder {Path} - pipeline will fail!",
-                        _pipelineConfig.WatchSettings.Path);
-                }
-
-                // Handle failure post-processing
-                await HandlePostProcessingAsync(filePath, null, false);
-
-                ProcessingError?.Invoke(this, new FileProcessingErrorEventArgs
-                {
-                    FilePath = filePath,
-                    Error = ex
-                });
-            }
-
-            return result;
+            return $"F{timestamp}-{filePrefix}";
         }
 
         private void ValidateInputFile(string filePath)
@@ -301,7 +467,6 @@ namespace CamBridge.Infrastructure.Services
         private string DetermineOutputPath(ImageMetadata metadata, string sourceFile)
         {
             // FIXED: Use ArchiveFolder as DICOM output if no OutputPath configured
-            // This matches the current config structure where ArchiveFolder is used for output
             var baseOutputPath = _pipelineConfig.WatchSettings.OutputPath;
 
             if (string.IsNullOrEmpty(baseOutputPath))
@@ -398,127 +563,6 @@ namespace CamBridge.Infrastructure.Services
             return string.Join("_", input.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
         }
 
-        /// <summary>
-        /// FIXED: Now handles source and DICOM files separately!
-        /// </summary>
-        private async Task HandlePostProcessingAsync(string sourceFilePath, string? dicomFilePath, bool success)
-        {
-            var action = success
-                ? _pipelineConfig.ProcessingOptions.SuccessAction
-                : _pipelineConfig.ProcessingOptions.FailureAction;
-
-            try
-            {
-                switch (action)
-                {
-                    case PostProcessingAction.Delete:
-                        // Delete only the source file
-                        if (File.Exists(sourceFilePath))
-                        {
-                            File.Delete(sourceFilePath);
-                            _logger.LogDebug("Deleted source file: {FilePath}", sourceFilePath);
-                        }
-                        break;
-
-                    case PostProcessingAction.Archive:
-                        // FIXED: Create separate archive folder for processed JPEGs
-                        // Don't mix them with DICOM output!
-                        var jpegArchiveFolder = _pipelineConfig.ProcessingOptions.BackupFolder
-                            ?? Path.Combine(_pipelineConfig.ProcessingOptions.ArchiveFolder, "ProcessedJPEGs");
-
-                        var archivePath = Path.Combine(
-                            jpegArchiveFolder,
-                            Path.GetFileName(sourceFilePath));
-
-                        Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
-
-                        if (File.Exists(sourceFilePath))
-                        {
-                            File.Move(sourceFilePath, archivePath, true);
-                            _logger.LogDebug("Archived source JPEG: {FullSourcePath} -> {FullArchivePath}",
-                                Path.GetFullPath(sourceFilePath), Path.GetFullPath(archivePath));
-                        }
-
-                        // DICOM file stays in output folder - don't move it!
-                        if (success && !string.IsNullOrEmpty(dicomFilePath))
-                        {
-                            _logger.LogInformation("DICOM file created at: {FullDicomPath}",
-                                Path.GetFullPath(dicomFilePath));
-                        }
-                        break;
-
-                    case PostProcessingAction.MoveToError:
-                        // Move source file to error folder (typically for failures)
-                        if (!success)
-                        {
-                            await MoveToErrorFolderAsync(sourceFilePath, "Processing failed");
-
-                            // If DICOM was partially created, clean it up
-                            if (!string.IsNullOrEmpty(dicomFilePath) && File.Exists(dicomFilePath))
-                            {
-                                try
-                                {
-                                    File.Delete(dicomFilePath);
-                                    _logger.LogDebug("Cleaned up partial DICOM file: {DicomPath}", dicomFilePath);
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.LogWarning(ex, "Failed to clean up partial DICOM file: {DicomPath}", dicomFilePath);
-                                }
-                            }
-                        }
-                        break;
-
-                    default:
-                        // Leave files as-is
-                        _logger.LogDebug("No post-processing action for {FilePath}", sourceFilePath);
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex,
-                    "Failed to perform post-processing action {Action} on {FilePath}",
-                    action, sourceFilePath);
-                // Don't fail the overall processing for post-processing errors
-            }
-        }
-
-        private async Task MoveToErrorFolderAsync(string filePath, string errorMessage)
-        {
-            try
-            {
-                var errorFolder = _pipelineConfig.ProcessingOptions.ErrorFolder;
-                Directory.CreateDirectory(errorFolder);
-
-                var errorFileName = $"{Path.GetFileNameWithoutExtension(filePath)}" +
-                                   $"_{DateTime.Now:yyyyMMdd_HHmmss}" +
-                                   $"{Path.GetExtension(filePath)}";
-
-                var errorPath = Path.Combine(errorFolder, errorFileName);
-
-                // Write error info file
-                var errorInfoPath = Path.ChangeExtension(errorPath, ".error.txt");
-                await File.WriteAllTextAsync(errorInfoPath,
-                    $"Error Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                    $"Pipeline: {_pipelineConfig.Name}\n" +
-                    $"Source File: {filePath}\n" +
-                    $"Error: {errorMessage}");
-
-                // Move the file
-                if (File.Exists(filePath))
-                {
-                    File.Move(filePath, errorPath, true);
-                    _logger.LogDebug("Moved failed file to error folder: {FullErrorPath}",
-                        Path.GetFullPath(errorPath));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to move file to error folder: {FilePath}", filePath);
-            }
-        }
-
         private DicomSettings ApplyDicomOverrides(DicomSettings global, DicomOverrides? overrides)
         {
             if (overrides == null)
@@ -543,7 +587,6 @@ namespace CamBridge.Infrastructure.Services
 
         /// <summary>
         /// Creates minimal default metadata when extraction fails
-        /// DICOM MUST be created regardless of metadata availability!
         /// </summary>
         private ImageMetadata CreateDefaultMetadata(string sourceFile)
         {
@@ -593,14 +636,14 @@ namespace CamBridge.Infrastructure.Services
             // Create metadata with full constructor
             var metadata = new ImageMetadata(
                 sourceFilePath: sourceFile,
-                captureDateTime: now,  // Note: captureDateTime, not captureDate!
+                captureDateTime: now,
                 patient: patient,
                 study: study,
                 technicalData: technicalData,
                 userComment: null,
                 barcodeData: null,
                 instanceNumber: 1,
-                instanceUid: null,  // Will be auto-generated
+                instanceUid: null,
                 exifData: exifData
             );
 
@@ -609,36 +652,43 @@ namespace CamBridge.Infrastructure.Services
     }
 
     /// <summary>
-    /// Event arguments for file processing events
+    /// Event arguments for file processing events with correlation support
     /// </summary>
     public class FileProcessingEventArgs : EventArgs
     {
         public string FilePath { get; set; } = string.Empty;
         public string? OutputPath { get; set; }
+        public string CorrelationId { get; set; } = string.Empty;
+        public string PipelineName { get; set; } = string.Empty;
+        public ProcessingStage Stage { get; set; } = ProcessingStage.FileDetected;
     }
 
     /// <summary>
-    /// Event arguments for file processing errors
+    /// Event arguments for file processing errors with correlation support
     /// </summary>
     public class FileProcessingErrorEventArgs : EventArgs
     {
         public string FilePath { get; set; } = string.Empty;
         public Exception Error { get; set; } = null!;
+        public string CorrelationId { get; set; } = string.Empty;
+        public string PipelineName { get; set; } = string.Empty;
+        public ProcessingStage Stage { get; set; } = ProcessingStage.Error;
     }
 
     /// <summary>
-    /// Result of file processing operation
+    /// Result of file processing operation with correlation tracking
     /// </summary>
     public class FileProcessingResult
     {
         public string SourceFile { get; set; } = string.Empty;
         public string? OutputFile { get; set; }
-        public string? DicomFile { get; set; }  // NEW: Track DICOM file separately
+        public string? DicomFile { get; set; }
         public bool Success { get; set; }
         public string? ErrorMessage { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public long ProcessingTimeMs { get; set; }
         public Guid PipelineId { get; set; }
+        public string CorrelationId { get; set; } = string.Empty;
     }
 }

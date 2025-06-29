@@ -1,357 +1,410 @@
 <!-- src\CamBridge.Config\Views\LogViewerPage.xaml -->
-<!-- Version: 0.7.28 -->
-<!-- Description: Enhanced Log Viewer with unified header, filters, tail functionality and multi-selection -->
-<!-- CLEAN VERSION with correct structure! -->
+<!-- Version: 0.8.6 -->
+<!-- Description: Enhanced log viewer with correlation tree view -->
+<!-- Copyright: © 2025 Claude's Improbably Reliable Software Solutions -->
 
 <Page x:Class="CamBridge.Config.Views.LogViewerPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:ui="http://schemas.modernwpf.com/2019"
-      xmlns:vm="clr-namespace:CamBridge.Config.ViewModels"
-      Loaded="Page_Loaded"
-      Unloaded="Page_Unloaded">
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:CamBridge.Config.Views"
+      xmlns:viewmodels="clr-namespace:CamBridge.Config.ViewModels"
+      xmlns:converters="clr-namespace:CamBridge.Config.Converters"
+      mc:Ignorable="d" 
+      d:DesignHeight="600" d:DesignWidth="1000"
+      d:DataContext="{d:DesignInstance Type=viewmodels:LogViewerViewModel}"
+      Title="Log Viewer">
 
     <Page.Resources>
-        <!-- Converters -->
-        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <converters:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility"/>
 
-        <!-- Log Entry Template -->
-        <DataTemplate x:Key="LogEntryTemplate" DataType="{x:Type vm:LogEntry}">
-            <Border BorderThickness="0" Padding="8,2">
+        <!-- Style for expandable group headers -->
+        <Style x:Key="ExpandableGroupHeader" TargetType="Border">
+            <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E8E8E8"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- DataTemplate for log entries in tree view -->
+        <DataTemplate x:Key="LogEntryTemplate" DataType="{x:Type viewmodels:LogEntry}">
+            <Border Padding="24,2,8,2" BorderThickness="0,0,0,1" BorderBrush="#E0E0E0">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="Auto" MinWidth="50"/>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="60"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="80"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Timestamp -->
-                    <TextBlock Grid.Column="0" 
-                               Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}"
-                               FontFamily="Consolas"
-                               FontSize="12"
-                               Opacity="0.7"/>
+                    <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" 
+                               FontFamily="Consolas" FontSize="11" Opacity="0.7"/>
 
-                    <!-- Level -->
-                    <Border Grid.Column="1" 
-                            CornerRadius="2"
-                            Padding="6,1"
-                            Margin="0,0,8,0"
-                            HorizontalAlignment="Left">
-                        <Border.Background>
-                            <SolidColorBrush Color="{Binding LevelColor}" Opacity="0.2"/>
-                        </Border.Background>
-                        <TextBlock Text="{Binding LevelText}"
-                                   Foreground="{Binding LevelColor}"
-                                   FontFamily="Consolas"
-                                   FontSize="12"
-                                   FontWeight="Bold"/>
-                    </Border>
+                    <TextBlock Grid.Column="1" Text="{Binding LevelText}" 
+                               FontWeight="Bold" FontFamily="Consolas"
+                               Foreground="{Binding LevelColor}"/>
 
-                    <!-- Message -->
-                    <TextBlock Grid.Column="2" 
-                               Text="{Binding Message}"
-                               FontFamily="Consolas"
-                               FontSize="12"
-                               TextWrapping="Wrap"/>
+                    <TextBlock Grid.Column="2" Text="{Binding StageIcon}" 
+                               FontSize="14" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Column="3" Text="{Binding Message}" 
+                               TextWrapping="Wrap" Margin="8,0,0,0"/>
+
+                    <TextBlock Grid.Column="4" Text="{Binding FormattedDuration}" 
+                               FontFamily="Consolas" FontSize="11" Opacity="0.7"
+                               HorizontalAlignment="Right"/>
                 </Grid>
             </Border>
         </DataTemplate>
     </Page.Resources>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <DockPanel>
+        <!-- Header with controls -->
+        <Border DockPanel.Dock="Top" Padding="16" Background="White"
+                BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-        <!-- Unified Header -->
-        <Border Grid.Row="0" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
-            <Grid Height="60">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+                <!-- Title and Stats -->
+                <DockPanel Grid.Row="0">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                        <TextBlock Text="📄" FontSize="28" VerticalAlignment="Center"/>
+                        <TextBlock Text="Log Viewer" FontSize="24" FontWeight="Bold" 
+                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
 
-                <TextBlock Text="Log Viewer"
-                           FontSize="24"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center"
-                           Margin="24,0,0,0"/>
+                        <!-- Tree/Flat Toggle -->
+                        <ToggleButton IsChecked="{Binding IsTreeViewEnabled}" 
+                                      Margin="16,0,0,0" VerticalAlignment="Center"
+                                      ToolTip="Toggle tree view" Padding="8,4">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🌳" FontSize="16" Margin="0,0,4,0"/>
+                                <TextBlock Text="Tree View"/>
+                            </StackPanel>
+                        </ToggleButton>
+                    </StackPanel>
 
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Margin="0,0,24,0">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" 
+                                HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <TextBlock Text="Last Update:" Opacity="0.7" Margin="0,0,4,0"/>
+                        <TextBlock Text="{Binding LastUpdateTime, StringFormat='HH:mm:ss'}" FontWeight="Bold"/>
+                        <TextBlock Text="Lines:" Opacity="0.7" Margin="16,0,4,0"/>
+                        <TextBlock Text="{Binding DisplayedLineCount}" FontWeight="Bold"/>
+                        <TextBlock Text="/" Opacity="0.5"/>
+                        <TextBlock Text="{Binding TotalLineCount}" Opacity="0.7"/>
+                    </StackPanel>
+                </DockPanel>
 
-                    <CheckBox Content="Auto-scroll"
-                              IsChecked="{Binding IsAutoScrollEnabled}"
-                              VerticalAlignment="Center"
-                              Margin="0,0,16,0"/>
+                <!-- Pipeline Selection -->
+                <Grid Grid.Row="1" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                    <Button Command="{Binding ExportLogCommand}"
-                            ToolTip="Export filtered log"
-                            MinWidth="80"
-                            Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Save" Margin="0,0,6,0"/>
-                            <TextBlock Text="Export"/>
-                        </StackPanel>
-                    </Button>
+                    <TextBlock Grid.Column="0" Text="Pipelines:" VerticalAlignment="Center" Margin="0,0,8,0"/>
 
-                    <Button Content="Clear"
-                            Command="{Binding ClearLogCommand}"
-                            MinWidth="80"
-                            Margin="0,0,8,0"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding PipelineSelections}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected}" 
+                                          Content="{Binding Name}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                        <ComboBox.Text>
+                            <MultiBinding StringFormat="{}{0} pipeline(s) selected" Mode="OneWay">
+                                <Binding Path="SelectedPipelineCount" Mode="OneWay"/>
+                            </MultiBinding>
+                        </ComboBox.Text>
+                    </ComboBox>
 
-                    <Button Content="Refresh"
-                            Command="{Binding RefreshCommand}"
-                            MinWidth="80"/>
-                </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="16,0,0,0">
+                        <Button Command="{Binding RefreshCommand}" 
+                                ToolTip="Refresh logs" Margin="0,0,8,0" Padding="8,4">
+                            <TextBlock Text="🔄" FontSize="16"/>
+                        </Button>
+
+                        <Button Command="{Binding ExpandAllCommand}" 
+                                ToolTip="Expand all" Margin="0,0,8,0" Padding="8,4"
+                                Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="⊕" FontSize="16"/>
+                        </Button>
+
+                        <Button Command="{Binding CollapseAllCommand}" 
+                                ToolTip="Collapse all" Margin="0,0,8,0" Padding="8,4"
+                                Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="⊖" FontSize="16"/>
+                        </Button>
+
+                        <Button Command="{Binding ClearLogCommand}" 
+                                ToolTip="Clear display" Margin="0,0,8,0" Padding="8,4">
+                            <TextBlock Text="🧹" FontSize="16"/>
+                        </Button>
+
+                        <Button Command="{Binding ExportLogCommand}" 
+                                ToolTip="Export filtered logs" Padding="8,4">
+                            <TextBlock Text="💾" FontSize="16"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Filters -->
+                <Grid Grid.Row="2" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Search Box -->
+                    <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Tag="Search logs..." VerticalContentAlignment="Center" Padding="4">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+
+                    <!-- Level Filters -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="16,0,0,0">
+                        <TextBlock Text="Levels:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                        <ToggleButton IsChecked="{Binding ShowDebug}" ToolTip="Debug" Padding="4,2">
+                            <TextBlock Text="DBG" FontFamily="Consolas" FontWeight="Bold" Foreground="#808080"/>
+                        </ToggleButton>
+
+                        <ToggleButton IsChecked="{Binding ShowInformation}" ToolTip="Information" Padding="4,2">
+                            <TextBlock Text="INF" FontFamily="Consolas" FontWeight="Bold" Foreground="#0078D4"/>
+                        </ToggleButton>
+
+                        <ToggleButton IsChecked="{Binding ShowWarning}" ToolTip="Warning" Padding="4,2">
+                            <TextBlock Text="WRN" FontFamily="Consolas" FontWeight="Bold" Foreground="#FFA500"/>
+                        </ToggleButton>
+
+                        <ToggleButton IsChecked="{Binding ShowError}" ToolTip="Error" Padding="4,2">
+                            <TextBlock Text="ERR" FontFamily="Consolas" FontWeight="Bold" Foreground="#FF0000"/>
+                        </ToggleButton>
+
+                        <ToggleButton IsChecked="{Binding ShowCritical}" ToolTip="Critical" Padding="4,2">
+                            <TextBlock Text="CRT" FontFamily="Consolas" FontWeight="Bold" Foreground="#8B0000"/>
+                        </ToggleButton>
+                    </StackPanel>
+
+                    <!-- Auto-scroll -->
+                    <CheckBox Grid.Column="2" IsChecked="{Binding IsAutoScrollEnabled}" 
+                              Content="Auto-scroll" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                </Grid>
             </Grid>
         </Border>
 
-        <!-- Filter Bar -->
-        <Border Grid.Row="1"
-                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-                BorderThickness="0"
-                Padding="16,12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="250"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <!-- Progress bar -->
+        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" Height="2"
+                     Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
 
-                <!-- Pipeline Multi-Selection -->
-                <TextBlock Text="Pipelines:"
-                           VerticalAlignment="Center"
-                           Margin="0,0,12,0"/>
+        <!-- Main content area -->
+        <Grid>
+            <!-- Tree View (when enabled) -->
+            <ScrollViewer Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}"
+                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding CorrelationGroups}" VirtualizingPanel.IsVirtualizing="True">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type viewmodels:CorrelationGroup}">
+                            <Border Margin="0,0,0,8" BorderBrush="#E0E0E0" 
+                                    BorderThickness="1" CornerRadius="4">
+                                <!-- Correlation Group Header -->
+                                <StackPanel>
+                                    <Border Style="{StaticResource ExpandableGroupHeader}"
+                                            MouseLeftButtonDown="CorrelationHeader_Click"
+                                            Tag="{Binding}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
-                <ui:DropDownButton Grid.Column="1"
-                                   HorizontalAlignment="Stretch"
-                                   Margin="0,0,16,0">
-                    <ui:DropDownButton.Content>
-                        <TextBlock Text="{Binding SelectedPipelineCount, StringFormat={}{0} selected}"/>
-                    </ui:DropDownButton.Content>
-                    <ui:DropDownButton.Flyout>
-                        <ui:Flyout Placement="Bottom">
-                            <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="4"
-                                    MinWidth="250"
-                                    MaxHeight="300">
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl ItemsSource="{Binding PipelineSelections}" Margin="8">
+                                            <TextBlock Grid.Column="0" FontFamily="Consolas">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                                                                <Setter Property="Text" Value="▶"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                                <Setter Property="Text" Value="▼"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+
+                                            <TextBlock Grid.Column="1" Text="{Binding StatusIcon}" 
+                                                       FontSize="16" Margin="8,0"/>
+
+                                            <TextBlock Grid.Column="2" FontWeight="Bold">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}{0} - {1}">
+                                                        <Binding Path="CorrelationId"/>
+                                                        <Binding Path="Pipeline"/>
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+
+                                            <TextBlock Grid.Column="3" Text="{Binding StartTime, StringFormat='HH:mm:ss.fff'}" 
+                                                       FontFamily="Consolas" Opacity="0.7" Margin="8,0"/>
+
+                                            <TextBlock Grid.Column="4" Text="{Binding DurationText}" 
+                                                       FontFamily="Consolas" Foreground="{Binding StatusColor}" 
+                                                       FontWeight="Bold" Margin="8,0"/>
+
+                                            <TextBlock Grid.Column="5" Text="{Binding TotalEntries, StringFormat='({0} entries)'}" 
+                                                       Opacity="0.7" Margin="8,0"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Stages (when expanded) -->
+                                    <ItemsControl ItemsSource="{Binding Stages}" 
+                                                  Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <CheckBox Content="{Binding Name}"
-                                                          IsChecked="{Binding IsSelected}"
-                                                          Margin="0,2"/>
+                                            <DataTemplate DataType="{x:Type viewmodels:StageGroup}">
+                                                <StackPanel>
+                                                    <!-- Stage Header -->
+                                                    <Border Style="{StaticResource ExpandableGroupHeader}"
+                                                            Margin="16,0,0,0"
+                                                            MouseLeftButtonDown="StageHeader_Click"
+                                                            Tag="{Binding}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" FontFamily="Consolas" Width="16">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                                                                                <Setter Property="Text" Value="▶"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                                                <Setter Property="Text" Value="▼"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+
+                                                            <TextBlock Grid.Column="1" Text="{Binding StageIcon}" 
+                                                                       FontSize="14" Margin="4,0"/>
+
+                                                            <TextBlock Grid.Column="2" Text="{Binding Stage}" 
+                                                                       FontWeight="SemiBold"/>
+
+                                                            <TextBlock Grid.Column="3" Text="{Binding DurationText}" 
+                                                                       FontFamily="Consolas" FontSize="11" 
+                                                                       Opacity="0.7" Margin="8,0"/>
+
+                                                            <TextBlock Grid.Column="4" Text="{Binding Entries.Count, StringFormat='({0})'}" 
+                                                                       FontSize="11" Opacity="0.7"/>
+                                                        </Grid>
+                                                    </Border>
+
+                                                    <!-- Stage Entries (when expanded) -->
+                                                    <ItemsControl ItemsSource="{Binding Entries}" 
+                                                                  Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}"
+                                                                  Margin="32,0,0,0"
+                                                                  ItemTemplate="{StaticResource LogEntryTemplate}"/>
+                                                </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                </ScrollViewer>
-                            </Border>
-                        </ui:Flyout>
-                    </ui:DropDownButton.Flyout>
-                </ui:DropDownButton>
 
-                <!-- Search -->
-                <TextBlock Grid.Column="2"
-                           Text="Search:"
-                           VerticalAlignment="Center"
-                           Margin="0,0,12,0"/>
-
-                <TextBox Grid.Column="3"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                         ui:ControlHelper.PlaceholderText="Filter log entries..."
-                         VerticalAlignment="Center"
-                         Margin="0,0,16,0"/>
-
-                <!-- Level Filters -->
-                <ui:DropDownButton Grid.Column="4" HorizontalAlignment="Right">
-                    <ui:DropDownButton.Content>
-                        <TextBlock>
-                            <TextBlock.Text>
-                                <MultiBinding StringFormat="Levels ({0})">
-                                    <Binding Path="SelectedLevelCount"/>
-                                </MultiBinding>
-                            </TextBlock.Text>
-                        </TextBlock>
-                    </ui:DropDownButton.Content>
-                    <ui:DropDownButton.Flyout>
-                        <ui:Flyout Placement="Bottom">
-                            <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="4"
-                                    MinWidth="150">
-                                <StackPanel Margin="8">
-                                    <CheckBox Content="Debug" IsChecked="{Binding ShowDebug}" Margin="0,2"/>
-                                    <CheckBox Content="Info" IsChecked="{Binding ShowInformation}" Margin="0,2"/>
-                                    <CheckBox Content="Warning" IsChecked="{Binding ShowWarning}" Foreground="#FFA500" Margin="0,2"/>
-                                    <CheckBox Content="Error" IsChecked="{Binding ShowError}" Foreground="#FF0000" Margin="0,2"/>
-                                    <CheckBox Content="Critical" IsChecked="{Binding ShowCritical}" Foreground="#FF0000" FontWeight="Bold" Margin="0,2"/>
+                                    <!-- Ungrouped Entries -->
+                                    <ItemsControl ItemsSource="{Binding UngroupedEntries}" 
+                                                  Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}"
+                                                  Margin="16,0,0,0"
+                                                  ItemTemplate="{StaticResource LogEntryTemplate}"/>
                                 </StackPanel>
                             </Border>
-                        </ui:Flyout>
-                    </ui:DropDownButton.Flyout>
-                </ui:DropDownButton>
-            </Grid>
-        </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
 
-        <!-- Log Content -->
-        <Border Grid.Row="2"
-                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-                BorderThickness="0"
-                Margin="16">
-            <Grid>
-                <!-- Main Log ListBox -->
-                <ListBox x:Name="LogListBox"
-                         ItemsSource="{Binding FilteredCombinedEntries}"
-                         ItemTemplate="{StaticResource LogEntryTemplate}"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto"
-                         ScrollViewer.CanContentScroll="True"
-                         VirtualizingPanel.IsVirtualizing="True"
-                         VirtualizingPanel.VirtualizationMode="Recycling"
-                         BorderThickness="0"
-                         Background="Transparent"
-                         SelectionMode="Extended"
-                         PreviewKeyDown="LogListBox_PreviewKeyDown">
+            <!-- Flat View (when tree view disabled) -->
+            <DataGrid ItemsSource="{Binding FilteredCombinedEntries}"
+                      Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource InverseBoolToVisibility}}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      GridLinesVisibility="Horizontal"
+                      HeadersVisibility="Column"
+                      IsReadOnly="True"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      ScrollViewer.CanContentScroll="True">
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="BorderThickness" Value="0"/>
+                    </Style>
+                </DataGrid.Resources>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" 
+                                        Width="100" FontFamily="Consolas"/>
 
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            <Setter Property="Padding" Value="0"/>
-                            <Setter Property="Margin" Value="0"/>
-                            <Setter Property="BorderThickness" Value="0"/>
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <Border Background="{TemplateBinding Background}"
-                                                BorderBrush="{TemplateBinding BorderBrush}"
-                                                BorderThickness="{TemplateBinding BorderThickness}">
-                                            <ContentPresenter/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListAccentLowBrush}"/>
-                                </Trigger>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
+                    <DataGridTextColumn Header="Level" Binding="{Binding LevelText}" Width="60">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{Binding LevelColor}"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontFamily" Value="Consolas"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
-                    <ListBox.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="Copy Selected Lines" 
-                                      Click="CopySelectedLines_Click"
-                                      InputGestureText="Ctrl+C">
-                                <MenuItem.Icon>
-                                    <ui:SymbolIcon Symbol="Copy"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <Separator/>
-                            <MenuItem Header="Copy Messages Only" Click="CopySelectedMessages_Click"/>
-                            <MenuItem Header="Copy as CSV" Click="CopySelectedAsCSV_Click"/>
-                            <Separator/>
-                            <MenuItem Header="Export Selected..." Click="ExportSelected_Click">
-                                <MenuItem.Icon>
-                                    <ui:SymbolIcon Symbol="Save"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                        </ContextMenu>
-                    </ListBox.ContextMenu>
-                </ListBox>
+                    <DataGridTextColumn Header="Pipeline" Binding="{Binding Source}" Width="120"/>
 
-                <!-- Empty State -->
-                <TextBlock Text="No log entries to display"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           FontSize="16"
-                           Opacity="0.5"
-                           Visibility="{Binding FilteredCombinedEntries.Count, Converter={StaticResource ZeroToVisibility}}"/>
+                    <DataGridTextColumn Header="Correlation" Binding="{Binding CorrelationId}" Width="140" 
+                                        FontFamily="Consolas" FontSize="11"/>
 
-                <!-- Loading Overlay -->
-                <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-                        Opacity="0.9"
-                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel VerticalAlignment="Center"
-                                HorizontalAlignment="Center">
-                        <ui:ProgressRing IsActive="True"
-                                         Width="48"
-                                         Height="48"/>
-                        <TextBlock Text="Loading log files..."
-                                   Margin="0,16,0,0"
-                                   HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
+                    <DataGridTextColumn Header="Stage" Binding="{Binding Stage}" Width="120"/>
 
-        <!-- Status Bar -->
-        <Border Grid.Row="3"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                Height="28">
-            <Grid Margin="16,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+                    <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
-                <TextBlock Grid.Column="0"
-                           VerticalAlignment="Center"
-                           FontSize="11"
-                           Opacity="0.8">
-                    <Run Text="Log files: "/>
-                    <Run Text="{Binding CurrentLogFiles}" FontFamily="Consolas"/>
-                </TextBlock>
-
-                <TextBlock Grid.Column="1"
-                           VerticalAlignment="Center"
-                           FontSize="11"
-                           Opacity="0.8"
-                           Margin="0,0,8,0">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Text" Value="{Binding ElementName=LogListBox, Path=SelectedItems.Count, StringFormat={}{0} selected}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ElementName=LogListBox, Path=SelectedItems.Count}" Value="0">
-                                    <Setter Property="Text" Value="{Binding DisplayedLineCount, StringFormat={}Showing {0}}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-
-                <TextBlock Grid.Column="2"
-                           Text="{Binding TotalLineCount, StringFormat={}of {0} lines}"
-                           VerticalAlignment="Center"
-                           FontSize="11"
-                           Opacity="0.8"
-                           Margin="0,0,16,0"/>
-
-                <TextBlock Grid.Column="3"
-                           Text="{Binding LastUpdateTime, StringFormat={}Last update: {0:HH:mm:ss}}"
-                           VerticalAlignment="Center"
-                           FontSize="11"
-                           Opacity="0.8"/>
-            </Grid>
-        </Border>
-    </Grid>
+                    <DataGridTextColumn Header="Duration" Binding="{Binding FormattedDuration}" 
+                                        Width="80" FontFamily="Consolas" FontSize="11"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
 </Page>
