@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # CHANGELOG Entry
 
+## [0.8.5] - 2025-06-29 - The Great ViewModel Refactoring!
+
+### Changed
+- **MAJOR**: Extracted PacsConfigViewModel from PipelineConfigViewModel
+  - Monster file reduced from 1400 to 579 lines
+  - PACS logic now properly isolated
+  - Better separation of concerns
+- Fixed Dashboard service indicator color
+  - Added "online" and "offline" cases to ServiceStatusToColorConverter
+  - Dashboard now shows green for running service (was gray)
+- Improved transform icons display in Mapping Editor
+  - Emoji icons (📅→, ⏰→, etc.) work correctly in UI
+  - Console encoding issues documented but not blocking
+
+### Technical Notes
+- Session 95: First successful tab extraction from monster ViewModel
+- Next target: Split remaining tabs (General, Folders, Processing, etc.)
+- Log viewer improvements planned for Session 96
+
 ## [0.8.4] - 2025-06-25
 
 ### Fixed

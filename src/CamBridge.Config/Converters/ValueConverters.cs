@@ -1,6 +1,6 @@
-﻿// src/CamBridge.Config/Converters/ValueConverters.cs
-// Version: 0.7.25
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// src/CamBridge.Config/Converters/ValueConverters.cs
+// Version: 0.8.5
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Globalization;
@@ -258,6 +258,8 @@ namespace CamBridge.Config.Converters
 
     /// <summary>
     /// Converts service status to color
+    /// UPDATED in v0.8.5 for proper status colors (Session 95)
+    /// FIXED: Added "online" and "offline" mappings
     /// </summary>
     public class ServiceStatusToColorConverter : IValueConverter
     {
@@ -267,10 +269,18 @@ namespace CamBridge.Config.Converters
 
             return status.ToLower() switch
             {
-                "running" => new SolidColorBrush(Colors.Green),
-                "stopped" => new SolidColorBrush(Colors.Red),
-                "paused" => new SolidColorBrush(Colors.Orange),
-                _ => new SolidColorBrush(Colors.Gray)
+                "running" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),      // Green #4CAF50
+                "online" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),       // Green #4CAF50 (same as running)
+                "stopped" => new SolidColorBrush(Color.FromRgb(255, 193, 7)),      // Yellow #FFC107 (was Red)
+                "offline" => new SolidColorBrush(Color.FromRgb(255, 193, 7)),      // Yellow #FFC107 (same as stopped)
+                "paused" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),       // Orange #FF9800
+                "startpending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange #FF9800
+                "stoppending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),  // Orange #FF9800
+                "continuepending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange
+                "pausepending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),    // Orange
+                "error" => new SolidColorBrush(Color.FromRgb(244, 67, 54)),        // Red #F44336
+                "notinstalled" => new SolidColorBrush(Color.FromRgb(244, 67, 54)), // Red #F44336
+                _ => new SolidColorBrush(Color.FromRgb(158, 158, 158))             // Gray #9E9E9E
             };
         }
 
@@ -525,21 +535,21 @@ namespace CamBridge.Config.Converters
             {
                 return transform switch
                 {
-                    ValueTransform.None => "â†’",
-                    ValueTransform.DateToDicom => "ðŸ“…â†’",
-                    ValueTransform.TimeToDicom => "â°â†’",
-                    ValueTransform.DateTimeToDicom => "ðŸ“…â°â†’",
-                    ValueTransform.MapGender => "â™‚â™€â†’",
-                    ValueTransform.RemovePrefix => "âœ‚â†’",
-                    ValueTransform.ExtractDate => "ðŸ“…â†",
-                    ValueTransform.ExtractTime => "â°â†",
-                    ValueTransform.ToUpperCase => "Aâ†’",
-                    ValueTransform.ToLowerCase => "aâ†’",
-                    ValueTransform.Trim => "âŽµâ†’",
-                    _ => "â†’"
+                    ValueTransform.None => "→",
+                    ValueTransform.DateToDicom => "📅→",
+                    ValueTransform.TimeToDicom => "⏰→",
+                    ValueTransform.DateTimeToDicom => "📅⏰→",
+                    ValueTransform.MapGender => "♂♀→",
+                    ValueTransform.RemovePrefix => "✂→",
+                    ValueTransform.ExtractDate => "📅←",
+                    ValueTransform.ExtractTime => "⏰←",
+                    ValueTransform.ToUpperCase => "A→",
+                    ValueTransform.ToLowerCase => "a→",
+                    ValueTransform.Trim => "⎵→",
+                    _ => "→"
                 };
             }
-            return "â†’";
+            return "→";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

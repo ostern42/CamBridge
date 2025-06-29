@@ -49,12 +49,63 @@
 
                         <!-- Status Icon -->
                         <Ellipse Grid.Column="0"
-                                 Width="16" Height="16"
-                                 Margin="0,0,12,0"
-                                 VerticalAlignment="Center">
+         Width="16" Height="16"
+         Margin="0,0,12,0"
+         VerticalAlignment="Center">
                             <Ellipse.Fill>
                                 <Binding Path="ServiceStatus" Converter="{StaticResource ServiceStatusToColorConverter}"/>
                             </Ellipse.Fill>
+                            <Ellipse.ToolTip>
+                                <ToolTip>
+                                    <StackPanel>
+                                        <TextBlock FontWeight="Bold" Text="{Binding ServiceStatus, StringFormat='Status: {0}'}"/>
+                                        <TextBlock FontSize="11" Opacity="0.8">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ServiceStatus}" Value="Running">
+                                                            <Setter Property="Text" Value="Service is running normally"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ServiceStatus}" Value="Online">
+                                                            <Setter Property="Text" Value="Service is online and operational"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ServiceStatus}" Value="Stopped">
+                                                            <Setter Property="Text" Value="Service is stopped"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ServiceStatus}" Value="Offline">
+                                                            <Setter Property="Text" Value="Service is offline"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ServiceStatus}" Value="StartPending">
+                                                            <Setter Property="Text" Value="Service is starting..."/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ServiceStatus}" Value="StopPending">
+                                                            <Setter Property="Text" Value="Service is stopping..."/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ServiceStatus}" Value="Paused">
+                                                            <Setter Property="Text" Value="Service is paused"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ServiceStatus}" Value="Error">
+                                                            <Setter Property="Text" Value="Service encountered an error"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ServiceStatus}" Value="NotInstalled">
+                                                            <Setter Property="Text" Value="Service is not installed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock FontSize="10" Opacity="0.6" Margin="0,4,0,0">
+                    <Run Text="Green = Running"/>
+                    <LineBreak/>
+                    <Run Text="Yellow = Stopped"/>
+                    <LineBreak/>
+                    <Run Text="Orange = Transitioning"/>
+                    <LineBreak/>
+                    <Run Text="Red = Error/Not installed"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </ToolTip>
+                            </Ellipse.ToolTip>
                         </Ellipse>
 
                         <!-- Status Text -->

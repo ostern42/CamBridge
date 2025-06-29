@@ -1,13 +1,11 @@
 // src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs
-// Version: 0.8.1
-// Description: Pipeline Configuration ViewModel - With PACS Upload Support
+// Version: 0.8.5
+// Description: Pipeline Configuration ViewModel - Refactored with child ViewModels
 
 using CamBridge.Config.Services;
 using CamBridge.Core;
-using CamBridge.Infrastructure.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -23,6 +21,8 @@ namespace CamBridge.Config.ViewModels
     public partial class PipelineConfigViewModel : ViewModelBase
     {
         private readonly IConfigurationService _configurationService;
+        private readonly IPipelineSettingsService _pipelineSettingsService;
+        private readonly PacsConfigViewModel _pacsConfigViewModel;
         private CamBridgeSettingsV2? _originalSettings;
 
         // Collections
@@ -31,6 +31,9 @@ namespace CamBridge.Config.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<MappingSet> _mappingSets = new();
+
+        // Child ViewModels
+        public PacsConfigViewModel PacsConfigViewModel => _pacsConfigViewModel;
 
         // Selected Pipeline
         private PipelineConfiguration? _selectedPipeline;
@@ -42,6 +45,10 @@ namespace CamBridge.Config.ViewModels
                 if (SetProperty(ref _selectedPipeline, value))
                 {
                     Debug.WriteLine($"SelectedPipeline changed to: {value?.Name ?? "null"}");
+
+                    // Initialize child ViewModels
+                    _pacsConfigViewModel.Initialize(value);
+
                     OnPropertyChanged(nameof(SelectedPipelineDicomOverrides));
                     OnPropertyChanged(nameof(UseCustomLogging));
                     OnPropertyChanged(nameof(UseCustomNotifications));
@@ -122,13 +129,6 @@ namespace CamBridge.Config.ViewModels
         [ObservableProperty]
         private bool _pipelineAlertOnErrors = true;
 
-        // PACS Test Properties
-        [ObservableProperty]
-        private string _pacsTestResult = string.Empty;
-
-        [ObservableProperty]
-        private string _pacsTestResultColor = "Black";
-
         // Status properties
         [ObservableProperty]
         private bool _isLoading;
@@ -151,10 +151,27 @@ namespace CamBridge.Config.ViewModels
         [ObservableProperty]
         private bool _selectedPipelineHasChanges;
 
-        public PipelineConfigViewModel(IConfigurationService configurationService)
+        public PipelineConfigViewModel(
+            IConfigurationService configurationService,
+            IPipelineSettingsService pipelineSettingsService,
+            PacsConfigViewModel pacsConfigViewModel)
         {
             _configurationService = configurationService;
+            _pipelineSettingsService = pipelineSettingsService;
+            _pacsConfigViewModel = pacsConfigViewModel;
+
             Debug.WriteLine("PipelineConfigViewModel constructor called");
+
+            // Wire up configuration changes from child ViewModels
+            _pacsConfigViewModel.ConfigurationChanged += (s, e) =>
+            {
+                if (!IsLoading)
+                {
+                    HasUnsavedChanges = true;
+                    UnsavedChangesCount++;
+                    SelectedPipelineHasChanges = true;
+                }
+            };
 
             // Subscribe to collection changes
             Pipelines.CollectionChanged += (s, e) =>
@@ -210,23 +227,11 @@ namespace CamBridge.Config.ViewModels
                 IsError = false;
                 StatusMessage = "";
 
-                Debug.WriteLine("Calling ConfigurationService.LoadConfigurationAsync<CamBridgeSettingsV2>");
-                var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>();
+                var settings = await _pipelineSettingsService.LoadSettingsAsync();
 
                 if (settings != null)
                 {
                     Debug.WriteLine($"Settings loaded: Version={settings.Version}, Pipelines={settings.Pipelines.Count}");
-
-                    // Fix any null PacsConfiguration in existing pipelines
-                    foreach (var pipeline in settings.Pipelines)
-                    {
-                        if (pipeline.PacsConfiguration == null)
-                        {
-                            Debug.WriteLine($"Creating PacsConfiguration for pipeline: {pipeline.Name}");
-                            pipeline.PacsConfiguration = new PacsConfiguration();
-                        }
-                    }
-
                     _originalSettings = settings;
                     MapFromSettings(settings);
 
@@ -235,12 +240,11 @@ namespace CamBridge.Config.ViewModels
 
                     HasUnsavedChanges = false;
                     UnsavedChangesCount = 0;
-                    StatusMessage = "";  // Clear status - pipeline count shown in header
+                    StatusMessage = "";
                 }
                 else
                 {
                     Debug.WriteLine("Settings is null - creating default pipeline");
-                    // Create default settings
                     CreateDefaultPipeline();
                 }
             }
@@ -274,7 +278,7 @@ namespace CamBridge.Config.ViewModels
                 StatusMessage = "Saving all pipelines...";
 
                 var settings = MapToSettings();
-                await _configurationService.SaveConfigurationAsync(settings);
+                await _pipelineSettingsService.SaveSettingsAsync(settings);
 
                 _originalSettings = settings;
                 HasUnsavedChanges = false;
@@ -292,10 +296,7 @@ namespace CamBridge.Config.ViewModels
                 });
 
                 // Notify success
-                var backupPath = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                    "CamBridge",
-                    $"appsettings.json.backup_{DateTime.Now:yyyyMMdd_HHmmss}");
+                var backupPath = _pipelineSettingsService.GetBackupPath();
 
                 MessageBox.Show($"Pipeline configuration saved successfully!\n\nAuto-backup created at:\n{backupPath}",
                                "Success",
@@ -325,47 +326,7 @@ namespace CamBridge.Config.ViewModels
         {
             Debug.WriteLine("AddPipeline called");
 
-            var newPipeline = new PipelineConfiguration
-            {
-                Id = Guid.NewGuid(),
-                Name = $"Pipeline {Pipelines.Count + 1}",
-                Description = "New pipeline configuration",
-                Enabled = true,
-                WatchSettings = new PipelineWatchSettings
-                {
-                    Path = @"C:\CamBridge\NewPipeline\Input",
-                    FilePattern = "*.jpg;*.jpeg",
-                    IncludeSubdirectories = false,
-                    MinimumFileAgeSeconds = 5
-                },
-                ProcessingOptions = new ProcessingOptions
-                {
-                    ArchiveFolder = @"C:\CamBridge\NewPipeline\Archive",
-                    ErrorFolder = @"C:\CamBridge\NewPipeline\Errors",
-                    DeadLetterFolder = @"C:\CamBridge\NewPipeline\DeadLetters",
-                    SuccessAction = PostProcessingAction.Archive,
-                    FailureAction = PostProcessingAction.MoveToError,
-                    CreateBackup = true,
-                    BackupFolder = @"C:\CamBridge\NewPipeline\Backup",
-                    MaxConcurrentProcessing = 2,
-                    RetryOnFailure = true,
-                    MaxRetryAttempts = 3,
-                    OutputOrganization = OutputOrganization.ByPatientAndDate
-                },
-                MappingSetId = MappingSets.FirstOrDefault(m => !m.IsSystemDefault)?.Id,
-                // Initialize PACS Configuration
-                PacsConfiguration = new PacsConfiguration
-                {
-                    Enabled = false,
-                    Host = string.Empty,
-                    Port = 104,
-                    CalledAeTitle = string.Empty,
-                    CallingAeTitle = "CAMBRIDGE",
-                    TimeoutSeconds = 30,
-                    MaxRetryAttempts = 3,
-                    RetryDelaySeconds = 5
-                }
-            };
+            var newPipeline = _pipelineSettingsService.CreateDefaultPipeline($"Pipeline {Pipelines.Count + 1}");
 
             // Subscribe to property changes
             newPipeline.PropertyChanged += Pipeline_PropertyChanged;
@@ -434,7 +395,7 @@ namespace CamBridge.Config.ViewModels
                 var index = Pipelines.IndexOf(SelectedPipeline);
                 if (index >= 0)
                 {
-                    var cloned = ClonePipeline(originalPipeline);
+                    var cloned = _pipelineSettingsService.ClonePipeline(originalPipeline);
                     cloned.PropertyChanged += Pipeline_PropertyChanged;
                     cloned.WatchSettings.PropertyChanged += Pipeline_PropertyChanged;
                     cloned.ProcessingOptions.PropertyChanged += Pipeline_PropertyChanged;
@@ -452,54 +413,6 @@ namespace CamBridge.Config.ViewModels
         }
 
         private bool CanResetPipeline() => SelectedPipelineHasChanges && !IsLoading && !IsSaving;
-
-        [RelayCommand]
-        private async Task TestPacsConnectionAsync()
-        {
-            if (SelectedPipeline?.PacsConfiguration == null)
-            {
-                PacsTestResult = "No PACS configuration available";
-                PacsTestResultColor = "Red";
-                return;
-            }
-
-            try
-            {
-                PacsTestResult = "Testing connection...";
-                PacsTestResultColor = "Gray";
-
-                // Get DicomStoreService from DI
-                var app = Application.Current as App;
-                if (app?.Host == null)
-                {
-                    PacsTestResult = "✗ Service not available";
-                    PacsTestResultColor = "Red";
-                    return;
-                }
-
-                var dicomStoreService = app.Host.Services.GetService<DicomStoreService>();
-                if (dicomStoreService == null)
-                {
-                    PacsTestResult = "✗ DICOM Store service not configured";
-                    PacsTestResultColor = "Red";
-                    return;
-                }
-
-                var result = await dicomStoreService.TestConnectionAsync(
-                    SelectedPipeline.PacsConfiguration);
-
-                PacsTestResult = result.Success
-                    ? $"✓ Connection successful! {result.TransactionUid}"
-                    : $"✗ Failed: {result.ErrorMessage}";
-                PacsTestResultColor = result.Success ? "Green" : "Red";
-            }
-            catch (Exception ex)
-            {
-                PacsTestResult = $"✗ Error: {ex.Message}";
-                PacsTestResultColor = "Red";
-                Debug.WriteLine($"PACS connection test failed: {ex}");
-            }
-        }
 
         private void MapFromSettings(CamBridgeSettingsV2 settings)
         {
@@ -519,25 +432,7 @@ namespace CamBridge.Config.ViewModels
             // Map pipelines
             foreach (var pipeline in settings.Pipelines)
             {
-                var clonedPipeline = ClonePipeline(pipeline);
-
-                // Ensure PacsConfiguration is never null
-                if (clonedPipeline.PacsConfiguration == null)
-                {
-                    clonedPipeline.PacsConfiguration = new PacsConfiguration
-                    {
-                        Enabled = false,
-                        Host = string.Empty,
-                        Port = 104,
-                        CalledAeTitle = string.Empty,
-                        CallingAeTitle = "CAMBRIDGE",
-                        TimeoutSeconds = 30,
-                        MaxConcurrentUploads = 1,
-                        RetryOnFailure = true,
-                        MaxRetryAttempts = 3,
-                        RetryDelaySeconds = 5
-                    };
-                }
+                var clonedPipeline = _pipelineSettingsService.ClonePipeline(pipeline);
 
                 // Subscribe to property changes
                 clonedPipeline.PropertyChanged += Pipeline_PropertyChanged;
@@ -583,7 +478,7 @@ namespace CamBridge.Config.ViewModels
             settings.Pipelines.Clear();
             foreach (var pipeline in Pipelines)
             {
-                settings.Pipelines.Add(ClonePipeline(pipeline));
+                settings.Pipelines.Add(_pipelineSettingsService.ClonePipeline(pipeline));
             }
 
             // Map mapping sets
@@ -594,74 +489,6 @@ namespace CamBridge.Config.ViewModels
             }
 
             return settings;
-        }
-
-        private PipelineConfiguration ClonePipeline(PipelineConfiguration source)
-        {
-            var cloned = new PipelineConfiguration
-            {
-                Id = source.Id,
-                Name = source.Name,
-                Description = source.Description,
-                Enabled = source.Enabled,
-                WatchSettings = new PipelineWatchSettings
-                {
-                    Path = source.WatchSettings.Path,
-                    FilePattern = source.WatchSettings.FilePattern,
-                    IncludeSubdirectories = source.WatchSettings.IncludeSubdirectories,
-                    OutputPath = source.WatchSettings.OutputPath,
-                    MinimumFileAgeSeconds = source.WatchSettings.MinimumFileAgeSeconds
-                },
-                ProcessingOptions = CloneProcessingOptions(source.ProcessingOptions),
-                DicomOverrides = source.DicomOverrides != null ? new DicomOverrides
-                {
-                    InstitutionName = source.DicomOverrides.InstitutionName,
-                    InstitutionDepartment = source.DicomOverrides.InstitutionDepartment,
-                    StationName = source.DicomOverrides.StationName
-                } : null,
-                MappingSetId = source.MappingSetId,
-                CreatedAt = source.CreatedAt,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            // Clone PACS Configuration
-            if (source.PacsConfiguration != null)
-            {
-                cloned.PacsConfiguration = new PacsConfiguration
-                {
-                    Enabled = source.PacsConfiguration.Enabled,
-                    Host = source.PacsConfiguration.Host,
-                    Port = source.PacsConfiguration.Port,
-                    CalledAeTitle = source.PacsConfiguration.CalledAeTitle,
-                    CallingAeTitle = source.PacsConfiguration.CallingAeTitle,
-                    TimeoutSeconds = source.PacsConfiguration.TimeoutSeconds,
-                    MaxConcurrentUploads = source.PacsConfiguration.MaxConcurrentUploads,
-                    RetryOnFailure = source.PacsConfiguration.RetryOnFailure,
-                    MaxRetryAttempts = source.PacsConfiguration.MaxRetryAttempts,
-                    RetryDelaySeconds = source.PacsConfiguration.RetryDelaySeconds
-                };
-            }
-
-            return cloned;
-        }
-
-        private ProcessingOptions CloneProcessingOptions(ProcessingOptions source)
-        {
-            return new ProcessingOptions
-            {
-                SuccessAction = source.SuccessAction,
-                FailureAction = source.FailureAction,
-                ArchiveFolder = source.ArchiveFolder,
-                ErrorFolder = source.ErrorFolder,
-                BackupFolder = source.BackupFolder,
-                CreateBackup = source.CreateBackup,
-                MaxConcurrentProcessing = source.MaxConcurrentProcessing,
-                RetryOnFailure = source.RetryOnFailure,
-                MaxRetryAttempts = source.MaxRetryAttempts,
-                OutputOrganization = source.OutputOrganization,
-                ProcessExistingOnStartup = source.ProcessExistingOnStartup,
-                DeadLetterFolder = source.DeadLetterFolder
-            };
         }
 
         private void CreateDefaultPipeline()
@@ -691,51 +518,8 @@ namespace CamBridge.Config.ViewModels
             MappingSets.Add(defaultMappingSet);
 
             // Create default pipeline
-            var defaultPipeline = new PipelineConfiguration
-            {
-                Id = Guid.NewGuid(),
-                Name = "Default Pipeline",
-                Description = "Default processing pipeline",
-                Enabled = true,
-                WatchSettings = new PipelineWatchSettings
-                {
-                    Path = @"C:\CamBridge\Watch\Default",
-                    FilePattern = "*.jpg;*.jpeg",
-                    IncludeSubdirectories = false,
-                    OutputPath = @"C:\CamBridge\Output\Default",
-                    MinimumFileAgeSeconds = 5
-                },
-                ProcessingOptions = new ProcessingOptions
-                {
-                    ArchiveFolder = @"C:\CamBridge\Archive",
-                    ErrorFolder = @"C:\CamBridge\Errors",
-                    DeadLetterFolder = @"C:\CamBridge\DeadLetters",
-                    SuccessAction = PostProcessingAction.Archive,
-                    FailureAction = PostProcessingAction.MoveToError,
-                    CreateBackup = true,
-                    BackupFolder = @"C:\CamBridge\Backup",
-                    MaxConcurrentProcessing = 2,
-                    RetryOnFailure = true,
-                    MaxRetryAttempts = 3,
-                    OutputOrganization = OutputOrganization.ByPatientAndDate,
-                    ProcessExistingOnStartup = false
-                },
-                MappingSetId = defaultMappingSet.Id,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                // Initialize PACS Configuration
-                PacsConfiguration = new PacsConfiguration
-                {
-                    Enabled = false,
-                    Host = string.Empty,
-                    Port = 104,
-                    CalledAeTitle = string.Empty,
-                    CallingAeTitle = "CAMBRIDGE",
-                    TimeoutSeconds = 30,
-                    MaxRetryAttempts = 3,
-                    RetryDelaySeconds = 5
-                }
-            };
+            var defaultPipeline = _pipelineSettingsService.CreateDefaultPipeline("Default Pipeline");
+            defaultPipeline.MappingSetId = defaultMappingSet.Id;
 
             defaultPipeline.PropertyChanged += Pipeline_PropertyChanged;
             defaultPipeline.WatchSettings.PropertyChanged += Pipeline_PropertyChanged;
@@ -777,7 +561,6 @@ namespace CamBridge.Config.ViewModels
             DeletePipelineCommand.NotifyCanExecuteChanged();
             ApplyPipelineCommand.NotifyCanExecuteChanged();
             ResetPipelineCommand.NotifyCanExecuteChanged();
-            TestPacsConnectionCommand.NotifyCanExecuteChanged();
         }
 
         // Handle property changes

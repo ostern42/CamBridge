@@ -1,29 +1,29 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.8.3 -->
-<!-- Modified: 2025-06-24 -->
-<!-- Purpose: Session 92 - Complete DICOM C-STORE Implementation -->
+<!-- Version: 0.8.5 -->
+<!-- Modified: 2025-06-25 -->
+<!-- Purpose: Session 95 - The Great ViewModel Refactoring! -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.8.3</VersionPrefix>
+		<VersionPrefix>0.8.5</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
 		<AssemblyVersion>0.8.0.0</AssemblyVersion>
 
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.8.3.0</FileVersion>
+		<FileVersion>0.8.5.0</FileVersion>
 
 		<!-- Informational version shown in logs and UI -->
-		<InformationalVersion>0.8.3 - Complete DICOM C-STORE Implementation</InformationalVersion>
+		<InformationalVersion>0.8.5 - The Great ViewModel Refactoring!</InformationalVersion>
 
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.8.3</PackageVersion>
+		<PackageVersion>0.8.5</PackageVersion>
 
 		<!-- Product information -->
 		<Product>CamBridge</Product>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>
-		<Copyright>Copyright &#169; 2025 Claude's Improbably Reliable Software Solutions</Copyright>
+		<Copyright>Copyright © 2025 Claude's Improbably Reliable Software Solutions</Copyright>
 
 		<!-- Build metadata -->
 		<RepositoryUrl>https://github.com/yourusername/CamBridge</RepositoryUrl>

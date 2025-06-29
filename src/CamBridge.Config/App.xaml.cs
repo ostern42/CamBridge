@@ -1,7 +1,7 @@
-﻿// src\CamBridge.Config\App.xaml.cs
-// Version: 0.7.28
-// Description: Application entry point with LogViewer registration
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// src\CamBridge.Config\App.xaml.cs
+// Version: 0.8.5
+// Description: Application entry point with refactored ViewModels and DicomStoreService
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Diagnostics;
@@ -10,6 +10,8 @@ using System.Windows.Threading;
 using CamBridge.Config.Services;
 using CamBridge.Config.ViewModels;
 using CamBridge.Config.Views;
+using CamBridge.Infrastructure.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -94,10 +96,16 @@ namespace CamBridge.Config
             _host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
                 {
-                    // Services
+                    // Configuration
+                    var configuration = context.Configuration;
+
+                    // Core Services
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IServiceManager, ServiceManager>();
                     services.AddSingleton<IConfigurationService, ConfigurationService>();
+
+                    // NEW: Pipeline Settings Service (Session 95)
+                    services.AddSingleton<IPipelineSettingsService, PipelineSettingsService>();
 
                     // HttpClient for API calls - FIXED PORT!
                     services.AddHttpClient<IApiService, HttpApiService>(client =>
@@ -107,17 +115,31 @@ namespace CamBridge.Config
                         client.Timeout = TimeSpan.FromSeconds(5);
                     });
 
-                    // ViewModels - Updated with LogViewerViewModel
+                    // Infrastructure Services
+                    // CRITICAL: DicomStoreService was missing! This is why Test Connection never worked!
+                    services.AddSingleton<DicomStoreService>(); // NEW - Session 95 discovery!
+
+                    // ViewModels - Updated with refactored ViewModels
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ServiceControlViewModel>();
-                    services.AddTransient<PipelineConfigViewModel>();
+
+                    // NEW: PacsConfigViewModel (Session 95)
+                    services.AddTransient<PacsConfigViewModel>();
+
+                    // UPDATED: PipelineConfigViewModel with new dependencies
+                    services.AddTransient<PipelineConfigViewModel>(provider =>
+                        new PipelineConfigViewModel(
+                            provider.GetRequiredService<IConfigurationService>(),
+                            provider.GetRequiredService<IPipelineSettingsService>(),
+                            provider.GetRequiredService<PacsConfigViewModel>()));
+
                     services.AddTransient<DeadLettersViewModel>();
                     services.AddTransient<MappingEditorViewModel>();
-                    services.AddTransient<LogViewerViewModel>(); // NEW!
+                    services.AddTransient<LogViewerViewModel>();
 
-                    // Views - Registration for LogViewerPage
-                    services.AddTransient<LogViewerPage>(); // NEW!
+                    // Views - Registration for pages
+                    services.AddTransient<LogViewerPage>();
 
                     // Logging
                     services.AddLogging(configure =>

@@ -1,6 +1,6 @@
-﻿// src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
-// Version: 0.7.27
-// Description: Pipeline Configuration page - Code Behind
+// src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
+// Version: 0.8.5
+// Description: Pipeline Configuration page - Code Behind with Test Connection Handler
 
 using System;
 using System.Runtime.Versioning;
@@ -64,6 +64,74 @@ namespace CamBridge.Config.Views
                     var viewModel = app.Host.Services.GetRequiredService<PipelineConfigViewModel>();
                     DataContext = viewModel;
                     await viewModel.InitializeAsync();
+                }
+            }
+        }
+
+        // NEW: Test PACS Connection Click Handler (Session 95 - Quick Fix)
+        private async void TestPacsConnection_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button == null) return;
+
+            Debug.WriteLine("TestPacsConnection_Click called");
+
+            try
+            {
+                button.IsEnabled = false;
+                var originalContent = button.Content;
+                button.Content = "Testing...";
+
+                if (DataContext is PipelineConfigViewModel vm)
+                {
+                    Debug.WriteLine($"ViewModel found: {vm != null}");
+                    Debug.WriteLine($"PacsConfigViewModel exists: {vm.PacsConfigViewModel != null}");
+                    Debug.WriteLine($"SelectedPipeline: {vm.SelectedPipeline?.Name ?? "null"}");
+                    Debug.WriteLine($"PacsConfiguration: {vm.SelectedPipeline?.PacsConfiguration != null}");
+
+                    if (vm.PacsConfigViewModel != null &&
+                        vm.SelectedPipeline?.PacsConfiguration != null)
+                    {
+                        // Initialize if needed
+                        vm.PacsConfigViewModel.Initialize(vm.SelectedPipeline);
+
+                        // Call test method directly
+                        await vm.PacsConfigViewModel.TestPacsConnectionAsync();
+                        Debug.WriteLine("Test completed");
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            "PACS configuration not available.\n\nPlease ensure:\n" +
+                            "- A pipeline is selected\n" +
+                            "- PACS upload is enabled\n" +
+                            "- PACS settings are configured",
+                            "Configuration Required",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("DataContext is not PipelineConfigViewModel!");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"TestPacsConnection_Click error: {ex}");
+                MessageBox.Show(
+                    $"Error testing connection:\n{ex.Message}",
+                    "Test Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                // Restore button state
+                if (button != null && DataContext is PipelineConfigViewModel viewModel)
+                {
+                    button.IsEnabled = viewModel.SelectedPipeline?.PacsConfiguration?.Enabled ?? false;
+                    button.Content = "Test Connection (C-ECHO)";
                 }
             }
         }
