@@ -1,12 +1,11 @@
 // src\CamBridge.Infrastructure\Services\PacsUploadQueue.cs
-// Version: 0.8.0
-// Description: Queue for PACS uploads with retry logic
+// Version: 0.8.3
+// Description: Queue for PACS uploads with enhanced retry logging
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -16,115 +15,139 @@ using Microsoft.Extensions.Logging;
 namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
-    /// Item for PACS upload queue
+    /// Item queued for PACS upload
     /// </summary>
     public class PacsUploadItem
     {
         public string DicomFilePath { get; init; } = string.Empty;
         public DateTime EnqueuedAt { get; init; } = DateTime.UtcNow;
-        public int RetryCount { get; set; }
+        public int AttemptCount { get; set; }
+        public DateTime? LastAttemptAt { get; set; }
         public string? LastError { get; set; }
+        public Guid CorrelationId { get; init; } = Guid.NewGuid();
     }
 
     /// <summary>
-    /// Error information for failed PACS uploads
+    /// Error information for failed uploads
     /// </summary>
     public class PacsUploadError
     {
-        public string DicomFilePath { get; init; } = string.Empty;
-        public string ErrorMessage { get; init; } = string.Empty;
-        public int AttemptCount { get; init; }
-        public DateTime FailedAt { get; init; } = DateTime.UtcNow;
+        public string FilePath { get; init; } = string.Empty;
+        public string Error { get; init; } = string.Empty;
+        public string UserFriendlyError { get; init; } = string.Empty;
+        public DicomErrorType ErrorType { get; init; }
+        public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+        public int AttemptNumber { get; init; }
+        public bool WillRetry { get; init; }
     }
 
     /// <summary>
-    /// Queue for PACS uploads per pipeline with retry logic
+    /// Queue for uploading DICOM files to PACS with enhanced logging
     /// </summary>
-    public class PacsUploadQueue
+    public class PacsUploadQueue : IDisposable
     {
-        private readonly PipelineConfiguration _pipeline;
+        private readonly PipelineConfiguration _pipelineConfig;
         private readonly DicomStoreService _storeService;
         private readonly ILogger<PacsUploadQueue> _logger;
-        private readonly Channel<PacsUploadItem> _channel;
-        private readonly List<PacsUploadError> _errorList = new();
-        private readonly object _errorListLock = new();
-        private readonly SemaphoreSlim _concurrencyLimit;
+        private readonly Channel<PacsUploadItem> _queue;
+        private readonly List<PacsUploadError> _recentErrors = new();
+        private readonly object _errorLock = new();
+        private bool _disposed;
 
         // Statistics
-        private int _totalUploaded;
+        private int _totalQueued;
+        private int _totalSuccessful;
         private int _totalFailed;
-        private DateTime _startTime = DateTime.UtcNow;
-
-        public int QueueLength => _channel.Reader.Count;
-        public int TotalUploaded => _totalUploaded;
-        public int TotalFailed => _totalFailed;
-        public List<PacsUploadError> GetErrors()
-        {
-            lock (_errorListLock)
-            {
-                return _errorList.ToList();
-            }
-        }
+        private DateTime? _lastSuccessfulUpload;
+        private DateTime? _lastFailedUpload;
 
         public PacsUploadQueue(
-            PipelineConfiguration pipeline,
+            PipelineConfiguration pipelineConfig,
             DicomStoreService storeService,
             ILogger<PacsUploadQueue> logger)
         {
-            _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
+            _pipelineConfig = pipelineConfig ?? throw new ArgumentNullException(nameof(pipelineConfig));
             _storeService = storeService ?? throw new ArgumentNullException(nameof(storeService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            // Create unbounded channel for queue
-            _channel = Channel.CreateUnbounded<PacsUploadItem>();
+            var pacsConfig = _pipelineConfig.PacsConfiguration;
+            if (pacsConfig == null || !pacsConfig.Enabled)
+            {
+                throw new InvalidOperationException("PACS configuration is not enabled for this pipeline");
+            }
 
-            // Create concurrency limiter
-            var maxConcurrent = _pipeline.PacsConfiguration?.MaxConcurrentUploads ?? 1;
-            _concurrencyLimit = new SemaphoreSlim(maxConcurrent, maxConcurrent);
+            // Create bounded channel with capacity
+            var channelOptions = new BoundedChannelOptions(1000)
+            {
+                FullMode = BoundedChannelFullMode.Wait,
+                SingleReader = true,
+                SingleWriter = false
+            };
 
-            _logger.LogInformation("Created PACS upload queue for pipeline {Pipeline} with concurrency {Max}",
-                _pipeline.Name, maxConcurrent);
+            _queue = Channel.CreateBounded<PacsUploadItem>(channelOptions);
+
+            _logger.LogInformation("Created PACS upload queue for pipeline {Pipeline} with concurrency {Concurrency}",
+                _pipelineConfig.Name,
+                pacsConfig.MaxConcurrentUploads);
         }
 
         /// <summary>
-        /// Enqueue DICOM file for upload
+        /// Queue a DICOM file for upload
         /// </summary>
-        public async Task EnqueueAsync(string dicomFilePath)
+        public async Task<bool> EnqueueAsync(string dicomFilePath, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrEmpty(dicomFilePath))
-                throw new ArgumentException("Path required", nameof(dicomFilePath));
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(PacsUploadQueue));
 
             if (!File.Exists(dicomFilePath))
             {
-                _logger.LogWarning("Cannot enqueue non-existent file: {Path}", dicomFilePath);
-                return;
+                _logger.LogWarning("Cannot queue non-existent file for PACS upload: {Path}", dicomFilePath);
+                return false;
             }
 
-            var item = new PacsUploadItem { DicomFilePath = dicomFilePath };
-            await _channel.Writer.WriteAsync(item);
-
-            _logger.LogDebug("Enqueued for PACS upload: {File} (queue depth: {Depth})",
-                Path.GetFileName(dicomFilePath), _channel.Reader.Count);
-        }
-
-        /// <summary>
-        /// Process upload queue
-        /// </summary>
-        public async Task ProcessQueueAsync(CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("PACS upload queue started for pipeline {Pipeline}", _pipeline.Name);
-
-            var uploadTasks = new List<Task>();
+            var item = new PacsUploadItem
+            {
+                DicomFilePath = dicomFilePath,
+                CorrelationId = Guid.NewGuid()
+            };
 
             try
             {
-                await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
-                {
-                    // Wait for available slot
-                    await _concurrencyLimit.WaitAsync(cancellationToken);
+                await _queue.Writer.WriteAsync(item, cancellationToken);
+                Interlocked.Increment(ref _totalQueued);
 
-                    // Start upload task
-                    var uploadTask = Task.Run(async () =>
+                _logger.LogInformation("[{CorrelationId}] DICOM queued for PACS upload: {FileName} → {Host}:{Port}",
+                    item.CorrelationId.ToString().Substring(0, 8),
+                    Path.GetFileName(dicomFilePath),
+                    _pipelineConfig.PacsConfiguration!.Host,
+                    _pipelineConfig.PacsConfiguration.Port);
+
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogDebug("Queue operation cancelled");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Process the upload queue
+        /// </summary>
+        public async Task ProcessQueueAsync(CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("PACS upload queue started for pipeline {Pipeline}", _pipelineConfig.Name);
+
+            var pacsConfig = _pipelineConfig.PacsConfiguration!;
+            var semaphore = new SemaphoreSlim(pacsConfig.MaxConcurrentUploads, pacsConfig.MaxConcurrentUploads);
+
+            try
+            {
+                await foreach (var item in _queue.Reader.ReadAllAsync(cancellationToken))
+                {
+                    await semaphore.WaitAsync(cancellationToken);
+
+                    _ = Task.Run(async () =>
                     {
                         try
                         {
@@ -132,154 +155,233 @@ namespace CamBridge.Infrastructure.Services
                         }
                         finally
                         {
-                            _concurrencyLimit.Release();
+                            semaphore.Release();
                         }
                     }, cancellationToken);
-
-                    uploadTasks.Add(uploadTask);
-
-                    // Clean up completed tasks
-                    uploadTasks.RemoveAll(t => t.IsCompleted);
                 }
-
-                // Wait for remaining uploads
-                await Task.WhenAll(uploadTasks);
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("PACS upload queue cancelled for pipeline {Pipeline}", _pipeline.Name);
+                _logger.LogInformation("PACS upload queue cancelled for pipeline {Pipeline}", _pipelineConfig.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "PACS upload queue error for pipeline {Pipeline}", _pipeline.Name);
+                _logger.LogError(ex, "Fatal error in PACS upload queue for pipeline {Pipeline}", _pipelineConfig.Name);
+                throw;
             }
             finally
             {
-                _logger.LogInformation("PACS upload queue stopped for pipeline {Pipeline}. " +
-                    "Uploaded: {Success}, Failed: {Failed}",
-                    _pipeline.Name, _totalUploaded, _totalFailed);
+                semaphore?.Dispose();
             }
         }
 
         private async Task ProcessUploadAsync(PacsUploadItem item, CancellationToken cancellationToken)
         {
-            var pacsConfig = _pipeline.PacsConfiguration;
-            if (pacsConfig == null || !pacsConfig.Enabled)
-            {
-                _logger.LogWarning("PACS configuration missing or disabled for pipeline {Pipeline}",
-                    _pipeline.Name);
-                return;
-            }
-
             var fileName = Path.GetFileName(item.DicomFilePath);
-            _logger.LogInformation("Processing PACS upload for {File} (attempt {Attempt})",
-                fileName, item.RetryCount + 1);
+            var correlationId = item.CorrelationId.ToString().Substring(0, 8);
+
+            item.AttemptCount++;
+            item.LastAttemptAt = DateTime.UtcNow;
+
+            _logger.LogInformation("[{CorrelationId}] Processing PACS upload for {FileName} (attempt {Attempt})",
+                correlationId,
+                fileName,
+                item.AttemptCount);
 
             try
             {
-                // Perform upload with retry
                 var result = await _storeService.StoreFileWithRetryAsync(
                     item.DicomFilePath,
-                    pacsConfig,
+                    _pipelineConfig.PacsConfiguration!,
                     cancellationToken);
 
                 if (result.Success)
                 {
-                    Interlocked.Increment(ref _totalUploaded);
-                    _logger.LogInformation("Successfully uploaded {File} to PACS. Transaction: {Uid}",
-                        fileName, result.TransactionUid);
+                    Interlocked.Increment(ref _totalSuccessful);
+                    _lastSuccessfulUpload = DateTime.UtcNow;
+
+                    var uploadTime = DateTime.UtcNow - item.EnqueuedAt;
+                    _logger.LogInformation("[{CorrelationId}] Successfully uploaded {FileName} to PACS. " +
+                        "Transaction: {TransactionId}, Upload time: {Time:F1}s",
+                        correlationId,
+                        fileName,
+                        result.TransactionUid,
+                        uploadTime.TotalSeconds);
                 }
                 else
                 {
-                    // Max retries reached
-                    Interlocked.Increment(ref _totalFailed);
-                    AddToErrorList(item, result.ErrorMessage ?? "Unknown error");
-
-                    _logger.LogError("Failed to upload {File} to PACS after retries: {Error}",
-                        fileName, result.ErrorMessage);
+                    HandleUploadFailure(item, result, correlationId);
                 }
             }
             catch (Exception ex)
             {
-                Interlocked.Increment(ref _totalFailed);
-                AddToErrorList(item, ex.Message);
+                _logger.LogError(ex, "[{CorrelationId}] Unexpected error uploading {FileName} to PACS",
+                    correlationId, fileName);
 
-                _logger.LogError(ex, "Exception during PACS upload for {File}", fileName);
-            }
-        }
-
-        private void AddToErrorList(PacsUploadItem item, string error)
-        {
-            var errorEntry = new PacsUploadError
-            {
-                DicomFilePath = item.DicomFilePath,
-                ErrorMessage = error,
-                AttemptCount = item.RetryCount + 1,
-                FailedAt = DateTime.UtcNow
-            };
-
-            lock (_errorListLock)
-            {
-                _errorList.Add(errorEntry);
-
-                // Keep list size reasonable
-                if (_errorList.Count > 1000)
+                var error = new PacsUploadError
                 {
-                    _logger.LogWarning("PACS error list exceeded 1000 entries, removing oldest 500");
-                    _errorList.RemoveRange(0, 500);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Clear error list
-        /// </summary>
-        public void ClearErrors()
-        {
-            lock (_errorListLock)
-            {
-                _logger.LogInformation("Clearing {Count} PACS upload errors", _errorList.Count);
-                _errorList.Clear();
-            }
-        }
-
-        /// <summary>
-        /// Save error list to file for persistence
-        /// </summary>
-        public async Task SaveErrorsToFileAsync(string filePath)
-        {
-            try
-            {
-                List<PacsUploadError> errors;
-                lock (_errorListLock)
-                {
-                    errors = _errorList.ToList();
-                }
-
-                var lines = new List<string>
-                {
-                    $"PACS Upload Errors for Pipeline: {_pipeline.Name}",
-                    $"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-                    $"Total Errors: {errors.Count}",
-                    new string('-', 80)
+                    FilePath = item.DicomFilePath,
+                    Error = ex.Message,
+                    UserFriendlyError = "Unerwarteter Fehler beim Upload. Details siehe Log.",
+                    ErrorType = DicomErrorType.Unknown,
+                    AttemptNumber = item.AttemptCount,
+                    WillRetry = false
                 };
 
-                foreach (var error in errors)
-                {
-                    lines.Add($"File: {error.DicomFilePath}");
-                    lines.Add($"Error: {error.ErrorMessage}");
-                    lines.Add($"Attempts: {error.AttemptCount}");
-                    lines.Add($"Failed At: {error.FailedAt:yyyy-MM-dd HH:mm:ss}");
-                    lines.Add(string.Empty);
-                }
+                RecordError(error);
+                Interlocked.Increment(ref _totalFailed);
+                _lastFailedUpload = DateTime.UtcNow;
+            }
+        }
 
-                await File.WriteAllLinesAsync(filePath, lines);
-                _logger.LogInformation("Saved {Count} PACS errors to {Path}", errors.Count, filePath);
-            }
-            catch (Exception ex)
+        private void HandleUploadFailure(PacsUploadItem item, StoreResult result, string correlationId)
+        {
+            var fileName = Path.GetFileName(item.DicomFilePath);
+            item.LastError = result.ErrorMessage;
+
+            var willRetry = !IsNonRetryableError(result.ErrorType) &&
+                           item.AttemptCount < _pipelineConfig.PacsConfiguration!.MaxRetryAttempts;
+
+            var error = new PacsUploadError
             {
-                _logger.LogError(ex, "Failed to save PACS errors to file");
+                FilePath = item.DicomFilePath,
+                Error = result.ErrorMessage ?? "Unknown error",
+                UserFriendlyError = result.UserFriendlyMessage ?? result.ErrorMessage ?? "Unknown error",
+                ErrorType = result.ErrorType,
+                AttemptNumber = item.AttemptCount,
+                WillRetry = willRetry
+            };
+
+            RecordError(error);
+
+            if (willRetry)
+            {
+                _logger.LogWarning("[{CorrelationId}] PACS upload failed for {FileName} (attempt {Attempt}/{Max}). " +
+                    "Error: {Error}. Will retry...",
+                    correlationId,
+                    fileName,
+                    item.AttemptCount,
+                    _pipelineConfig.PacsConfiguration.MaxRetryAttempts,
+                    result.UserFriendlyMessage);
+
+                // Re-queue for retry
+                _ = Task.Run(async () =>
+                {
+                    var delay = TimeSpan.FromSeconds(
+                        _pipelineConfig.PacsConfiguration.RetryDelaySeconds * item.AttemptCount);
+
+                    await Task.Delay(delay);
+                    await _queue.Writer.WriteAsync(item);
+                });
             }
+            else
+            {
+                Interlocked.Increment(ref _totalFailed);
+                _lastFailedUpload = DateTime.UtcNow;
+
+                _logger.LogError("[{CorrelationId}] PACS upload permanently failed for {FileName} after {Attempts} attempts. " +
+                    "Final error: {Error}\n" +
+                    "Handlungsempfehlung:\n{UserMessage}",
+                    correlationId,
+                    fileName,
+                    item.AttemptCount,
+                    result.ErrorMessage,
+                    GetActionRecommendation(result.ErrorType, result.UserFriendlyMessage));
+            }
+        }
+
+        private bool IsNonRetryableError(DicomErrorType errorType)
+        {
+            return errorType switch
+            {
+                DicomErrorType.FileNotFound => true,
+                DicomErrorType.InvalidConfiguration => true,
+                DicomErrorType.Authentication => true,
+                _ => false
+            };
+        }
+
+        private string GetActionRecommendation(DicomErrorType errorType, string? userMessage)
+        {
+            var recommendation = errorType switch
+            {
+                DicomErrorType.NetworkConnection =>
+                    "1. PACS-Server Status prüfen (läuft Orthanc?)\n" +
+                    "2. Netzwerkverbindung testen\n" +
+                    "3. Firewall-Einstellungen prüfen",
+
+                DicomErrorType.Authentication =>
+                    "1. AE Titles in Config prüfen\n" +
+                    "2. PACS-Server Konfiguration checken\n" +
+                    "3. Bei Orthanc: DICOM_CHECK_CALLED_AE_TITLE=false setzen",
+
+                DicomErrorType.Timeout =>
+                    "1. PACS-Server Performance prüfen\n" +
+                    "2. Netzwerk-Latenz testen\n" +
+                    "3. Timeout-Wert erhöhen",
+
+                DicomErrorType.PacsRejection =>
+                    "1. DICOM-Datei mit dcmdump validieren\n" +
+                    "2. PACS-Server Logs prüfen\n" +
+                    "3. Transfer Syntax Kompatibilität checken",
+
+                _ => "1. Log-Dateien prüfen\n" +
+                     "2. IT-Support kontaktieren\n" +
+                     "3. Datei manuell hochladen"
+            };
+
+            if (!string.IsNullOrEmpty(userMessage))
+            {
+                return $"{userMessage}\n\nEmpfohlene Maßnahmen:\n{recommendation}";
+            }
+
+            return recommendation;
+        }
+
+        private void RecordError(PacsUploadError error)
+        {
+            lock (_errorLock)
+            {
+                _recentErrors.Add(error);
+
+                // Keep only last 100 errors
+                while (_recentErrors.Count > 100)
+                {
+                    _recentErrors.RemoveAt(0);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Get queue statistics
+        /// </summary>
+        public (int queued, int successful, int failed) GetStatistics()
+        {
+            return (_totalQueued, _totalSuccessful, _totalFailed);
+        }
+
+        /// <summary>
+        /// Get recent errors
+        /// </summary>
+        public List<PacsUploadError> GetRecentErrors()
+        {
+            lock (_errorLock)
+            {
+                return new List<PacsUploadError>(_recentErrors);
+            }
+        }
+
+        /// <summary>
+        /// Get current queue length
+        /// </summary>
+        public int QueueLength => _queue.Reader.Count;
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+
+            _queue.Writer.TryComplete();
+            _disposed = true;
         }
     }
 }

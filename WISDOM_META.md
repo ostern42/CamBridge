@@ -1,941 +1,333 @@
 # WISDOM_META.md - Intelligent Code Navigation & Architecture
-**Version**: 0.7.32  
-**Purpose**: WHAT exists, WHERE to find it, HOW components connect  
-**Goal**: Navigate 30,000+ LOC efficiently, find hidden features fast  
-**Reality**: 14,850 LOC with hidden treasures waiting
-**Updated**: Sessions 85-87 - DICOM Pipeline Success & EXIF Mapping Mastery
+**Version**: 0.8.2  
+**Purpose**: Navigate 15,670+ LOC efficiently with treasure map precision  
+**Updated**: Session 93 - PACS integrated, monsters documented  
+**Philosophy**: "The map IS the territory (when it's accurate)"
 
 ## 🗺️ PROJECT OVERVIEW
 
 ```yaml
-Total: 14,850+ LOC across 5 projects
+Total: 15,670+ LOC across 5 projects + tests
 Architecture: Pipeline-isolated medical imaging system
-Key Flow: JPEG → EXIF extraction → DICOM conversion → PACS
-Hidden Gems Found: Transform system (11 types)
-More Hidden?: Probably! That's why we need this map
+Core Flow: JPEG → EXIF → DICOM → PACS
+Major Victories: Transform system, DICOM pipeline, PACS upload
 
 Projects by Size:
-  CamBridge.Config: ~5,100 LOC (34%) - Most UI & features
-  CamBridge.Infrastructure: ~4,900 LOC (33%) - Core logic
-  CamBridge.Core: ~3,200 LOC (22%) - Domain models
-  CamBridge.Service: ~2,100 LOC (14%) - Windows Service
+  CamBridge.Config: ~5,400 LOC (34%) - UI & Monster ViewModels
+  CamBridge.Infrastructure: ~5,200 LOC (33%) - Core + PACS
+  CamBridge.Core: ~3,200 LOC (20%) - Domain models  
+  CamBridge.Service: ~2,100 LOC (13%) - Windows Service
   CamBridge.QRBridge: ~350 LOC (2%) - QR generator
+  CamBridge.PacsTest: ~220 LOC - Test program ⭐ NEW!
 ```
 
-## 🔍 FEATURE FINDER - "I need to..." Guide
+## 🔍 FEATURE FINDER - Quick Navigation
 
-### Core Features
+### "I need to..." → "Look here..."
+
 ```yaml
-Process JPEG images:
-  → FileProcessor.ProcessFileAsync() 
-  → Infrastructure/Services/FileProcessor.cs (Line ~45)
-  → Entry point for all processing
+Upload to PACS:
+  → DicomStoreService.cs ⭐ NEW! (Real implementation)
+  → PacsUploadQueue.cs - Per-pipeline queue with retry
+  → Infrastructure/Services/
+  → Integration: FileProcessor ~line 190
 
-Extract QR/Barcode data:
-  → ExifToolReader.ExtractMetadataAsync() ⭐ [NOT ExtractDataAsync!]
-  → ExifToolReader.ParseBarcodeData() (Line ~85)
-  → ExifToolReader.ParseQRBridgeData() (Line ~120)
-  → Infrastructure/Services/ExifToolReader.cs
-  → CRITICAL: Barcode in "RMETA:Barcode" OR "Barcode" key!
+Test DICOM connection:
+  → tests/CamBridge.PacsTest/Program.cs ⭐ NEW!
+  → Working example with fo-dicom 5.2.2
+  → Shows C-ECHO and C-STORE
 
-Convert to DICOM:
-  → DicomConverter.ConvertToDicomAsync() (Line ~40)
-  → Infrastructure/Services/DicomConverter.cs
-  → Uses fo-dicom library extensively
-  → CRITICAL: Create dataset WITH transfer syntax for JPEG!
+Configure PACS:
+  → PipelineConfiguration.PacsConfiguration (nested class)
+  → PipelineConfigPage.xaml - Tab #3 ⭐
+  → PipelineConfigViewModel - Lines ~800-900 (in 1400 line monster!)
 
-Generate DICOM UIDs: ⭐ NEW!
-  → DicomConverter.GenerateUID() (Line ~400)
-  → Rules: 0-9 and dots only, max 64 chars, globally unique
-  → Infrastructure/Services/DicomConverter.cs
+Process images:
+  → FileProcessor.ProcessFileAsync() - Entry point
+  → Now with PacsUploadQueue integration!
 
-Transform data (HIDDEN TREASURE!):
-  → ValueTransform enum - Core/Models/ValueTransform.cs
-  → DicomTagMapper.ApplyTransform() - Infrastructure/Services/DicomTagMapper.cs
-  → 11 types: DateToDicom, MapGender, ExtractDate, etc.
+Extract EXIF data:
+  → ExifToolReader.ExtractMetadataAsync()
+  → CRITICAL: Handle "RMETA:Barcode" prefix!
+  → Check multiple key variants
 
-Map fields to DICOM tags:
-  → MappingRule class - Core/Models/MappingRule.cs
-  → DicomTagMapper.MapToDataset() - Infrastructure/Services/DicomTagMapper.cs
-  → Supports drag & drop UI
+Find hidden features:
+  → Search enums first (capability lists)
+  → ValueTransform.cs - 11 transform types!
+  → ProcessingQueue.cs - HashSet deduplication!
+  → Check switch statements
 
-Validate configuration:
-  → ConfigurationService.ValidateEnumValues() (Line ~150)
-  → Config/Services/ConfigurationService.cs
-  → Clear error messages for invalid values
-
-Manage pipelines:
-  → PipelineManager - Infrastructure/Services/PipelineManager.cs
-  → CreatePipelineContext() (Line ~80) - CRITICAL!
-  → Each pipeline completely isolated
-
-Handle errors:
-  → ProcessingOptions.ErrorFolder - Core/Configuration/ProcessingOptions.cs
-  → Simple folder approach (no complex queue)
-  → FileProcessor.MoveToErrorFolder() (Line ~200)
-
-Process Queue Management: ⭐ ENHANCED!
-  → ProcessingQueue with HashSet tracking (Session 87 fix)
-  → Prevents duplicate processing of same file
-  → Infrastructure/Services/ProcessingQueue.cs
+Handle Property Names:
+  → ImageTechnicalData: ImageWidth NOT Width!
+  → Always check exact names in source
+  → 45-minute lesson from Session 87
 ```
 
-### UI Features
+## 🦖 MONSTER FILES WARNING
+
+### The Beasts That Need Taming
 ```yaml
-Show dialogs:
-  → TransformEditorDialog - Config/Dialogs/TransformEditorDialog.xaml
-  → DicomTagBrowserDialog - Config/Dialogs/DicomTagBrowserDialog.xaml
-  → Pattern: Window.ShowDialog() vs ContentDialog.ShowAsync()
+PipelineConfigViewModel.cs:
+  Lines: 1400+ 😱
+  Problems: Does EVERYTHING
+  Contains: All tabs logic, PACS test, validation
+  Refactor Priority: HIGH
+  Estimated: 6-8 hours to split
 
-Drag & Drop mapping:
-  → MappingEditorPage.xaml/cs - Config/Pages/
-  → Event handlers must be connected in code-behind!
-  → See SourceField_MouseMove() implementation
-
-Display service status:
-  → DashboardPage/ViewModel - Config/Pages/ & ViewModels/
-  → Uses direct HttpClient (minimal pattern)
-  → Refreshes every 5 seconds
-
-Configure pipelines:
-  → PipelineConfigPage/ViewModel - Config/Pages/ & ViewModels/
-  → Supports multiple isolated pipelines
-  → Each with own watch/output folders
-
-Browse DICOM tags:
-  → DicomTagBrowserDialog - Config/Dialogs/
-  → 3-column NEMA-compliant display
-  → Search includes descriptions
-```
-
-## 🔍 CRITICAL EXIF KEY MAPPINGS (Session 87) ⭐
-
-### ExifTool Output Format (with -G1 flag)
-```yaml
-Barcode Location:
-  With Prefix: "RMETA:Barcode" ⭐ PRIMARY!
-  Without: "Barcode"
-  Example: "EX002|Schmidt, Maria|1985-03-15|F|Röntgen Thorax"
-
-Image Dimensions:
-  Width Keys:
-    - "File:ImageWidth" (primary) ⭐
-    - "ExifIFD:ExifImageWidth" 
-    - "ImageWidth" (fallback)
-    - "ExifImageWidth" (fallback)
-  Height Keys:
-    - "File:ImageHeight" (primary) ⭐
-    - "ExifIFD:ExifImageHeight"
-    - "ImageHeight" (fallback)
-    - "ExifImageHeight" (fallback)
-
-Camera Info:
-  Manufacturer: "IFD0:Make" or "Make"
-  Model: "IFD0:Model" or "Model"  
-  Software: "IFD0:Software" or "Software"
-
-Dates:
-  Primary: "ExifIFD:DateTimeOriginal"
-  Secondary: "ExifIFD:CreateDate"
-  Tertiary: "IFD0:ModifyDate"
-  Format: "yyyy:MM:dd HH:mm:ss"
-
-Other Fields:
-  ColorSpace: "ExifIFD:ColorSpace"
-  Compression: "File:Compression"
-  BitsPerSample: "File:BitsPerSample"
-  Orientation: "IFD0:Orientation"
-  UserComment: "ExifIFD:UserComment"
-```
-
-### ImageTechnicalData Property Mapping ⭐ EXACT NAMES!
-```yaml
-Class Properties (Session 87 hard lesson):
-  ImageWidth: int? (NOT Width!)
-  ImageHeight: int? (NOT Height!)
-  BitsPerSample: int?
-  Manufacturer: string?
-  Model: string?
-  Software: string?
-  ColorSpace: string?
-  Compression: string?
-  Orientation: int?
+MappingEditorViewModel.cs:
+  Lines: 500+
+  Problems: Drag/drop + transforms + browse
+  Refactor Priority: MEDIUM
   
-NO Properties for:
-  - PhotometricInterpretation
-  - CameraManufacturer 
-  - CameraModel
-  - DateTime
+Solution: See WISDOM_DEBT.md for refactor plan!
 ```
 
-## 📁 DETAILED PROJECT BREAKDOWN
+## 📁 PROJECT STRUCTURE - Detailed
 
-### CamBridge.Core (~3,200 LOC) - The Foundation
-**Purpose**: Domain models, contracts, value objects - the WHAT
-
+### CamBridge.Core (~3,200 LOC)
 ```yaml
-Configuration/ (~800 LOC)
+Configuration/:
   ConfigurationPaths.cs ⭐⭐⭐ [SINGLE SOURCE OF TRUTH]
+    - ALL paths derive from here
     - GetPrimaryConfigPath() → %ProgramData%\CamBridge\appsettings.json
-    - GetPipelineConfigDirectory() → %ProgramData%\CamBridge\Pipelines
-    - GetMappingRulesDirectory() → %ProgramData%\CamBridge\Mappings
-    - InitializePrimaryConfig() → Creates default config (COMPLETE!)
-    - ALL paths derive from here!
     
-  CamBridgeSettingsV2.cs [CURRENT CONFIG FORMAT]
-    - Root wrapper: { "CamBridge": { ... } } ⭐ REQUIRED!
-    - Version: "2.0" (only valid version)
-    - Service: ServiceSettings
-    - Pipelines: List<PipelineConfiguration>
-    - GlobalDicomSettings: DicomSettings
-    - ExifToolPath: string (default "Tools\\exiftool.exe")
+  PipelineConfiguration.cs:
+    - Now includes PacsConfiguration! ⭐ NEW
+    - Nested class pattern
     
-  PipelineConfiguration.cs ⭐
-    - Id: Guid (unique identifier)
-    - Name: string (display name)
-    - WatchSettings: Input folder config
-    - ProcessingOptions: How to handle files
-    - DicomOverrides: Pipeline-specific DICOM
-    - MappingSetId: Which mapping rules to use
+  PacsConfiguration.cs (nested): ⭐ NEW
+    - All PACS settings
+    - Validation via IsValid()
     
-  ProcessingOptions.cs
-    - OutputOrganization: enum [None, ByPatient, ByDate, ByPatientAndDate]
-    - SuccessAction: enum [Delete, Archive, Move, Leave] ⭐ Leave for retry!
-    - MaxConcurrentProcessing: int (default 5)
-    - ErrorFolder: string (simple approach!)
-
-Models/ (~1,000 LOC)
-  PatientInfo.cs, StudyInfo.cs, ImageMetadata.cs
-    - Domain entities for medical data
-    - Clean, simple POCOs
-    - Immutable constructors (Session 85 lesson!)
-    
-  MappingRule.cs, MappingSet.cs
-    - Field to DICOM tag mapping
-    - Supports transforms!
-    
-  ValueTransform.cs [HIDDEN TREASURE!]
-    - 11 transform types already implemented
-    - Just needed UI (Session 74)
-
-  ImageTechnicalData.cs ⭐ [SESSION 87 CRITICAL!]
-    - ImageWidth/ImageHeight (NOT Width/Height!)
-    - Exact property names matter!
-
-Interfaces/ (Only 2 left!)
-  IMappingConfiguration.cs
-    - GetMappingRules() [NOT GetMappingRulesAsync!]
-    - LoadConfigurationAsync()
-    
-  IDicomTagMapper.cs
-    - ApplyTransform()
-    - MapToDataset()
-
-Constants/
-  DicomTag.cs ⭐ [NEMA PS3.6 compliant]
-    - All standard DICOM tags as constants
-    - Grouped by module (Patient, Study, Series, etc.)
-    - Used throughout the system
-```
-
-### CamBridge.Infrastructure (~4,900 LOC) - The Engine
-**Purpose**: Core services, business logic - the HOW
-
-```yaml
-Services/ (~3,500 LOC)
-  ExifToolReader.cs ⭐ [NO INTERFACE!]
-    - ExtractMetadataAsync(imagePath) → EXIF as Dictionary [NOT ExtractDataAsync!]
-    - ParseBarcodeData(exifData) → Patient/Study info
-    - ParseQRBridgeData(barcode) → Structured data
-    - Uses ExifTool.exe via Process class
-    - Handles timeout (30 seconds)
-    - CRITICAL: Checks "RMETA:Barcode" AND "Barcode" keys!
-    - CRITICAL: Uses UTF-8 encoding (not Windows-1252!)
-    
-  DicomConverter.cs ⭐ [NO INTERFACE!]
-    - ConvertToDicomAsync(jpeg, dicom, metadata) → Result
-    - ValidateDicomFileAsync(path) → Validation result
-    - GenerateUID() → DICOM-compliant UIDs (Session 85-86!)
-    - CreateDicomDataset(DicomTransferSyntax) ⭐ CRITICAL for JPEG!
-    - Uses fo-dicom for all DICOM operations
-    - Handles pixel data, metadata, validation
-    
-  FileProcessor.cs ⭐⭐⭐ [PER PIPELINE!]
-    - NOT a singleton anymore!
-    - ProcessFileAsync(inputPath) → Complete flow
-    - DetermineOutputPath() → Returns ABSOLUTE paths! (Session 85!)
-    - CreateDefaultMetadata() → When no EXIF data
-    - Created by PipelineManager for each pipeline
-    - Owns: EXIF → Metadata → DICOM → Output
-    - Error handling via simple folder move
-    
-  PipelineManager.cs ⭐⭐⭐ [ORCHESTRATOR]
-    - StartAsync(settings) → Starts all pipelines
-    - StopAsync() → Graceful shutdown
-    - CreatePipelineContext() → Per-pipeline isolation!
-    - GetPipelineStatuses() → For dashboard
-    - Manages lifecycle of all components
-    
-  ProcessingQueue.cs [Channel-based] ⭐ ENHANCED Session 87!
-    - Uses System.Threading.Channels
-    - HashSet tracking prevents duplicates (_processedFiles, _enqueuedFiles)
-    - TryEnqueue(filePath) → bool (checks if already processed!)
-    - ProcessQueueAsync(token) → Processing loop (wrapper for ProcessAsync)
-    - Injected FileProcessor (pipeline-specific)
-    - Configurable concurrency
-    
-  DicomTagMapper.cs
-    - MapToDataset(dataset, sourceData, rules)
-    - ApplyTransform(value, transform) → All 11 types!
-    - Smart field detection
-    
-  NotificationService.cs [NO INTERFACE!]
-    - SendDailySummaryAsync(summary)
-    - NotifyErrorAsync(message, exception)
-    - Currently just logs (no email yet)
-
-Configuration/
-  MappingConfigurationLoader.cs
-    - Implements IMappingConfiguration
-    - Loads from JSON files
-    - Supports hot reload
-
-Extensions/
-  ServiceCollectionExtensions.cs ⭐ DI Configuration!
-    - ExifToolReader registration with config path
-    - FileProcessor NOT registered (created per pipeline!)
-    - Note pattern for config-based registration
-```
-
-### CamBridge.Service (~2,100 LOC) - The Host
-**Purpose**: Windows Service, API endpoints - the WHERE
-
-```yaml
-Program.cs ⭐ [Entry Point - Line 1-150]
-  - Port 5111 (hardcoded everywhere!)
-  - Minimal API configuration
-  - Service registration
-  - Swagger in development
+Models/:
+  PatientInfo.cs - Constructor only! No object init
+  ImageTechnicalData.cs - ImageWidth, not Width!
+  ValueTransform.cs - 11 hidden treasures
   
-  API Endpoints:
-    GET /api/status → Full service status
-    GET /api/pipelines → Pipeline configurations  
-    GET /api/pipelines/{id} → Detailed pipeline info [HIDDEN!]
-    GET /api/status/version → Version string only
-    GET /api/status/health → Simple health check
-    GET /api/statistics → TODO (returns 404)
-    
-Worker.cs [Background Service - Line 20-80]
-  - Inherits from BackgroundService
-  - Starts PipelineManager
-  - Handles graceful shutdown
-  - Logs lifecycle events
-
-Controllers/ (Using minimal API pattern)
-  StatusController.cs (embedded in Program.cs)
-    - GetStatus() → Complete status object
-    - GetPipelines() → Pipeline list
-    - GetStatistics() → Not implemented
-    
-Models/
-  ServiceInfo.cs
-    - Dynamic version from assembly
-    - Service metadata
-    
-  ServiceStatus.cs, PipelineStatus.cs
-    - DTOs for API responses
-    - Clean JSON serialization
+Interfaces/: 
+  Only 2 left! (was 12+)
 ```
 
-### CamBridge.Config (~5,100 LOC) - The UI
-**Purpose**: WPF Configuration Tool - the USER INTERFACE
-
+### CamBridge.Infrastructure (~5,200 LOC)
 ```yaml
-App.xaml.cs ⭐ [Application Entry - CRITICAL!]
-  - Host property → Fixes 144 build errors!
-  - DI container setup
-  - Service registration for ViewModels
-  - Navigation service initialization
-
-MainWindow.xaml/cs [Shell - Line 1-200]
-  - NavigationView (left menu)
-  - Frame for content (NavigationUIVisibility="Hidden")
-  - Navigation handling
-  - Window state persistence
-
-ViewModels/ (~1,500 LOC) [MVVM Pattern]
-  ViewModelBase.cs
-    - INotifyPropertyChanged base
-    - SetProperty<T> helper
+Services/:
+  DicomStoreService.cs ⭐ NEW!
+    - Real C-STORE implementation
+    - StoreFileAsync() with retry
+    - TestConnectionAsync() via C-ECHO
     
-  DashboardViewModel.cs [MINIMAL PATTERN!]
-    - Direct HttpClient (no abstractions)
-    - Simple timer refresh (5 seconds)
-    - ServiceStatus, PipelineStatuses properties
-    - NO complex initialization!
+  PacsUploadQueue.cs ⭐ NEW!
+    - Channel-based queue per pipeline
+    - Retry logic with backoff
+    - Integrates with FileProcessor
     
-  PipelineConfigViewModel.cs ⭐
-    - Pipelines: ObservableCollection<PipelineConfiguration>
-    - Add/Edit/Delete/Save commands
-    - Validation logic
-    - [DeadLetterFolder still referenced!]
+  FileProcessor.cs:
+    - MODIFIED: PacsUploadQueue integration
+    - Line ~190: Queue after DICOM creation
+    - Constructor takes optional queue
     
-  MappingEditorViewModel.cs ⭐⭐ [MOST COMPLEX]
-    - Drag & drop support
-    - Transform editing (NEW!)
-    - DICOM tag browsing
-    - Import/Export functionality
-    - Smart field detection
-    - Save with success feedback
-
-Views/Pages/ (~1,200 LOC)
-  DashboardPage.xaml/cs
-    - Service status cards
-    - Pipeline status list
-    - Error count display
-    - Auto-refresh UI
+  PipelineManager.cs:
+    - MODIFIED: Creates PacsUploadQueue if enabled
+    - Manages queue lifecycle
     
-  PipelineConfigPage.xaml/cs
-    - Pipeline CRUD operations
-    - Watch/Output folder config
-    - Processing options
-    - [DeadLetterFolder in UI!]
-    
-  MappingEditorPage.xaml/cs ⭐⭐⭐ [MOST ENHANCED]
-    - Source fields list (left)
-    - Mapping rules (center - expanded!)
-    - NO cheat sheet (removed Session 73)
-    - Drag & drop event handlers
-    - Transform indicators
-    
-  ServiceControlPage.xaml/cs
-    - Start/Stop service
-    - View Event Log
-    - Service status
-    - Service installer UI activated!
-    
-  DeadLettersPage.xaml/cs
-    - Error folder viewer
-    - [Needs enhancement]
-
-Dialogs/ (~800 LOC)
-  TransformEditorDialog.xaml/cs ⭐ [NEW in v0.7.26!]
-    - Multi-view preview (Normal/Special/HEX)
-    - Encoding detection
-    - Transform-specific test data
-    - DICOM compliance hints
-    - ContentDialog pattern
-    
-  DicomTagBrowserDialog.xaml/cs [ENHANCED v0.7.25]
-    - 3-column layout (Tag|Name|Description)
-    - NEMA-compliant descriptions
-    - Search all columns
-    - Module grouping
-    - Window pattern
-
-Converters/ (~400 LOC)
-  ValueConverters.cs [UI Magic]
-    - BoolToVisibilityConverter (+ Inverse)
-    - NullToVisibilityConverter (+ Inverse)
-    - EnumToStringConverter
-    - TransformToSymbolConverter (→, 📅→, ♂♀→)
-    - TransformToDescriptionConverter
-    - [Encoding issue: © shows as Â©]
-
-Services/ (UI Support)
-  NavigationService.cs ⭐
-    - Page registration & navigation
-    - ViewModel injection pattern
-    - Frame management
-    - History clearing
-    
-  ConfigurationService.cs
-    - Load/Save JSON configs
-    - V2 format enforcement
-    - Enum validation
-    - Path management
-    
-  ServiceManager.cs
-    - Windows Service control
-    - Start/Stop/Status via ServiceController
+  ExifToolReader.cs:
+    - ExtractMetadataAsync() - NOT ExtractDataAsync!
+    - Handle RMETA: prefixes!
 ```
 
-### CamBridge.QRBridge (~350 LOC) - The Helper
-**Purpose**: QR code generator for camera integration
-
+### CamBridge.Service (~2,100 LOC)
 ```yaml
-Program.cs (Console App)
-  - Parses command line: -examid "X" -name "Y" etc.
-  - Generates QR code using QRCoder
-  - Outputs as image file
-  - UTF-8 encoding throughout! (Session 87)
+Program.cs:
+  - Port 5111 EVERYWHERE
+  - API endpoints (status, pipelines)
+  - Hidden: GET /api/pipelines/{id}
   
-Models/
-  QRBridgeData.cs
-    - Patient info structure
-    - Serialization format
+ServiceCollectionExtensions.cs:
+  - MODIFIED: DicomStoreService registration ⭐
+```
+
+### CamBridge.Config (~5,400 LOC) 
+```yaml
+ViewModels/:
+  PipelineConfigViewModel.cs 🦖 MONSTER!
+    - 1400+ lines of everything
+    - PACS properties ~line 800
+    - TestPacsConnectionCommand ~line 900
+    - Needs urgent refactoring!
     
-Critical: Camera writes QR payload to EXIF Barcode field!
-This is how patient data gets into images.
+Views/Pages/:
+  PipelineConfigPage.xaml:
+    - PACS Upload is Tab #3 ⭐
+    - Full configuration UI
+    - Test connection button
 ```
 
-## 🔗 COMPONENT CONNECTION MAP
-
-### Data Flow Architecture (Sessions 85-87 validated!)
-```
-[Ricoh Camera] → QR Code → EXIF Barcode
-                              ↓
-[JPEG File] → FileSystemWatcher → ProcessingQueue ⭐ (with HashSet dedup!)
-                                        ↓
-                              FileProcessor.ProcessFileAsync()
-                                        ↓
-                              ExifToolReader.ExtractMetadataAsync() ⭐
-                                   ↓              ↓
-                        ParseBarcodeData()    Raw EXIF data
-                         ("RMETA:Barcode")         ↓
-                              ↓                    ↓
-                         Patient/Study ←→ ImageMetadata
-                         (Domain objects)    (Technical data)
-                                        ↓
-                              DicomConverter.ConvertToDicomAsync()
-                                 ↓                    ↓
-                         GenerateUID()        CreateDicomDataset(JPEGProcess1)
-                              ↓                       ↓
-                         [DICOM File] → Output Folder (Absolute paths!)
-                                               ↓
-                                          [PACS System]
-```
-
-### Service Dependencies
+### tests/CamBridge.PacsTest ⭐ NEW!
 ```yaml
-Startup Chain:
-  Program.cs → Worker.cs → PipelineManager
-                              ↓
-                    For each pipeline:
-                      Create FileProcessor ⭐ (with pipeline config!)
-                      Create ProcessingQueue (with dedup HashSets!)
-                      Create FileSystemWatcher
-                      Start processing loop
-
-Shared Services (Stateless - OK to share):
-  - ExifToolReader (reads files) ⭐ Registered with config path!
-  - DicomConverter (converts files)
-  - NotificationService (logs only)
-  
-Pipeline-Specific (MUST be isolated):
-  - FileProcessor (holds config) ⭐ Created per pipeline!
-  - ProcessingQueue (holds state + HashSets)
-  - FileSystemWatcher (monitors folder)
+Program.cs (~220 LOC):
+  - Minimal test program
+  - Shows fo-dicom 5.2.2 API
+  - C-ECHO and C-STORE examples
+  - Saved hours in Session 91!
 ```
 
-### API Communication
-```yaml
-Config Tool → Service API:
-  DashboardViewModel → HttpClient → http://localhost:5111/api/status
-                                 → http://localhost:5111/api/pipelines
-  
-  Refresh Pattern:
-    Timer (5 sec) → RefreshAsync() → HTTP GET → Update UI
-    
-Service → Config Tool:
-  No direct communication
-  Config Tool polls for status
-  Service writes to Event Log
+## 🔗 COMPONENT CONNECTIONS
+
+### PACS Integration Flow ⭐ NEW
+```
+FileProcessor.ProcessFileAsync()
+    ↓ (successful DICOM creation)
+if (PacsConfiguration.Enabled)
+    ↓
+PacsUploadQueue.EnqueueAsync(dicomPath)
+    ↓ (async processing)
+DicomStoreService.StoreFileWithRetryAsync()
+    ↓ (fo-dicom 5.2.2)
+PACS Server (Orthanc port 4242)
 ```
 
-### Configuration Flow (Sessions 85-87 insights)
+### Dependency Injection Updates
 ```yaml
-Source of Truth:
-  Version.props → Assembly → ServiceInfo.Version → API/UI
+NEW Services:
+  - DicomStoreService (singleton)
+  - PacsUploadQueue (created per pipeline)
   
-Config Paths:
-  ConfigurationPaths.GetPrimaryConfigPath()
-    → %ProgramData%\CamBridge\appsettings.json
-    → Loaded by ConfigurationService
-    → Used by all components
-    → MUST have "CamBridge" wrapper!
-    
-Pipeline Configs:
-  Main config references pipeline files
-  → %ProgramData%\CamBridge\Pipelines\*.json
-  → Loaded on demand
-  → NOTE: Service config structure differs from UI!
-  
-Mapping Rules:
-  Referenced by pipeline config
-  → %ProgramData%\CamBridge\Mappings\*.json
-  → Loaded by MappingConfigurationLoader
-
-Config Reality (Session 85):
-  - OutputPath often missing → Falls back to ArchiveFolder
-  - SuccessAction "Leave" prevents retry issues
-  - FilePattern (singular) not FilePatterns!
+Modified:
+  - FileProcessor (takes optional queue)
+  - PipelineManager (creates queues)
 ```
 
-## 💎 HIDDEN FEATURES & DISCOVERIES
+## 💎 HIDDEN TREASURES FOUND
 
-### Already Found (Sessions 74-87)
+### Completed Discoveries
 ```yaml
-Transform System:
-  Location: Core/Models/ValueTransform.cs
-  
-  public enum ValueTransform
-  {
-      None,
-      DateToDicom,       // "20240618" → DA format
-      TimeToDicom,       // "143022" → TM format
-      DateTimeToDicom,   // Full DT format
-      MapGender,         // "M/F" → DICOM format
-      RemovePrefix,      // Remove string prefix
-      ExtractDate,       // Extract date portion
-      ExtractTime,       // Extract time portion
-      ToUpperCase,       // Convert to upper
-      ToLowerCase,       // Convert to lower
-      Trim              // Remove whitespace
-  }
-  
-  Implementation: DicomTagMapper.ApplyTransform()
-  Status: Fully working, just needed UI
-  UI Added: TransformEditorDialog in v0.7.26
+Transform System (Session 74):
+  - 11 types fully implemented
+  - Just needed UI
+  - Saved weeks!
 
-ProcessingQueue Deduplication (Session 87):
-  Location: ProcessingQueue.cs
-  Status: Already implemented with HashSets!
-  Just wasn't obvious from the outside
-  Prevents FileSystemWatcher duplicate events
+ProcessingQueue Dedup (Session 87):
+  - HashSet tracking already there
+  - Prevents duplicate processing
+  - Just worked!
 
-Default DICOM Tag Population:
-  Location: DicomConverter.CreateDicomDataset()
-  Automatically sets standard tags
-  Mappings only for overrides/extras
-  Not obvious from UI!
+PACS Upload (Sessions 89-92):
+  - Backend in 30 minutes
+  - UI in 15 minutes  
+  - Real implementation via test-first
 ```
 
-### Potential Hidden Features (Not Yet Explored)
+### Potential Treasures
 ```yaml
-Search Patterns:
-  1. Enums often list all capabilities
-  2. Switch statements reveal features
-  3. TODO/HACK comments hint at more
-  4. #if DEBUG blocks may have tools
-  5. Test methods might be useful
-  
-Areas to Investigate:
+Still Hidden?:
   - More validation rules?
-  - Additional converters?
-  - Debug-only utilities?
-  - Performance monitoring?
-  - Hidden API endpoints? ✓ Found one!
-  - Configuration options without UI?
+  - Debug utilities in #if DEBUG?
+  - Commented features?
+  - Check TODO/HACK comments!
 ```
 
-### Search Commands for Treasure Hunt
-```powershell
-# Find all enums (capability lists)
-Get-ChildItem -Recurse *.cs | Select-String "enum\s+\w+" -Context 0,15
+## 🎯 NAVIGATION SHORTCUTS
 
-# Find switch statements (feature implementations)  
-Get-ChildItem -Recurse *.cs | Select-String "switch.*{" -Context 0,20
-
-# Find TODO/HACK comments
-Get-ChildItem -Recurse *.cs | Select-String "TODO|HACK|FIXME" -Context 2,5
-
-# Find test/sample data
-Get-ChildItem -Recurse *.cs | Select-String "Test|Sample|Demo" -Context 1,10
-
-# Find disabled features
-Get-ChildItem -Recurse *.cs,*.xaml | 
-  Select-String 'Visibility="Collapsed"|IsEnabled="False"|if \(false\)'
-
-# Find EXIF key usage (Session 87!)
-Get-ChildItem -Recurse *.cs | Select-String "RMETA:|File:|ExifIFD:"
-
-# Check exact property names
-Get-Content *.cs | Select-String "public.*\?.*{ get.*init" -Context 0,1
-```
-
-## 🎯 NAVIGATION STRATEGIES
-
-### Finding Features by Pattern
+### By Problem Type
 ```yaml
-"I need validation":
-  → Search: "Validate", "Valid", "Check"
-  → Look in: Services, ViewModels
-  → Check: ConfigurationService.ValidateEnumValues()
+"PACS not uploading":
+  → DicomStoreService logs
+  → PacsUploadQueue status
+  → Check PacsConfiguration.Enabled
+  → Port 4242 for Orthanc!
 
-"I need UI for X":
-  → Search: "Dialog", "Page", "View"
-  → Look in: Config/Dialogs, Config/Pages
-  → Pattern: Window vs ContentDialog
+"Binding not working":
+  → Check for null objects (Session 90!)
+  → PipelineConfigViewModel ~line 400
+  → Initialize all nested objects
 
-"I need to process X":
-  → Search: "Process", "Handle", "Convert"
-  → Look in: Infrastructure/Services
-  → Start with: FileProcessor
+"Can't find feature":
+  → Check enums first
+  → Search switch statements  
+  → Look for TODO comments
+  → Maybe already implemented!
 
-"I need configuration for X":
-  → Start: ConfigurationPaths
-  → Then: Core/Configuration
-  → Check: JSON examples in code
-
-"EXIF keys not working": ⭐ NEW!
-  → Check ExifTool -G1 output format
-  → Look for prefix variants (RMETA:, File:, etc.)
-  → Verify property names match exactly!
+"Property not found":
+  → EXACT names only!
+  → ImageTechnicalData.ImageWidth
+  → Check actual source file
+  → No guessing!
 ```
 
-### Code Archaeology Tips
+### By Technology
 ```yaml
-When exploring unknown feature:
-  1. Find the enum/constants
-  2. Search for enum usage
-  3. Find switch statements
-  4. Look for interface implementations
-  5. Check for UI bindings
-  6. Trace through call stack
+fo-dicom 5.2.2:
+  → See WISDOM_TECHNICAL_APIS.md ⭐
+  → Check PacsTest/Program.cs
+  → Breaking changes documented!
 
-Example - Finding Transform UI:
-  1. Found ValueTransform enum
-  2. Searched "ValueTransform" → DicomTagMapper
-  3. Searched "ApplyTransform" → MappingRule
-  4. Searched UI for "Transform" → Found commands
-  5. Added TransformEditorDialog
+MVVM/WPF:
+  → Null binding pattern
+  → Monster ViewModels need splitting
+  → Check WISDOM_DEBT.md
 
-Example - Finding ProcessingQueue fix (Session 87):
-  1. Searched "duplicate", "processed"
-  2. Found HashSet tracking already there!
-  3. Just needed to understand it existed
-```
-
-### Performance Hotspots
-```yaml
-Know where time is spent:
-  
-Heavy Operations:
-  - ExifTool.exe calls (process spawn)
-  - DICOM file writing (I/O)
-  - Large image processing
-  
-Optimized Areas:
-  - Channel-based queue (async)
-  - Pipeline isolation (parallel)
-  - Direct dependencies (no DI overhead)
-  - HashSet deduplication (Session 87!)
-  
-Monitoring Points:
-  - ProcessingQueue depth
-  - FileProcessor timing
-  - API response time
-  - Duplicate event frequency
+DICOM Compliance:
+  → UID format (numbers only!)
+  → Transfer syntax critical
+  → Dataset creation matters!
 ```
 
 ## 📊 CODE METRICS & INSIGHTS
 
-### Complexity Distribution
+### Growth Timeline
 ```yaml
-Most Complex:
-  1. MappingEditorViewModel (~500 LOC)
-     - Drag & drop logic
-     - Transform handling
-     - Save/Load operations
-     
-  2. FileProcessor (~400 LOC)
-     - Complete processing pipeline
-     - Error handling
-     - Output organization
-     
-  3. PipelineManager (~350 LOC)
-     - Orchestration logic
-     - Lifecycle management
-     - Status tracking
-
-Most Critical:
-  1. ConfigurationPaths (all paths)
-  2. FileProcessor (core logic)
-  3. PipelineManager (orchestration)
-  4. App.xaml.cs (Host property!)
-  5. ExifToolReader (EXIF key mapping!)
-
-Most Enhanced:
-  1. MappingEditorPage (Sessions 72-74)
-  2. DicomTagBrowserDialog (Session 73)
-  3. DashboardViewModel (Session 69)
-  4. TransformEditorDialog (Session 74)
-  5. ProcessingQueue (Session 87)
-  6. ExifToolReader (Session 87)
-
-Most Problematic (Sessions 85-87):
-  1. Property name mismatches
-  2. EXIF key prefixes
-  3. Path resolution (relative vs absolute)
-  4. DI registration for config values
+Session 1-30: Interface explosion (12+)
+Session 31-60: The great cleanup
+Session 61: "I wrote all this!" (14,350 LOC)
+Session 74: Hidden treasures found
+Session 87: DICOM pipeline complete
+Session 89-92: PACS in 45 minutes!
+Current: 15,670 LOC of working medical software
 ```
 
-### Technical Debt Locations
+### Complexity Hotspots
 ```yaml
-Known Issues:
-  - DeadLetterFolder references (UI & config)
-  - Encoding (© vs Â©) in multiple files
-  - ~140 build warnings
-  - Missing /api/statistics endpoint
-  - UTF-8 vs Windows-1252 (awaiting real camera test)
+URGENT:
+  - PipelineConfigViewModel (1400 lines!)
+  - Needs Tab-based split
   
-Improvement Opportunities:
-  - Email notifications (stubbed)
-  - Performance monitoring
-  - More error details in UI
-  - Pipeline priorities
-  - C-STORE for PACS (next sprint!)
+STABLE:
+  - FileProcessor (complex but works)
+  - PipelineManager (good isolation)
+  - DicomConverter (DICOM compliant)
+  
+NEW & CLEAN:
+  - DicomStoreService
+  - PacsUploadQueue
+  - Test-first development!
 ```
 
-## 🚧 GROWTH PLANNING
+## 🚀 QUICK REFERENCE
 
-### When Adding New Features
+### Find It Fast
 ```yaml
-Before Writing Code:
-  1. Search existing implementations
-  2. Check related enums/constants
-  3. Look for TODO comments
-  4. Verify not already hidden
-  5. Consider pipeline isolation
-  6. CHECK EXACT PROPERTY NAMES! (Session 87!)
-
-Where to Add:
-  Domain Models → Core/Models/
-  Business Logic → Infrastructure/Services/
-  API Endpoints → Service/Program.cs
-  UI Pages → Config/Pages/
-  UI Dialogs → Config/Dialogs/
-  Converters → Config/Converters/
-
-Naming Patterns:
-  Services: [Feature]Service.cs
-  ViewModels: [Page]ViewModel.cs
-  Pages: [Feature]Page.xaml
-  Dialogs: [Feature]Dialog.xaml
+Version? → Version.props
+Port? → 5111 (everywhere!)
+PACS Test? → Tab #3 in Pipeline Config
+Monster File? → PipelineConfigViewModel
+Test Program? → tests/CamBridge.PacsTest
+Breaking Changes? → WISDOM_TECHNICAL_APIS.md
+Refactor Plans? → WISDOM_DEBT.md
 ```
 
-### Expected Growth Areas
+### Common Locations
 ```yaml
-Near Term (v0.8.x):
-  - C-STORE implementation (PACS upload)
-  - Error management UI
-  - Pipeline priorities
-  - Email notifications
-  - Performance metrics
-  
-Medical Features (v0.9.x):
-  - FTP Server (Service/)
-  - DICOM SCP (Infrastructure/)
-  - Modality Worklist (Service/)
-  - HL7 Interface (New project?)
-  
-Scale Features (v1.x):
-  - Multi-site support
-  - Cloud storage
-  - REST API expansion
-  - Mobile monitoring
+C:\CamBridge\            # Binaries
+%ProgramData%\CamBridge\ # Configs & Logs
+Port 5111                # API
+Port 4242                # Orthanc DICOM
+Port 8042                # Orthanc Web
 ```
-
-## 🔮 NAVIGATION WISDOM
-
-### Quick Jump Cheat Sheet
-```yaml
-Need to change version?
-  → Version.props
-
-Need to add config?
-  → ConfigurationPaths.cs first
-  → Then Core/Configuration/
-
-Need to fix processing?
-  → FileProcessor.ProcessFileAsync()
-
-Need to add UI?
-  → Config/Pages/ or Dialogs/
-  → Don't forget ViewModel!
-
-Need to debug service?
-  → 4[TAB] for console mode
-  → Check Event Log
-
-Need to find feature?
-  → Search enums first
-  → Then switch statements
-  → Then TODO comments
-
-EXIF not extracting? ⭐ NEW!
-  → Check ExifTool output format
-  → Try with -G1 flag
-  → Look for RMETA: prefix
-
-DICOM creation fails? ⭐ NEW!
-  → Check UID format (digits only!)
-  → Verify transfer syntax location
-  → Use absolute paths!
-  → Create dataset WITH transfer syntax!
-```
-
-### Architecture Boundaries
-```yaml
-Core ← Infrastructure:
-  - Core has no dependencies
-  - Infrastructure uses Core models
-  
-Infrastructure ← Service:
-  - Service hosts Infrastructure
-  - No back-references
-  
-Config → Service:
-  - HTTP API only
-  - No direct references
-  
-QRBridge:
-  - Standalone tool
-  - No dependencies on main app
-```
-
-### The Map is the Territory
-```yaml
-This document is:
-  - Navigation tool for 30k+ LOC future
-  - Feature discovery guide
-  - Architecture reference
-  - Growth planning tool
-  - Bug pattern library (Sessions 85-87!)
-  
-Keep it updated when:
-  - Finding hidden features
-  - Adding new components
-  - Discovering patterns
-  - Learning navigation tricks
-  - Fixing critical bugs
-```
-
-## 🏁 DICOM Pipeline Success Checklist (Session 85-87)
-
-### What's Working:
-- ✅ JPEG files detected by FileSystemWatcher
-- ✅ Duplicate events filtered by ProcessingQueue
-- ✅ EXIF data extracted (with prefix handling!)
-- ✅ Barcode parsed from RMETA:Barcode
-- ✅ Patient/Study info correctly extracted
-- ✅ DICOM files created with metadata
-- ✅ Absolute paths used everywhere
-- ✅ UID generation DICOM-compliant
-- ✅ Transfer syntax properly set
-- ✅ JPEG encapsulation with undefined length
-- ✅ MicroDicom can open files!
-
-### What's Pending:
-- ⏳ UTF-8 encoding (waiting for real camera)
-- ⏳ C-STORE implementation
-- ⏳ Performance optimization
-- ⏳ Email notifications
 
 ---
 
-*"The best code is the code you can find quickly"*  
-*Navigate with confidence - hidden treasures await!* 🗺️🏴‍☠️
+**Remember**: This map evolved over 92 sessions. When lost, check enums first, then switches, then TODOs. Hidden treasures are everywhere! 🏴‍☠️
 
-**Sessions 85-87 Summary**: DICOM pipeline fully functional! From "no files" to "viewers work!" 🎉
+**Latest Discovery**: Test programs save hours. One artifact per file prevents errors. Monster ViewModels still work (but need love).
+
+*"The best code is code you can find quickly!"* 🗺️

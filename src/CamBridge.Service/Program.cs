@@ -1,7 +1,7 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.7.28
-// Description: Windows service entry point with corrected log levels
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// Version: 0.8.3
+// Description: Windows service entry point with FIXED DI registration
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
 using CamBridge.Core.Infrastructure;
@@ -232,24 +232,9 @@ try
                 ConfigValidator.ValidateAndWarn(configPath, Log.Logger);
             });
 
-            // Register notification settings separately
-            services.Configure<NotificationSettings>(configuration.GetSection("CamBridge:NotificationSettings"));
-
-            // Register core services
-            services.AddSingleton<DicomConverter>();
-            services.AddSingleton<NotificationService>();
-            // Register ExifToolReader with path from configuration
-            services.AddSingleton<ExifToolReader>(sp =>
-            {
-                var settings = sp.GetRequiredService<IOptionsMonitor<CamBridgeSettingsV2>>().CurrentValue;
-                return new ExifToolReader(
-                    sp.GetRequiredService<ILogger<ExifToolReader>>(),
-                    settings.ExifToolPath ?? "Tools\\exiftool.exe"
-                );
-            });
-
-            // PipelineManager as singleton - manages all pipelines
-            services.AddSingleton<PipelineManager>();
+            // CRITICAL FIX: USE THE INFRASTRUCTURE EXTENSION METHOD!
+            // This registers DicomStoreService and all other infrastructure services
+            services.AddInfrastructure(configuration);
 
             // Background services
             services.AddHostedService<Worker>();

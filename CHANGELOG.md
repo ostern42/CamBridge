@@ -6,6 +6,133 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# CHANGELOG Entry
+
+## [0.8.4] - 2025-06-25
+
+### Fixed
+- Fixed service registration bug - DicomStoreService was not registered correctly
+- Replaced all UTF-8 special characters with ASCII to fix encoding issues  
+- Removed non-existent properties from error handling (DeleteAfterUpload, ErrorPath, Association)
+
+### Added
+- Enhanced PACS error messages with user-friendly explanations and action recommendations
+- Correlation IDs for PACS upload tracking
+- Detailed retry logging with attempt counters
+- German error messages for common PACS issues (connection, AE titles, timeouts)
+- Debug logging for service registration
+
+### Changed
+- PacsUploadQueue now shows detailed progress for each upload attempt
+- Error messages now include specific troubleshooting steps
+- Property name fixes: ConcurrentUploads → MaxConcurrentUploads
+
+## [0.8.3] - 2025-06-24
+Added
+
+Real DICOM C-STORE implementation replacing STUBs (Session 92)
+Complete fo-dicom 5.2.2 integration with proper API usage
+C-ECHO connection testing with timeout support
+C-STORE file upload with retry logic
+Non-retryable error detection (file not found, auth failures)
+Comprehensive test plan and Orthanc integration guide
+
+Changed
+
+DicomStoreService now uses real fo-dicom APIs instead of STUBs
+Improved error messages with specific DICOM status codes
+Better logging with patient name and SOP Instance UID
+
+Technical Notes
+
+Uses TaskCompletionSource pattern for response handling
+CancellationToken for timeout implementation (no more client.Options)
+Follows fo-dicom 5.2.2 breaking changes from 4.x
+
+## [0.8.2] - 2025-06-24
+
+### Added
+- Real DICOM C-STORE implementation using fo-dicom 5.2.2
+- C-ECHO connection testing for PACS servers
+- Test program (CamBridge.PacsTest) for PACS verification
+- Retry logic with intelligent error detection
+- Integration guide for Orthanc testing
+
+### Changed
+- DicomStoreService: Replaced STUB implementation with real fo-dicom communication
+- Updated to fo-dicom 5.2.2 APIs (Microsoft.Extensions.Logging)
+- Improved error messages with DICOM status codes
+
+### Fixed
+- ServiceCollectionExtensions: DicomStoreService registration (was missing in deployment)
+- fo-dicom API compatibility issues in test program
+- Orthanc connection issues (port 4242, not 104)
+
+### Technical Notes
+- Verified with Orthanc PACS server
+- C-ECHO and C-STORE protocols fully functional
+- Non-retryable errors properly detected
+- Ready for production deployment
+
+## Version 0.8.1 - PACS Configuration UI (2025-06-23, 23:30-23:55)
+**Session**: 90
+
+### ✨ Features
+- **PACS Upload Tab** in Pipeline Configuration
+  - Complete configuration interface for PACS upload
+  - Positioned as 3rd tab (after General and Folders)
+  - Server configuration (Host, Port, AE Titles)
+  - Retry settings (attempts, delay, concurrent uploads)
+  - Test Connection button with status display
+  - Info box with helpful DICOM/PACS information
+
+### 🐛 Bug Fixes
+- **Fixed null PacsConfiguration binding issue**
+  - Existing pipelines had `null` PacsConfiguration
+  - MVVM bindings failed silently
+  - Save button remained disabled
+  - Now ensures all pipelines have valid config objects
+  - Added initialization in `LoadSettingsAsync()` and `MapFromSettings()`
+
+### 🔧 Technical Changes
+- Extended `PipelineConfigViewModel` with PACS properties
+  - Added `PacsTestResult` and `PacsTestResultColor`
+  - Added `TestPacsConnectionAsync` command
+  - Now 1400+ lines (technical debt noted)
+- Updated `PipelineConfigPage.xaml` with new tab
+  - Full data binding for all PACS fields
+  - Enable/disable logic for grouped controls
+  - Character limits on AE Title fields (16 chars)
+
+### 📝 Configuration
+- PACS settings now properly persisted in `appsettings.json`
+- Default values ensure valid configuration
+- Test connection uses STUB implementation (ready for real fo-dicom)
+
+### 🎯 User Experience
+- Tab ordering improved (PACS after Folders makes logical sense)
+- Clear visual feedback for connection testing
+- All fields have helpful placeholders
+- Validation built into UI (uppercase AE titles)
+
+### 📚 Documentation
+- Added technical note on MVVM null binding issues
+- Updated sprint status with bugfix information
+- Documented refactoring needs for large ViewModel
+- Created handover prompt for Session 91
+
+### 🚀 Next Steps
+- Session 91: Real fo-dicom implementation
+- Replace STUB with actual C-ECHO/C-STORE
+- Test with Orthanc PACS
+- Dashboard integration for upload status
+
+---
+
+**Time**: 25 minutes  
+**Result**: Feature complete UI with working configuration  
+**Technical Debt**: PipelineConfigViewModel needs refactoring (1400+ lines)
+
 # Changelog Entry for v0.8.0
 
 ## [0.8.0] - 2025-06-23

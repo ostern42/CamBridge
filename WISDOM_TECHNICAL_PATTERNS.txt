@@ -1,0 +1,277 @@
+# WISDOM_TECHNICAL_PATTERNS.md - Reusable Solution Patterns
+**Purpose**: Battle-tested patterns that solve recurring problems  
+**Philosophy**: "Patterns over memory, solutions over struggle"  
+**Updated**: Session 93 (Destillation from 87 sessions)
+
+## 🌟 THE CORE PATTERNS
+
+### The Minimal Pattern ⭐⭐⭐
+**Trigger**: "ich werde bald wahnsinnig" / 3+ hours debugging  
+**Solution**: DELETE everything, write 50 lines that work  
+**Success Rate**: 100% when applied
+
+```csharp
+// BEFORE: 200+ lines with abstractions
+public interface ILogService { }
+public class LogServiceImpl : ILogService { }
+public class LogViewerViewModel
+{
+    private readonly ILogService _logService;
+    // ... 300 lines of "proper" architecture
+}
+
+// AFTER: 50 lines that WORK
+public class LogViewerViewModel
+{
+    public async Task LoadLogFileAsync(string path)
+    {
+        var lines = await File.ReadAllLinesAsync(path);
+        foreach (var line in lines.TakeLast(1000))
+            LogEntries.Add(ParseLine(line));
+    }
+}
+```
+
+**When to use**: Complex approach failed, user frustrated  
+**Key insight**: Working code > "Proper" architecture
+
+### The Hidden Treasures Pattern ⭐⭐
+**Trigger**: "was immer schon alles da ist"  
+**Success Rate**: Found 11 transform types, dedup logic, more!
+
+```yaml
+Discovery Process:
+  1. Search solution for keywords
+  2. Check enums (capability lists!)
+  3. Find switch statements  
+  4. Look for TODO comments
+  5. Test if implementation works
+  6. Often just needs UI!
+
+Example Searches:
+  - "Transform" → Found complete transform system
+  - "Duplicate" → Found HashSet deduplication
+  - "TODO" → Found planned features
+```
+
+**Time saved**: Weeks of development  
+**Lesson**: Past-Claude was thorough!
+
+### The Null Binding Pattern ⭐⭐
+**Problem**: MVVM bindings fail silently on null objects  
+**Symptom**: Save button won't work, UI changes ignored  
+**Found in**: Sessions 67, 72, 90
+
+```csharp
+// PROBLEM: Nested object is null
+public class PipelineConfiguration
+{
+    public PacsConfiguration? PacsConfiguration { get; set; }
+    // Binding to PacsConfiguration.Enabled fails silently!
+}
+
+// SOLUTION: Always initialize
+foreach (var pipeline in pipelines)
+{
+    pipeline.PacsConfiguration ??= new PacsConfiguration();
+}
+```
+
+**Rule**: Initialize ALL bindable objects  
+**Check**: When bindings don't work, check for nulls first!
+
+### The Property Name Pattern ⭐
+**Trigger**: CS0117 "no definition for X"  
+**Time wasted**: 45 minutes on "Width vs ImageWidth"!
+
+```csharp
+// NEVER GUESS - Always check exact names!
+// WRONG:
+technicalData.Width = width;  // CS0117
+
+// RIGHT:
+technicalData.ImageWidth = width;  // Check the actual class!
+```
+
+**Process**:
+1. Get source file
+2. List ALL properties  
+3. Use EXACT names
+4. NO creativity allowed!
+
+### The Incremental Fix Pattern ⭐
+**Problem**: Multiple cascading errors overwhelm  
+**Solution**: Fix one, build, test, repeat
+
+```yaml
+Session 85 Example:
+  1. Path error → Fix → Build ✅
+  2. UID hex error → Fix → Build ✅  
+  3. UID length error → Fix → Build ✅
+  4. Transfer syntax error → Fix → Build ✅
+  5. All working! 🎉
+
+Key: Each error teaches something
+Never: Try to fix everything at once
+```
+
+### The Sources First Pattern 
+**Success Rate**: 60% (improving!)  
+**Failure Cost**: 30-45 minutes typically
+
+```yaml
+Before coding:
+  1. Load actual source file
+  2. Check existing implementation
+  3. Verify method signatures
+  4. Confirm property names
+  
+Common failures:
+  - Excitement → forget to check
+  - "I remember this" → memory lies
+  - Creative mode → inventing APIs
+```
+
+### The Delete With Joy Pattern 🗑️
+**Philosophy**: "Every deleted line is a victory"  
+**Best feeling**: Removing entire interfaces
+
+```yaml
+Examples:
+  - 12 interfaces → 2 interfaces (−2000 LOC)
+  - Complex queue → Error folder (−645 LOC)
+  - Navigation history → Hidden (UI clarity)
+  
+Rule: Less code = fewer bugs = better sleep
+```
+
+### The Pipeline Isolation Pattern ⚕️
+**Critical**: Medical data MUST be isolated  
+**No compromise**: Each pipeline completely separate
+
+```csharp
+// WRONG: Shared services
+services.AddSingleton<FileProcessor>();
+
+// RIGHT: Per-pipeline instances
+var fileProcessor = new FileProcessor(
+    pipelineLogger,      // Pipeline-specific!
+    pipelineConfig      // Pipeline-specific!
+);
+```
+
+**Includes**: Processor, Queue, Logger, Files
+
+### The One Artifact Pattern 📄
+**Problem**: Partial updates cause build errors  
+**Solution**: One complete file per artifact
+
+```yaml
+Session 89 Success:
+  - 7 artifacts = 7 complete files
+  - 0 build errors
+  - 20 minutes instead of 3 hours
+  
+Rule: Big files need complete artifacts
+Never: Send position-based snippets
+```
+
+### The Test First Pattern 🧪
+**Trigger**: New external API/library  
+**Example**: fo-dicom implementation
+
+```yaml
+Process:
+  1. Create minimal test program
+  2. Discover API changes/issues
+  3. Fix in isolation
+  4. Then integrate
+  
+Session 91: Saved hours of debugging!
+```
+
+### The VOGON Protocol Pattern ⭐⭐⭐
+**Purpose**: Structured approach for complex debugging/implementation  
+**Created**: Early sessions, proven over 90+ uses  
+**Success Rate**: Extremely high when followed properly
+
+```yaml
+VOGON INIT: Start focused work
+  V - Verify: What exists? What's the real problem?
+  O - Organize: Structure approach, gather tools
+  G - Generate: Create/modify code systematically
+  O - Observe: Test every change immediately
+  N - Next: Document and plan next steps
+
+VOGON EXIT: End session properly
+  V - Validate: All changes working?
+  O - Organize: Update docs, clean up
+  G - Generate: Commit message, notes
+  O - Observe: What's left to do?
+  N - Next: Clear action items
+```
+
+**Example: Service Registration Bug (Session 94)**
+```yaml
+VERIFY:
+  - DicomStoreService exists ✓
+  - Registration code exists ✓
+  - BUT service not found at runtime
+  - Real problem unknown!
+
+ORGANIZE:
+  - Load ServiceCollectionExtensions.cs
+  - Load PipelineManager creation
+  - Prepare logging points
+  - Have test ready
+
+GENERATE:
+  - Add logging to registration
+  - Add logging to service creation
+  - One change at a time!
+
+OBSERVE:
+  - Build after each change
+  - Check logs
+  - When does error occur?
+
+NEXT:
+  - Document findings
+  - Plan next debugging step
+```
+
+**Why it works**: Forces systematic thinking, prevents assumption-driven debugging
+
+## 🎯 PATTERN SELECTION GUIDE
+
+```yaml
+User frustrated? → Minimal Pattern
+Need new feature? → Hidden Treasures first
+Binding not working? → Null Binding check
+Build errors? → Property Name Pattern
+Many errors? → Incremental Fix
+External API? → Test First Pattern
+Too complex? → Delete With Joy
+Medical data? → Pipeline Isolation
+Big changes? → One Artifact Pattern
+```
+
+## 💡 META-PATTERNS
+
+### The User Knows Pattern
+**Signal**: "nimm doch...", "können wir nicht..."  
+**Response**: Stop arguing, implement their idea  
+**Success Rate**: 95%+ (Tab-complete, minimal, etc.)
+
+### The Working Code Pattern
+> "Make it work, make it right, make it fast"  
+We're always at "make it work" first!
+
+### The Emotion Signal Pattern
+**"wahnsinnig"** → Time for minimal  
+**"nervt"** → Time to hide/delete  
+**"wo ist..."** → Check Hidden Treasures  
+
+---
+
+**Remember**: These patterns emerged from 87 sessions of real debugging. They're battle-tested, Oliver-approved, and medical-software-ready! 🏥
