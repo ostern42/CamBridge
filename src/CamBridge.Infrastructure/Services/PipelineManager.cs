@@ -1,5 +1,5 @@
 // src/CamBridge.Infrastructure/Services/PipelineManager.cs
-// Version: 0.8.8
+// Version: 0.8.9
 // Last Modified: 2025-06-30
 // Description: Manages multiple processing pipelines with hierarchical logging
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
@@ -63,7 +63,10 @@ namespace CamBridge.Infrastructure.Services
             await _startupSemaphore.WaitAsync(cancellationToken);
             try
             {
-                _logger.LogInformation("Starting PipelineManager");
+                // FIXED: Add correlation ID for startup
+                var startupCorrelationId = $"PM{DateTime.Now:HHmmssff}-START";
+                _logger.LogInformation("[{CorrelationId}] [ServiceStartup] Starting PipelineManager", startupCorrelationId);
+
                 _shutdownTokenSource = new CancellationTokenSource();
 
                 // FIXED: Get current settings value
@@ -72,14 +75,15 @@ namespace CamBridge.Infrastructure.Services
                 // Validate settings
                 if (settings?.Pipelines == null || !settings.Pipelines.Any())
                 {
-                    _logger.LogWarning("No pipelines configured");
+                    _logger.LogWarning("[{CorrelationId}] [ServiceStartup] No pipelines configured", startupCorrelationId);
                     return;
                 }
 
                 // DEBUG: Log what we actually loaded
                 foreach (var pipeline in settings.Pipelines)
                 {
-                    _logger.LogDebug("Pipeline {Name}: Enabled={Enabled}, WatchPath={Watch}, ArchiveFolder={Archive}",
+                    _logger.LogDebug("[{CorrelationId}] [ServiceStartup] Pipeline {Name}: Enabled={Enabled}, WatchPath={Watch}, ArchiveFolder={Archive}",
+                        startupCorrelationId,
                         pipeline.Name,
                         pipeline.Enabled,
                         pipeline.WatchSettings?.Path ?? "(null)",
@@ -93,11 +97,14 @@ namespace CamBridge.Infrastructure.Services
 
                 await Task.WhenAll(startTasks);
 
-                _logger.LogInformation("Started {Count} pipelines", _pipelines.Count);
+                // FIXED: Add correlation ID
+                _logger.LogInformation("[{CorrelationId}] [ServiceStartup] Started {Count} pipelines",
+                    startupCorrelationId, _pipelines.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to start pipelines");
+                var errorCorrelationId = $"PM{DateTime.Now:HHmmssff}-ERROR";
+                _logger.LogError(ex, "[{CorrelationId}] [Error] Failed to start pipelines", errorCorrelationId);
                 await _notificationService.NotifyErrorAsync($"Failed to start pipelines: {ex.Message}", ex);
                 throw;
             }
@@ -112,7 +119,9 @@ namespace CamBridge.Infrastructure.Services
         /// </summary>
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Stopping PipelineManager");
+            // FIXED: Add correlation ID for shutdown
+            var shutdownCorrelationId = $"PM{DateTime.Now:HHmmssff}-STOP";
+            _logger.LogInformation("[{CorrelationId}] [ServiceShutdown] Stopping PipelineManager", shutdownCorrelationId);
 
             // Signal shutdown to all pipelines
             _shutdownTokenSource?.Cancel();
@@ -124,7 +133,8 @@ namespace CamBridge.Infrastructure.Services
             // Clear pipeline dictionary
             _pipelines.Clear();
 
-            _logger.LogInformation("PipelineManager stopped");
+            // FIXED: Add correlation ID
+            _logger.LogInformation("[{CorrelationId}] [ServiceShutdown] PipelineManager stopped", shutdownCorrelationId);
         }
 
         /// <summary>
@@ -176,8 +186,10 @@ namespace CamBridge.Infrastructure.Services
 
                     if (config.PacsConfiguration?.Enabled == true)
                     {
-                        logContext.LogInformation("PACS upload enabled for pipeline {Pipeline} -> {Host}:{Port}",
-                            config.Name, config.PacsConfiguration.Host, config.PacsConfiguration.Port);
+                        // FIXED: Add correlation ID for PACS message!
+                        var correlationId = $"PM{DateTime.Now:HHmmssff}-PACS-{config.Name}";
+                        _logger.LogInformation("[{CorrelationId}] [PipelineInitialization] PACS upload enabled for pipeline {Pipeline} -> {Host}:{Port}",
+                            correlationId, config.Name, config.PacsConfiguration.Host, config.PacsConfiguration.Port);
                     }
 
                     // Create output directory structure
@@ -271,7 +283,8 @@ namespace CamBridge.Infrastructure.Services
                         StartTime = DateTime.UtcNow,
                         LastActivityTime = DateTime.UtcNow,
                         IsRunning = true,
-                        PacsQueue = pacsQueue
+                        PacsQueue = pacsQueue,
+                        CorrelationId = pipelineCorrelationId  // Store for later use
                     };
 
                     // Register pipeline
@@ -291,7 +304,8 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to start pipeline {Name}", config.Name);
+                var errorCorrelationId = $"PE{DateTime.Now:HHmmssff}-{config.Name}";
+                _logger.LogError(ex, "[{CorrelationId}] [Error] Failed to start pipeline {Name}", errorCorrelationId, config.Name);
                 await _notificationService.NotifyErrorAsync($"Pipeline {config.Name} failed to start: {ex.Message}", ex);
                 throw;
             }
@@ -508,8 +522,9 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[{Pipeline}] Error handling file detection for {File}",
-                    pipelineName, filePath);
+                var errorCorrelationId = $"FD{DateTime.Now:HHmmssff}-{pipelineName}";
+                _logger.LogError(ex, "[{CorrelationId}] [Error] Error handling file detection for {File} in pipeline {Pipeline}",
+                    errorCorrelationId, filePath, pipelineName);
             }
         }
 
@@ -554,7 +569,10 @@ namespace CamBridge.Infrastructure.Services
         private void OnWatcherError(string pipelineName, ErrorEventArgs e)
         {
             var ex = e.GetException();
-            _logger.LogError(ex, "[{Pipeline}] File watcher error", pipelineName);
+            // FIXED: Add correlation ID
+            var errorCorrelationId = $"WE{DateTime.Now:HHmmssff}-{pipelineName}";
+            _logger.LogError(ex, "[{CorrelationId}] [WatcherError] File watcher error for pipeline {Pipeline}",
+                errorCorrelationId, pipelineName);
 
             // Try to recover by recreating the watcher
             Task.Run(async () =>
@@ -571,7 +589,10 @@ namespace CamBridge.Infrastructure.Services
         {
             try
             {
-                _logger.LogInformation("[{Pipeline}] Attempting to recover pipeline", pipelineName);
+                // FIXED: Add correlation ID
+                var recoveryCorrelationId = $"PR{DateTime.Now:HHmmssff}-{pipelineName}";
+                _logger.LogInformation("[{CorrelationId}] [PipelineRecovery] Attempting to recover pipeline {Pipeline}",
+                    recoveryCorrelationId, pipelineName);
 
                 if (_pipelines.TryGetValue(pipelineName, out var status))
                 {
@@ -585,13 +606,18 @@ namespace CamBridge.Infrastructure.Services
                     if (_shutdownTokenSource != null && !_shutdownTokenSource.Token.IsCancellationRequested)
                     {
                         await CreateAndStartPipelineAsync(status.Configuration, _shutdownTokenSource.Token);
-                        _logger.LogInformation("[{Pipeline}] Pipeline recovered successfully", pipelineName);
+                        // FIXED: Add correlation ID
+                        _logger.LogInformation("[{CorrelationId}] [PipelineRecovery] Pipeline {Pipeline} recovered successfully",
+                            recoveryCorrelationId, pipelineName);
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[{Pipeline}] Failed to recover pipeline", pipelineName);
+                // FIXED: Add correlation ID
+                var errorCorrelationId = $"PR{DateTime.Now:HHmmssff}-{pipelineName}-FAIL";
+                _logger.LogError(ex, "[{CorrelationId}] [Error] Failed to recover pipeline {Pipeline}",
+                    errorCorrelationId, pipelineName);
             }
         }
 
@@ -602,7 +628,10 @@ namespace CamBridge.Infrastructure.Services
         {
             try
             {
-                _logger.LogInformation("Stopping pipeline {Name}", status.Configuration.Name);
+                // FIXED: Use stored correlation ID or create new one
+                var pipelineCorrelationId = status.CorrelationId ?? $"PS{DateTime.Now:HHmmssff}-{status.Configuration.Name}";
+                _logger.LogInformation("[{CorrelationId}] [PipelineShutdown] Stopping pipeline {Name}",
+                    pipelineCorrelationId, status.Configuration.Name);
 
                 // Stop watching for new files
                 status.Watcher.EnableRaisingEvents = false;
@@ -620,8 +649,8 @@ namespace CamBridge.Infrastructure.Services
                     }
                     catch (TimeoutException)
                     {
-                        _logger.LogWarning("Pipeline {Name} processing task did not complete in time",
-                            status.Configuration.Name);
+                        _logger.LogWarning("[{CorrelationId}] [PipelineShutdown] Pipeline {Name} processing task did not complete in time",
+                            pipelineCorrelationId, status.Configuration.Name);
                     }
                 }
 
@@ -634,11 +663,15 @@ namespace CamBridge.Infrastructure.Services
                 status.IsRunning = false;
                 status.StopTime = DateTime.UtcNow;
 
-                _logger.LogInformation("Pipeline {Name} stopped", status.Configuration.Name);
+                // FIXED: Add correlation ID
+                _logger.LogInformation("[{CorrelationId}] [PipelineShutdown] Pipeline {Name} stopped",
+                    pipelineCorrelationId, status.Configuration.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error stopping pipeline {Name}", status.Configuration.Name);
+                var errorCorrelationId = $"PS{DateTime.Now:HHmmssff}-{status.Configuration.Name}-ERROR";
+                _logger.LogError(ex, "[{CorrelationId}] [Error] Error stopping pipeline {Name}",
+                    errorCorrelationId, status.Configuration.Name);
             }
         }
 
@@ -777,6 +810,7 @@ namespace CamBridge.Infrastructure.Services
         public DateTime LastActivityTime { get; set; }
         public bool IsRunning { get; set; }
         public PacsUploadQueue? PacsQueue { get; init; }
+        public string? CorrelationId { get; set; }  // FIXED: Add for tracking
     }
 
     /// <summary>

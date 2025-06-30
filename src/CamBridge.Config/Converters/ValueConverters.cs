@@ -3,10 +3,14 @@
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using CamBridge.Config.ViewModels;
 using CamBridge.Core;
 
 namespace CamBridge.Config.Converters
@@ -585,6 +589,75 @@ namespace CamBridge.Config.Converters
                 };
             }
             return "No transformation";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Combines stage entries and ungrouped entries into a flat list for compact tree view
+    /// </summary>
+    public class CombineStagesConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length != 2) return null;
+
+            var stages = values[0] as ObservableCollection<StageGroup>;
+            var ungrouped = values[1] as ObservableCollection<LogEntry>;
+
+            var combined = new List<LogEntry>();
+
+            // Add all entries from stages (flattened)
+            if (stages != null)
+            {
+                foreach (var stage in stages.OrderBy(s => s.StartTime))
+                {
+                    combined.AddRange(stage.Entries);
+                }
+            }
+
+            // Add ungrouped entries
+            if (ungrouped != null)
+            {
+                combined.AddRange(ungrouped);
+            }
+
+            // Sort by timestamp
+            return combined.OrderBy(e => e.Timestamp).ToList();
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts color string to SolidColorBrush with opacity
+    /// </summary>
+    public class ColorToBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string colorString)
+            {
+                try
+                {
+                    var color = (Color)ColorConverter.ConvertFromString(colorString);
+                    // Add slight transparency for background
+                    color.A = 30; // Very light background
+                    return new SolidColorBrush(color);
+                }
+                catch
+                {
+                    return Brushes.Transparent;
+                }
+            }
+            return Brushes.Transparent;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

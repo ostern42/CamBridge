@@ -104,6 +104,9 @@ namespace CamBridge.Config.ViewModels
             CopySelectedCommand = new RelayCommand(CopySelected);
             OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
             ClearFiltersCommand = new RelayCommand(ClearFilters);
+            CopyLineCommand = new RelayCommand<object>(CopyLine);
+            CopyGroupCommand = new RelayCommand<object>(CopyGroup);
+            ExpandGroupCommand = new RelayCommand<object>(ExpandGroup);
 
             // Initialize timer for auto-refresh
             _refreshTimer = new Timer(OnRefreshTimer, null, Timeout.Infinite, Timeout.Infinite);
@@ -239,6 +242,9 @@ namespace CamBridge.Config.ViewModels
         public IRelayCommand CopySelectedCommand { get; }
         public IRelayCommand OpenLogFolderCommand { get; }
         public IRelayCommand ClearFiltersCommand { get; }
+        public ICommand CopyLineCommand { get; }
+        public ICommand CopyGroupCommand { get; }
+        public ICommand ExpandGroupCommand { get; }
 
         #endregion
 
@@ -299,6 +305,52 @@ namespace CamBridge.Config.ViewModels
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during cleanup");
+            }
+        }
+
+        #endregion
+
+        #region Copy Command Implementations
+
+        private void CopyLine(object? parameter)
+        {
+            if (parameter is LogEntry entry)
+            {
+                var text = $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{entry.CorrelationId}] [{entry.Stage}] {entry.Message}";
+                Clipboard.SetText(text);
+            }
+        }
+
+        private void CopyGroup(object? parameter)
+        {
+            if (parameter is CorrelationGroup group)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine($"=== {group.CorrelationId} - {group.Pipeline} [{group.DurationText}] ===");
+
+                // Get all entries sorted
+                var allEntries = new List<LogEntry>();
+                foreach (var stage in group.Stages)
+                {
+                    allEntries.AddRange(stage.Entries);
+                }
+                allEntries.AddRange(group.UngroupedEntries);
+
+                foreach (var entry in allEntries.OrderBy(e => e.Timestamp))
+                {
+                    sb.AppendLine($"{entry.Timestamp:HH:mm:ss.fff} {entry.Stage}: {entry.Message}");
+                }
+
+                Clipboard.SetText(sb.ToString());
+            }
+        }
+
+        private void ExpandGroup(object? parameter)
+        {
+            if (parameter is CorrelationGroup group)
+            {
+                group.IsExpanded = true;
+                // In compact view we don't have nested stages anymore
             }
         }
 
@@ -1424,7 +1476,11 @@ namespace CamBridge.Config.ViewModels
             ProcessingStage.PacsUpload => "☁️",
             ProcessingStage.Complete => "✅",
             ProcessingStage.Error => "❌",
-            _ => "📍"
+            ProcessingStage.PipelineShutdown => "🔴",
+            ProcessingStage.PipelineRecovery => "🔧",
+            ProcessingStage.WatcherError => "👁️",
+            ProcessingStage.HealthCheck => "💓",
+            _ => "📌"
         };
 
         public string FormattedDuration => DurationMs.HasValue ? $"{DurationMs}ms" : "";
@@ -1494,7 +1550,7 @@ namespace CamBridge.Config.ViewModels
         public TimeSpan Duration => EndTime - StartTime;
         public string DurationText => $"{Duration.TotalMilliseconds:0}ms";
 
-        public string StageIcon => Entries.FirstOrDefault()?.StageIcon ?? "📍";
+        public string StageIcon => Entries.FirstOrDefault()?.StageIcon ?? "📌";
     }
 
     /// <summary>

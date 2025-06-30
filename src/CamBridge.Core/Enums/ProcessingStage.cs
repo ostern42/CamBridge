@@ -1,9 +1,8 @@
 // src/CamBridge.Core/Enums/ProcessingStage.cs
-// Version: 0.8.7
+// Version: 0.8.9
 // Created: Session 97 - Fixing hierarchical logging
-// Updated: Session 100 - Added Service-level stages
+// Updated: Session 105 - Added pipeline lifecycle stages
 // Purpose: Define processing stages for correlation tracking
-
 namespace CamBridge.Core.Enums
 {
     /// <summary>
@@ -31,6 +30,27 @@ namespace CamBridge.Core.Enums
         /// Service is shutting down
         /// </summary>
         ServiceShutdown,
+
+        // NEW in Session 105:
+        /// <summary>
+        /// Pipeline is being stopped
+        /// </summary>
+        PipelineShutdown,
+
+        /// <summary>
+        /// Pipeline recovery attempt after error
+        /// </summary>
+        PipelineRecovery,
+
+        /// <summary>
+        /// File watcher encountered an error
+        /// </summary>
+        WatcherError,
+
+        /// <summary>
+        /// Health check operation
+        /// </summary>
+        HealthCheck,
 
         // File processing stages
         /// <summary>

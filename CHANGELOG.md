@@ -6,6 +6,53 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# CHANGELOG - Session 107
+
+## Version 0.8.9 - 2025-06-30
+
+### 🐛 Critical Bug Fixes
+- **Fixed Service Restart Loop** - Service was crashing every 2-4 minutes due to empty output path
+  - Applied configuration workaround by setting `WatchSettings.OutputPath` explicitly
+  - Identified root cause: OutputPath saved as empty string ("") instead of null
+  - Service now runs stable without crashes
+  
+### 🔍 Discovered Issues (Documented for Fix)
+- **Empty String vs Null Bug** - `??` operator fails when OutputPath is "" instead of null
+- **GUI/Config Mismatch** - "Output Folder" field mapping needs investigation
+- **TaskCanceledException** logged as ERR instead of INFO on shutdown
+- **Debug logging** in production (WRN messages that should be removed)
+
+### ✨ Features (from Session 106)
+- **Log Viewer Tree View** - Compact tree view with correlation ID grouping
+- **Copy Commands** - Added copy line/group functionality to tree view
+- **New Converters** - Added CombineStagesConverter and ColorToBrushConverter
+
+### 📋 Log Improvements (from Session 106)
+- **Complete Correlation ID Coverage** - All logs now have correlation IDs
+- **PipelineManager** - Fixed missing correlation ID on line 189 (PACS message)
+- **Consistent Format** - `[{CorrelationId}] [{Stage}] {Message}` throughout
+
+### 🔧 Technical Details
+- Fixed copyright symbols (© instead of Â©) in multiple files
+- Log Verbosity properly passed through pipeline initialization
+- Output path resolution logic identified for refactoring
+
+### 📝 Known Issues
+- Output path resolution needs `IsNullOrWhiteSpace()` instead of `??` operator
+- GUI "Output Folder" field binding needs verification
+- Some logs still missing pipeline tags
+- Mojibake in console output (UTF-8 BOM issues)
+
+### 🚀 Next Steps
+- Fix empty string vs null handling in PipelineManager
+- Investigate GUI field bindings for Output Folder
+- Remove debug logging from production
+- Test Log Viewer tree view with real data
+
+---
+
+*Session 107 - Emergency fix for service stability!*
+
 ## [0.8.9] - 2025-06-30
 
 ### 🎯 Major Features

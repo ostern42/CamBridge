@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\LogViewerPage.xaml -->
 <!-- Version: 0.8.9 -->
-<!-- Description: Enhanced log viewer with Triple Filter UI -->
+<!-- Description: Enhanced log viewer with Triple Filter UI and Compact Tree View -->
 <!-- Copyright: © 2025 Claude's Improbably Reliable Software Solutions -->
 
 <Page x:Class="CamBridge.Config.Views.LogViewerPage"
@@ -19,6 +19,8 @@
     <Page.Resources>
         <converters:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
         <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+        <converters:CombineStagesConverter x:Key="CombineStagesConverter"/>
+        <converters:ColorToBrushConverter x:Key="ColorToBrushConverter"/>
 
         <!-- Style for expandable group headers -->
         <Style x:Key="ExpandableGroupHeader" TargetType="Border">
@@ -121,8 +123,6 @@
                     </StackPanel>
                 </DockPanel>
 
-                <!-- REPLACE the Pipeline Selection section in LogViewerPage.xaml (around line 107) -->
-
                 <!-- Pipeline Selection -->
                 <Grid Grid.Row="1" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
@@ -134,13 +134,13 @@
                     <TextBlock Grid.Column="0" Text="Pipelines:" VerticalAlignment="Center" Margin="0,0,8,0"/>
 
                     <ComboBox Grid.Column="1" ItemsSource="{Binding PipelineSelections}"
-              MaxDropDownHeight="300">
+                              MaxDropDownHeight="300">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Padding="4,2" MinHeight="24">
                                     <CheckBox IsChecked="{Binding IsSelected}" 
-                              Content="{Binding Name}"
-                              VerticalAlignment="Center"/>
+                                              Content="{Binding Name}"
+                                              VerticalAlignment="Center"/>
                                 </Border>
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
@@ -168,9 +168,59 @@
                         </ComboBox.Text>
                     </ComboBox>
 
-                    <!-- Rest of the buttons remain the same -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="16,0,0,0">
-                        <!-- ... existing buttons ... -->
+                        <!-- Tree View Controls -->
+                        <Button Command="{Binding ExpandAllCommand}" 
+                                ToolTip="Expand all groups" 
+                                Margin="0,0,4,0" 
+                                Padding="6,4"
+                                Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="⊕" FontSize="14"/>
+                        </Button>
+
+                        <Button Command="{Binding CollapseAllCommand}" 
+                                ToolTip="Collapse all groups" 
+                                Margin="0,0,8,0" 
+                                Padding="6,4"
+                                Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="⊖" FontSize="14"/>
+                        </Button>
+
+                        <!-- Log Actions -->
+                        <Button Command="{Binding RefreshCommand}" 
+                                ToolTip="Refresh logs" 
+                                Margin="0,0,4,0" 
+                                Padding="6,4">
+                            <TextBlock Text="🔄" FontSize="14"/>
+                        </Button>
+
+                        <Button Command="{Binding ClearLogCommand}" 
+                                ToolTip="Clear all logs" 
+                                Margin="0,0,4,0" 
+                                Padding="6,4">
+                            <TextBlock Text="🗑️" FontSize="14"/>
+                        </Button>
+
+                        <Button Command="{Binding ExportLogCommand}" 
+                                ToolTip="Export logs to file" 
+                                Margin="0,0,4,0" 
+                                Padding="6,4">
+                            <TextBlock Text="💾" FontSize="14"/>
+                        </Button>
+
+                        <Button Command="{Binding OpenLogFolderCommand}" 
+                                ToolTip="Open log folder" 
+                                Margin="0,0,4,0" 
+                                Padding="6,4">
+                            <TextBlock Text="📁" FontSize="14"/>
+                        </Button>
+
+                        <Button Command="{Binding CopySelectedCommand}" 
+                                ToolTip="Copy to clipboard" 
+                                Margin="0,0,4,0" 
+                                Padding="6,4">
+                            <TextBlock Text="📋" FontSize="14"/>
+                        </Button>
                     </StackPanel>
                 </Grid>
 
@@ -287,162 +337,157 @@
 
         <!-- Main content area -->
         <Grid>
-            <!-- Tree View (when enabled) -->
-            <ScrollViewer Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}"
-                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                          Padding="8">
-                <ScrollViewer.ContextMenu>
-                    <StaticResource ResourceKey="TreeContextMenu"/>
-                </ScrollViewer.ContextMenu>
+            <!-- Compact Tree View (when enabled) -->
+            <ScrollViewer x:Name="TreeScrollViewer"
+                          Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}"
+                          VerticalScrollBarVisibility="Auto" 
+                          HorizontalScrollBarVisibility="Auto">
 
-                <!-- Show message when no groups available -->
-                <Grid>
-                    <ItemsControl ItemsSource="{Binding CorrelationGroups}" VirtualizingPanel.IsVirtualizing="True">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type viewmodels:CorrelationGroup}">
-                                <Border Margin="0,0,0,8" BorderBrush="#E0E0E0" 
-                                        BorderThickness="1" CornerRadius="4">
-                                    <!-- Correlation Group Header -->
-                                    <StackPanel>
-                                        <Border Style="{StaticResource ExpandableGroupHeader}"
-                                                MouseLeftButtonDown="CorrelationHeader_Click"
-                                                Tag="{Binding}">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
+                <!-- Compact tree view with performance optimizations -->
+                <TreeView x:Name="LogTreeView"
+                          ItemsSource="{Binding CorrelationGroups}"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          ScrollViewer.CanContentScroll="True"
+                          Background="Transparent"
+                          BorderThickness="0">
 
-                                                <TextBlock Grid.Column="0" FontFamily="Consolas">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsExpanded}" Value="False">
-                                                                    <Setter Property="Text" Value="▶"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsExpanded}" Value="True">
-                                                                    <Setter Property="Text" Value="▼"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
+                    <!-- Compact item container style -->
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="Padding" Value="2,1"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="FontSize" Value="11"/>
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
 
-                                                <TextBlock Grid.Column="1" Text="{Binding StatusIcon}" 
-                                                           FontSize="16" Margin="8,0"/>
+                            <!-- Context Menu for Copy -->
+                            <Setter Property="ContextMenu">
+                                <Setter.Value>
+                                    <ContextMenu>
+                                        <MenuItem Header="Copy Line" 
+                                                  Command="{Binding DataContext.CopyLineCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
+                                                  CommandParameter="{Binding}"/>
+                                        <MenuItem Header="Copy Group" 
+                                                  Command="{Binding DataContext.CopyGroupCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
+                                                  CommandParameter="{Binding}"/>
+                                        <Separator/>
+                                        <MenuItem Header="Expand All in Group" 
+                                                  Command="{Binding DataContext.ExpandGroupCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
+                                                  CommandParameter="{Binding}"/>
+                                    </ContextMenu>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </TreeView.ItemContainerStyle>
 
-                                                <TextBlock Grid.Column="2" FontWeight="Bold">
-                                                    <TextBlock.Text>
-                                                        <MultiBinding StringFormat="{}{0} - {1}">
-                                                            <Binding Path="CorrelationId"/>
-                                                            <Binding Path="Pipeline"/>
-                                                        </MultiBinding>
-                                                    </TextBlock.Text>
-                                                </TextBlock>
+                    <!-- Template for correlation groups -->
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate DataType="{x:Type viewmodels:CorrelationGroup}">
+                            <!-- Bind to combined entries collection -->
+                            <HierarchicalDataTemplate.ItemsSource>
+                                <MultiBinding Converter="{StaticResource CombineStagesConverter}">
+                                    <Binding Path="Stages"/>
+                                    <Binding Path="UngroupedEntries"/>
+                                </MultiBinding>
+                            </HierarchicalDataTemplate.ItemsSource>
 
-                                                <TextBlock Grid.Column="3" Text="{Binding StartTime, StringFormat='HH:mm:ss.fff'}" 
-                                                           FontFamily="Consolas" Opacity="0.7" Margin="8,0"/>
+                            <!-- Compact group header -->
+                            <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" 
+                                    Padding="4,2" Background="{Binding StatusColor, Converter={StaticResource ColorToBrushConverter}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                                                <TextBlock Grid.Column="4" Text="{Binding DurationText}" 
-                                                           FontFamily="Consolas" Foreground="{Binding StatusColor}" 
-                                                           FontWeight="Bold" Margin="8,0"/>
+                                    <!-- Expand/Collapse icon -->
+                                    <TextBlock Grid.Column="0" FontFamily="Consolas" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                                                        <Setter Property="Text" Value="▶"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                        <Setter Property="Text" Value="▼"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
 
-                                                <TextBlock Grid.Column="5" Text="{Binding TotalEntries, StringFormat='({0} entries)'}" 
-                                                           Opacity="0.7" Margin="8,0"/>
-                                            </Grid>
-                                        </Border>
+                                    <!-- Status icon -->
+                                    <TextBlock Grid.Column="1" Text="{Binding StatusIcon}" 
+                                               FontSize="12" Margin="4,0" VerticalAlignment="Center"/>
 
-                                        <!-- Stages (when expanded) -->
-                                        <ItemsControl ItemsSource="{Binding Stages}" 
-                                                      Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type viewmodels:StageGroup}">
-                                                    <StackPanel>
-                                                        <!-- Stage Header -->
-                                                        <Border Style="{StaticResource ExpandableGroupHeader}"
-                                                                Margin="16,0,0,0"
-                                                                MouseLeftButtonDown="StageHeader_Click"
-                                                                Tag="{Binding}">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                </Grid.ColumnDefinitions>
+                                    <!-- Correlation info -->
+                                    <TextBlock Grid.Column="2" VerticalAlignment="Center">
+                                        <Run Text="{Binding CorrelationId}" FontWeight="SemiBold"/>
+                                        <Run Text=" - "/>
+                                        <Run Text="{Binding Pipeline}" Foreground="#666"/>
+                                    </TextBlock>
 
-                                                                <TextBlock Grid.Column="0" FontFamily="Consolas" Width="16">
-                                                                    <TextBlock.Style>
-                                                                        <Style TargetType="TextBlock">
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding IsExpanded}" Value="False">
-                                                                                    <Setter Property="Text" Value="▶"/>
-                                                                                </DataTrigger>
-                                                                                <DataTrigger Binding="{Binding IsExpanded}" Value="True">
-                                                                                    <Setter Property="Text" Value="▼"/>
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </TextBlock.Style>
-                                                                </TextBlock>
+                                    <!-- Timing -->
+                                    <TextBlock Grid.Column="3" Text="{Binding StartTime, StringFormat='HH:mm:ss'}" 
+                                               FontFamily="Consolas" FontSize="10" 
+                                               Foreground="#666" Margin="8,0" VerticalAlignment="Center"/>
 
-                                                                <TextBlock Grid.Column="1" Text="{Binding StageIcon}" 
-                                                                           FontSize="14" Margin="4,0"/>
+                                    <!-- Duration -->
+                                    <TextBlock Grid.Column="4" Text="{Binding DurationText}" 
+                                               FontFamily="Consolas" FontSize="10" FontWeight="Bold"
+                                               Foreground="{Binding StatusColor}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
 
-                                                                <TextBlock Grid.Column="2" Text="{Binding Stage}" 
-                                                                           FontWeight="SemiBold"/>
+                    <!-- Resources for inline stage display -->
+                    <TreeView.Resources>
+                        <!-- Template for individual log entries (flat, no more nesting) -->
+                        <DataTemplate DataType="{x:Type viewmodels:LogEntry}">
+                            <Border Padding="16,1,4,1" BorderThickness="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="65"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="50"/>
+                                    </Grid.ColumnDefinitions>
 
-                                                                <TextBlock Grid.Column="3" Text="{Binding DurationText}" 
-                                                                           FontFamily="Consolas" FontSize="11" 
-                                                                           Opacity="0.7" Margin="8,0"/>
+                                    <!-- Stage icon -->
+                                    <TextBlock Grid.Column="0" Text="{Binding StageIcon}" 
+                                               FontSize="11" VerticalAlignment="Center"/>
 
-                                                                <TextBlock Grid.Column="4" Text="{Binding Entries.Count, StringFormat='({0})'}" 
-                                                                           FontSize="11" Opacity="0.7"/>
-                                                            </Grid>
-                                                        </Border>
+                                    <!-- Timestamp -->
+                                    <TextBlock Grid.Column="1" Text="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" 
+                                               FontFamily="Consolas" FontSize="10" 
+                                               Foreground="#666" VerticalAlignment="Center"/>
 
-                                                        <!-- Stage Entries (when expanded) -->
-                                                        <ItemsControl ItemsSource="{Binding Entries}" 
-                                                                      Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}"
-                                                                      Margin="32,0,0,0"
-                                                                      ItemTemplate="{StaticResource LogEntryTemplate}"/>
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                    <!-- Stage name (compact) -->
+                                    <TextBlock Grid.Column="2" Text="{Binding Stage}" 
+                                               FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{Binding LevelColor}" VerticalAlignment="Center"/>
 
-                                        <!-- Ungrouped Entries -->
-                                        <ItemsControl ItemsSource="{Binding UngroupedEntries}" 
-                                                      Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}"
-                                                      Margin="16,0,0,0"
-                                                      ItemTemplate="{StaticResource LogEntryTemplate}"/>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                    <!-- Message -->
+                                    <TextBlock Grid.Column="3" Text="{Binding Message}" 
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Message}"
+                                               Margin="4,0" VerticalAlignment="Center"/>
 
-                    <!-- Empty state message -->
-                    <TextBlock Text="No correlation groups to display. Process some files to see hierarchical logs!" 
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               FontSize="14" Opacity="0.5" Margin="20">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CorrelationGroups.Count}" Value="0">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </Grid>
+                                    <!-- Duration if available -->
+                                    <TextBlock Grid.Column="4" Text="{Binding FormattedDuration}" 
+                                               FontFamily="Consolas" FontSize="9"
+                                               Foreground="#999" HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </TreeView.Resources>
+                </TreeView>
             </ScrollViewer>
 
             <!-- Flat View (when tree view disabled) -->
