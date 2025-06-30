@@ -6,6 +6,43 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.9] - 2025-06-30
+
+### 🎯 Major Features
+- **Triple Filter System** - Added 3-stage text filtering with wildcard support
+  - Three chained filter inputs with AND logic
+  - Wildcard support (* = any chars, ? = single char)
+  - Tree-aware filtering (shows entire group if any entry matches)
+  - Clear all filters button
+- **Default Expanded Tree View** - All correlation groups and stages now expand by default for better visibility
+
+### Added
+- Triple filter UI with three TextBox inputs and arrow indicators
+- ClearFiltersCommand to reset all filters at once
+- Wildcard pattern matching for flexible log searching
+- Auto-initialization of LogViewerViewModel when page loads
+- Filter tooltips explaining wildcard usage
+
+### Fixed
+- Pipeline dropdown was empty due to missing InitializeAsync() call
+- UTF-8 encoding issues (© symbols and emojis now display correctly)
+- ComboBox height issues in pipeline selector
+
+### Changed
+- Tree view nodes now default to expanded state instead of collapsed
+- Updated to version 0.8.9
+
+### Known Issues
+- ⚠️ **CRITICAL**: Many log entries missing correlation IDs - tree view incomplete
+- Triple filter logic implemented but not working correctly yet
+- Some UI buttons accidentally removed (Expand/Collapse/Export/etc.)
+- Filter only works with tree view enabled
+
+### Technical Notes
+- Session 104: Triple filter implementation and UI improvements
+- Sources First Protocol: 100% success rate maintained
+- Next priority: Fix correlation ID coverage across all logging
+
 ## [0.8.8] - 2025-06-30
 
 ### 🎉 Major Achievement

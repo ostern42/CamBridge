@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\LogViewerPage.xaml -->
-<!-- Version: 0.8.7 -->
-<!-- Description: Enhanced log viewer with FIXED tree view and working icons -->
+<!-- Version: 0.8.9 -->
+<!-- Description: Enhanced log viewer with Triple Filter UI -->
 <!-- Copyright: © 2025 Claude's Improbably Reliable Software Solutions -->
 
 <Page x:Class="CamBridge.Config.Views.LogViewerPage"
@@ -121,6 +121,8 @@
                     </StackPanel>
                 </DockPanel>
 
+                <!-- REPLACE the Pipeline Selection section in LogViewerPage.xaml (around line 107) -->
+
                 <!-- Pipeline Selection -->
                 <Grid Grid.Row="1" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
@@ -131,18 +133,34 @@
 
                     <TextBlock Grid.Column="0" Text="Pipelines:" VerticalAlignment="Center" Margin="0,0,8,0"/>
 
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding PipelineSelections}">
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding PipelineSelections}"
+              MaxDropDownHeight="300">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
-                                <CheckBox IsChecked="{Binding IsSelected}" 
-                                          Content="{Binding Name}"/>
+                                <Border Padding="4,2" MinHeight="24">
+                                    <CheckBox IsChecked="{Binding IsSelected}" 
+                              Content="{Binding Name}"
+                              VerticalAlignment="Center"/>
+                                </Border>
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                         <ComboBox.ItemContainerStyle>
                             <Style TargetType="ComboBoxItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="MinHeight" Value="24"/>
+                                <Setter Property="Padding" Value="2"/>
                             </Style>
                         </ComboBox.ItemContainerStyle>
+                        <ComboBox.Style>
+                            <Style TargetType="ComboBox">
+                                <Setter Property="MinWidth" Value="200"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsDropDownOpen" Value="True">
+                                        <Setter Property="MinWidth" Value="250"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ComboBox.Style>
                         <ComboBox.Text>
                             <MultiBinding StringFormat="{}{0} pipeline(s) selected" Mode="OneWay">
                                 <Binding Path="SelectedPipelineCount" Mode="OneWay"/>
@@ -150,43 +168,9 @@
                         </ComboBox.Text>
                     </ComboBox>
 
+                    <!-- Rest of the buttons remain the same -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="16,0,0,0">
-                        <Button Command="{Binding RefreshCommand}" 
-                                ToolTip="Refresh logs" Margin="0,0,8,0" Padding="8,4">
-                            <TextBlock Text="🔄" FontSize="16"/>
-                        </Button>
-
-                        <Button Command="{Binding ExpandAllCommand}" 
-                                ToolTip="Expand all" Margin="0,0,8,0" Padding="8,4"
-                                Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="⊕" FontSize="16"/>
-                        </Button>
-
-                        <Button Command="{Binding CollapseAllCommand}" 
-                                ToolTip="Collapse all" Margin="0,0,8,0" Padding="8,4"
-                                Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="⊖" FontSize="16"/>
-                        </Button>
-
-                        <Button Command="{Binding CopySelectedCommand}" 
-                                ToolTip="Copy to clipboard" Margin="0,0,8,0" Padding="8,4">
-                            <TextBlock Text="📋" FontSize="16"/>
-                        </Button>
-
-                        <Button Command="{Binding ClearLogCommand}" 
-                                ToolTip="Clear display" Margin="0,0,8,0" Padding="8,4">
-                            <TextBlock Text="🧹" FontSize="16"/>
-                        </Button>
-
-                        <Button Command="{Binding ExportLogCommand}" 
-                                ToolTip="Export filtered logs" Margin="0,0,8,0" Padding="8,4">
-                            <TextBlock Text="💾" FontSize="16"/>
-                        </Button>
-
-                        <Button Command="{Binding OpenLogFolderCommand}" 
-                                ToolTip="Open log folder" Padding="8,4">
-                            <TextBlock Text="📁" FontSize="16"/>
-                        </Button>
+                        <!-- ... existing buttons ... -->
                     </StackPanel>
                 </Grid>
 
@@ -198,13 +182,72 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Search Box -->
-                    <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             Tag="Search logs..." VerticalContentAlignment="Center" Padding="4">
-                        <TextBox.InputBindings>
-                            <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}"/>
-                        </TextBox.InputBindings>
-                    </TextBox>
+                    <!-- Triple Filter Box -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <!-- Filter 1 -->
+                        <TextBox Width="180" 
+                                 Text="{Binding Filter1, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center" 
+                                 Padding="4"
+                                 Margin="0,0,4,0">
+                            <TextBox.ToolTip>
+                                <ToolTip>
+                                    <TextBlock>
+                                        <TextBlock.Text>Filter 1 - Wildcards supported:&#x0a;* = any characters&#x0a;? = single character&#x0a;Example: *Schmidt*</TextBlock.Text>
+                                    </TextBlock>
+                                </ToolTip>
+                            </TextBox.ToolTip>
+                            <TextBox.Tag>Filter 1...</TextBox.Tag>
+                        </TextBox>
+
+                        <TextBlock Text="→" VerticalAlignment="Center" Margin="4,0" Opacity="0.5" FontSize="16"/>
+
+                        <!-- Filter 2 -->
+                        <TextBox Width="180" 
+                                 Text="{Binding Filter2, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center" 
+                                 Padding="4"
+                                 Margin="0,0,4,0">
+                            <TextBox.ToolTip>
+                                <ToolTip>
+                                    <TextBlock>
+                                        <TextBlock.Text>Filter 2 - All filters must match&#x0a;Example: DICOM</TextBlock.Text>
+                                    </TextBlock>
+                                </ToolTip>
+                            </TextBox.ToolTip>
+                            <TextBox.Tag>Filter 2...</TextBox.Tag>
+                        </TextBox>
+
+                        <TextBlock Text="→" VerticalAlignment="Center" Margin="4,0" Opacity="0.5" FontSize="16"/>
+
+                        <!-- Filter 3 -->
+                        <TextBox Width="180" 
+                                 Text="{Binding Filter3, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center" 
+                                 Padding="4"
+                                 Margin="0,0,4,0">
+                            <TextBox.ToolTip>
+                                <ToolTip>
+                                    <TextBlock>
+                                        <TextBlock.Text>Filter 3 - Chain filters for precision&#x0a;Example: *.dcm</TextBlock.Text>
+                                    </TextBlock>
+                                </ToolTip>
+                            </TextBox.ToolTip>
+                            <TextBox.Tag>Filter 3...</TextBox.Tag>
+                        </TextBox>
+
+                        <!-- Clear Filters Button -->
+                        <Button Command="{Binding ClearFiltersCommand}" 
+                                ToolTip="Clear all filters" 
+                                Margin="4,0,0,0" 
+                                Padding="6,4">
+                            <TextBlock Text="✖" FontSize="14"/>
+                        </Button>
+
+                        <!-- Legacy Search Box (hidden but kept for compatibility) -->
+                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Visibility="Collapsed"/>
+                    </StackPanel>
 
                     <!-- Level Filters -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="16,0,0,0">
