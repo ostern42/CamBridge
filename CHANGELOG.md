@@ -6,7 +6,70 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# CHANGELOG Entry
+## [0.8.8] - 2025-06-30
+
+### 🎉 Major Achievement
+- **Hierarchical Tree View Logging System COMPLETE!** After 8 sessions (96-103), the tree view finally works!
+- Correlation IDs (S→P→F format) track files through all processing stages
+- Service starts cleanly and processes files with proper logging hierarchy
+
+### Fixed
+- 🐛 **Fixed duplicate pipeline registration** (Session 103 - THE BIG ONE!)
+  - Root cause: `services.Configure<CamBridgeSettingsV2>` called twice
+  - Program.cs AND ServiceCollectionExtensions.cs both registered settings
+  - .NET was MERGING the pipeline lists instead of replacing!
+  - Fix: Removed duplicate registration - solved 3 sessions of mystery with 1 line!
+- 🐛 Fixed DI container registration issue in PipelineManager
+  - Changed constructor to use `IOptionsMonitor<CamBridgeSettingsV2>`
+  - Added registration for both interface and concrete DicomStoreService
+- 🐛 Fixed log message template duplication in LogContext
+  - Stage name was appearing twice in formatted output
+- 🐛 Fixed NullReferenceException in ProcessingQueue disposal
+  - Added proper null checks before accessing collections
+- 🐛 Partial UTF-8 encoding fixes (Worker.cs, ServiceCollectionExtensions.cs)
+  - Replaced © symbols showing as Â© in some files
+
+### Added
+- Tree view now shows complete S→P→F hierarchy with timing
+- Stage icons for all ProcessingStage values
+- Proper correlation ID formatting in logs
+
+### Technical
+- Updated PipelineManager to follow .NET Options Pattern correctly
+- All settings access now uses `_settingsMonitor.CurrentValue`
+- LogVerbosity is now an enum (breaking change from string)
+- Maintains configuration reload capability through IOptionsMonitor
+
+### Session Notes
+- Session 102: Emergency DI fixes after startup failure
+- Session 103: The great duplicate pipeline hunt - solved!
+- Sources First Protocol: 100% success rate achieved! 🎯
+- From "won't compile" to "production ready" in 2 sessions
+
+### Known Issues
+- Some UTF-8 characters still display incorrectly
+- Triple text filter not yet implemented  
+- Copy/Export functionality pending
+- Tree nodes should default to expanded state
+
+## [0.8.7] - 2025-06-30
+
+### Added
+- ✨ Hierarchical logging system with correlation IDs
+- 🌳 Tree view for log visualization  
+- 📊 ProcessingStage tracking through pipeline
+- ⏱️ Automatic timing for each processing stage
+- 🔍 Triple text filter chain for logs (planned)
+
+### Fixed
+- Fixed duplicate enum definitions (LogVerbosity, ProcessingStage)
+- Fixed StatusController API inconsistencies
+- Fixed Worker.cs property names
+
+### Technical
+- Implemented LogContext for correlation tracking
+- Added BeginStage pattern for automatic timing
+- Centralized enums in CamBridge.Core.Enums namespace
 
 ## [0.8.6] - 2025-06-29 - Making Logs Great Again! 🪵✨
 

@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/ServiceCollectionExtensions.cs
-// Version: 0.8.0
-// Description: DI container configuration with DicomStoreService
+// Version: 0.8.8
+// Description: DI container configuration with FIXED duplicate registration
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -25,8 +25,11 @@ namespace CamBridge.Infrastructure
         /// </summary>
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
-            // Add configuration
-            services.Configure<CamBridgeSettingsV2>(configuration.GetSection("CamBridge"));
+            // FIXED: REMOVED duplicate Configure<CamBridgeSettingsV2>!
+            // This is already done in Program.cs with validation logic
+            // services.Configure<CamBridgeSettingsV2>(configuration.GetSection("CamBridge"));
+
+            // Add other configuration sections (these are fine)
             services.Configure<ProcessingOptions>(configuration.GetSection("CamBridge:DefaultProcessingOptions"));
 
             // Add notification settings (global)
@@ -58,8 +61,11 @@ namespace CamBridge.Infrastructure
             // Register notification service (v0.7.18: Direct class, no interface!)
             services.AddSingleton<NotificationService>();
 
+            // FIXED: Register MappingConfigurationLoader as both interface AND concrete type
+            services.AddSingleton<MappingConfigurationLoader>();
+            services.AddSingleton<IMappingConfiguration>(sp => sp.GetRequiredService<MappingConfigurationLoader>());
+
             // Register remaining interfaces (only 2 left!)
-            services.AddSingleton<IMappingConfiguration, MappingConfigurationLoader>();
             services.AddSingleton<IDicomTagMapper, DicomTagMapper>();
 
             return services;

@@ -1,20 +1,20 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.8.6 -->
-<!-- Modified: 2025-06-29 -->
-<!-- Purpose: Session 96 - Making Logs Great Again! Hierarchical logging with correlation IDs -->
+<!-- Version: 0.8.9 -->
+<!-- Modified: 2025-06-30 -->
+<!-- Purpose: Session 104 - Pre-Filter Implementation Checkpoint -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.8.6</VersionPrefix>
+		<VersionPrefix>0.8.9</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
 		<AssemblyVersion>0.8.0.0</AssemblyVersion>
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.8.6.0</FileVersion>
+		<FileVersion>0.8.9.0</FileVersion>
 		<!-- Informational version shown in logs and UI -->
-		<InformationalVersion>0.8.6 - Making Logs Great Again!</InformationalVersion>
+		<InformationalVersion>0.8.9 - Triple Filter Ready!</InformationalVersion>
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.8.6</PackageVersion>
+		<PackageVersion>0.8.9</PackageVersion>
 		<!-- Product information -->
 		<Product>CamBridge</Product>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>

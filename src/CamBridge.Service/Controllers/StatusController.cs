@@ -1,187 +1,145 @@
-﻿// src\CamBridge.Service\Controllers\StatusController.cs
-// Version: 0.7.28
-// Description: Service status API controller with static methods for minimal API
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// src/CamBridge.Service/Controllers/StatusController.cs
+// Version: 0.8.7
+// Description: REST API endpoints for service status and control
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using CamBridge.Core;
-using CamBridge.Infrastructure.Services;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System.Reflection;
-using CamBridge.Core.Infrastructure;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using CamBridge.Infrastructure.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CamBridge.Service.Controllers
 {
     /// <summary>
-    /// Service status controller with static methods for minimal API endpoints
+    /// Handles HTTP requests for service status and control
     /// </summary>
     public static class StatusController
     {
-        private static DateTime _startTime = DateTime.UtcNow;
-
         /// <summary>
-        /// Get service status
+        /// Gets the current service status
         /// </summary>
         public static async Task GetStatus(HttpContext context)
         {
             var pipelineManager = context.RequestServices.GetRequiredService<PipelineManager>();
             var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-
             try
             {
-                var pipelineStatuses = pipelineManager.GetPipelineStatuses();
+                // FIXED: Use GetPipelineStatus() instead of GetPipelineStatuses()
+                var pipelineInfos = pipelineManager.GetPipelineStatus();
 
                 var status = new
                 {
                     service = new
                     {
-                        name = ServiceInfo.ServiceName,
-                        displayName = ServiceInfo.DisplayName,
+                        name = ServiceInfo.ServiceName,  // FIXED: ServiceName not Name
                         version = ServiceInfo.Version,
-                        status = "Online",
-                        timestamp = DateTime.UtcNow,
-                        startTime = _startTime,
-                        uptime = GetUptime(),
-                        processId = Environment.ProcessId
+                        status = "running",
+                        startTime = Program.ServiceStartTime,
+                        uptime = DateTime.UtcNow - Program.ServiceStartTime
                     },
-                    environment = new
+                    // FIXED: Correct property mappings
+                    pipelines = pipelineInfos.Select(kvp => new
                     {
-                        machineName = Environment.MachineName,
-                        osVersion = Environment.OSVersion.ToString(),
-                        processorCount = Environment.ProcessorCount,
-                        workingSet = Environment.WorkingSet / (1024 * 1024),
-                        dotNetVersion = Environment.Version.ToString()
-                    },
-                    pipelines = pipelineStatuses.Select(p => new
-                    {
-                        id = p.Id,
-                        name = p.Name,
-                        isActive = p.IsActive,
-                        queueDepth = p.QueueDepth,
-                        processedCount = p.ProcessedCount,
-                        errorCount = p.ErrorCount,
-                        lastProcessed = p.LastProcessed,
-                        watchPath = p.WatchPath,
-                        outputPath = p.OutputPath
+                        id = kvp.Key,                              // Key as ID
+                        name = kvp.Value.Name,
+                        isActive = kvp.Value.IsRunning,            // FIXED: IsRunning not IsActive
+                        queueDepth = kvp.Value.QueueLength,        // FIXED: QueueLength not QueueDepth
+                        processedCount = kvp.Value.ProcessedCount,
+                        errorCount = kvp.Value.ErrorCount,
+                        lastProcessed = kvp.Value.LastActivityTime, // Now available!
+                        watchPath = kvp.Value.WatchFolder,          // FIXED: WatchFolder not WatchPath
+                        outputPath = kvp.Value.OutputFolder         // Now available!
                     }).ToList(),
                     statistics = new
                     {
-                        totalPipelines = pipelineStatuses.Count,
-                        activePipelines = pipelineStatuses.Count(p => p.IsActive),
-                        totalProcessed = pipelineStatuses.Sum(p => p.ProcessedCount),
-                        totalErrors = pipelineStatuses.Sum(p => p.ErrorCount),
-                        totalQueued = pipelineStatuses.Sum(p => p.QueueDepth)
-                    },
-                    configuration = new
-                    {
-                        path = ConfigurationPaths.GetPrimaryConfigPath(),
-                        logsDirectory = ConfigurationPaths.GetLogsDirectory()
+                        totalPipelines = pipelineInfos.Count,
+                        activePipelines = pipelineInfos.Count(p => p.Value.IsRunning),
+                        totalProcessed = pipelineInfos.Sum(p => p.Value.ProcessedCount),
+                        totalErrors = pipelineInfos.Sum(p => p.Value.ErrorCount),
+                        totalQueued = pipelineInfos.Sum(p => p.Value.QueueLength)
                     }
                 };
 
-                context.Response.ContentType = "application/json";
                 await context.Response.WriteAsJsonAsync(status);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error getting service status");
                 context.Response.StatusCode = 500;
-                await context.Response.WriteAsJsonAsync(new { error = "Failed to retrieve service status" });
+                await context.Response.WriteAsJsonAsync(new { error = "Internal server error" });
             }
         }
 
         /// <summary>
-        /// Get just the version string
-        /// </summary>
-        public static async Task GetVersion(HttpContext context)
-        {
-            context.Response.ContentType = "text/plain";
-            await context.Response.WriteAsync(ServiceInfo.Version);
-        }
-
-        /// <summary>
-        /// Get health status (minimal endpoint for monitoring)
+        /// Gets the service health status
         /// </summary>
         public static async Task GetHealth(HttpContext context)
         {
             var pipelineManager = context.RequestServices.GetRequiredService<PipelineManager>();
-
-            var pipelineStatuses = pipelineManager.GetPipelineStatuses();
+            // FIXED: Use GetPipelineStatus()
+            var pipelineInfos = pipelineManager.GetPipelineStatus();
 
             var health = new
             {
                 status = "Healthy",
                 version = ServiceInfo.Version,
-                timestamp = DateTime.UtcNow,
-                activePipelines = pipelineStatuses.Count(p => p.IsActive),
-                totalPipelines = pipelineStatuses.Count
+                pipelines = pipelineInfos.Count,
+                activePipelines = pipelineInfos.Count(p => p.Value.IsRunning),
+                timestamp = DateTime.UtcNow
             };
 
-            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = 200;
             await context.Response.WriteAsJsonAsync(health);
         }
 
         /// <summary>
-        /// Get pipeline configurations
+        /// Gets the list of configured pipelines
         /// </summary>
         public static async Task GetPipelines(HttpContext context)
-        {
-            var settings = context.RequestServices.GetRequiredService<IOptionsSnapshot<CamBridgeSettingsV2>>();
-            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-
-            try
-            {
-                var pipelines = settings.Value.Pipelines.Select(p => new
-                {
-                    id = p.Id,
-                    name = p.Name,
-                    description = p.Description,
-                    enabled = p.Enabled,
-                    watchPath = p.WatchSettings.Path,
-                    watchPattern = p.WatchSettings.FilePattern,
-                    includeSubdirectories = p.WatchSettings.IncludeSubdirectories,
-                    outputPath = p.WatchSettings.OutputPath,
-                    processingOptions = new
-                    {
-                        outputOrganization = p.ProcessingOptions.OutputOrganization.ToString(),
-                        successAction = p.ProcessingOptions.SuccessAction.ToString(),
-                        failureAction = p.ProcessingOptions.FailureAction.ToString(),
-                        maxConcurrentProcessing = p.ProcessingOptions.MaxConcurrentProcessing,
-                        errorFolder = p.ProcessingOptions.ErrorFolder
-                    }
-                }).ToList();
-
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(new
-                {
-                    count = pipelines.Count,
-                    pipelines = pipelines
-                });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error getting pipeline configurations");
-                context.Response.StatusCode = 500;
-                await context.Response.WriteAsJsonAsync(new { error = "Failed to retrieve pipeline configurations" });
-            }
-        }
-
-        /// <summary>
-        /// Get detailed status for a specific pipeline
-        /// </summary>
-        public static async Task GetPipelineDetails(HttpContext context)
         {
             var pipelineManager = context.RequestServices.GetRequiredService<PipelineManager>();
             var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
 
-            var id = context.Request.RouteValues["id"]?.ToString();
-            if (string.IsNullOrEmpty(id))
+            try
+            {
+                // FIXED: Use GetPipelineStatus()
+                var pipelineInfos = pipelineManager.GetPipelineStatus();
+
+                var pipelines = pipelineInfos.Select(kvp => new
+                {
+                    id = kvp.Key,
+                    name = kvp.Value.Name,
+                    isActive = kvp.Value.IsRunning,
+                    watchPath = kvp.Value.WatchFolder,
+                    outputPath = kvp.Value.OutputFolder,
+                    queueLength = kvp.Value.QueueLength,
+                    processedCount = kvp.Value.ProcessedCount,
+                    errorCount = kvp.Value.ErrorCount,
+                    lastActivity = kvp.Value.LastActivityTime
+                }).ToList();
+
+                await context.Response.WriteAsJsonAsync(pipelines);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error getting pipelines");
+                context.Response.StatusCode = 500;
+                await context.Response.WriteAsJsonAsync(new { error = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Gets details for a specific pipeline
+        /// </summary>
+        public static async Task GetPipelineDetails(HttpContext context, string id)
+        {
+            var pipelineManager = context.RequestServices.GetRequiredService<PipelineManager>();
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+
+            if (string.IsNullOrWhiteSpace(id))
             {
                 context.Response.StatusCode = 400;
                 await context.Response.WriteAsJsonAsync(new { error = "Pipeline ID is required" });
@@ -190,7 +148,8 @@ namespace CamBridge.Service.Controllers
 
             try
             {
-                var status = pipelineManager.GetPipelineStatus(id);
+                // FIXED: Use GetPipelineInfo(id) instead of GetPipelineStatus(id)
+                var status = pipelineManager.GetPipelineInfo(id);
                 if (status == null)
                 {
                     context.Response.StatusCode = 404;
@@ -198,19 +157,42 @@ namespace CamBridge.Service.Controllers
                     return;
                 }
 
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(status);
+                var details = new
+                {
+                    id = id,
+                    name = status.Name,
+                    isActive = status.IsRunning,
+                    startTime = status.StartTime,
+                    lastActivity = status.LastActivityTime,
+                    configuration = new
+                    {
+                        watchPath = status.WatchFolder,
+                        outputPath = status.OutputFolder
+                    },
+                    statistics = new
+                    {
+                        processedCount = status.ProcessedCount,
+                        errorCount = status.ErrorCount,
+                        successCount = status.ProcessedCount - status.ErrorCount,
+                        successRate = status.ProcessedCount > 0
+                            ? ((double)(status.ProcessedCount - status.ErrorCount) / status.ProcessedCount * 100).ToString("F1") + "%"
+                            : "0.0%",
+                        queueLength = status.QueueLength
+                    }
+                };
+
+                await context.Response.WriteAsJsonAsync(details);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error getting pipeline status for {PipelineId}", id);
+                logger.LogError(ex, "Error getting pipeline details for {PipelineId}", id);
                 context.Response.StatusCode = 500;
-                await context.Response.WriteAsJsonAsync(new { error = "Failed to retrieve pipeline status" });
+                await context.Response.WriteAsJsonAsync(new { error = "Internal server error" });
             }
         }
 
         /// <summary>
-        /// Get statistics (currently returns basic info, expand as needed)
+        /// Gets processing statistics
         /// </summary>
         public static async Task GetStatistics(HttpContext context)
         {
@@ -219,58 +201,96 @@ namespace CamBridge.Service.Controllers
 
             try
             {
-                var pipelineStatuses = pipelineManager.GetPipelineStatuses();
+                // FIXED: Use GetPipelineStatus()
+                var pipelineInfos = pipelineManager.GetPipelineStatus();
 
                 var statistics = new
                 {
                     timestamp = DateTime.UtcNow,
-                    pipelines = pipelineStatuses.Select(p => new
+                    pipelines = pipelineInfos.Select(kvp => new
                     {
-                        id = p.Id,
-                        name = p.Name,
-                        processedCount = p.ProcessedCount,
-                        errorCount = p.ErrorCount,
-                        successCount = p.ProcessedCount - p.ErrorCount,
-                        queueDepth = p.QueueDepth,
-                        isActive = p.IsActive,
-                        lastProcessed = p.LastProcessed
+                        id = kvp.Key,
+                        name = kvp.Value.Name,
+                        processedCount = kvp.Value.ProcessedCount,
+                        errorCount = kvp.Value.ErrorCount,
+                        lastProcessed = kvp.Value.LastActivityTime,
+                        successRate = kvp.Value.ProcessedCount > 0
+                            ? ((double)(kvp.Value.ProcessedCount - kvp.Value.ErrorCount) / kvp.Value.ProcessedCount * 100).ToString("F1") + "%"
+                            : "0.0%"
                     }).ToList(),
                     summary = new
                     {
-                        totalPipelines = pipelineStatuses.Count,
-                        activePipelines = pipelineStatuses.Count(p => p.IsActive),
-                        totalProcessed = pipelineStatuses.Sum(p => p.ProcessedCount),
-                        totalErrors = pipelineStatuses.Sum(p => p.ErrorCount),
-                        totalQueued = pipelineStatuses.Sum(p => p.QueueDepth)
+                        totalPipelines = pipelineInfos.Count,
+                        activePipelines = pipelineInfos.Count(p => p.Value.IsRunning),
+                        totalProcessed = pipelineInfos.Sum(p => p.Value.ProcessedCount),
+                        totalErrors = pipelineInfos.Sum(p => p.Value.ErrorCount),
+                        overallSuccessRate = pipelineInfos.Sum(p => p.Value.ProcessedCount) > 0
+                            ? ((double)(pipelineInfos.Sum(p => p.Value.ProcessedCount - p.Value.ErrorCount)) /
+                               pipelineInfos.Sum(p => p.Value.ProcessedCount) * 100).ToString("F1") + "%"
+                            : "0.0%"
                     }
                 };
 
-                context.Response.ContentType = "application/json";
                 await context.Response.WriteAsJsonAsync(statistics);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error getting statistics");
                 context.Response.StatusCode = 500;
-                await context.Response.WriteAsJsonAsync(new { error = "Failed to retrieve statistics" });
+                await context.Response.WriteAsJsonAsync(new { error = "Internal server error" });
             }
         }
 
-        private static string GetUptime()
+        /// <summary>
+        /// Gets the service version information
+        /// </summary>
+        public static async Task GetVersion(HttpContext context)
         {
-            var uptime = DateTime.UtcNow - _startTime;
+            var version = new
+            {
+                version = ServiceInfo.Version,
+                serviceName = ServiceInfo.ServiceName,
+                displayName = ServiceInfo.DisplayName,
+                description = ServiceInfo.Description,
+                company = ServiceInfo.Company,
+                copyright = ServiceInfo.Copyright,
+                buildConfiguration = ServiceInfo.BuildConfiguration,
+                fullVersion = ServiceInfo.GetFullVersionString()
+            };
 
-            if (uptime.TotalDays >= 1)
+            await context.Response.WriteAsJsonAsync(version);
+        }
+
+        /// <summary>
+        /// Triggers a graceful shutdown of the service
+        /// </summary>
+        public static async Task Shutdown(HttpContext context)
+        {
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            var lifetime = context.RequestServices.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+
+            try
             {
-                return $"{(int)uptime.TotalDays}d {uptime.Hours}h {uptime.Minutes}m";
+                logger.LogInformation("Shutdown requested via API");
+
+                // Trigger shutdown after a small delay to allow response
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(1000);
+                    lifetime.StopApplication();
+                });
+
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    message = "Shutdown initiated",
+                    timestamp = DateTime.UtcNow
+                });
             }
-            else if (uptime.TotalHours >= 1)
+            catch (Exception ex)
             {
-                return $"{(int)uptime.TotalHours}h {uptime.Minutes}m";
-            }
-            else
-            {
-                return $"{(int)uptime.TotalMinutes}m";
+                logger.LogError(ex, "Error during shutdown request");
+                context.Response.StatusCode = 500;
+                await context.Response.WriteAsJsonAsync(new { error = "Shutdown failed" });
             }
         }
     }

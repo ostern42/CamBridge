@@ -1,6 +1,7 @@
 // src/CamBridge.Core/Enums/ProcessingStage.cs
-// Version: 0.8.6
+// Version: 0.8.7
 // Created: Session 97 - Fixing hierarchical logging
+// Updated: Session 100 - Added Service-level stages
 // Purpose: Define processing stages for correlation tracking
 
 namespace CamBridge.Core.Enums
@@ -10,6 +11,28 @@ namespace CamBridge.Core.Enums
     /// </summary>
     public enum ProcessingStage
     {
+        // Service-level stages (new in v0.8.7)
+        /// <summary>
+        /// Service is starting up
+        /// </summary>
+        ServiceStartup,
+
+        /// <summary>
+        /// Loading service configuration
+        /// </summary>
+        ConfigurationLoading,
+
+        /// <summary>
+        /// Initializing processing pipelines
+        /// </summary>
+        PipelineInitialization,
+
+        /// <summary>
+        /// Service is shutting down
+        /// </summary>
+        ServiceShutdown,
+
+        // File processing stages
         /// <summary>
         /// File received from FTP Server (future feature)
         /// </summary>

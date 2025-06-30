@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/ProcessingQueue.cs
-// Version: 0.7.31
-// Description: Thread-safe queue with duplicate detection fix
+// Version: 0.8.8
+// Description: Thread-safe queue with duplicate detection and NULL check fix
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -18,6 +18,7 @@ namespace CamBridge.Infrastructure.Services
     /// <summary>
     /// Thread-safe queue for managing file processing with retry logic
     /// FIXED: Prevents duplicate processing of successfully completed files
+    /// FIXED: NullReferenceException in StopAsync
     /// </summary>
     public class ProcessingQueue
     {
@@ -27,7 +28,7 @@ namespace CamBridge.Infrastructure.Services
         private readonly ConcurrentQueue<ProcessingItem> _queue = new();
         private readonly ConcurrentDictionary<string, ProcessingItem> _activeItems = new();
         private readonly SemaphoreSlim _processingSlots;
-        private readonly CancellationTokenSource _cancellationSource = new();
+        private CancellationTokenSource? _cancellationSource;  // FIXED: Nullable
         private Task? _processingTask;
 
         // FIX: Track processed and enqueued files to prevent duplicates
@@ -170,6 +171,7 @@ namespace CamBridge.Infrastructure.Services
         /// </summary>
         public Task ProcessQueueAsync(CancellationToken cancellationToken)
         {
+            _cancellationSource = new CancellationTokenSource();  // FIXED: Create here
             return ProcessAsync(cancellationToken);
         }
 
@@ -178,6 +180,7 @@ namespace CamBridge.Infrastructure.Services
         /// </summary>
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            _cancellationSource = new CancellationTokenSource();
             _processingTask = ProcessAsync(_cancellationSource.Token);
             return Task.CompletedTask;
         }
@@ -187,16 +190,24 @@ namespace CamBridge.Infrastructure.Services
         /// </summary>
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            _cancellationSource.Cancel();
+            // FIXED: Null checks added!
+            _cancellationSource?.Cancel();
 
-            try
+            if (_processingTask != null)
             {
-                await _processingTask;
+                try
+                {
+                    await _processingTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when canceling
+                }
             }
-            catch (OperationCanceledException)
-            {
-                // Expected when canceling
-            }
+
+            // Dispose cancellation source
+            _cancellationSource?.Dispose();
+            _cancellationSource = null;
         }
 
         /// <summary>

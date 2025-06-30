@@ -1,7 +1,8 @@
+﻿====== START: LogViewerViewModel.cs ======
 // src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
-// Version: 0.8.7
-// Description: Enhanced log viewer with FIXED correlation ID parsing and debug output
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Version: 0.8.6
+// Description: Enhanced log viewer with correlation ID support, tree view, and hierarchical display
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Config.Services;
 using CamBridge.Core;
@@ -16,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -100,8 +100,6 @@ namespace CamBridge.Config.ViewModels
             ToggleTreeViewCommand = new RelayCommand(() => IsTreeViewEnabled = !IsTreeViewEnabled);
             ExpandAllCommand = new RelayCommand(ExpandAll);
             CollapseAllCommand = new RelayCommand(CollapseAll);
-            CopySelectedCommand = new RelayCommand(CopySelected);
-            OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
 
             // Initialize timer for auto-refresh
             _refreshTimer = new Timer(OnRefreshTimer, null, Timeout.Infinite, Timeout.Infinite);
@@ -219,8 +217,6 @@ namespace CamBridge.Config.ViewModels
         public IRelayCommand ToggleTreeViewCommand { get; }
         public IRelayCommand ExpandAllCommand { get; }
         public IRelayCommand CollapseAllCommand { get; }
-        public IRelayCommand CopySelectedCommand { get; }
-        public IRelayCommand OpenLogFolderCommand { get; }
 
         #endregion
 
@@ -343,9 +339,6 @@ namespace CamBridge.Config.ViewModels
 
         private void UpdateCorrelationGroups(List<LogEntry> entries)
         {
-            // DEBUG OUTPUT
-            Console.WriteLine($"[DEBUG] UpdateCorrelationGroups called with {entries.Count} entries");
-
             CorrelationGroups.Clear();
 
             // Group by correlation ID
@@ -354,18 +347,14 @@ namespace CamBridge.Config.ViewModels
                 .GroupBy(e => e.CorrelationId!)
                 .OrderByDescending(g => g.Max(e => e.Timestamp));
 
-            Console.WriteLine($"[DEBUG] Found {groups.Count()} correlation groups");
-
             foreach (var group in groups)
             {
-                Console.WriteLine($"[DEBUG] Processing group {group.Key} with {group.Count()} entries");
-
                 var correlationGroup = new CorrelationGroup
                 {
                     CorrelationId = group.Key,
                     StartTime = group.Min(e => e.Timestamp),
                     EndTime = group.Max(e => e.Timestamp),
-                    Pipeline = group.FirstOrDefault(e => !string.IsNullOrEmpty(e.Pipeline))?.Pipeline ?? "Unknown",
+                    Pipeline = group.First().Pipeline ?? "Unknown",
                     IsExpanded = false // Default collapsed
                 };
 
@@ -421,8 +410,6 @@ namespace CamBridge.Config.ViewModels
 
             // Add entries without correlation ID
             var uncorrelatedEntries = entries.Where(e => string.IsNullOrEmpty(e.CorrelationId)).ToList();
-            Console.WriteLine($"[DEBUG] Found {uncorrelatedEntries.Count} uncorrelated entries");
-
             if (uncorrelatedEntries.Any())
             {
                 var uncorrelatedGroup = new CorrelationGroup
@@ -442,8 +429,6 @@ namespace CamBridge.Config.ViewModels
 
                 CorrelationGroups.Add(uncorrelatedGroup);
             }
-
-            Console.WriteLine($"[DEBUG] Total CorrelationGroups: {CorrelationGroups.Count}");
         }
 
         private void ExpandAll()
@@ -467,82 +452,6 @@ namespace CamBridge.Config.ViewModels
                 {
                     stage.IsExpanded = false;
                 }
-            }
-        }
-
-        private void CopySelected()
-        {
-            // Copy all visible log entries to clipboard
-            var sb = new StringBuilder();
-
-            if (IsTreeViewEnabled)
-            {
-                // Copy tree structure
-                foreach (var group in CorrelationGroups)
-                {
-                    sb.AppendLine($"=== {group.CorrelationId} - {group.Pipeline} [{group.DurationText}] ===");
-
-                    foreach (var stage in group.Stages)
-                    {
-                        sb.AppendLine($"  {stage.Stage} [{stage.DurationText}]");
-                        foreach (var entry in stage.Entries)
-                        {
-                            sb.AppendLine($"    {entry.Timestamp:HH:mm:ss.fff} {entry.LevelText} {entry.Message}");
-                        }
-                    }
-
-                    if (group.UngroupedEntries.Any())
-                    {
-                        sb.AppendLine("  [Ungrouped]");
-                        foreach (var entry in group.UngroupedEntries)
-                        {
-                            sb.AppendLine($"    {entry.Timestamp:HH:mm:ss.fff} {entry.LevelText} {entry.Message}");
-                        }
-                    }
-
-                    sb.AppendLine();
-                }
-            }
-            else
-            {
-                // Copy flat list
-                foreach (var entry in FilteredCombinedEntries)
-                {
-                    sb.AppendLine($"{entry.Timestamp:HH:mm:ss.fff} {entry.LevelText} [{entry.CorrelationId}] [{entry.Stage}] {entry.Message}");
-                }
-            }
-
-            if (sb.Length > 0)
-            {
-                Clipboard.SetText(sb.ToString());
-                _logger.LogInformation("Copied {Count} entries to clipboard",
-                    IsTreeViewEnabled ? CorrelationGroups.Sum(g => g.TotalEntries) : FilteredCombinedEntries.Count);
-            }
-        }
-
-        private void OpenLogFolder()
-        {
-            try
-            {
-                var logPath = ConfigurationPaths.GetLogsDirectory();
-                if (Directory.Exists(logPath))
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = logPath,
-                        UseShellExecute = true,
-                        Verb = "open"
-                    });
-                    _logger.LogInformation("Opened log folder: {Path}", logPath);
-                }
-                else
-                {
-                    _logger.LogWarning("Log folder does not exist: {Path}", logPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to open log folder");
             }
         }
 
@@ -762,32 +671,19 @@ namespace CamBridge.Config.ViewModels
 
             try
             {
-                // DEBUG output for first few lines
-                if (TotalLineCount < 10)
+                // First try to parse enhanced format with correlation ID
+                // Pattern: [{Timestamp}] [{CorrelationId}] [{Stage}] {Message} [{Pipeline}] [{Duration}ms]
+                var enhancedMatch = Regex.Match(line,
+                    @"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\] \[([^\]]+)\] \[([^\]]+)\] (.+?) \[([^\]]+)\](?: \[(\d+)ms\])?$");
+
+                if (enhancedMatch.Success)
                 {
-                    Console.WriteLine($"[DEBUG] Parsing line: {line}");
-                }
-
-                // Try the REAL format from actual logs!
-                // Format: [HH:mm:ss LEVEL] [CorrelationId] ["Stage"] Message [Duplicate]
-                // Example: [23:56:28 INF] [F23562879-R0010168] ["FileDetected"] Processing file: R0010168.JPG [Processing file: R0010168.JPG]
-                var realLogFormatMatch = Regex.Match(line,
-                    @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+\[([^\]]+)\]\s+\[""([^""]+)""\]\s+([^[]+)(?:\[.*\])?");
-
-                if (realLogFormatMatch.Success)
-                {
-                    var timeStr = realLogFormatMatch.Groups[1].Value;
-                    var levelStr = realLogFormatMatch.Groups[2].Value;
-                    var correlationId = realLogFormatMatch.Groups[3].Value;
-                    var stageStr = realLogFormatMatch.Groups[4].Value;
-                    var message = realLogFormatMatch.Groups[5].Value.Trim();
-
-                    // Parse timestamp (add today's date)
-                    var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss", CultureInfo.InvariantCulture);
-                    timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
-
-                    // Parse log level
-                    var level = ParseLogLevel(levelStr);
+                    var timestamp = DateTime.Parse(enhancedMatch.Groups[1].Value);
+                    var correlationId = enhancedMatch.Groups[2].Value;
+                    var stageStr = enhancedMatch.Groups[3].Value;
+                    var message = enhancedMatch.Groups[4].Value;
+                    var pipeline = enhancedMatch.Groups[5].Value;
+                    var durationMs = enhancedMatch.Groups[6].Success ? int.Parse(enhancedMatch.Groups[6].Value) : (int?)null;
 
                     // Parse stage
                     ProcessingStage? stage = null;
@@ -796,29 +692,8 @@ namespace CamBridge.Config.ViewModels
                         stage = parsedStage;
                     }
 
-                    // Extract pipeline name if present at end of message
-                    string? pipeline = null;
-                    var pipelineMatch = Regex.Match(message, @"\[([^\]]+)\]\s*$");
-                    if (pipelineMatch.Success)
-                    {
-                        pipeline = pipelineMatch.Groups[1].Value;
-                        message = message.Substring(0, message.Length - pipelineMatch.Value.Length).Trim();
-                    }
-
-                    // Extract duration if present
-                    int? durationMs = null;
-                    var durationMatch = Regex.Match(message, @"\[(\d+)ms\]");
-                    if (durationMatch.Success)
-                    {
-                        durationMs = int.Parse(durationMatch.Groups[1].Value);
-                        message = message.Replace(durationMatch.Value, "").Trim();
-                    }
-
-                    // DEBUG output
-                    if (TotalLineCount < 10)
-                    {
-                        Console.WriteLine($"[DEBUG] MATCHED REAL FORMAT: CorrelationId={correlationId}, Stage={stage}, Pipeline={pipeline}");
-                    }
+                    // Determine log level from stage or message content
+                    var level = DetermineLogLevel(stage, message);
 
                     return new LogEntry
                     {
@@ -833,152 +708,9 @@ namespace CamBridge.Config.ViewModels
                     };
                 }
 
-                // First try the ACTUAL format from the logs
-                // Example: [F00044243-R0010168] ["ExifExtraction"] Extracting EXIF metadata [Extracting EXIF metadata]
-                // Note: Last part in brackets might be duplicated message - ignore it
-                var actualFormatMatch = Regex.Match(line,
-                    @"^\[([^\]]+)\]\s+\[""?([^\]""]+)""?\]\s+([^[]+)(?:\[.*\])?$");
-
-                if (actualFormatMatch.Success)
-                {
-                    var correlationId = actualFormatMatch.Groups[1].Value;
-                    var stageStr = actualFormatMatch.Groups[2].Value;
-                    var message = actualFormatMatch.Groups[3].Value.Trim();
-
-                    // Check if this is a real correlation ID (starts with letter + numbers)
-                    if (Regex.IsMatch(correlationId, @"^[A-Z]\d{8,}"))
-                    {
-                        // Use current time since no timestamp in this format
-                        var timestamp = DateTime.Now;
-
-                        // Parse stage
-                        ProcessingStage? stage = null;
-                        if (Enum.TryParse<ProcessingStage>(stageStr, true, out var parsedStage))
-                        {
-                            stage = parsedStage;
-                        }
-
-                        // Determine log level from content
-                        var level = DetermineLogLevel(stage, message);
-
-                        // Extract pipeline name if present
-                        string? pipeline = null;
-                        var pipelineMatch = Regex.Match(message, @"\[([^\]]+)\]$");
-                        if (pipelineMatch.Success)
-                        {
-                            pipeline = pipelineMatch.Groups[1].Value;
-                            message = message.Substring(0, message.Length - pipelineMatch.Value.Length).Trim();
-                        }
-
-                        // DEBUG output
-                        if (TotalLineCount < 10)
-                        {
-                            Console.WriteLine($"[DEBUG] Parsed NEW FORMAT: CorrelationId={correlationId}, Stage={stage}, Pipeline={pipeline}");
-                        }
-
-                        return new LogEntry
-                        {
-                            Timestamp = timestamp,
-                            Level = level,
-                            Message = message,
-                            RawLine = line,
-                            CorrelationId = correlationId,
-                            Stage = stage,
-                            Pipeline = pipeline
-                        };
-                    }
-                }
-
-                // ALSO try the timestamp format we expected
-                // Example: 23:01:37.000 INF [F23013594-R0010168] ["ExifExtraction"] Extracting EXIF metadata completed
-                var timestampFormatMatch = Regex.Match(line,
-                    @"^(\d{2}:\d{2}:\d{2}\.\d{3})\s+(\w+)\s+\[([^\]]+)\]\s+\[""?([^\]""]+)""?\]\s+(.+)$");
-
-                if (timestampFormatMatch.Success)
-                {
-                    var timeStr = timestampFormatMatch.Groups[1].Value;
-                    var levelStr = timestampFormatMatch.Groups[2].Value;
-                    var correlationId = timestampFormatMatch.Groups[3].Value;
-                    var stageStr = timestampFormatMatch.Groups[4].Value;
-                    var message = timestampFormatMatch.Groups[5].Value;
-
-                    // Parse timestamp (add today's date)
-                    var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss.fff", CultureInfo.InvariantCulture);
-                    timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
-
-                    // Parse log level
-                    var level = ParseLogLevel(levelStr);
-
-                    // Parse stage
-                    ProcessingStage? stage = null;
-                    if (Enum.TryParse<ProcessingStage>(stageStr, true, out var parsedStage))
-                    {
-                        stage = parsedStage;
-                    }
-
-                    // Extract pipeline name from message if present
-                    string? pipeline = null;
-                    var pipelineMatch = Regex.Match(message, @"\[([\w\s]+)\]$");
-                    if (pipelineMatch.Success)
-                    {
-                        pipeline = pipelineMatch.Groups[1].Value;
-                        message = message.Substring(0, message.Length - pipelineMatch.Value.Length).Trim();
-                    }
-
-                    // Extract duration if present
-                    int? durationMs = null;
-                    var durationMatch = Regex.Match(message, @"\[(\d+)ms\]");
-                    if (durationMatch.Success)
-                    {
-                        durationMs = int.Parse(durationMatch.Groups[1].Value);
-                        message = message.Replace(durationMatch.Value, "").Trim();
-                    }
-
-                    return new LogEntry
-                    {
-                        Timestamp = timestamp,
-                        Level = level,
-                        Message = message,
-                        RawLine = line,
-                        CorrelationId = correlationId,
-                        Stage = stage,
-                        Pipeline = pipeline,
-                        DurationMs = durationMs
-                    };
-                }
-
-                // Try simpler correlation format without stage
-                // Example: 23:01:37.000 DBG [F23013594-R0010168] Found barcode data in Barcode field
-                var simpleCorrelationMatch = Regex.Match(line,
-                    @"^(\d{2}:\d{2}:\d{2}\.\d{3})\s+(\w+)\s+\[([^\]]+)\]\s+(.+)$");
-
-                if (simpleCorrelationMatch.Success)
-                {
-                    var timeStr = simpleCorrelationMatch.Groups[1].Value;
-                    var levelStr = simpleCorrelationMatch.Groups[2].Value;
-                    var correlationIdOrMessage = simpleCorrelationMatch.Groups[3].Value;
-                    var remainingMessage = simpleCorrelationMatch.Groups[4].Value;
-
-                    // Check if this looks like a correlation ID (starts with F followed by digits)
-                    if (Regex.IsMatch(correlationIdOrMessage, @"^F\d{8,}"))
-                    {
-                        var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss.fff", CultureInfo.InvariantCulture);
-                        timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
-
-                        return new LogEntry
-                        {
-                            Timestamp = timestamp,
-                            Level = ParseLogLevel(levelStr),
-                            Message = remainingMessage,
-                            RawLine = line,
-                            CorrelationId = correlationIdOrMessage
-                        };
-                    }
-                }
-
-                // Fallback to standard Serilog format WITHOUT correlation
+                // Fallback to standard Serilog format
                 // Example: [14:23:45 INF] Pipeline Radiology started
-                var standardMatch = Regex.Match(line, @"^\[?(\d{2}:\d{2}:\d{2}(?:\.\d{3})?)\s+(\w+)\]?\s+(.+)$");
+                var standardMatch = Regex.Match(line, @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+(.+)$");
 
                 if (standardMatch.Success)
                 {
@@ -1011,7 +743,8 @@ namespace CamBridge.Config.ViewModels
                     };
                 }
 
-                // Last resort - just treat as info message
+                // Fallback for non-standard format
+                _logger.LogDebug("Could not parse log line format: {Line}", line);
                 return new LogEntry
                 {
                     Timestamp = DateTime.Now,
@@ -1041,14 +774,15 @@ namespace CamBridge.Config.ViewModels
                 return LogLevel.Error;
 
             // Check message content
-            var messageLower = message.ToLowerInvariant();
-            if (messageLower.Contains("error") || messageLower.Contains("failed"))
+            if (message.Contains("error", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("failed", StringComparison.OrdinalIgnoreCase))
                 return LogLevel.Error;
 
-            if (messageLower.Contains("warning") || messageLower.Contains("warn") || messageLower.Contains("slow"))
+            if (message.Contains("warning", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("slow", StringComparison.OrdinalIgnoreCase))
                 return LogLevel.Warning;
 
-            if (messageLower.Contains("debug"))
+            if (message.Contains("debug", StringComparison.OrdinalIgnoreCase))
                 return LogLevel.Debug;
 
             // Default to Information
@@ -1092,59 +826,11 @@ namespace CamBridge.Config.ViewModels
 
                 if (dialog.ShowDialog() == true)
                 {
-                    var sb = new StringBuilder();
-
-                    if (IsTreeViewEnabled)
-                    {
-                        // Export tree structure
-                        foreach (var group in CorrelationGroups)
-                        {
-                            sb.AppendLine($"=== Correlation: {group.CorrelationId} ===");
-                            sb.AppendLine($"Pipeline: {group.Pipeline}");
-                            sb.AppendLine($"Duration: {group.DurationText}");
-                            sb.AppendLine($"Status: {group.Status}");
-                            sb.AppendLine();
-
-                            foreach (var stage in group.Stages)
-                            {
-                                sb.AppendLine($"  Stage: {stage.Stage} [{stage.DurationText}]");
-                                foreach (var entry in stage.Entries)
-                                {
-                                    sb.AppendLine($"    {entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} {entry.LevelText} {entry.Message}");
-                                }
-                                sb.AppendLine();
-                            }
-
-                            if (group.UngroupedEntries.Any())
-                            {
-                                sb.AppendLine("  [Ungrouped Entries]");
-                                foreach (var entry in group.UngroupedEntries)
-                                {
-                                    sb.AppendLine($"    {entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} {entry.LevelText} {entry.Message}");
-                                }
-                                sb.AppendLine();
-                            }
-
-                            sb.AppendLine(new string('=', 50));
-                            sb.AppendLine();
-                        }
-                    }
-                    else
-                    {
-                        // Export flat list
-                        var lines = FilteredCombinedEntries.Select(e => e.RawLine ??
-                            $"{e.Timestamp:yyyy-MM-dd HH:mm:ss.fff} {e.LevelText} [{e.CorrelationId}] [{e.Stage}] {e.Message}");
-                        foreach (var line in lines)
-                        {
-                            sb.AppendLine(line);
-                        }
-                    }
-
-                    await File.WriteAllTextAsync(dialog.FileName, sb.ToString(), Encoding.UTF8);
+                    var lines = FilteredCombinedEntries.Select(e => e.RawLine ?? e.Message);
+                    await File.WriteAllLinesAsync(dialog.FileName, lines, Encoding.UTF8);
 
                     _logger.LogInformation("Exported {Count} log entries to {FileName}",
-                        IsTreeViewEnabled ? CorrelationGroups.Sum(g => g.TotalEntries) : FilteredCombinedEntries.Count,
-                        dialog.FileName);
+                        FilteredCombinedEntries.Count, dialog.FileName);
                 }
             }
             catch (Exception ex)
@@ -1303,22 +989,17 @@ namespace CamBridge.Config.ViewModels
             _ => "#000000"
         };
 
-        // FIXED emoji icons!
         public string StageIcon => Stage switch
         {
-            ProcessingStage.ServiceStartup => "🚀",
-            ProcessingStage.ConfigurationLoading => "⚙️",
-            ProcessingStage.PipelineInitialization => "🔧",
-            ProcessingStage.ServiceShutdown => "🛑",
-            ProcessingStage.FileDetected => "📄",
-            ProcessingStage.ExifExtraction => "📷",
-            ProcessingStage.TagMapping => "🔄",
-            ProcessingStage.DicomConversion => "🏥",
-            ProcessingStage.PostProcessing => "📋",
-            ProcessingStage.PacsUpload => "☁️",
-            ProcessingStage.Complete => "✅",
-            ProcessingStage.Error => "❌",
-            _ => "📝"
+            ProcessingStage.FileDetected => "ðŸ“",
+            ProcessingStage.ExifExtraction => "ðŸ“·",
+            ProcessingStage.TagMapping => "ðŸ”„",
+            ProcessingStage.DicomConversion => "ðŸ¥",
+            ProcessingStage.PostProcessing => "ðŸ“‹",
+            ProcessingStage.PacsUpload => "â˜ï¸",
+            ProcessingStage.Complete => "âœ…",
+            ProcessingStage.Error => "âŒ",
+            _ => "ðŸ“"
         };
 
         public string FormattedDuration => DurationMs.HasValue ? $"{DurationMs}ms" : "";
@@ -1349,13 +1030,12 @@ namespace CamBridge.Config.ViewModels
         public string DurationText => $"{Duration.TotalMilliseconds:0}ms";
         public int TotalEntries => Stages.Sum(s => s.Entries.Count) + UngroupedEntries.Count;
 
-        // FIXED emoji icons!
         public string StatusIcon => Status switch
         {
-            ProcessingStatus.Completed => "✅",
-            ProcessingStatus.Failed => "❌",
-            ProcessingStatus.InProgress => "⏳",
-            _ => "❓"
+            ProcessingStatus.Completed => "âœ…",
+            ProcessingStatus.Failed => "âŒ",
+            ProcessingStatus.InProgress => "â³",
+            _ => "â“"
         };
 
         public string StatusColor => Status switch
@@ -1388,7 +1068,7 @@ namespace CamBridge.Config.ViewModels
         public TimeSpan Duration => EndTime - StartTime;
         public string DurationText => $"{Duration.TotalMilliseconds:0}ms";
 
-        public string StageIcon => Entries.FirstOrDefault()?.StageIcon ?? "📝";
+        public string StageIcon => Entries.FirstOrDefault()?.StageIcon ?? "ðŸ“";
     }
 
     /// <summary>
@@ -1402,3 +1082,492 @@ namespace CamBridge.Config.ViewModels
         Failed
     }
 }
+
+====== END: LogViewerViewModel.cs ======
+
+====== START: LogViewerPage.xaml ======
+<!-- src\CamBridge.Config\Views\LogViewerPage.xaml -->
+<!-- Version: 0.8.6 -->
+<!-- Description: Enhanced log viewer with correlation tree view -->
+<!-- Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions -->
+
+<Page x:Class="CamBridge.Config.Views.LogViewerPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:CamBridge.Config.Views"
+      xmlns:viewmodels="clr-namespace:CamBridge.Config.ViewModels"
+      xmlns:converters="clr-namespace:CamBridge.Config.Converters"
+      mc:Ignorable="d" 
+      d:DesignHeight="600" d:DesignWidth="1000"
+      d:DataContext="{d:DesignInstance Type=viewmodels:LogViewerViewModel}"
+      Title="Log Viewer">
+
+    <Page.Resources>
+        <converters:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+
+        <!-- Style for expandable group headers -->
+        <Style x:Key="ExpandableGroupHeader" TargetType="Border">
+            <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E8E8E8"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- DataTemplate for log entries in tree view -->
+        <DataTemplate x:Key="LogEntryTemplate" DataType="{x:Type viewmodels:LogEntry}">
+            <Border Padding="24,2,8,2" BorderThickness="0,0,0,1" BorderBrush="#E0E0E0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="60"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="80"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" 
+                               FontFamily="Consolas" FontSize="11" Opacity="0.7"/>
+
+                    <TextBlock Grid.Column="1" Text="{Binding LevelText}" 
+                               FontWeight="Bold" FontFamily="Consolas"
+                               Foreground="{Binding LevelColor}"/>
+
+                    <TextBlock Grid.Column="2" Text="{Binding StageIcon}" 
+                               FontSize="14" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Column="3" Text="{Binding Message}" 
+                               TextWrapping="Wrap" Margin="8,0,0,0"/>
+
+                    <TextBlock Grid.Column="4" Text="{Binding FormattedDuration}" 
+                               FontFamily="Consolas" FontSize="11" Opacity="0.7"
+                               HorizontalAlignment="Right"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Page.Resources>
+
+    <DockPanel>
+        <!-- Header with controls -->
+        <Border DockPanel.Dock="Top" Padding="16" Background="White"
+                BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Title and Stats -->
+                <DockPanel Grid.Row="0">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                        <TextBlock Text="ðŸ“„" FontSize="28" VerticalAlignment="Center"/>
+                        <TextBlock Text="Log Viewer" FontSize="24" FontWeight="Bold" 
+                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+
+                        <!-- Tree/Flat Toggle -->
+                        <ToggleButton IsChecked="{Binding IsTreeViewEnabled}" 
+                                      Margin="16,0,0,0" VerticalAlignment="Center"
+                                      ToolTip="Toggle tree view" Padding="8,4">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="ðŸŒ³" FontSize="16" Margin="0,0,4,0"/>
+                                <TextBlock Text="Tree View"/>
+                            </StackPanel>
+                        </ToggleButton>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" 
+                                HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <TextBlock Text="Last Update:" Opacity="0.7" Margin="0,0,4,0"/>
+                        <TextBlock Text="{Binding LastUpdateTime, StringFormat='HH:mm:ss'}" FontWeight="Bold"/>
+                        <TextBlock Text="Lines:" Opacity="0.7" Margin="16,0,4,0"/>
+                        <TextBlock Text="{Binding DisplayedLineCount}" FontWeight="Bold"/>
+                        <TextBlock Text="/" Opacity="0.5"/>
+                        <TextBlock Text="{Binding TotalLineCount}" Opacity="0.7"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Pipeline Selection -->
+                <Grid Grid.Row="1" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Pipelines:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding PipelineSelections}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected}" 
+                                          Content="{Binding Name}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                        <ComboBox.Text>
+                            <MultiBinding StringFormat="{}{0} pipeline(s) selected" Mode="OneWay">
+                                <Binding Path="SelectedPipelineCount" Mode="OneWay"/>
+                            </MultiBinding>
+                        </ComboBox.Text>
+                    </ComboBox>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="16,0,0,0">
+                        <Button Command="{Binding RefreshCommand}" 
+                                ToolTip="Refresh logs" Margin="0,0,8,0" Padding="8,4">
+                            <TextBlock Text="ðŸ”„" FontSize="16"/>
+                        </Button>
+
+                        <Button Command="{Binding ExpandAllCommand}" 
+                                ToolTip="Expand all" Margin="0,0,8,0" Padding="8,4"
+                                Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="âŠ•" FontSize="16"/>
+                        </Button>
+
+                        <Button Command="{Binding CollapseAllCommand}" 
+                                ToolTip="Collapse all" Margin="0,0,8,0" Padding="8,4"
+                                Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="âŠ–" FontSize="16"/>
+                        </Button>
+
+                        <Button Command="{Binding ClearLogCommand}" 
+                                ToolTip="Clear display" Margin="0,0,8,0" Padding="8,4">
+                            <TextBlock Text="ðŸ§¹" FontSize="16"/>
+                        </Button>
+
+                        <Button Command="{Binding ExportLogCommand}" 
+                                ToolTip="Export filtered logs" Padding="8,4">
+                            <TextBlock Text="ðŸ’¾" FontSize="16"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Filters -->
+                <Grid Grid.Row="2" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Search Box -->
+                    <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Tag="Search logs..." VerticalContentAlignment="Center" Padding="4">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+
+                    <!-- Level Filters -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="16,0,0,0">
+                        <TextBlock Text="Levels:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                        <ToggleButton IsChecked="{Binding ShowDebug}" ToolTip="Debug" Padding="4,2">
+                            <TextBlock Text="DBG" FontFamily="Consolas" FontWeight="Bold" Foreground="#808080"/>
+                        </ToggleButton>
+
+                        <ToggleButton IsChecked="{Binding ShowInformation}" ToolTip="Information" Padding="4,2">
+                            <TextBlock Text="INF" FontFamily="Consolas" FontWeight="Bold" Foreground="#0078D4"/>
+                        </ToggleButton>
+
+                        <ToggleButton IsChecked="{Binding ShowWarning}" ToolTip="Warning" Padding="4,2">
+                            <TextBlock Text="WRN" FontFamily="Consolas" FontWeight="Bold" Foreground="#FFA500"/>
+                        </ToggleButton>
+
+                        <ToggleButton IsChecked="{Binding ShowError}" ToolTip="Error" Padding="4,2">
+                            <TextBlock Text="ERR" FontFamily="Consolas" FontWeight="Bold" Foreground="#FF0000"/>
+                        </ToggleButton>
+
+                        <ToggleButton IsChecked="{Binding ShowCritical}" ToolTip="Critical" Padding="4,2">
+                            <TextBlock Text="CRT" FontFamily="Consolas" FontWeight="Bold" Foreground="#8B0000"/>
+                        </ToggleButton>
+                    </StackPanel>
+
+                    <!-- Auto-scroll -->
+                    <CheckBox Grid.Column="2" IsChecked="{Binding IsAutoScrollEnabled}" 
+                              Content="Auto-scroll" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Progress bar -->
+        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" Height="2"
+                     Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
+
+        <!-- Main content area -->
+        <Grid>
+            <!-- Tree View (when enabled) -->
+            <ScrollViewer Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}"
+                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding CorrelationGroups}" VirtualizingPanel.IsVirtualizing="True">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type viewmodels:CorrelationGroup}">
+                            <Border Margin="0,0,0,8" BorderBrush="#E0E0E0" 
+                                    BorderThickness="1" CornerRadius="4">
+                                <!-- Correlation Group Header -->
+                                <StackPanel>
+                                    <Border Style="{StaticResource ExpandableGroupHeader}"
+                                            MouseLeftButtonDown="CorrelationHeader_Click"
+                                            Tag="{Binding}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" FontFamily="Consolas">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                                                                <Setter Property="Text" Value="â–¶"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                                <Setter Property="Text" Value="â–¼"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+
+                                            <TextBlock Grid.Column="1" Text="{Binding StatusIcon}" 
+                                                       FontSize="16" Margin="8,0"/>
+
+                                            <TextBlock Grid.Column="2" FontWeight="Bold">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}{0} - {1}">
+                                                        <Binding Path="CorrelationId"/>
+                                                        <Binding Path="Pipeline"/>
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+
+                                            <TextBlock Grid.Column="3" Text="{Binding StartTime, StringFormat='HH:mm:ss.fff'}" 
+                                                       FontFamily="Consolas" Opacity="0.7" Margin="8,0"/>
+
+                                            <TextBlock Grid.Column="4" Text="{Binding DurationText}" 
+                                                       FontFamily="Consolas" Foreground="{Binding StatusColor}" 
+                                                       FontWeight="Bold" Margin="8,0"/>
+
+                                            <TextBlock Grid.Column="5" Text="{Binding TotalEntries, StringFormat='({0} entries)'}" 
+                                                       Opacity="0.7" Margin="8,0"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Stages (when expanded) -->
+                                    <ItemsControl ItemsSource="{Binding Stages}" 
+                                                  Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type viewmodels:StageGroup}">
+                                                <StackPanel>
+                                                    <!-- Stage Header -->
+                                                    <Border Style="{StaticResource ExpandableGroupHeader}"
+                                                            Margin="16,0,0,0"
+                                                            MouseLeftButtonDown="StageHeader_Click"
+                                                            Tag="{Binding}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" FontFamily="Consolas" Width="16">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                                                                                <Setter Property="Text" Value="â–¶"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                                                <Setter Property="Text" Value="â–¼"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+
+                                                            <TextBlock Grid.Column="1" Text="{Binding StageIcon}" 
+                                                                       FontSize="14" Margin="4,0"/>
+
+                                                            <TextBlock Grid.Column="2" Text="{Binding Stage}" 
+                                                                       FontWeight="SemiBold"/>
+
+                                                            <TextBlock Grid.Column="3" Text="{Binding DurationText}" 
+                                                                       FontFamily="Consolas" FontSize="11" 
+                                                                       Opacity="0.7" Margin="8,0"/>
+
+                                                            <TextBlock Grid.Column="4" Text="{Binding Entries.Count, StringFormat='({0})'}" 
+                                                                       FontSize="11" Opacity="0.7"/>
+                                                        </Grid>
+                                                    </Border>
+
+                                                    <!-- Stage Entries (when expanded) -->
+                                                    <ItemsControl ItemsSource="{Binding Entries}" 
+                                                                  Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}"
+                                                                  Margin="32,0,0,0"
+                                                                  ItemTemplate="{StaticResource LogEntryTemplate}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Ungrouped Entries -->
+                                    <ItemsControl ItemsSource="{Binding UngroupedEntries}" 
+                                                  Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}"
+                                                  Margin="16,0,0,0"
+                                                  ItemTemplate="{StaticResource LogEntryTemplate}"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Flat View (when tree view disabled) -->
+            <DataGrid ItemsSource="{Binding FilteredCombinedEntries}"
+                      Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource InverseBoolToVisibility}}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      GridLinesVisibility="Horizontal"
+                      HeadersVisibility="Column"
+                      IsReadOnly="True"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      ScrollViewer.CanContentScroll="True">
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="BorderThickness" Value="0"/>
+                    </Style>
+                </DataGrid.Resources>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" 
+                                        Width="100" FontFamily="Consolas"/>
+
+                    <DataGridTextColumn Header="Level" Binding="{Binding LevelText}" Width="60">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{Binding LevelColor}"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontFamily" Value="Consolas"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Pipeline" Binding="{Binding Source}" Width="120"/>
+
+                    <DataGridTextColumn Header="Correlation" Binding="{Binding CorrelationId}" Width="140" 
+                                        FontFamily="Consolas" FontSize="11"/>
+
+                    <DataGridTextColumn Header="Stage" Binding="{Binding Stage}" Width="120"/>
+
+                    <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Duration" Binding="{Binding FormattedDuration}" 
+                                        Width="80" FontFamily="Consolas" FontSize="11"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
+</Page>
+
+====== END: LogViewerPage.xaml ======
+
+====== START: LogViewerPage.xaml.cs ======
+// src\CamBridge.Config\Views\LogViewerPage.xaml.cs
+// Version: 0.8.6
+// Description: Enhanced code-behind for log viewer with tree view support
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using CamBridge.Config.ViewModels;
+using System.Windows.Controls;
+using System.Windows.Input;
+
+namespace CamBridge.Config.Views
+{
+    /// <summary>
+    /// Interaction logic for enhanced LogViewerPage.xaml
+    /// </summary>
+    public partial class LogViewerPage : Page
+    {
+        public LogViewerPage()
+        {
+            InitializeComponent();
+            Loaded += OnLoaded;
+            Unloaded += OnUnloaded;
+        }
+
+        private async void OnLoaded(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (DataContext is LogViewerViewModel viewModel)
+            {
+                await viewModel.InitializeAsync();
+            }
+        }
+
+        private void OnUnloaded(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (DataContext is LogViewerViewModel viewModel)
+            {
+                viewModel.Cleanup();
+            }
+        }
+
+        /// <summary>
+        /// Handle correlation group header click to expand/collapse
+        /// </summary>
+        private void CorrelationHeader_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is System.Windows.FrameworkElement element &&
+                element.Tag is CorrelationGroup group)
+            {
+                group.IsExpanded = !group.IsExpanded;
+            }
+        }
+
+        /// <summary>
+        /// Handle stage header click to expand/collapse
+        /// </summary>
+        private void StageHeader_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is System.Windows.FrameworkElement element &&
+                element.Tag is StageGroup stage)
+            {
+                stage.IsExpanded = !stage.IsExpanded;
+            }
+        }
+    }
+}
+
+====== END: LogViewerPage.xaml.cs ======
+
+====== START: LogEntry.cs (if separate file) ======
+LogEntry is defined within LogViewerViewModel.cs
+
+====== END: LogEntry.cs ======
