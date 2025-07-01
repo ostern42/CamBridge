@@ -1,6 +1,6 @@
-﻿// src\CamBridge.Core\ProcessingOptions.cs
-// Version: 0.6.5
-// Description: Processing options with INotifyPropertyChanged support
+// src\CamBridge.Core\ProcessingOptions.cs
+// Version: 0.8.10
+// Description: Processing options with INotifyPropertyChanged support - DeadLetterFolder removed!
 
 using System;
 using System.ComponentModel;
@@ -19,7 +19,6 @@ namespace CamBridge.Core
         private string _archiveFolder = @"C:\CamBridge\Archive";
         private string _errorFolder = @"C:\CamBridge\Errors";
         private string _backupFolder = @"C:\CamBridge\Backup";
-        private string? _deadLetterFolder = @"C:\CamBridge\DeadLetters";
         private bool _createBackup = true;
         private int _maxConcurrentProcessing = 2;
         private bool _retryOnFailure = true;
@@ -75,15 +74,6 @@ namespace CamBridge.Core
         {
             get => _backupFolder;
             set { _backupFolder = value; OnPropertyChanged(); }
-        }
-
-        /// <summary>
-        /// Dead letter folder for unprocessable files
-        /// </summary>
-        public string? DeadLetterFolder
-        {
-            get => _deadLetterFolder;
-            set { _deadLetterFolder = value; OnPropertyChanged(); }
         }
 
         /// <summary>
@@ -266,6 +256,6 @@ namespace CamBridge.Core
         /// </summary>
         ByPatientAndDate
 
-        
+
     }
 }

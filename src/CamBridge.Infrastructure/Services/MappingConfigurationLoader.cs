@@ -1,8 +1,8 @@
-﻿// File: src/CamBridge.Infrastructure/Services/MappingConfigurationLoader.cs
-// Version: 0.5.25
-// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
-// Modified: 2025-06-04
-// Status: Development/Local - FREEZE BUG FIXED
+// File: src/CamBridge.Infrastructure/Services/MappingConfigurationLoader.cs
+// Version: 0.8.10
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Modified: Session 110 - Complete correlation ID implementation
+// Status: Correlation IDs added to ALL log statements
 
 using System;
 using System.Collections.Generic;
@@ -26,11 +26,18 @@ namespace CamBridge.Infrastructure.Services
         private List<MappingRule> _mappingRules;
         private bool _isInitialized = false;
 
-        public MappingConfigurationLoader(ILogger<MappingConfigurationLoader> logger, string configPath = "mappings.json")
+        public MappingConfigurationLoader(ILogger<MappingConfigurationLoader> logger, string configPath = "mappings.json", string? correlationId = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _configPath = configPath;
             _mappingRules = new List<MappingRule>();
+
+            // Log initialization with correlation ID if provided
+            if (!string.IsNullOrEmpty(correlationId))
+            {
+                _logger.LogInformation("[{CorrelationId}] [MappingInit] MappingConfigurationLoader initialized with path: {Path}",
+                    correlationId, _configPath);
+            }
 
             // REMOVED: LoadConfigurationAsync().GetAwaiter().GetResult();
             // This was causing the UI freeze!
@@ -43,7 +50,7 @@ namespace CamBridge.Infrastructure.Services
             // Return default rules if not initialized
             if (!_isInitialized)
             {
-                LoadDefaultMappings();
+                LoadDefaultMappings(null);
                 _isInitialized = true;
             }
             return _mappingRules.AsReadOnly();
@@ -51,6 +58,14 @@ namespace CamBridge.Infrastructure.Services
 
         /// <inheritdoc />
         public async Task<bool> LoadConfigurationAsync(string? filePath = null)
+        {
+            return await LoadConfigurationAsync(filePath, null);
+        }
+
+        /// <summary>
+        /// Loads mapping configuration from a JSON file with correlation ID support
+        /// </summary>
+        public async Task<bool> LoadConfigurationAsync(string? filePath, string? correlationId)
         {
             var path = filePath ?? _configPath;
 
@@ -73,8 +88,16 @@ namespace CamBridge.Infrastructure.Services
 
                 if (!File.Exists(path))
                 {
-                    _logger.LogWarning("Mapping configuration file not found: {Path}. Using default mappings.", path);
-                    LoadDefaultMappings();
+                    if (!string.IsNullOrEmpty(correlationId))
+                    {
+                        _logger.LogWarning("[{CorrelationId}] [MappingConfig] Mapping configuration file not found: {Path}. Using default mappings.",
+                            correlationId, path);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("[NO-ID] [MappingConfig] Mapping configuration file not found: {Path}. Using default mappings.", path);
+                    }
+                    LoadDefaultMappings(correlationId);
                     _isInitialized = true;
                     return false;
                 }
@@ -88,22 +111,46 @@ namespace CamBridge.Infrastructure.Services
                 if (config?.Rules != null && config.Rules.Count > 0)
                 {
                     _mappingRules = config.Rules;
-                    _logger.LogInformation("Loaded {Count} mapping rules from {Path}", _mappingRules.Count, path);
+                    if (!string.IsNullOrEmpty(correlationId))
+                    {
+                        _logger.LogInformation("[{CorrelationId}] [MappingConfig] Loaded {Count} mapping rules from {Path}",
+                            correlationId, _mappingRules.Count, path);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("[NO-ID] [MappingConfig] Loaded {Count} mapping rules from {Path}", _mappingRules.Count, path);
+                    }
                     _isInitialized = true;
                     return true;
                 }
                 else
                 {
-                    _logger.LogWarning("No mapping rules found in {Path}. Using default mappings.", path);
-                    LoadDefaultMappings();
+                    if (!string.IsNullOrEmpty(correlationId))
+                    {
+                        _logger.LogWarning("[{CorrelationId}] [MappingConfig] No mapping rules found in {Path}. Using default mappings.",
+                            correlationId, path);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("[NO-ID] [MappingConfig] No mapping rules found in {Path}. Using default mappings.", path);
+                    }
+                    LoadDefaultMappings(correlationId);
                     _isInitialized = true;
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading mapping configuration from {Path}", path);
-                LoadDefaultMappings();
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogError(ex, "[{CorrelationId}] [MappingConfig] Error loading mapping configuration from {Path}",
+                        correlationId, path);
+                }
+                else
+                {
+                    _logger.LogError(ex, "[NO-ID] [MappingConfig] Error loading mapping configuration from {Path}", path);
+                }
+                LoadDefaultMappings(correlationId);
                 _isInitialized = true;
                 return false;
             }
@@ -111,6 +158,14 @@ namespace CamBridge.Infrastructure.Services
 
         /// <inheritdoc />
         public async Task<bool> SaveConfigurationAsync(IEnumerable<MappingRule> rules, string? filePath = null)
+        {
+            return await SaveConfigurationAsync(rules, filePath, null);
+        }
+
+        /// <summary>
+        /// Saves mapping configuration with correlation ID support
+        /// </summary>
+        public async Task<bool> SaveConfigurationAsync(IEnumerable<MappingRule> rules, string? filePath, string? correlationId)
         {
             var path = filePath ?? _configPath;
 
@@ -144,13 +199,30 @@ namespace CamBridge.Infrastructure.Services
                 await File.WriteAllTextAsync(path, json);
 
                 _mappingRules = config.Rules;
-                _logger.LogInformation("Saved {Count} mapping rules to {Path}", _mappingRules.Count, path);
+
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogInformation("[{CorrelationId}] [MappingConfig] Saved {Count} mapping rules to {Path}",
+                        correlationId, _mappingRules.Count, path);
+                }
+                else
+                {
+                    _logger.LogInformation("[NO-ID] [MappingConfig] Saved {Count} mapping rules to {Path}", _mappingRules.Count, path);
+                }
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving mapping configuration to {Path}", path);
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogError(ex, "[{CorrelationId}] [MappingConfig] Error saving mapping configuration to {Path}",
+                        correlationId, path);
+                }
+                else
+                {
+                    _logger.LogError(ex, "[NO-ID] [MappingConfig] Error saving mapping configuration to {Path}", path);
+                }
                 return false;
             }
         }
@@ -162,7 +234,7 @@ namespace CamBridge.Infrastructure.Services
                 throw new ArgumentNullException(nameof(rule));
 
             _mappingRules.Add(rule);
-            _logger.LogDebug("Added mapping rule: {Source} -> {Target}", rule.SourceField, rule.DicomTag);
+            _logger.LogDebug("[NO-ID] [MappingConfig] Added mapping rule: {Source} -> {Target}", rule.SourceField, rule.DicomTag);
         }
 
         /// <inheritdoc />
@@ -171,7 +243,7 @@ namespace CamBridge.Infrastructure.Services
             var removed = _mappingRules.RemoveAll(r => r.SourceField == sourceField);
             if (removed > 0)
             {
-                _logger.LogDebug("Removed {Count} mapping rule(s) for source field: {SourceField}", removed, sourceField);
+                _logger.LogDebug("[NO-ID] [MappingConfig] Removed {Count} mapping rule(s) for source field: {SourceField}", removed, sourceField);
             }
         }
 
@@ -181,7 +253,7 @@ namespace CamBridge.Infrastructure.Services
             // Ensure we have rules loaded
             if (!_isInitialized)
             {
-                LoadDefaultMappings();
+                LoadDefaultMappings(null);
                 _isInitialized = true;
             }
 
@@ -195,7 +267,7 @@ namespace CamBridge.Infrastructure.Services
             // Ensure we have rules loaded
             if (!_isInitialized)
             {
-                LoadDefaultMappings();
+                LoadDefaultMappings(null);
                 _isInitialized = true;
             }
 
@@ -221,7 +293,7 @@ namespace CamBridge.Infrastructure.Services
         /// <summary>
         /// Loads default mapping rules for Ricoh G900 II
         /// </summary>
-        private void LoadDefaultMappings()
+        private void LoadDefaultMappings(string? correlationId)
         {
             _mappingRules = new List<MappingRule>
             {
@@ -260,7 +332,7 @@ namespace CamBridge.Infrastructure.Services
                     Transform = "MapGender",
                     Required = false
                 },
-                
+
                 // Study Information
                 new MappingRule
                 {
@@ -278,7 +350,7 @@ namespace CamBridge.Infrastructure.Services
                     ValueRepresentation = "LO",
                     Required = false
                 },
-                
+
                 // Series Information
                 new MappingRule
                 {
@@ -300,7 +372,15 @@ namespace CamBridge.Infrastructure.Services
                 }
             };
 
-            _logger.LogInformation("Loaded {Count} default mapping rules", _mappingRules.Count);
+            if (!string.IsNullOrEmpty(correlationId))
+            {
+                _logger.LogInformation("[{CorrelationId}] [MappingConfig] Loaded {Count} default mapping rules",
+                    correlationId, _mappingRules.Count);
+            }
+            else
+            {
+                _logger.LogInformation("[NO-ID] [MappingConfig] Loaded {Count} default mapping rules", _mappingRules.Count);
+            }
         }
 
         /// <summary>

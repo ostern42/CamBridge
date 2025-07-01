@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/PacsUploadQueue.cs
-// Version: 0.8.6
-// Modified: Session 96 - Fixed StoreFileAsync call signature
+// Version: 0.8.10
+// Modified: Session 110 - Fixed correlation ID usage
 // Purpose: Per-pipeline queue for PACS uploads with retry logic
 
 using System;
@@ -24,6 +24,7 @@ namespace CamBridge.Infrastructure.Services
         private readonly PipelineConfiguration _pipelineConfig;
         private readonly CancellationTokenSource _cts;
         private readonly Task _processingTask;
+        private readonly string _correlationId;
         private int _queueLength = 0;
 
         /// <summary>
@@ -34,11 +35,13 @@ namespace CamBridge.Infrastructure.Services
         public PacsUploadQueue(
             PipelineConfiguration pipelineConfig,
             DicomStoreService storeService,
-            ILogger<PacsUploadQueue> logger)
+            ILogger<PacsUploadQueue> logger,
+            string correlationId)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _storeService = storeService ?? throw new ArgumentNullException(nameof(storeService));
             _pipelineConfig = pipelineConfig ?? throw new ArgumentNullException(nameof(pipelineConfig));
+            _correlationId = correlationId ?? throw new ArgumentNullException(nameof(correlationId));
 
             if (_pipelineConfig.PacsConfiguration == null)
                 throw new ArgumentException("Pipeline must have PACS configuration", nameof(pipelineConfig));
@@ -77,6 +80,7 @@ namespace CamBridge.Infrastructure.Services
             {
                 await _queue.Writer.WriteAsync(item);
                 Interlocked.Increment(ref _queueLength);
+
                 _logger.LogInformation(
                     "[{CorrelationId}] [PacsUpload] File queued for upload (queue depth: {QueueDepth}) [{Pipeline}]",
                     correlationId, _queueLength, _pipelineConfig.Name);
@@ -96,135 +100,82 @@ namespace CamBridge.Infrastructure.Services
             var pacsConfig = _pipelineConfig.PacsConfiguration!;
             var maxConcurrent = Math.Max(1, Math.Min(pacsConfig.MaxConcurrentUploads, 10));
 
+            // FIXED: Don't use _correlationId here! This is a one-time startup log
+            // We create a specific correlation ID for PACS initialization
+            var pacsInitCorrelationId = $"PM{DateTime.Now:HHmmssff}-PACS-{_pipelineConfig.Name}";
+
             _logger.LogInformation(
-                "[PacsUpload] Starting upload processor with {MaxConcurrent} concurrent uploads [{Pipeline}]",
-                maxConcurrent, _pipelineConfig.Name);
+                "[{CorrelationId}] [PacsInit] Starting upload processor with {MaxConcurrent} concurrent uploads [{Pipeline}]",
+                pacsInitCorrelationId, maxConcurrent, _pipelineConfig.Name);
 
             // Use semaphore to limit concurrent uploads
             using var semaphore = new SemaphoreSlim(maxConcurrent, maxConcurrent);
 
-            await foreach (var item in _queue.Reader.ReadAllAsync(cancellationToken))
-            {
-                Interlocked.Decrement(ref _queueLength);
-                // Don't await - process concurrently up to limit
-                _ = ProcessUploadAsync(item, pacsConfig, semaphore, cancellationToken);
-            }
-        }
-
-        private async Task ProcessUploadAsync(
-            PacsUploadItem item,
-            PacsConfiguration pacsConfig,
-            SemaphoreSlim semaphore,
-            CancellationToken cancellationToken)
-        {
-            await semaphore.WaitAsync(cancellationToken);
             try
             {
-                await UploadWithRetryAsync(item, pacsConfig, cancellationToken);
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        }
-
-        private async Task UploadWithRetryAsync(
-            PacsUploadItem item,
-            PacsConfiguration pacsConfig,
-            CancellationToken cancellationToken)
-        {
-            var startTime = DateTime.UtcNow;
-            var maxAttempts = pacsConfig.RetryOnFailure ? pacsConfig.MaxRetryAttempts : 1;
-            StoreResult? lastResult = null;
-
-            // Check if file still exists
-            if (!File.Exists(item.DicomFilePath))
-            {
-                _logger.LogWarning(
-                    "[{CorrelationId}] [PacsUpload] File no longer exists: {Path} [{Pipeline}]",
-                    item.CorrelationId, item.DicomFilePath, _pipelineConfig.Name);
-                return;
-            }
-
-            for (int attempt = 1; attempt <= maxAttempts; attempt++)
-            {
-                try
+                await foreach (var item in _queue.Reader.ReadAllAsync(cancellationToken))
                 {
-                    if (cancellationToken.IsCancellationRequested)
+                    await semaphore.WaitAsync(cancellationToken);
+
+                    // Don't await - let it run in background within concurrency limit
+                    _ = Task.Run(async () =>
                     {
-                        _logger.LogInformation(
-                            "[{CorrelationId}] [PacsUpload] Upload cancelled [{Pipeline}]",
-                            item.CorrelationId, _pipelineConfig.Name);
-                        return;
-                    }
-
-                    if (attempt > 1)
-                    {
-                        _logger.LogInformation(
-                            "[{CorrelationId}] [PacsUpload] Retry attempt {Attempt}/{Max} [{Pipeline}]",
-                            item.CorrelationId, attempt, maxAttempts, _pipelineConfig.Name);
-                        // Wait before retry
-                        await Task.Delay(TimeSpan.FromSeconds(pacsConfig.RetryDelaySeconds), cancellationToken);
-                    }
-
-                    // FIXED: Use the correct method signature with PacsConfiguration
-                    var result = await _storeService.StoreFileAsync(
-                        item.DicomFilePath,
-                        pacsConfig);
-
-                    if (result.Success)
-                    {
-                        var duration = DateTime.UtcNow - startTime;
-                        _logger.LogInformation(
-                            "[{CorrelationId}] [PacsUpload] Upload successful to {Host}:{Port} ({Duration:F1}s) [{Pipeline}]",
-                            item.CorrelationId, pacsConfig.Host, pacsConfig.Port, duration.TotalSeconds, _pipelineConfig.Name);
-                        return;
-                    }
-
-                    lastResult = result;
-                    _logger.LogWarning(
-                        "[{CorrelationId}] [PacsUpload] Upload failed (attempt {Attempt}/{Max}): {Error} [{Pipeline}]",
-                        item.CorrelationId, attempt, maxAttempts, result.ErrorMessage, _pipelineConfig.Name);
-                }
-                catch (Exception ex)
-                {
-                    lastResult = StoreResult.CreateFailure(
-                        ex.Message,
-                        "Upload failed with exception",
-                        DicomErrorType.Unknown);
-
-                    _logger.LogError(ex,
-                        "[{CorrelationId}] [PacsUpload] Upload exception (attempt {Attempt}/{Max}) [{Pipeline}]",
-                        item.CorrelationId, attempt, maxAttempts, _pipelineConfig.Name);
+                        try
+                        {
+                            await ProcessUploadAsync(item, pacsConfig, cancellationToken);
+                        }
+                        finally
+                        {
+                            Interlocked.Decrement(ref _queueLength);
+                            semaphore.Release();
+                        }
+                    }, cancellationToken);
                 }
             }
-
-            // All attempts failed
-            var totalDuration = DateTime.UtcNow - startTime;
-            _logger.LogError(
-                "[{CorrelationId}] [PacsUpload] Upload failed after {Attempts} attempts ({Duration:F1}s): {Error} [{Pipeline}]",
-                item.CorrelationId, maxAttempts, totalDuration.TotalSeconds,
-                lastResult?.ErrorMessage ?? "Unknown error", _pipelineConfig.Name);
-
-            // Move to error folder if configured
-            await HandleFailedUploadAsync(item, lastResult);
-        }
-
-        private async Task HandleFailedUploadAsync(PacsUploadItem item, StoreResult? lastResult)
-        {
-            try
+            catch (OperationCanceledException)
             {
-                // TODO: Move to PACS error folder if configured
-                // For now, just log
+                // Use a shutdown-specific correlation ID
+                var shutdownCorrelationId = $"PM{DateTime.Now:HHmmssff}-PACS-SHUTDOWN-{_pipelineConfig.Name}";
                 _logger.LogInformation(
-                    "[{CorrelationId}] [PacsUpload] Failed upload handling complete [{Pipeline}]",
-                    item.CorrelationId, _pipelineConfig.Name);
+                    "[{CorrelationId}] [PacsShutdown] Upload processor cancelled [{Pipeline}]",
+                    shutdownCorrelationId, _pipelineConfig.Name);
             }
             catch (Exception ex)
             {
+                // Use an error-specific correlation ID
+                var errorCorrelationId = $"PM{DateTime.Now:HHmmssff}-PACS-ERROR-{_pipelineConfig.Name}";
                 _logger.LogError(ex,
-                    "[{CorrelationId}] [PacsUpload] Error handling failed upload [{Pipeline}]",
-                    item.CorrelationId, _pipelineConfig.Name);
+                    "[{CorrelationId}] [PacsError] Upload processor failed [{Pipeline}]",
+                    errorCorrelationId, _pipelineConfig.Name);
+            }
+        }
+
+        private async Task ProcessUploadAsync(PacsUploadItem item, PacsConfiguration pacsConfig, CancellationToken cancellationToken)
+        {
+            var correlationId = item.CorrelationId;
+            var queueTime = DateTime.UtcNow - item.QueuedAt;
+
+            _logger.LogInformation(
+                "[{CorrelationId}] [PacsUpload] Starting upload after {QueueTime:F1}s queue time [{Pipeline}]",
+                correlationId, queueTime.TotalSeconds, _pipelineConfig.Name);
+
+            var result = await _storeService.StoreFileWithRetryAsync(
+                item.DicomFilePath,
+                pacsConfig,
+                correlationId,
+                cancellationToken);
+
+            if (result.Success)
+            {
+                _logger.LogInformation(
+                    "[{CorrelationId}] [PacsUpload] Successfully uploaded to PACS [{Pipeline}]",
+                    correlationId, _pipelineConfig.Name);
+            }
+            else
+            {
+                _logger.LogError(
+                    "[{CorrelationId}] [PacsUpload] Failed to upload: {ErrorMessage} [{Pipeline}]",
+                    correlationId, result.ErrorMessage, _pipelineConfig.Name);
             }
         }
 
@@ -232,23 +183,25 @@ namespace CamBridge.Infrastructure.Services
         {
             try
             {
-                // Signal completion and wait for processing to finish
-                _queue.Writer.TryComplete();
                 _cts.Cancel();
+                _queue.Writer.TryComplete();
 
-                // Give some time for graceful shutdown
                 if (!_processingTask.Wait(TimeSpan.FromSeconds(30)))
                 {
+                    // Use a disposal-specific correlation ID
+                    var disposeCorrelationId = $"PM{DateTime.Now:HHmmssff}-PACS-DISPOSE-{_pipelineConfig.Name}";
                     _logger.LogWarning(
-                        "[PacsUpload] Upload queue did not shut down gracefully [{Pipeline}]",
-                        _pipelineConfig.Name);
+                        "[{CorrelationId}] [PacsShutdown] Upload processor did not complete within timeout [{Pipeline}]",
+                        disposeCorrelationId, _pipelineConfig.Name);
                 }
             }
             catch (Exception ex)
             {
+                // Use an error-specific correlation ID
+                var errorCorrelationId = $"PM{DateTime.Now:HHmmssff}-PACS-DISPOSE-ERROR-{_pipelineConfig.Name}";
                 _logger.LogError(ex,
-                    "[PacsUpload] Error during queue disposal [{Pipeline}]",
-                    _pipelineConfig.Name);
+                    "[{CorrelationId}] [PacsShutdown] Error during disposal [{Pipeline}]",
+                    errorCorrelationId, _pipelineConfig.Name);
             }
             finally
             {
@@ -258,9 +211,9 @@ namespace CamBridge.Infrastructure.Services
 
         private class PacsUploadItem
         {
-            public required string DicomFilePath { get; set; }
-            public required string CorrelationId { get; set; }
-            public DateTime QueuedAt { get; set; }
+            public required string DicomFilePath { get; init; }
+            public required string CorrelationId { get; init; }
+            public DateTime QueuedAt { get; init; }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿/**************************************************************************
+/**************************************************************************
 *  ConfigurationPaths.cs                                                  *
 *  PATH: src\CamBridge.Core\Infrastructure\ConfigurationPaths.cs         *
 *  VERSION: 0.7.13 | SIZE: ~12KB | MODIFIED: 2025-06-14                  *
@@ -223,7 +223,6 @@ namespace CamBridge.Core.Infrastructure
                                         OutputOrganization = "ByPatientAndDate",  // NOT "PatientName"!
                                         ProcessExistingOnStartup = true,
                                         RetryDelaySeconds = 5,
-                                        DeadLetterFolder = @"C:\CamBridge\DeadLetter",
                                         OutputFilePattern = "{PatientID}_{StudyDate}_{InstanceNumber}"
                                     },
                                     DicomOverrides = new

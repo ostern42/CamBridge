@@ -1,5 +1,5 @@
 // src/CamBridge.Infrastructure/Services/FileProcessor.cs
-// Version: 0.8.6
+// Version: 0.8.10
 // Description: Pipeline-aware file processor with LogContext integration
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
@@ -8,7 +8,7 @@ using CamBridge.Core.Entities;
 using CamBridge.Core.Interfaces;
 using CamBridge.Core.ValueObjects;
 using CamBridge.Core.Logging;
-using CamBridge.Core.Enums; // FIXED: Import LogVerbosity from correct namespace
+using CamBridge.Core.Enums;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -51,7 +51,8 @@ namespace CamBridge.Infrastructure.Services
             IDicomTagMapper? tagMapper = null,
             IMappingConfiguration? mappingConfiguration = null,
             PacsUploadQueue? pacsUploadQueue = null,
-            LogVerbosity logVerbosity = LogVerbosity.Detailed)
+            LogVerbosity logVerbosity = LogVerbosity.Detailed,
+            string? correlationId = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _exifToolReader = exifToolReader ?? throw new ArgumentNullException(nameof(exifToolReader));
@@ -63,13 +64,29 @@ namespace CamBridge.Infrastructure.Services
             _pacsUploadQueue = pacsUploadQueue;
             _logVerbosity = logVerbosity;
 
-            _logger.LogDebug("Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
-                pipelineConfig.Name, pipelineConfig.Id);
-
-            if (_pacsUploadQueue != null)
+            // Log with correlation ID if provided
+            if (!string.IsNullOrEmpty(correlationId))
             {
-                _logger.LogInformation("PACS upload queue attached to pipeline: {PipelineName}",
-                    pipelineConfig.Name);
+                _logger.LogDebug("[{CorrelationId}] [ProcessorInit] Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
+                    correlationId, pipelineConfig.Name, pipelineConfig.Id);
+
+                if (_pacsUploadQueue != null)
+                {
+                    _logger.LogInformation("[{CorrelationId}] [PacsInit] PACS upload queue attached to pipeline: {PipelineName}",
+                        correlationId, pipelineConfig.Name);
+                }
+            }
+            else
+            {
+                // Fallback without correlation ID
+                _logger.LogDebug("Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
+                    pipelineConfig.Name, pipelineConfig.Id);
+
+                if (_pacsUploadQueue != null)
+                {
+                    _logger.LogInformation("PACS upload queue attached to pipeline: {PipelineName}",
+                        pipelineConfig.Name);
+                }
             }
         }
 
@@ -110,7 +127,8 @@ namespace CamBridge.Infrastructure.Services
                 ImageMetadata? metadata;
                 using (logContext.BeginStage(ProcessingStage.ExifExtraction, "Extracting EXIF metadata"))
                 {
-                    metadata = await _exifToolReader.ExtractMetadataAsync(filePath);
+                    // FIXED: Pass correlationId to ExtractMetadataAsync!
+                    metadata = await _exifToolReader.ExtractMetadataAsync(filePath, correlationId);
 
                     if (metadata == null)
                     {
@@ -137,7 +155,8 @@ namespace CamBridge.Infrastructure.Services
                 }
 
                 // Determine output path based on pipeline configuration
-                var outputPath = DetermineOutputPath(metadata, filePath);
+                // FIXED: Pass correlationId to DetermineOutputPath!
+                var outputPath = DetermineOutputPath(metadata, filePath, correlationId);
 
                 // Ensure output directory exists
                 var outputDir = Path.GetDirectoryName(outputPath);
@@ -156,10 +175,12 @@ namespace CamBridge.Infrastructure.Services
                         _tagMapper,
                         _mappingConfiguration);
 
+                    // FIXED: Pass correlationId to ConvertToDicomAsync!
                     conversionResult = await converterWithMapping.ConvertToDicomAsync(
                         filePath,
                         outputPath,
-                        metadata);
+                        metadata,
+                        correlationId);
                 }
 
                 result.Success = conversionResult.Success;
@@ -370,8 +391,6 @@ namespace CamBridge.Infrastructure.Services
             }
         }
 
-        // Rest of the methods remain the same...
-
         /// <summary>
         /// Determines if a file should be processed based on pipeline configuration
         /// </summary>
@@ -464,7 +483,7 @@ namespace CamBridge.Infrastructure.Services
             }
         }
 
-        private string DetermineOutputPath(ImageMetadata metadata, string sourceFile)
+        private string DetermineOutputPath(ImageMetadata metadata, string sourceFile, string correlationId)
         {
             // FIXED: Use ArchiveFolder as DICOM output if no OutputPath configured
             var baseOutputPath = _pipelineConfig.WatchSettings.OutputPath;
@@ -473,8 +492,8 @@ namespace CamBridge.Infrastructure.Services
             {
                 // Fallback to ArchiveFolder if no OutputPath (current config behavior)
                 baseOutputPath = _pipelineConfig.ProcessingOptions.ArchiveFolder;
-                _logger.LogWarning("No OutputPath in WatchSettings, using ArchiveFolder as output: {Path}",
-                    Path.GetFullPath(baseOutputPath));
+                _logger.LogWarning("[{CorrelationId}] [PathResolution] No OutputPath in WatchSettings, using ArchiveFolder as output: {Path}",
+                    correlationId, Path.GetFullPath(baseOutputPath));
             }
 
             // ALWAYS make path absolute!
@@ -483,12 +502,12 @@ namespace CamBridge.Infrastructure.Services
                 // If relative path, make it relative to service executable location
                 var serviceDir = AppDomain.CurrentDomain.BaseDirectory;
                 baseOutputPath = Path.Combine(serviceDir, baseOutputPath);
-                _logger.LogWarning("OutputPath was relative, converted to absolute: {Path}",
-                    Path.GetFullPath(baseOutputPath));
+                _logger.LogWarning("[{CorrelationId}] [PathResolution] OutputPath was relative, converted to absolute: {Path}",
+                    correlationId, Path.GetFullPath(baseOutputPath));
             }
 
-            _logger.LogDebug("Base output path for pipeline {Pipeline}: {Path}",
-                _pipelineConfig.Name, Path.GetFullPath(baseOutputPath));
+            _logger.LogDebug("[{CorrelationId}] [PathResolution] Base output path for pipeline {Pipeline}: {Path}",
+                correlationId, _pipelineConfig.Name, Path.GetFullPath(baseOutputPath));
 
             var organization = _pipelineConfig.ProcessingOptions.OutputOrganization;
             var fileName = Path.GetFileNameWithoutExtension(sourceFile);
@@ -503,13 +522,14 @@ namespace CamBridge.Infrastructure.Services
                     {
                         var safeName = SanitizeForPath(metadata.Patient.PatientName);
                         outputDir = Path.Combine(baseOutputPath, safeName);
-                        _logger.LogDebug("Output organized by patient: {PatientName} -> {SafeName}",
-                            metadata.Patient.PatientName, safeName);
+                        _logger.LogDebug("[{CorrelationId}] [PathResolution] Output organized by patient: {PatientName} -> {SafeName}",
+                            correlationId, metadata.Patient.PatientName, safeName);
                     }
                     else
                     {
                         outputDir = Path.Combine(baseOutputPath, "Unknown Patient");
-                        _logger.LogWarning("No patient name found, using 'Unknown Patient' folder");
+                        _logger.LogWarning("[{CorrelationId}] [PathResolution] No patient name found, using 'Unknown Patient' folder",
+                            correlationId);
                     }
                     break;
 
@@ -517,7 +537,8 @@ namespace CamBridge.Infrastructure.Services
                     // ALWAYS use current date for organization
                     var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
                     outputDir = Path.Combine(baseOutputPath, dateFolder);
-                    _logger.LogDebug("Output organized by date: {Date}", dateFolder);
+                    _logger.LogDebug("[{CorrelationId}] [PathResolution] Output organized by date: {Date}",
+                        correlationId, dateFolder);
                     break;
 
                 case OutputOrganization.ByPatientAndDate:
@@ -527,14 +548,15 @@ namespace CamBridge.Infrastructure.Services
                         // ALWAYS use current date for organization
                         var dateFolder2 = DateTime.Now.ToString("yyyy-MM-dd");
                         outputDir = Path.Combine(baseOutputPath, safeName, dateFolder2);
-                        _logger.LogDebug("Output organized by patient/date: {PatientName}/{Date}",
-                            safeName, dateFolder2);
+                        _logger.LogDebug("[{CorrelationId}] [PathResolution] Output organized by patient/date: {PatientName}/{Date}",
+                            correlationId, safeName, dateFolder2);
                     }
                     else
                     {
                         var dateFolder3 = DateTime.Now.ToString("yyyy-MM-dd");
                         outputDir = Path.Combine(baseOutputPath, "Unknown Patient", dateFolder3);
-                        _logger.LogWarning("No patient name found, using 'Unknown Patient/{Date}' folder", dateFolder3);
+                        _logger.LogWarning("[{CorrelationId}] [PathResolution] No patient name found, using 'Unknown Patient/{Date}' folder",
+                            correlationId, dateFolder3);
                     }
                     break;
 
@@ -549,7 +571,8 @@ namespace CamBridge.Infrastructure.Services
 
             // CRITICAL: ALWAYS return ABSOLUTE path!
             var absolutePath = Path.GetFullPath(dicomPath);
-            _logger.LogInformation("Determined DICOM output path: {FullPath}", absolutePath);
+            _logger.LogInformation("[{CorrelationId}] [PathResolution] Determined DICOM output path: {FullPath}",
+                correlationId, absolutePath);
             return absolutePath;
         }
 

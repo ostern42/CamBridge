@@ -1,4 +1,9 @@
-﻿using System;
+// src/CamBridge.Infrastructure/Services/DicomTagMapper.cs
+// Version: 0.8.10
+// Description: Service for mapping values to DICOM tags with correlation ID support
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
@@ -18,6 +23,124 @@ namespace CamBridge.Infrastructure.Services
         public DicomTagMapper(ILogger<DicomTagMapper> logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        /// <summary>
+        /// Maps source data to a DICOM dataset using mapping rules (Interface method)
+        /// </summary>
+        public void MapToDataset(DicomDataset dataset, Dictionary<string, string> sourceData, IEnumerable<MappingRule> mappingRules)
+        {
+            // Call the overloaded method with null correlationId
+            MapToDataset(dataset, sourceData, mappingRules, null);
+        }
+
+        /// <summary>
+        /// Maps source data to a DICOM dataset using mapping rules with correlation ID support
+        /// </summary>
+        public void MapToDataset(DicomDataset dataset, Dictionary<string, string> sourceData, IEnumerable<MappingRule> mappingRules, string? correlationId)
+        {
+            if (dataset == null) throw new ArgumentNullException(nameof(dataset));
+            if (sourceData == null) throw new ArgumentNullException(nameof(sourceData));
+            if (mappingRules == null) throw new ArgumentNullException(nameof(mappingRules));
+
+            foreach (var rule in mappingRules)
+            {
+                try
+                {
+                    // Get source value
+                    if (!sourceData.TryGetValue(rule.SourceField, out var sourceValue))
+                    {
+                        if (rule.Required)
+                        {
+                            // FIXED: Add correlation ID to warning
+                            if (!string.IsNullOrEmpty(correlationId))
+                            {
+                                _logger.LogWarning("[{CorrelationId}] [TagMapping] Required source field '{Field}' not found in data",
+                                    correlationId, rule.SourceField);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Required source field '{Field}' not found in data", rule.SourceField);
+                            }
+                        }
+
+                        // Use default value if available
+                        sourceValue = rule.DefaultValue;
+
+                        if (string.IsNullOrEmpty(sourceValue))
+                        {
+                            continue;
+                        }
+                    }
+
+                    // Apply transform if specified
+                    var transformedValue = ApplyTransform(sourceValue, rule.Transform);
+
+                    if (string.IsNullOrEmpty(transformedValue) && rule.Required)
+                    {
+                        // FIXED: Add correlation ID to warning
+                        if (!string.IsNullOrEmpty(correlationId))
+                        {
+                            _logger.LogWarning("[{CorrelationId}] [TagMapping] Required field '{Field}' resulted in empty value after transform",
+                                correlationId, rule.SourceField);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Required field '{Field}' resulted in empty value after transform", rule.SourceField);
+                        }
+                    }
+
+                    // Parse DICOM tag
+                    if (!TryParseDicomTag(rule.DicomTag, out var group, out var element))
+                    {
+                        // FIXED: Add correlation ID to error
+                        if (!string.IsNullOrEmpty(correlationId))
+                        {
+                            _logger.LogError("[{CorrelationId}] [TagMapping] Invalid DICOM tag format: {Tag}",
+                                correlationId, rule.DicomTag);
+                        }
+                        else
+                        {
+                            _logger.LogError("Invalid DICOM tag format: {Tag}", rule.DicomTag);
+                        }
+                        continue;
+                    }
+
+                    // Add to dataset
+                    var tag = new DicomTag(group, element);
+
+                    if (!string.IsNullOrEmpty(transformedValue))
+                    {
+                        dataset.AddOrUpdate(tag, transformedValue);
+
+                        // FIXED: Add correlation ID to debug log
+                        if (!string.IsNullOrEmpty(correlationId))
+                        {
+                            _logger.LogDebug("[{CorrelationId}] [TagMapping] Mapped {Source} -> {Tag}: {Value}",
+                                correlationId, rule.SourceField, rule.DicomTag, transformedValue);
+                        }
+                        else
+                        {
+                            _logger.LogDebug("Mapped {Source} -> {Tag}: {Value}",
+                                rule.SourceField, rule.DicomTag, transformedValue);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // FIXED: Add correlation ID to error
+                    if (!string.IsNullOrEmpty(correlationId))
+                    {
+                        _logger.LogError(ex, "[{CorrelationId}] [TagMapping] Error mapping rule {Source} -> {Tag}",
+                            correlationId, rule.SourceField, rule.DicomTag);
+                    }
+                    else
+                    {
+                        _logger.LogError(ex, "Error mapping rule {Source} -> {Tag}",
+                            rule.SourceField, rule.DicomTag);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -105,69 +228,6 @@ namespace CamBridge.Infrastructure.Services
 
             _logger.LogWarning("Unable to convert datetime '{DateTime}' to DICOM format", dateTime);
             return dateTime;
-        }
-
-        /// <summary>
-        /// Maps source data to a DICOM dataset using mapping rules
-        /// </summary>
-        public void MapToDataset(DicomDataset dataset, Dictionary<string, string> sourceData, IEnumerable<MappingRule> mappingRules)
-        {
-            if (dataset == null) throw new ArgumentNullException(nameof(dataset));
-            if (sourceData == null) throw new ArgumentNullException(nameof(sourceData));
-            if (mappingRules == null) throw new ArgumentNullException(nameof(mappingRules));
-
-            foreach (var rule in mappingRules)
-            {
-                try
-                {
-                    // Get source value
-                    if (!sourceData.TryGetValue(rule.SourceField, out var sourceValue))
-                    {
-                        if (rule.Required)
-                        {
-                            _logger.LogWarning("Required source field '{Field}' not found in data", rule.SourceField);
-                        }
-
-                        // Use default value if available
-                        sourceValue = rule.DefaultValue;
-
-                        if (string.IsNullOrEmpty(sourceValue))
-                        {
-                            continue;
-                        }
-                    }
-
-                    // Apply transform if specified
-                    var transformedValue = ApplyTransform(sourceValue, rule.Transform);
-
-                    if (string.IsNullOrEmpty(transformedValue) && rule.Required)
-                    {
-                        _logger.LogWarning("Required field '{Field}' resulted in empty value after transform", rule.SourceField);
-                    }
-
-                    // Parse DICOM tag
-                    if (!TryParseDicomTag(rule.DicomTag, out var group, out var element))
-                    {
-                        _logger.LogError("Invalid DICOM tag format: {Tag}", rule.DicomTag);
-                        continue;
-                    }
-
-                    // Add to dataset
-                    var tag = new DicomTag(group, element);
-
-                    if (!string.IsNullOrEmpty(transformedValue))
-                    {
-                        dataset.AddOrUpdate(tag, transformedValue);
-                        _logger.LogDebug("Mapped {Source} -> {Tag}: {Value}",
-                            rule.SourceField, rule.DicomTag, transformedValue);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error mapping rule {Source} -> {Tag}",
-                        rule.SourceField, rule.DicomTag);
-                }
-            }
         }
 
         /// <summary>

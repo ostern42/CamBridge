@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/ExifToolReader.cs
-// Version: 0.7.31
-// Description: EXIF data extraction service - clean UTF-8 implementation
+// Version: 0.8.10
+// Description: EXIF data extraction service - with correlation ID support
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -26,10 +26,12 @@ namespace CamBridge.Infrastructure.Services
     {
         private readonly ILogger<ExifToolReader> _logger;
         private readonly string _exifToolPath;
+        private readonly string? _correlationId;
 
-        public ExifToolReader(ILogger<ExifToolReader> logger, string exifToolPath)
+        public ExifToolReader(ILogger<ExifToolReader> logger, string exifToolPath, string? correlationId = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _correlationId = correlationId;
 
             if (string.IsNullOrWhiteSpace(exifToolPath))
             {
@@ -60,15 +62,34 @@ namespace CamBridge.Infrastructure.Services
                 throw new FileNotFoundException($"ExifTool not found at: {_exifToolPath}");
             }
 
-            _logger.LogInformation("ExifToolReader initialized with path: {Path}", _exifToolPath);
+            if (!string.IsNullOrEmpty(_correlationId))
+            {
+                _logger.LogInformation("[{CorrelationId}] [ExifInit] ExifToolReader initialized with path: {Path}", _correlationId, _exifToolPath);
+            }
+            else
+            {
+                _logger.LogInformation("ExifToolReader initialized with path: {Path}", _exifToolPath);
+            }
         }
 
         /// <summary>
         /// Extract metadata from an image file
         /// </summary>
-        public async Task<ImageMetadata> ExtractMetadataAsync(string imagePath)
+        public async Task<ImageMetadata> ExtractMetadataAsync(string imagePath, string? correlationId = null)
         {
-            _logger.LogDebug("Extracting metadata from: {ImagePath}", imagePath);
+            // FIXED: Use passed correlationId instead of stored _correlationId!
+            var logCorrelationId = correlationId ?? _correlationId;
+
+            // CHANGED TO INFORMATION LEVEL
+            if (!string.IsNullOrEmpty(logCorrelationId))
+            {
+                _logger.LogInformation("[{CorrelationId}] [ExifExtraction] Extracting metadata from: {ImagePath}",
+                    logCorrelationId, imagePath);
+            }
+            else
+            {
+                _logger.LogInformation("Extracting metadata from: {ImagePath}", imagePath);
+            }
 
             if (!File.Exists(imagePath))
             {
@@ -79,22 +100,41 @@ namespace CamBridge.Infrastructure.Services
 
             try
             {
-                var exifData = await ReadExifDataAsync(imagePath);
-                var metadata = ParseExifData(exifData, imagePath);
+                var exifData = await ReadExifDataAsync(imagePath, logCorrelationId);  // Pass correlationId!
+                var metadata = ParseExifData(exifData, imagePath, logCorrelationId);  // Pass correlationId!
 
                 stopwatch.Stop();
-                _logger.LogDebug("EXIF extraction completed in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+
+                // CHANGED TO INFORMATION LEVEL
+                if (!string.IsNullOrEmpty(logCorrelationId))
+                {
+                    _logger.LogInformation("[{CorrelationId}] [ExifExtraction] EXIF extraction completed in {ElapsedMs}ms",
+                        logCorrelationId, stopwatch.ElapsedMilliseconds);
+                }
+                else
+                {
+                    _logger.LogInformation("EXIF extraction completed in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+                }
 
                 return metadata;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to extract EXIF data from {ImagePath}", imagePath);
+                // FIXED: Use correlation ID in error log
+                if (!string.IsNullOrEmpty(logCorrelationId))
+                {
+                    _logger.LogError(ex, "[{CorrelationId}] [ExifError] Failed to extract EXIF data from {ImagePath}",
+                        logCorrelationId, imagePath);
+                }
+                else
+                {
+                    _logger.LogError(ex, "Failed to extract EXIF data from {ImagePath}", imagePath);
+                }
                 throw new InvalidOperationException($"Failed to extract EXIF data: {ex.Message}", ex);
             }
         }
 
-        private async Task<Dictionary<string, string>> ReadExifDataAsync(string imagePath)
+        private async Task<Dictionary<string, string>> ReadExifDataAsync(string imagePath, string? correlationId = null)
         {
             var arguments = $"-j -a -G1 -s \"{imagePath}\"";
 
@@ -108,12 +148,20 @@ namespace CamBridge.Infrastructure.Services
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true,
-                    // Use UTF-8 encoding for clean data
                     StandardOutputEncoding = Encoding.UTF8
                 }
             };
 
-            _logger.LogDebug("Executing: {FileName} {Arguments}", _exifToolPath, arguments);
+            // Keep as DEBUG - less important
+            if (!string.IsNullOrEmpty(correlationId))
+            {
+                _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Executing: {FileName} {Arguments}",
+                    correlationId, _exifToolPath, arguments);
+            }
+            else
+            {
+                _logger.LogDebug("Executing: {FileName} {Arguments}", _exifToolPath, arguments);
+            }
 
             process.Start();
 
@@ -166,7 +214,17 @@ namespace CamBridge.Infrastructure.Services
                         {
                             duplicateKeys.Add(key);
                             var newKey = $"{key}_{duplicateKeys.Count(k => k == key)}";
-                            _logger.LogDebug("Duplicate key found: {Key}, renamed to: {NewKey}", key, newKey);
+
+                            // Keep as DEBUG - less important
+                            if (!string.IsNullOrEmpty(_correlationId))
+                            {
+                                _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Duplicate key found: {Key}, renamed to: {NewKey}",
+                                    _correlationId, key, newKey);
+                            }
+                            else
+                            {
+                                _logger.LogDebug("Duplicate key found: {Key}, renamed to: {NewKey}", key, newKey);
+                            }
                             result[newKey] = value;
                         }
                         else
@@ -178,32 +236,58 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (JsonException ex)
             {
-                _logger.LogError(ex, "Failed to parse ExifTool JSON output");
+                // FIXED: Use correlation ID in error log
+                if (!string.IsNullOrEmpty(_correlationId))
+                {
+                    _logger.LogError(ex, "[{CorrelationId}] [ExifError] Failed to parse ExifTool JSON output", _correlationId);
+                }
+                else
+                {
+                    _logger.LogError(ex, "Failed to parse ExifTool JSON output");
+                }
                 throw new InvalidOperationException("Failed to parse ExifTool output", ex);
             }
 
             return result;
         }
 
-        private ImageMetadata ParseExifData(Dictionary<string, string> exifData, string imagePath)
+        private ImageMetadata ParseExifData(Dictionary<string, string> exifData, string imagePath, string? correlationId = null)
         {
-            // Log barcode data if present
+            // Log barcode data if present - ALREADY INFORMATION LEVEL
             if ((exifData.TryGetValue("RMETA:Barcode", out var barcodeData) ||
                  exifData.TryGetValue("Barcode", out barcodeData)) &&
                 !string.IsNullOrEmpty(barcodeData))
             {
-                _logger.LogInformation("Found Ricoh barcode data: '{BarcodeData}'", barcodeData);
+                // ALREADY LogInformation - good!
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogInformation("[{CorrelationId}] [ExifExtraction] Found Ricoh barcode data: '{BarcodeData}'",
+                        correlationId, barcodeData);
+                }
+                else
+                {
+                    _logger.LogInformation("Found Ricoh barcode data: '{BarcodeData}'", barcodeData);
+                }
             }
 
             // Check for UserComment (alternative location for camera data)
             if (exifData.TryGetValue("ExifIFD:UserComment", out var userComment) ||
                 exifData.TryGetValue("UserComment", out userComment))
             {
-                _logger.LogDebug("UserComment field: '{UserComment}'", userComment);
+                // Keep as DEBUG - less important
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [ExifExtraction] UserComment field: '{UserComment}'",
+                        correlationId, userComment);
+                }
+                else
+                {
+                    _logger.LogDebug("UserComment field: '{UserComment}'", userComment);
+                }
             }
 
             // Extract patient and study info from barcode data
-            var (patientInfo, studyInfo) = ParsePatientAndStudyInfo(exifData);
+            var (patientInfo, studyInfo) = ParsePatientAndStudyInfo(exifData, correlationId); // Pass correlationId!
 
             // Extract technical data
             var technicalData = new ImageTechnicalData
@@ -243,16 +327,24 @@ namespace CamBridge.Infrastructure.Services
             );
         }
 
-        private (PatientInfo, StudyInfo) ParsePatientAndStudyInfo(Dictionary<string, string> exifData)
+        private (PatientInfo, StudyInfo) ParsePatientAndStudyInfo(Dictionary<string, string> exifData, string? correlationId = null)
         {
-            // Check for barcode data first (Ricoh G900 II stores QR code payload here)
-            // Try both with and without prefix
+            // Check for barcode data first
             if ((exifData.TryGetValue("RMETA:Barcode", out var barcodeData) ||
                  exifData.TryGetValue("Barcode", out barcodeData)) &&
                 !string.IsNullOrEmpty(barcodeData))
             {
-                _logger.LogDebug("Found barcode data in Barcode field: '{BarcodeData}'", barcodeData);
-                return ParseBarcodeData(barcodeData);
+                // FIXED: Use correlationId parameter instead of _correlationId
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Found barcode data in Barcode field: '{BarcodeData}'",
+                        correlationId, barcodeData);
+                }
+                else
+                {
+                    _logger.LogDebug("Found barcode data in Barcode field: '{BarcodeData}'", barcodeData);
+                }
+                return ParseBarcodeData(barcodeData, correlationId); // Pass correlationId!
             }
 
             // Check UserComment as fallback
@@ -260,26 +352,53 @@ namespace CamBridge.Infrastructure.Services
                 !string.IsNullOrEmpty(userComment) &&
                 userComment.Contains("|"))
             {
-                _logger.LogDebug("Found barcode data in UserComment field: '{UserComment}'", userComment);
-                return ParseBarcodeData(userComment);
+                // FIXED: Use correlationId parameter instead of _correlationId
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Found barcode data in UserComment field: '{UserComment}'",
+                        correlationId, userComment);
+                }
+                else
+                {
+                    _logger.LogDebug("Found barcode data in UserComment field: '{UserComment}'", userComment);
+                }
+                return ParseBarcodeData(userComment, correlationId); // Pass correlationId!
             }
 
             // No barcode data found
-            return CreateDefaultPatientAndStudy();
+            return CreateDefaultPatientAndStudy(correlationId); // Pass correlationId!
         }
 
-        private (PatientInfo, StudyInfo) ParseBarcodeData(string barcodeData)
+        private (PatientInfo, StudyInfo) ParseBarcodeData(string barcodeData, string? correlationId = null)
         {
             try
             {
-                _logger.LogDebug("Parsing barcode data: '{BarcodeData}'", barcodeData);
+                // FIXED: Use correlationId parameter instead of _correlationId
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Parsing barcode data: '{BarcodeData}'",
+                        correlationId, barcodeData);
+                }
+                else
+                {
+                    _logger.LogDebug("Parsing barcode data: '{BarcodeData}'", barcodeData);
+                }
 
                 // Expected format: "ExamId|PatientName|BirthDate|Gender|StudyDescription"
                 var parts = barcodeData.Split('|');
 
                 for (int i = 0; i < parts.Length; i++)
                 {
-                    _logger.LogDebug("Barcode field [{Index}]: '{Value}'", i, parts[i]);
+                    // FIXED: Use correlationId parameter instead of _correlationId
+                    if (!string.IsNullOrEmpty(correlationId))
+                    {
+                        _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Barcode field [{Index}]: '{Value}'",
+                            correlationId, i, parts[i]);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Barcode field [{Index}]: '{Value}'", i, parts[i]);
+                    }
                 }
 
                 if (parts.Length >= 4)
@@ -322,18 +441,35 @@ namespace CamBridge.Infrastructure.Services
                         studyDate: DateTime.Now
                     );
 
-                    _logger.LogInformation("Successfully parsed barcode: ExamId={ExamId}, Patient={PatientName}, Study={StudyDescription}",
-                        examId, patientName, studyDescription);
+                    // CHANGED TO INFORMATION LEVEL - Important info
+                    if (!string.IsNullOrEmpty(correlationId))
+                    {
+                        _logger.LogInformation("[{CorrelationId}] [ExifExtraction] Successfully parsed barcode: ExamId={ExamId}, Patient={PatientName}, Study={StudyDescription}",
+                            correlationId, examId, patientName, studyDescription);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Successfully parsed barcode: ExamId={ExamId}, Patient={PatientName}, Study={StudyDescription}",
+                            examId, patientName, studyDescription);
+                    }
 
                     return (patientInfo, studyInfo);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error parsing barcode data");
+                // FIXED: Use correlationId parameter instead of _correlationId
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogError(ex, "[{CorrelationId}] [ExifError] Error parsing barcode data", correlationId);
+                }
+                else
+                {
+                    _logger.LogError(ex, "Error parsing barcode data");
+                }
             }
 
-            return CreateDefaultPatientAndStudy();
+            return CreateDefaultPatientAndStudy(correlationId); // Pass correlationId!
         }
 
         private Gender ParseGender(string? genderStr)
@@ -350,7 +486,7 @@ namespace CamBridge.Infrastructure.Services
             };
         }
 
-        private (PatientInfo, StudyInfo) CreateDefaultPatientAndStudy()
+        private (PatientInfo, StudyInfo) CreateDefaultPatientAndStudy(string? correlationId = null)
         {
             var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
             var shortTimestamp = DateTime.Now.ToString("MMddHHmm");
@@ -370,7 +506,16 @@ namespace CamBridge.Infrastructure.Services
                 studyDate: DateTime.Now
             );
 
-            _logger.LogWarning("Created default patient/study info with ID: AUTO_{Timestamp}", timestamp);
+            // Keep as WARNING - important to know
+            if (!string.IsNullOrEmpty(correlationId))
+            {
+                _logger.LogWarning("[{CorrelationId}] [ExifExtraction] Created default patient/study info with ID: AUTO_{Timestamp}",
+                    correlationId, timestamp);
+            }
+            else
+            {
+                _logger.LogWarning("Created default patient/study info with ID: AUTO_{Timestamp}", timestamp);
+            }
 
             return (patientInfo, studyInfo);
         }

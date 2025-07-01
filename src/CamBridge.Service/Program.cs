@@ -1,6 +1,6 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.8.8
-// Description: Windows service entry point with DEBUG for duplicate pipeline issue
+// Version: 0.8.10
+// Description: Windows service entry point
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
@@ -97,27 +97,8 @@ try
     var settings = new CamBridgeSettingsV2();
     configuration.GetSection("CamBridge").Bind(settings);
 
-    // DEBUG: Check what configuration loaded
-    Console.WriteLine($"[DEBUG] Config loaded from: {configPath}");
-    Console.WriteLine($"[DEBUG] Settings.Pipelines.Count: {settings?.Pipelines?.Count ?? 0}");
-    if (settings?.Pipelines != null)
-    {
-        for (int i = 0; i < settings.Pipelines.Count; i++)
-        {
-            var p = settings.Pipelines[i];
-            Console.WriteLine($"[DEBUG] Pipeline[{i}]: Name='{p.Name}', Id='{p.Id}'");
-        }
-
-        // Check for duplicates
-        var groupedByName = settings.Pipelines.GroupBy(p => p.Name);
-        foreach (var group in groupedByName.Where(g => g.Count() > 1))
-        {
-            Console.WriteLine($"[DEBUG] WARNING: Duplicate pipeline name '{group.Key}' found {group.Count()} times!");
-        }
-    }
-
     var logConfig = new LoggerConfiguration()
-        .MinimumLevel.Debug()
+        .MinimumLevel.Information()
         .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
         .MinimumLevel.Override("System", LogEventLevel.Warning)
         .Enrich.FromLogContext()
@@ -145,9 +126,6 @@ try
     // Create a separate log file for each pipeline
     if (settings?.Pipelines != null)
     {
-        // DEBUG: Log pipeline configuration for Serilog
-        Console.WriteLine($"[DEBUG] Configuring Serilog for {settings.Pipelines.Count} pipelines");
-
         foreach (var pipeline in settings.Pipelines)
         {
             var sanitizedName = SanitizeForFileName(pipeline.Name);
@@ -164,16 +142,14 @@ try
                     outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
                     shared: true));
 
-            // Changed to DEBUG level
-            Log.Debug("Configured logging for pipeline: {Pipeline} -> {LogFile}",
+            Log.Information("Configured logging for pipeline: {Pipeline} -> {LogFile}",
                 pipeline.Name, $"pipeline_{sanitizedName}_{{Date}}.log");
         }
     }
 
     Log.Logger = logConfig.CreateLogger();
 
-    // Changed to DEBUG level
-    Log.Debug("Serilog configured with TRUE multi-pipeline support at {LogPath}", baseLogPath);
+    Log.Information("Serilog configured with multi-pipeline support at {LogPath}", baseLogPath);
     serviceEventLog?.WriteEntry($"Logging initialized with separate pipeline logs at: {baseLogPath}", EventLogEntryType.Information, 1005);
 }
 catch (Exception ex)
@@ -208,7 +184,7 @@ try
 
             // Use centralized configuration path
             var configPath = ConfigurationPaths.GetPrimaryConfigPath();
-            Log.Debug("Loading configuration from: {ConfigPath}", configPath); // Changed to DEBUG
+            Log.Information("Loading configuration from: {ConfigPath}", configPath);
 
             // Initialize config if needed
             if (!File.Exists(configPath))
@@ -245,16 +221,6 @@ try
                 }
 
                 cambridgeSection.Bind(options);
-
-                // DEBUG: Check pipeline count after binding
-                Log.Warning("[DEBUG ConfigureOptions] After Bind - Pipeline count: {Count}", options.Pipelines?.Count ?? -1);
-                if (options.Pipelines != null)
-                {
-                    foreach (var p in options.Pipelines)
-                    {
-                        Log.Warning("[DEBUG ConfigureOptions] Pipeline: {Name} ({Id})", p.Name, p.Id);
-                    }
-                }
 
                 // Validate configuration structure
                 ConfigValidator.ValidateSettings(options);
@@ -323,18 +289,10 @@ try
         var settings = scope.ServiceProvider.GetService<IOptionsSnapshot<CamBridgeSettingsV2>>();
         if (settings?.Value != null)
         {
-            // Changed to DEBUG level
-            Log.Debug("Configuration loaded successfully:");
-            Log.Debug("  Version: {Version}", settings.Value.Version);
-            Log.Debug("  Pipelines: {Count}", settings.Value.Pipelines.Count);
-            Log.Debug("  Service Port: {Port}", settings.Value.Service?.ApiPort ?? 5111);
-
-            // DEBUG: Extra pipeline info
-            Log.Warning("[DEBUG Final Check] Pipeline count: {Count}", settings.Value.Pipelines.Count);
-            foreach (var p in settings.Value.Pipelines)
-            {
-                Log.Warning("[DEBUG Final Check] Pipeline: {Name} ({Id})", p.Name, p.Id);
-            }
+            Log.Information("Configuration loaded successfully:");
+            Log.Information("  Version: {Version}", settings.Value.Version);
+            Log.Information("  Pipelines: {Count}", settings.Value.Pipelines.Count);
+            Log.Information("  Service Port: {Port}", settings.Value.Service?.ApiPort ?? 5111);
         }
         else
         {

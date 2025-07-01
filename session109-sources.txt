@@ -1,0 +1,2459 @@
+﻿// src/CamBridge.Infrastructure/Services/ExifToolReader.cs
+// Version: 0.8.10
+// Description: EXIF data extraction service - with correlation ID support
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using CamBridge.Core.Entities;
+using CamBridge.Core.ValueObjects;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Service for reading EXIF data from image files using ExifTool
+    /// Clean UTF-8 implementation without workarounds
+    /// </summary>
+    public class ExifToolReader
+    {
+        private readonly ILogger<ExifToolReader> _logger;
+        private readonly string _exifToolPath;
+        private readonly string? _correlationId;
+
+        public ExifToolReader(ILogger<ExifToolReader> logger, string exifToolPath, string? correlationId = null)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _correlationId = correlationId;
+
+            if (string.IsNullOrWhiteSpace(exifToolPath))
+            {
+                throw new ArgumentException("ExifTool path cannot be empty", nameof(exifToolPath));
+            }
+
+            // Resolve to absolute path if relative
+            _exifToolPath = Path.IsPathRooted(exifToolPath)
+                ? exifToolPath
+                : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, exifToolPath);
+
+            // Try to find ExifTool in various locations
+            if (!File.Exists(_exifToolPath))
+            {
+                var searchPaths = new[]
+                {
+                    _exifToolPath,
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "exiftool.exe"),
+                    Path.Combine(Environment.CurrentDirectory, "Tools", "exiftool.exe"),
+                    Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, "Tools", "exiftool.exe")
+                };
+
+                _exifToolPath = searchPaths.FirstOrDefault(File.Exists) ?? _exifToolPath;
+            }
+
+            if (!File.Exists(_exifToolPath))
+            {
+                throw new FileNotFoundException($"ExifTool not found at: {_exifToolPath}");
+            }
+
+            if (!string.IsNullOrEmpty(_correlationId))
+            {
+                _logger.LogInformation("[{CorrelationId}] [ExifInit] ExifToolReader initialized with path: {Path}", _correlationId, _exifToolPath);
+            }
+            else
+            {
+                _logger.LogInformation("ExifToolReader initialized with path: {Path}", _exifToolPath);
+            }
+        }
+
+        /// <summary>
+        /// Extract metadata from an image file
+        /// </summary>
+        public async Task<ImageMetadata> ExtractMetadataAsync(string imagePath, string? correlationId = null)
+        {
+            // FIXED: Use passed correlationId instead of stored _correlationId!
+            var logCorrelationId = correlationId ?? _correlationId;
+
+            // CHANGED TO INFORMATION LEVEL
+            if (!string.IsNullOrEmpty(logCorrelationId))
+            {
+                _logger.LogInformation("[{CorrelationId}] [ExifExtraction] Extracting metadata from: {ImagePath}",
+                    logCorrelationId, imagePath);
+            }
+            else
+            {
+                _logger.LogInformation("Extracting metadata from: {ImagePath}", imagePath);
+            }
+
+            if (!File.Exists(imagePath))
+            {
+                throw new FileNotFoundException($"Image file not found: {imagePath}");
+            }
+
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                var exifData = await ReadExifDataAsync(imagePath, logCorrelationId);  // Pass correlationId!
+                var metadata = ParseExifData(exifData, imagePath, logCorrelationId);  // Pass correlationId!
+
+                stopwatch.Stop();
+
+                // CHANGED TO INFORMATION LEVEL
+                if (!string.IsNullOrEmpty(logCorrelationId))
+                {
+                    _logger.LogInformation("[{CorrelationId}] [ExifExtraction] EXIF extraction completed in {ElapsedMs}ms",
+                        logCorrelationId, stopwatch.ElapsedMilliseconds);
+                }
+                else
+                {
+                    _logger.LogInformation("EXIF extraction completed in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+                }
+
+                return metadata;
+            }
+            catch (Exception ex)
+            {
+                // FIXED: Use correlation ID in error log
+                if (!string.IsNullOrEmpty(logCorrelationId))
+                {
+                    _logger.LogError(ex, "[{CorrelationId}] [ExifError] Failed to extract EXIF data from {ImagePath}",
+                        logCorrelationId, imagePath);
+                }
+                else
+                {
+                    _logger.LogError(ex, "Failed to extract EXIF data from {ImagePath}", imagePath);
+                }
+                throw new InvalidOperationException($"Failed to extract EXIF data: {ex.Message}", ex);
+            }
+        }
+
+        private async Task<Dictionary<string, string>> ReadExifDataAsync(string imagePath, string? correlationId = null)
+        {
+            var arguments = $"-j -a -G1 -s \"{imagePath}\"";
+
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = _exifToolPath,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = Encoding.UTF8
+                }
+            };
+
+            // Keep as DEBUG - less important
+            if (!string.IsNullOrEmpty(correlationId))
+            {
+                _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Executing: {FileName} {Arguments}",
+                    correlationId, _exifToolPath, arguments);
+            }
+            else
+            {
+                _logger.LogDebug("Executing: {FileName} {Arguments}", _exifToolPath, arguments);
+            }
+
+            process.Start();
+
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+
+            await Task.WhenAll(outputTask, errorTask);
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                var error = await errorTask;
+                throw new InvalidOperationException($"ExifTool returned exit code {process.ExitCode}: {error}");
+            }
+
+            var output = await outputTask;
+            return ParseExifToolOutput(output);
+        }
+
+        private Dictionary<string, string> ParseExifToolOutput(string output)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                using var doc = JsonDocument.Parse(output);
+                var root = doc.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
+                {
+                    var firstElement = root[0];
+                    var duplicateKeys = new HashSet<string>();
+
+                    foreach (var property in firstElement.EnumerateObject())
+                    {
+                        var key = property.Name;
+                        // Handle different JSON value types
+                        var value = property.Value.ValueKind switch
+                        {
+                            JsonValueKind.String => property.Value.GetString() ?? string.Empty,
+                            JsonValueKind.Number => property.Value.GetRawText(),
+                            JsonValueKind.True => "true",
+                            JsonValueKind.False => "false",
+                            JsonValueKind.Null => string.Empty,
+                            _ => property.Value.GetRawText()
+                        };
+
+                        // Handle duplicate keys
+                        if (result.ContainsKey(key))
+                        {
+                            duplicateKeys.Add(key);
+                            var newKey = $"{key}_{duplicateKeys.Count(k => k == key)}";
+
+                            // Keep as DEBUG - less important
+                            if (!string.IsNullOrEmpty(_correlationId))
+                            {
+                                _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Duplicate key found: {Key}, renamed to: {NewKey}",
+                                    _correlationId, key, newKey);
+                            }
+                            else
+                            {
+                                _logger.LogDebug("Duplicate key found: {Key}, renamed to: {NewKey}", key, newKey);
+                            }
+                            result[newKey] = value;
+                        }
+                        else
+                        {
+                            result[key] = value;
+                        }
+                    }
+                }
+            }
+            catch (JsonException ex)
+            {
+                // FIXED: Use correlation ID in error log
+                if (!string.IsNullOrEmpty(_correlationId))
+                {
+                    _logger.LogError(ex, "[{CorrelationId}] [ExifError] Failed to parse ExifTool JSON output", _correlationId);
+                }
+                else
+                {
+                    _logger.LogError(ex, "Failed to parse ExifTool JSON output");
+                }
+                throw new InvalidOperationException("Failed to parse ExifTool output", ex);
+            }
+
+            return result;
+        }
+
+        private ImageMetadata ParseExifData(Dictionary<string, string> exifData, string imagePath, string? correlationId = null)
+        {
+            // Log barcode data if present - ALREADY INFORMATION LEVEL
+            if ((exifData.TryGetValue("RMETA:Barcode", out var barcodeData) ||
+                 exifData.TryGetValue("Barcode", out barcodeData)) &&
+                !string.IsNullOrEmpty(barcodeData))
+            {
+                // ALREADY LogInformation - good!
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogInformation("[{CorrelationId}] [ExifExtraction] Found Ricoh barcode data: '{BarcodeData}'",
+                        correlationId, barcodeData);
+                }
+                else
+                {
+                    _logger.LogInformation("Found Ricoh barcode data: '{BarcodeData}'", barcodeData);
+                }
+            }
+
+            // Check for UserComment (alternative location for camera data)
+            if (exifData.TryGetValue("ExifIFD:UserComment", out var userComment) ||
+                exifData.TryGetValue("UserComment", out userComment))
+            {
+                // Keep as DEBUG - less important
+                if (!string.IsNullOrEmpty(_correlationId))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [ExifExtraction] UserComment field: '{UserComment}'",
+                        _correlationId, userComment);
+                }
+                else
+                {
+                    _logger.LogDebug("UserComment field: '{UserComment}'", userComment);
+                }
+            }
+
+            // Extract patient and study info from barcode data
+            var (patientInfo, studyInfo) = ParsePatientAndStudyInfo(exifData, correlationId); // Pass correlationId!
+
+            // Extract technical data
+            var technicalData = new ImageTechnicalData
+            {
+                ImageWidth = this.GetIntValue(exifData, "File:ImageWidth", "ExifIFD:ExifImageWidth", "ImageWidth", "ExifImageWidth") ?? 0,
+                ImageHeight = this.GetIntValue(exifData, "File:ImageHeight", "ExifIFD:ExifImageHeight", "ImageHeight", "ExifImageHeight") ?? 0,
+                BitsPerSample = this.GetIntValue(exifData, "File:BitsPerSample", "BitsPerSample") ?? 8,
+                Manufacturer = exifData.GetValueOrDefault("IFD0:Make") ?? exifData.GetValueOrDefault("Make") ?? "Unknown",
+                Model = exifData.GetValueOrDefault("IFD0:Model") ?? exifData.GetValueOrDefault("Model") ?? "Unknown",
+                Software = exifData.GetValueOrDefault("IFD0:Software") ?? exifData.GetValueOrDefault("Software"),
+                ColorSpace = exifData.GetValueOrDefault("ExifIFD:ColorSpace") ?? exifData.GetValueOrDefault("ColorSpace"),
+                Compression = exifData.GetValueOrDefault("File:Compression") ?? exifData.GetValueOrDefault("Compression"),
+                Orientation = this.GetIntValue(exifData, "IFD0:Orientation", "Orientation")
+            };
+
+            // Get capture date
+            var captureDateTime = ParseDateTime(
+                exifData.GetValueOrDefault("ExifIFD:DateTimeOriginal") ??
+                exifData.GetValueOrDefault("DateTimeOriginal") ??
+                exifData.GetValueOrDefault("ExifIFD:CreateDate") ??
+                exifData.GetValueOrDefault("CreateDate") ??
+                exifData.GetValueOrDefault("IFD0:ModifyDate") ??
+                exifData.GetValueOrDefault("ModifyDate")) ?? DateTime.Now;
+
+            // Create metadata using the actual constructor
+            return new ImageMetadata(
+                sourceFilePath: imagePath,
+                captureDateTime: captureDateTime,
+                patient: patientInfo,
+                study: studyInfo,
+                technicalData: technicalData,
+                userComment: userComment,
+                barcodeData: barcodeData,
+                instanceNumber: 1,
+                instanceUid: null, // Will be auto-generated
+                exifData: exifData
+            );
+        }
+
+        private (PatientInfo, StudyInfo) ParsePatientAndStudyInfo(Dictionary<string, string> exifData, string? correlationId = null)
+        {
+            // Check for barcode data first
+            if ((exifData.TryGetValue("RMETA:Barcode", out var barcodeData) ||
+                 exifData.TryGetValue("Barcode", out barcodeData)) &&
+                !string.IsNullOrEmpty(barcodeData))
+            {
+                // Ã„NDERN: correlationId statt _correlationId
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Found barcode data in Barcode field: '{BarcodeData}'",
+                        correlationId, barcodeData);
+                }
+                else
+                {
+                    _logger.LogDebug("Found barcode data in Barcode field: '{BarcodeData}'", barcodeData);
+                }
+                return ParseBarcodeData(barcodeData, correlationId); // Pass correlationId!
+            }
+
+            // Check UserComment as fallback
+            if (exifData.TryGetValue("UserComment", out var userComment) &&
+                !string.IsNullOrEmpty(userComment) &&
+                userComment.Contains("|"))
+            {
+                // Ã„NDERN: correlationId statt _correlationId
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Found barcode data in UserComment field: '{UserComment}'",
+                        correlationId, userComment);
+                }
+                else
+                {
+                    _logger.LogDebug("Found barcode data in UserComment field: '{UserComment}'", userComment);
+                }
+                return ParseBarcodeData(userComment, correlationId); // Pass correlationId!
+            }
+
+            // No barcode data found
+            return CreateDefaultPatientAndStudy(correlationId); // Pass correlationId!
+        }
+
+        private (PatientInfo, StudyInfo) ParseBarcodeData(string barcodeData, string? correlationId = null)
+        {
+            try
+            {
+                // Ã„NDERN: correlationId statt _correlationId
+                if (!string.IsNullOrEmpty(correlationId))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Parsing barcode data: '{BarcodeData}'",
+                        correlationId, barcodeData);
+                }
+                else
+                {
+                    _logger.LogDebug("Parsing barcode data: '{BarcodeData}'", barcodeData);
+                }
+
+                // Expected format: "ExamId|PatientName|BirthDate|Gender|StudyDescription"
+                var parts = barcodeData.Split('|');
+
+                for (int i = 0; i < parts.Length; i++)
+                {
+                    // Keep as DEBUG - very detailed
+                    if (!string.IsNullOrEmpty(_correlationId))
+                    {
+                        _logger.LogDebug("[{CorrelationId}] [ExifExtraction] Barcode field [{Index}]: '{Value}'",
+                            _correlationId, i, parts[i]);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Barcode field [{Index}]: '{Value}'", i, parts[i]);
+                    }
+                }
+
+                if (parts.Length >= 4)
+                {
+                    // Parse patient info
+                    var examId = parts[0]?.Trim() ?? string.Empty;
+                    var patientName = parts[1]?.Trim() ?? "Unknown";
+                    var birthDateStr = parts[2]?.Trim();
+                    var genderStr = parts[3]?.Trim();
+                    var studyDescription = parts.Length > 4 ? parts[4]?.Trim() : null;
+
+                    // Parse birth date
+                    DateTime? birthDate = null;
+                    if (!string.IsNullOrEmpty(birthDateStr))
+                    {
+                        if (DateTime.TryParse(birthDateStr, out var parsed))
+                        {
+                            birthDate = parsed;
+                        }
+                    }
+
+                    // Parse gender
+                    var gender = ParseGender(genderStr);
+
+                    // Create patient info
+                    var patientInfo = new PatientInfo(
+                        id: new PatientId(examId),
+                        name: patientName,
+                        birthDate: birthDate,
+                        gender: gender
+                    );
+
+                    // Create study info
+                    var studyIdValue = examId.Length > 14 ? examId.Substring(0, 14) : examId;
+                    var studyInfo = new StudyInfo(
+                        studyId: new StudyId($"S{studyIdValue}"), // Max 16 chars total
+                        examId: examId,
+                        description: studyDescription ?? "Clinical Photography",
+                        modality: "VL", // Visible Light photography
+                        studyDate: DateTime.Now
+                    );
+
+                    // CHANGED TO INFORMATION LEVEL - Important info
+                    if (!string.IsNullOrEmpty(correlationId))
+                    {
+                        _logger.LogInformation("[{CorrelationId}] [ExifExtraction] Successfully parsed barcode: ExamId={ExamId}, Patient={PatientName}, Study={StudyDescription}",
+                            correlationId, examId, patientName, studyDescription);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Successfully parsed barcode: ExamId={ExamId}, Patient={PatientName}, Study={StudyDescription}",
+                            examId, patientName, studyDescription);
+                    }
+
+                    return (patientInfo, studyInfo);
+                }
+            }
+            catch (Exception ex)
+            {
+                // FIXED: Use correlation ID in error log
+                if (!string.IsNullOrEmpty(_correlationId))
+                {
+                    _logger.LogError(ex, "[{CorrelationId}] [ExifError] Error parsing barcode data", _correlationId);
+                }
+                else
+                {
+                    _logger.LogError(ex, "Error parsing barcode data");
+                }
+            }
+
+            return CreateDefaultPatientAndStudy();
+        }
+
+        private Gender ParseGender(string? genderStr)
+        {
+            if (string.IsNullOrWhiteSpace(genderStr))
+                return Gender.Other;
+
+            return genderStr.ToUpperInvariant() switch
+            {
+                "M" or "MALE" => Gender.Male,
+                "F" or "FEMALE" => Gender.Female,
+                "O" or "OTHER" => Gender.Other,
+                _ => Gender.Other
+            };
+        }
+
+        private (PatientInfo, StudyInfo) CreateDefaultPatientAndStudy(string? correlationId = null)
+        {
+            var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+            var shortTimestamp = DateTime.Now.ToString("MMddHHmm");
+
+            var patientInfo = new PatientInfo(
+                id: new PatientId($"AUTO_{timestamp}"),
+                name: "Unknown Patient",
+                birthDate: null,
+                gender: Gender.Other
+            );
+
+            var studyInfo = new StudyInfo(
+                studyId: new StudyId($"S{shortTimestamp}"), // Max 16 chars
+                examId: $"AUTO_{timestamp}",
+                description: "Unidentified Clinical Photography",
+                modality: "VL",
+                studyDate: DateTime.Now
+            );
+
+            // Keep as WARNING - important to know
+            if (!string.IsNullOrEmpty(correlationId))
+            {
+                _logger.LogWarning("[{CorrelationId}] [ExifExtraction] Created default patient/study info with ID: AUTO_{Timestamp}",
+                    correlationId, timestamp);
+            }
+            else
+            {
+                _logger.LogWarning("Created default patient/study info with ID: AUTO_{Timestamp}", timestamp);
+            }
+
+            return (patientInfo, studyInfo);
+        }
+
+        private DateTime? ParseDateTime(string? dateTimeStr)
+        {
+            if (string.IsNullOrWhiteSpace(dateTimeStr))
+                return null;
+
+            // ExifTool format: "2023:12:25 14:30:45"
+            if (DateTime.TryParseExact(dateTimeStr, "yyyy:MM:dd HH:mm:ss",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out var result))
+            {
+                return result;
+            }
+
+            // Fallback to standard parsing
+            if (DateTime.TryParse(dateTimeStr, out result))
+            {
+                return result;
+            }
+
+            return null;
+        }
+
+        private int? GetIntValue(Dictionary<string, string> exifData, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (exifData.TryGetValue(key, out var value))
+                {
+                    // Handle values like "8 8 8" for BitsPerSample
+                    var firstValue = value.Split(' ')[0];
+
+                    if (int.TryParse(firstValue, out var result))
+                        return result;
+                }
+            }
+            return null;
+        }
+    }
+}
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Extensions.Logging;
+using CamBridge.Core;
+using CamBridge.Core.Interfaces;
+using FellowOakDicom;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Service responsible for mapping values to DICOM tags according to mapping rules
+    /// </summary>
+    public class DicomTagMapper : IDicomTagMapper
+    {
+        private readonly ILogger<DicomTagMapper> _logger;
+
+        public DicomTagMapper(ILogger<DicomTagMapper> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        /// <summary>
+        /// Applies a mapping rule to transform a value
+        /// </summary>
+        public string? ApplyTransform(string? value, string? transform)
+        {
+            if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(transform) || transform == "None")
+            {
+                return value;
+            }
+
+            // Parse transform string to enum
+            if (!Enum.TryParse<ValueTransform>(transform, out var transformEnum))
+            {
+                _logger.LogWarning("Unknown transform: {Transform}", transform);
+                return value;
+            }
+
+            try
+            {
+                return transformEnum switch
+                {
+                    ValueTransform.DateToDicom => ConvertDateToDicom(value),
+                    ValueTransform.TimeToDicom => ConvertTimeToDicom(value),
+                    ValueTransform.DateTimeToDicom => ConvertDateTimeToDicom(value),
+                    ValueTransform.MapGender => MapGenderCode(value),
+                    ValueTransform.RemovePrefix => RemovePrefix(value),
+                    ValueTransform.ExtractDate => ExtractDate(value),
+                    ValueTransform.ExtractTime => ExtractTime(value),
+                    ValueTransform.ToUpperCase => value.ToUpperInvariant(),
+                    ValueTransform.ToLowerCase => value.ToLowerInvariant(),
+                    ValueTransform.Trim => value.Trim(),
+                    _ => value
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to apply transform {Transform} to value '{Value}'", transform, value);
+                return value;
+            }
+        }
+
+        private string ConvertDateToDicom(string date)
+        {
+            // Convert various date formats to DICOM format (YYYYMMDD)
+            if (DateTime.TryParse(date, out var dt))
+            {
+                return dt.ToString("yyyyMMdd");
+            }
+
+            // Already in DICOM format?
+            if (date.Length == 8 && int.TryParse(date, out _))
+            {
+                return date;
+            }
+
+            _logger.LogWarning("Unable to convert date '{Date}' to DICOM format", date);
+            return date;
+        }
+
+        private string ConvertTimeToDicom(string time)
+        {
+            // Convert various time formats to DICOM format (HHMMSS)
+            if (DateTime.TryParse(time, out var dt))
+            {
+                return dt.ToString("HHmmss");
+            }
+
+            if (TimeSpan.TryParse(time, out var ts))
+            {
+                return $"{ts.Hours:D2}{ts.Minutes:D2}{ts.Seconds:D2}";
+            }
+
+            _logger.LogWarning("Unable to convert time '{Time}' to DICOM format", time);
+            return time;
+        }
+
+        private string ConvertDateTimeToDicom(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("yyyyMMddHHmmss");
+            }
+
+            _logger.LogWarning("Unable to convert datetime '{DateTime}' to DICOM format", dateTime);
+            return dateTime;
+        }
+
+        /// <summary>
+        /// Maps source data to a DICOM dataset using mapping rules
+        /// </summary>
+        public void MapToDataset(DicomDataset dataset, Dictionary<string, string> sourceData, IEnumerable<MappingRule> mappingRules)
+        {
+            if (dataset == null) throw new ArgumentNullException(nameof(dataset));
+            if (sourceData == null) throw new ArgumentNullException(nameof(sourceData));
+            if (mappingRules == null) throw new ArgumentNullException(nameof(mappingRules));
+
+            foreach (var rule in mappingRules)
+            {
+                try
+                {
+                    // Get source value
+                    if (!sourceData.TryGetValue(rule.SourceField, out var sourceValue))
+                    {
+                        if (rule.Required)
+                        {
+                            _logger.LogWarning("Required source field '{Field}' not found in data", rule.SourceField);
+                        }
+
+                        // Use default value if available
+                        sourceValue = rule.DefaultValue;
+
+                        if (string.IsNullOrEmpty(sourceValue))
+                        {
+                            continue;
+                        }
+                    }
+
+                    // Apply transform if specified
+                    var transformedValue = ApplyTransform(sourceValue, rule.Transform);
+
+                    if (string.IsNullOrEmpty(transformedValue) && rule.Required)
+                    {
+                        _logger.LogWarning("Required field '{Field}' resulted in empty value after transform", rule.SourceField);
+                    }
+
+                    // Parse DICOM tag
+                    if (!TryParseDicomTag(rule.DicomTag, out var group, out var element))
+                    {
+                        _logger.LogError("Invalid DICOM tag format: {Tag}", rule.DicomTag);
+                        continue;
+                    }
+
+                    // Add to dataset
+                    var tag = new DicomTag(group, element);
+
+                    if (!string.IsNullOrEmpty(transformedValue))
+                    {
+                        dataset.AddOrUpdate(tag, transformedValue);
+                        _logger.LogDebug("Mapped {Source} -> {Tag}: {Value}",
+                            rule.SourceField, rule.DicomTag, transformedValue);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error mapping rule {Source} -> {Tag}",
+                        rule.SourceField, rule.DicomTag);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Parses a DICOM tag string like "(0010,0010)" into group and element
+        /// </summary>
+        private bool TryParseDicomTag(string tagString, out ushort group, out ushort element)
+        {
+            group = 0;
+            element = 0;
+
+            if (string.IsNullOrEmpty(tagString))
+                return false;
+
+            // Remove parentheses and spaces
+            var cleaned = tagString.Trim('(', ')', ' ');
+            var parts = cleaned.Split(',');
+
+            if (parts.Length != 2)
+                return false;
+
+            try
+            {
+                group = Convert.ToUInt16(parts[0].Trim(), 16);
+                element = Convert.ToUInt16(parts[1].Trim(), 16);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private string MapGenderCode(string gender)
+        {
+            return gender?.ToUpperInvariant() switch
+            {
+                "M" or "MALE" => "M",
+                "F" or "FEMALE" => "F",
+                "O" or "OTHER" => "O",
+                _ => ""
+            };
+        }
+
+        private string RemovePrefix(string value)
+        {
+            // Remove common prefixes like "GCM_TAG"
+            if (value.StartsWith("GCM_TAG", StringComparison.OrdinalIgnoreCase))
+            {
+                return value.Substring(7).Trim();
+            }
+
+            return value;
+        }
+
+        private string ExtractDate(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("yyyyMMdd");
+            }
+
+            return dateTime;
+        }
+
+        private string ExtractTime(string dateTime)
+        {
+            if (DateTime.TryParse(dateTime, out var dt))
+            {
+                return dt.ToString("HHmmss");
+            }
+
+            return dateTime;
+        }
+    }
+}
+
+// src\CamBridge.Infrastructure\Services\DicomStoreService.cs
+// Version: 0.8.3
+// Description: DICOM C-STORE service with enhanced error handling and user-friendly messages
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.IO;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using Microsoft.Extensions.Logging;
+using FellowOakDicom;
+using FellowOakDicom.Network;
+using FellowOakDicom.Network.Client;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Result of DICOM C-STORE operation
+    /// </summary>
+    public class StoreResult
+    {
+        public bool Success { get; init; }
+        public string? ErrorMessage { get; init; }
+        public string? UserFriendlyMessage { get; init; }
+        public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+        public string? TransactionUid { get; init; }
+        public DicomErrorType ErrorType { get; init; } = DicomErrorType.None;
+
+        public static StoreResult CreateSuccess(string transactionUid = "")
+            => new() { Success = true, TransactionUid = transactionUid };
+
+        public static StoreResult CreateFailure(string errorMessage, string? userFriendlyMessage = null, DicomErrorType errorType = DicomErrorType.Unknown)
+            => new()
+            {
+                Success = false,
+                ErrorMessage = errorMessage,
+                UserFriendlyMessage = userFriendlyMessage ?? errorMessage,
+                ErrorType = errorType
+            };
+    }
+
+    /// <summary>
+    /// Types of DICOM errors for better handling
+    /// </summary>
+    public enum DicomErrorType
+    {
+        None,
+        FileNotFound,
+        NetworkConnection,
+        Authentication,
+        Timeout,
+        InvalidConfiguration,
+        PacsRejection,
+        Unknown
+    }
+
+    /// <summary>
+    /// Service for DICOM C-STORE operations to PACS with enhanced error handling
+    /// </summary>
+    public class DicomStoreService
+    {
+        private readonly ILogger<DicomStoreService> _logger;
+
+        public DicomStoreService(ILogger<DicomStoreService> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        /// <summary>
+        /// Store DICOM file to PACS with enhanced error messages
+        /// </summary>
+        public async Task<StoreResult> StoreFileAsync(string dicomPath, PacsConfiguration config, string? correlationId = null)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (string.IsNullOrEmpty(dicomPath)) throw new ArgumentException("Path required", nameof(dicomPath));
+
+            if (!File.Exists(dicomPath))
+            {
+                _logger.LogError("[{CorrelationId}] [PacsStore] DICOM file not found: {Path}",
+                    correlationId ?? "NO-ID", dicomPath);
+                return StoreResult.CreateFailure(
+                    $"File not found: {dicomPath}",
+                    $"DICOM-Datei nicht gefunden: {Path.GetFileName(dicomPath)}",
+                    DicomErrorType.FileNotFound);
+            }
+
+            _logger.LogInformation("Starting C-STORE to {Host}:{Port} for {File}",
+                config.Host, config.Port, Path.GetFileName(dicomPath));
+
+            try
+            {
+                // Load DICOM file
+                var dicomFile = await DicomFile.OpenAsync(dicomPath);
+                var sopInstanceUid = dicomFile.Dataset.GetSingleValue<string>(DicomTag.SOPInstanceUID);
+                var patientName = dicomFile.Dataset.GetSingleValueOrDefault<string>(DicomTag.PatientName, "Unknown");
+
+                _logger.LogDebug("[{CorrelationId}] [PacsStore] Loaded DICOM: SOP Instance UID={Uid}, Patient={Patient}",
+                    correlationId ?? "NO-ID", sopInstanceUid, patientName);
+
+                // Create client
+                var client = DicomClientFactory.Create(
+                    config.Host,
+                    config.Port,
+                    false,  // No TLS for now
+                    config.CallingAeTitle,
+                    config.CalledAeTitle);
+
+                client.NegotiateAsyncOps();
+
+                // Setup response handling with TaskCompletionSource
+                DicomCStoreResponse? response = null;
+                var responseReceived = new TaskCompletionSource<bool>();
+
+                var request = new DicomCStoreRequest(dicomFile)
+                {
+                    OnResponseReceived = (req, res) =>
+                    {
+                        response = res;
+                        _logger.LogDebug("C-STORE Response: Status={Status} ({Code:X4})",
+                            res.Status.State, res.Status.Code);
+                        responseReceived.TrySetResult(true);
+                    }
+                };
+
+                await client.AddRequestAsync(request);
+
+                // Send with timeout
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(config.TimeoutSeconds));
+
+                try
+                {
+                    await Task.WhenAll(
+                        client.SendAsync(cts.Token),
+                        responseReceived.Task);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogError("C-STORE timeout after {Timeout}s", config.TimeoutSeconds);
+                    return StoreResult.CreateFailure(
+                        $"Timeout after {config.TimeoutSeconds} seconds",
+                        $"PACS antwortet nicht nach {config.TimeoutSeconds} Sekunden. Ist der PACS-Server erreichbar?",
+                        DicomErrorType.Timeout);
+                }
+
+                // Check response
+                if (response?.Status == DicomStatus.Success)
+                {
+                    _logger.LogInformation("[{CorrelationId}] [PacsStore] C-STORE successful for {File}, SOP Instance UID: {Uid}",
+                        correlationId ?? "NO-ID", Path.GetFileName(dicomPath), sopInstanceUid);
+                    return StoreResult.CreateSuccess(sopInstanceUid);
+                }
+                else
+                {
+                    var errorMsg = $"C-STORE failed with status: {response?.Status?.Description ?? "Unknown"}";
+                    var userMsg = TranslateDicomStatus(response?.Status);
+                    _logger.LogWarning(errorMsg);
+                    return StoreResult.CreateFailure(errorMsg, userMsg, DicomErrorType.PacsRejection);
+                }
+            }
+            catch (DicomAssociationRejectedException ex)
+            {
+                _logger.LogError(ex, "DICOM association rejected");
+                var userMsg = TranslateAssociationRejection(ex);
+                return StoreResult.CreateFailure(
+                    $"Association rejected: {ex.Message}",
+                    userMsg,
+                    DicomErrorType.Authentication);
+            }
+            catch (DicomNetworkException ex) when (ex.InnerException is SocketException socketEx)
+            {
+                _logger.LogError(ex, "Network error during C-STORE");
+                var userMsg = TranslateSocketError(socketEx, config);
+                return StoreResult.CreateFailure(
+                    $"Network error: {ex.Message}",
+                    userMsg,
+                    DicomErrorType.NetworkConnection);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "C-STORE failed for {File}", Path.GetFileName(dicomPath));
+                var userMsg = $"Unerwarteter Fehler beim PACS-Upload: {ex.GetType().Name}. Details siehe Log.";
+                return StoreResult.CreateFailure($"Store failed: {ex.Message}", userMsg);
+            }
+        }
+
+        /// <summary>
+        /// Test PACS connection with C-ECHO and enhanced feedback
+        /// </summary>
+        public async Task<StoreResult> TestConnectionAsync(PacsConfiguration config, string? correlationId = null)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            if (!config.IsValid())
+            {
+                var issues = new System.Text.StringBuilder();
+                if (string.IsNullOrWhiteSpace(config.Host))
+                    issues.AppendLine("- Host/IP-Adresse fehlt");
+                if (config.Port <= 0 || config.Port > 65535)
+                    issues.AppendLine($"- UngÃ¼ltiger Port: {config.Port}");
+                if (string.IsNullOrWhiteSpace(config.CallingAeTitle))
+                    issues.AppendLine("- Calling AE Title fehlt");
+                if (string.IsNullOrWhiteSpace(config.CalledAeTitle))
+                    issues.AppendLine("- Called AE Title fehlt");
+
+                return StoreResult.CreateFailure(
+                    "Invalid PACS configuration",
+                    $"PACS-Konfiguration ungÃ¼ltig:\n{issues}",
+                    DicomErrorType.InvalidConfiguration);
+            }
+
+            _logger.LogInformation("[{CorrelationId}] [PacsTest] Testing connection to {Host}:{Port} as {CallingAe} â†’ {CalledAe}",
+                correlationId ?? "NO-ID", config.Host, config.Port, config.CallingAeTitle, config.CalledAeTitle);
+
+            try
+            {
+                // Create client
+                var client = DicomClientFactory.Create(
+                    config.Host,
+                    config.Port,
+                    false,  // No TLS
+                    config.CallingAeTitle,
+                    config.CalledAeTitle);
+
+                client.NegotiateAsyncOps();
+
+                // Setup response handling
+                DicomCEchoResponse? response = null;
+                var responseReceived = new TaskCompletionSource<bool>();
+
+                var request = new DicomCEchoRequest
+                {
+                    OnResponseReceived = (req, res) =>
+                    {
+                        response = res;
+                        _logger.LogDebug("C-ECHO Response: {Status}", res.Status);
+                        responseReceived.TrySetResult(true);
+                    }
+                };
+
+                await client.AddRequestAsync(request);
+
+                // Send with timeout
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(config.TimeoutSeconds));
+
+                try
+                {
+                    await Task.WhenAll(
+                        client.SendAsync(cts.Token),
+                        responseReceived.Task);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogError("C-ECHO timeout after {Timeout}s", config.TimeoutSeconds);
+                    return StoreResult.CreateFailure(
+                        $"Connection timeout after {config.TimeoutSeconds} seconds",
+                        $"Verbindungstimeout nach {config.TimeoutSeconds} Sekunden.\n" +
+                        $"MÃ¶gliche Ursachen:\n" +
+                        $"- PACS-Server lÃ¤uft nicht (z.B. Orthanc Docker Container gestoppt)\n" +
+                        $"- Falsche IP/Port ({config.Host}:{config.Port})\n" +
+                        $"- Firewall blockiert Verbindung",
+                        DicomErrorType.Timeout);
+                }
+
+                // Check response
+                if (response?.Status == DicomStatus.Success)
+                {
+                    _logger.LogInformation("C-ECHO successful - PACS connection verified");
+                    return StoreResult.CreateSuccess("ECHO-OK");
+                }
+                else
+                {
+                    var errorMsg = $"C-ECHO failed: {response?.Status?.Description ?? "No response"}";
+                    var userMsg = TranslateDicomStatus(response?.Status);
+                    _logger.LogWarning(errorMsg);
+                    return StoreResult.CreateFailure(errorMsg, userMsg, DicomErrorType.PacsRejection);
+                }
+            }
+            catch (DicomAssociationRejectedException ex)
+            {
+                _logger.LogError(ex, "[{CorrelationId}] [PacsError] C-ECHO association rejected",
+                    correlationId ?? "NO-ID");
+                var userMsg = TranslateAssociationRejection(ex);
+                return StoreResult.CreateFailure(
+                    $"Association rejected: {ex.Message}",
+                    userMsg,
+                    DicomErrorType.Authentication);
+            }
+            catch (DicomNetworkException ex) when (ex.InnerException is SocketException socketEx)
+            {
+                _logger.LogError(ex, "[{CorrelationId}] [PacsError] Network error during C-ECHO",
+                    correlationId ?? "NO-ID");
+
+                var userMsg = TranslateSocketError(socketEx, config);
+                return StoreResult.CreateFailure(
+                    $"Network error: {ex.Message}",
+                    userMsg,
+                    DicomErrorType.NetworkConnection);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[{CorrelationId}] [PacsError] C-ECHO failed",
+                    correlationId ?? "NO-ID");
+
+                return StoreResult.CreateFailure(
+                    $"Connection test failed: {ex.Message}",
+                    $"Verbindungstest fehlgeschlagen: {ex.GetType().Name}\nDetails siehe Log.",
+                    DicomErrorType.Unknown);
+            }
+        }
+
+        /// <summary>
+        /// Store DICOM file with retry logic and improved logging
+        /// </summary>
+        public async Task<StoreResult> StoreFileWithRetryAsync(
+            string dicomPath,
+            PacsConfiguration config,
+            string? correlationId = null,  // NEU!
+            CancellationToken cancellationToken = default)
+        {
+            if (!config.RetryOnFailure)
+            {
+                return await StoreFileAsync(dicomPath, config, correlationId);  // correlationId weitergeben!
+            }
+
+            var attempts = 0;
+            StoreResult? lastResult = null;
+            var fileName = Path.GetFileName(dicomPath);
+
+            while (attempts < config.MaxRetryAttempts && !cancellationToken.IsCancellationRequested)
+            {
+                attempts++;
+
+                _logger.LogInformation("[{CorrelationId}] [PacsRetry] C-STORE attempt {Attempt}/{Max} for {File}",
+                    correlationId ?? "NO-ID", attempts, config.MaxRetryAttempts, fileName);
+
+                lastResult = await StoreFileAsync(dicomPath, config, correlationId);  // correlationId weitergeben!
+
+                if (lastResult.Success)
+                {
+                    if (attempts > 1)
+                    {
+                        _logger.LogInformation("[{CorrelationId}] [PacsRetry] C-STORE succeeded after {Attempts} attempts for {File}",
+                            correlationId ?? "NO-ID", attempts, fileName);
+                    }
+                    return lastResult;
+                }
+
+                // Check if error is retryable
+                if (IsNonRetryableError(lastResult.ErrorType))
+                {
+                    _logger.LogWarning("[{CorrelationId}] [PacsRetry] Non-retryable error detected for {File}: {ErrorType}",
+                        correlationId ?? "NO-ID", fileName, lastResult.ErrorType);
+                    break;
+                }
+
+                if (attempts < config.MaxRetryAttempts)
+                {
+                    var delay = TimeSpan.FromSeconds(config.RetryDelaySeconds * attempts);
+                    _logger.LogWarning("[{CorrelationId}] [PacsRetry] C-STORE failed for {File}, retrying in {Delay}s. Error: {Error}",
+                        correlationId ?? "NO-ID", fileName, delay.TotalSeconds, lastResult.UserFriendlyMessage);
+                    await Task.Delay(delay, cancellationToken);
+                }
+            }
+
+            if (attempts >= config.MaxRetryAttempts)
+            {
+                _logger.LogError("[{CorrelationId}] [PacsRetry] C-STORE failed after {Attempts} attempts for {File}. Final error: {Error}",
+                    correlationId ?? "NO-ID", attempts, fileName, lastResult?.UserFriendlyMessage);
+            }
+
+            return lastResult ?? StoreResult.CreateFailure("No attempts made");
+        }
+
+        /// <summary>
+        /// Determine if an error should not be retried
+        /// </summary>
+        private bool IsNonRetryableError(DicomErrorType errorType)
+        {
+            return errorType switch
+            {
+                DicomErrorType.FileNotFound => true,
+                DicomErrorType.InvalidConfiguration => true,
+                DicomErrorType.Authentication => true,  // Wrong AE Title won't fix itself
+                _ => false  // Network errors, timeouts, etc. are retryable
+            };
+        }
+
+        /// <summary>
+        /// Translate DICOM status codes to user-friendly messages
+        /// </summary>
+        private string TranslateDicomStatus(DicomStatus? status)
+        {
+            if (status == null)
+                return "Keine Antwort vom PACS-Server erhalten.";
+
+            // Check common status codes
+            if (status == DicomStatus.QueryRetrieveOutOfResources)
+                return "PACS-Server hat nicht genÃ¼gend Ressourcen. Speicherplatz voll?";
+
+            if (status == DicomStatus.StorageStorageOutOfResources)
+                return "PACS-Speicher voll. Administrator kontaktieren.";
+
+            if (status == DicomStatus.ProcessingFailure)
+                return "PACS konnte die Datei nicht verarbeiten. DICOM-Format prÃ¼fen.";
+
+            if (status == DicomStatus.NoSuchObjectInstance)
+                return "PACS erkennt das Bildformat nicht. Transfer Syntax prÃ¼fen.";
+
+            // Generic message with status code
+            return $"PACS-Server meldet: {status.Description} (Code: {status.Code:X4})";
+        }
+
+        /// <summary>
+        /// Translate association rejection reasons
+        /// </summary>
+        private string TranslateAssociationRejection(DicomAssociationRejectedException ex)
+        {
+            var msg = new System.Text.StringBuilder();
+            msg.AppendLine("PACS-Verbindung abgelehnt!");
+
+            // Check common rejection reasons in the message
+            if (ex.Message.Contains("Called AE Title Not Recognized", StringComparison.OrdinalIgnoreCase))
+            {
+                msg.AppendLine($"Der Called AE Title wird vom PACS nicht erkannt.");
+                msg.AppendLine($"Tipp: Bei Orthanc muss 'DICOM_CHECK_CALLED_AE_TITLE=false' gesetzt sein.");
+            }
+            else if (ex.Message.Contains("Calling AE Title Not Recognized", StringComparison.OrdinalIgnoreCase))
+            {
+                msg.AppendLine($"Der Calling AE Title wird vom PACS nicht akzeptiert.");
+                msg.AppendLine($"Tipp: AE Title im PACS als bekannter Client registrieren.");
+            }
+            else
+            {
+                msg.AppendLine($"Grund: {ex.RejectReason}");
+                msg.AppendLine($"Source: {ex.RejectSource}");
+                msg.AppendLine($"Result: {ex.RejectResult}");
+            }
+
+            return msg.ToString();
+        }
+
+        /// <summary>
+        /// Translate socket errors to user-friendly messages
+        /// </summary>
+        private string TranslateSocketError(SocketException socketEx, PacsConfiguration config)
+        {
+            var msg = new System.Text.StringBuilder();
+            msg.AppendLine($"Netzwerkfehler beim Verbinden zu {config.Host}:{config.Port}");
+
+            switch (socketEx.SocketErrorCode)
+            {
+                case SocketError.ConnectionRefused:
+                    msg.AppendLine("Verbindung verweigert!");
+                    msg.AppendLine("MÃ¶gliche Ursachen:");
+                    msg.AppendLine("- PACS-Server lÃ¤uft nicht (Orthanc Docker Container prÃ¼fen)");
+                    msg.AppendLine($"- Falscher Port (aktuell: {config.Port}, Orthanc Standard: 4242)");
+                    msg.AppendLine("- Firewall blockiert Verbindung");
+                    break;
+
+                case SocketError.HostNotFound:
+                case SocketError.HostUnreachable:
+                    msg.AppendLine("Host nicht erreichbar!");
+                    msg.AppendLine($"- Hostname/IP prÃ¼fen: {config.Host}");
+                    msg.AppendLine("- Netzwerkverbindung prÃ¼fen");
+                    msg.AppendLine("- DNS-AuflÃ¶sung prÃ¼fen");
+                    break;
+
+                case SocketError.TimedOut:
+                    msg.AppendLine("Verbindung Timeout!");
+                    msg.AppendLine("- PACS-Server Ã¼berlastet?");
+                    msg.AppendLine("- Netzwerk zu langsam?");
+                    msg.AppendLine($"- Timeout erhÃ¶hen (aktuell: {config.TimeoutSeconds}s)");
+                    break;
+
+                default:
+                    msg.AppendLine($"Socket-Fehler: {socketEx.SocketErrorCode}");
+                    msg.AppendLine($"Details: {socketEx.Message}");
+                    break;
+            }
+
+            return msg.ToString();
+        }
+    }
+}
+
+// src/CamBridge.Infrastructure/Services/FileProcessor.cs
+// Version: 0.8.6
+// Description: Pipeline-aware file processor with LogContext integration
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using CamBridge.Core;
+using CamBridge.Core.Entities;
+using CamBridge.Core.Interfaces;
+using CamBridge.Core.ValueObjects;
+using CamBridge.Core.Logging;
+using CamBridge.Core.Enums; // FIXED: Import LogVerbosity from correct namespace
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Orchestrates the complete JPEG to DICOM conversion process for a specific pipeline
+    /// ENHANCED: Now uses LogContext for structured hierarchical logging
+    /// </summary>
+    public class FileProcessor
+    {
+        private readonly ILogger _logger;
+        private readonly ExifToolReader _exifToolReader;
+        private readonly DicomConverter _dicomConverter;
+        private readonly PipelineConfiguration _pipelineConfig;
+        private readonly DicomSettings _dicomSettings;
+        private readonly IDicomTagMapper? _tagMapper;
+        private readonly IMappingConfiguration? _mappingConfiguration;
+        private readonly PacsUploadQueue? _pacsUploadQueue;
+        private readonly LogVerbosity _logVerbosity;
+
+        public event EventHandler<FileProcessingEventArgs>? ProcessingStarted;
+        public event EventHandler<FileProcessingEventArgs>? ProcessingCompleted;
+        public event EventHandler<FileProcessingErrorEventArgs>? ProcessingError;
+
+        /// <summary>
+        /// Creates a FileProcessor for a specific pipeline with optional PACS upload support
+        /// </summary>
+        public FileProcessor(
+            ILogger logger,
+            ExifToolReader exifToolReader,
+            DicomConverter dicomConverter,
+            PipelineConfiguration pipelineConfig,
+            DicomSettings globalDicomSettings,
+            IDicomTagMapper? tagMapper = null,
+            IMappingConfiguration? mappingConfiguration = null,
+            PacsUploadQueue? pacsUploadQueue = null,
+            LogVerbosity logVerbosity = LogVerbosity.Detailed,
+            string? correlationId = null)  // NEU: Optional correlation ID
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _exifToolReader = exifToolReader ?? throw new ArgumentNullException(nameof(exifToolReader));
+            _dicomConverter = dicomConverter ?? throw new ArgumentNullException(nameof(dicomConverter));
+            _pipelineConfig = pipelineConfig ?? throw new ArgumentNullException(nameof(pipelineConfig));
+            _dicomSettings = ApplyDicomOverrides(globalDicomSettings, pipelineConfig.DicomOverrides);
+            _tagMapper = tagMapper;
+            _mappingConfiguration = mappingConfiguration;
+            _pacsUploadQueue = pacsUploadQueue;
+            _logVerbosity = logVerbosity;
+
+            // Log mit Correlation ID wenn vorhanden
+            if (!string.IsNullOrEmpty(correlationId))
+            {
+                _logger.LogDebug("[{CorrelationId}] [ProcessorInit] Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
+                    correlationId, pipelineConfig.Name, pipelineConfig.Id);
+
+                if (_pacsUploadQueue != null)
+                {
+                    _logger.LogInformation("[{CorrelationId}] [PacsInit] PACS upload queue attached to pipeline: {PipelineName}",
+                        correlationId, pipelineConfig.Name);
+                }
+            }
+            else
+            {
+                // Fallback ohne Correlation ID
+                _logger.LogDebug("Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
+                    pipelineConfig.Name, pipelineConfig.Id);
+
+                if (_pacsUploadQueue != null)
+                {
+                    _logger.LogInformation("PACS upload queue attached to pipeline: {PipelineName}",
+                        pipelineConfig.Name);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Processes a single JPEG file through the pipeline using LogContext
+        /// </summary>
+        public async Task<FileProcessingResult> ProcessFileAsync(string filePath)
+        {
+            // Generate correlation ID and create LogContext
+            var correlationId = GenerateCorrelationId(filePath);
+            var logContext = _logger.CreateContext(correlationId, _pipelineConfig.Name, _logVerbosity);
+
+            var result = new FileProcessingResult
+            {
+                SourceFile = filePath,
+                StartTime = DateTime.UtcNow,
+                PipelineId = _pipelineConfig.Id,
+                CorrelationId = correlationId
+            };
+
+            try
+            {
+                using (logContext.BeginStage(ProcessingStage.FileDetected, $"Processing file: {Path.GetFileName(filePath)}"))
+                {
+                    ProcessingStarted?.Invoke(this, new FileProcessingEventArgs
+                    {
+                        FilePath = filePath,
+                        CorrelationId = correlationId,
+                        PipelineName = _pipelineConfig.Name,
+                        Stage = ProcessingStage.FileDetected
+                    });
+
+                    // Validate input file
+                    ValidateInputFile(filePath);
+                }
+
+                // Extract EXIF data with timing
+                ImageMetadata? metadata;
+                using (logContext.BeginStage(ProcessingStage.ExifExtraction, "Extracting EXIF metadata"))
+                {
+                    metadata = await _exifToolReader.ExtractMetadataAsync(filePath);
+
+                    if (metadata == null)
+                    {
+                        logContext.LogWarning("Failed to extract metadata, creating default DICOM with minimal tags");
+                        metadata = CreateDefaultMetadata(filePath);
+                    }
+                    else if (metadata.Patient != null)
+                    {
+                        logContext.LogInformation($"Patient: {metadata.Patient.PatientName}");
+                    }
+                }
+
+                // Apply tag mapping if configured
+                if (_tagMapper != null && _mappingConfiguration != null)
+                {
+                    using (logContext.BeginStage(ProcessingStage.TagMapping, "Applying tag mapping rules"))
+                    {
+                        var mappingRules = _mappingConfiguration.GetMappingRules();
+                        if (mappingRules.Any())
+                        {
+                            logContext.LogDebug($"Applying {mappingRules.Count()} mapping rules");
+                        }
+                    }
+                }
+
+                // Determine output path based on pipeline configuration
+                var outputPath = DetermineOutputPath(metadata, filePath);
+
+                // Ensure output directory exists
+                var outputDir = Path.GetDirectoryName(outputPath);
+                if (!string.IsNullOrEmpty(outputDir))
+                {
+                    Directory.CreateDirectory(outputDir);
+                }
+
+                // Convert to DICOM with timing
+                ConversionResult conversionResult;
+                using (logContext.BeginStage(ProcessingStage.DicomConversion, $"Converting to DICOM: {Path.GetFileName(outputPath)}"))
+                {
+                    // Create converter with mapper if available
+                    var converterWithMapping = new DicomConverter(
+                        _logger as ILogger<DicomConverter> ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<DicomConverter>.Instance,
+                        _tagMapper,
+                        _mappingConfiguration);
+
+                    conversionResult = await converterWithMapping.ConvertToDicomAsync(
+                        filePath,
+                        outputPath,
+                        metadata);
+                }
+
+                result.Success = conversionResult.Success;
+                result.OutputFile = outputPath;
+                result.DicomFile = outputPath;
+                result.EndTime = DateTime.UtcNow;
+                result.ProcessingTimeMs = (long)(result.EndTime - result.StartTime).TotalMilliseconds;
+
+                if (result.Success)
+                {
+                    // Queue for PACS upload if enabled
+                    if (_pacsUploadQueue != null && _pipelineConfig.PacsConfiguration?.Enabled == true)
+                    {
+                        using (logContext.BeginStage(ProcessingStage.PacsUpload, $"Queueing for PACS upload to {_pipelineConfig.PacsConfiguration.Host}:{_pipelineConfig.PacsConfiguration.Port}"))
+                        {
+                            try
+                            {
+                                await _pacsUploadQueue.EnqueueAsync(conversionResult.DicomFilePath!, correlationId);
+                            }
+                            catch (Exception ex)
+                            {
+                                logContext.LogError(ex, "Failed to queue DICOM for PACS upload");
+                                // Don't fail the overall processing if PACS queue fails
+                            }
+                        }
+                    }
+
+                    // Handle post-processing
+                    using (logContext.BeginStage(ProcessingStage.PostProcessing, "Performing post-processing"))
+                    {
+                        await HandlePostProcessingAsync(filePath, outputPath, result.Success, logContext);
+                    }
+
+                    // Final success log
+                    using (logContext.BeginStage(ProcessingStage.Complete, $"Successfully processed {Path.GetFileName(filePath)}"))
+                    {
+                        // Performance warning for slow processing
+                        if (result.ProcessingTimeMs > 5000)
+                        {
+                            logContext.LogWarning($"Slow processing detected: {result.ProcessingTimeMs}ms");
+                        }
+
+                        ProcessingCompleted?.Invoke(this, new FileProcessingEventArgs
+                        {
+                            FilePath = filePath,
+                            OutputPath = outputPath,
+                            CorrelationId = correlationId,
+                            PipelineName = _pipelineConfig.Name,
+                            Stage = ProcessingStage.Complete
+                        });
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"DICOM conversion failed: {conversionResult.ErrorMessage}");
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                result.EndTime = DateTime.UtcNow;
+                result.ProcessingTimeMs = (long)(result.EndTime - result.StartTime).TotalMilliseconds;
+
+                using (logContext.BeginStage(ProcessingStage.Error, $"Processing failed: {ex.Message}"))
+                {
+                    logContext.LogError(ex, $"Failed to process {Path.GetFileName(filePath)}");
+
+                    // Critical error detection
+                    if (ex is UnauthorizedAccessException && filePath.StartsWith(_pipelineConfig.WatchSettings.Path))
+                    {
+                        _logger.LogCritical(ex, "[{CorrelationId}] [Error] Cannot access watch folder {Path} - pipeline will fail! [{Pipeline}]",
+                            correlationId, _pipelineConfig.WatchSettings.Path, _pipelineConfig.Name);
+                    }
+
+                    // Handle failure post-processing
+                    await HandlePostProcessingAsync(filePath, null, false, logContext);
+
+                    ProcessingError?.Invoke(this, new FileProcessingErrorEventArgs
+                    {
+                        FilePath = filePath,
+                        Error = ex,
+                        CorrelationId = correlationId,
+                        PipelineName = _pipelineConfig.Name,
+                        Stage = ProcessingStage.Error
+                    });
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Handles post-processing with LogContext
+        /// </summary>
+        private async Task HandlePostProcessingAsync(string sourceFilePath, string? dicomFilePath, bool success, LogContext logContext)
+        {
+            var action = success
+                ? _pipelineConfig.ProcessingOptions.SuccessAction
+                : _pipelineConfig.ProcessingOptions.FailureAction;
+
+            try
+            {
+                logContext.LogDebug($"Performing {action} on source file");
+
+                switch (action)
+                {
+                    case PostProcessingAction.Delete:
+                        // Delete only the source file
+                        if (File.Exists(sourceFilePath))
+                        {
+                            File.Delete(sourceFilePath);
+                            logContext.LogDebug("Deleted source file");
+                        }
+                        break;
+
+                    case PostProcessingAction.Archive:
+                        var jpegArchiveFolder = _pipelineConfig.ProcessingOptions.BackupFolder
+                            ?? Path.Combine(_pipelineConfig.ProcessingOptions.ArchiveFolder, "ProcessedJPEGs");
+
+                        var archivePath = Path.Combine(
+                            jpegArchiveFolder,
+                            Path.GetFileName(sourceFilePath));
+
+                        Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
+
+                        if (File.Exists(sourceFilePath))
+                        {
+                            File.Move(sourceFilePath, archivePath, true);
+                            logContext.LogDebug($"Archived source JPEG to {Path.GetFullPath(archivePath)}");
+                        }
+
+                        // DICOM file stays in output folder
+                        if (success && !string.IsNullOrEmpty(dicomFilePath))
+                        {
+                            logContext.LogInformation($"DICOM file created at: {Path.GetFullPath(dicomFilePath)}");
+                        }
+                        break;
+
+                    case PostProcessingAction.MoveToError:
+                        // Move source file to error folder (typically for failures)
+                        if (!success)
+                        {
+                            await MoveToErrorFolderAsync(sourceFilePath, "Processing failed", logContext);
+
+                            // If DICOM was partially created, clean it up
+                            if (!string.IsNullOrEmpty(dicomFilePath) && File.Exists(dicomFilePath))
+                            {
+                                try
+                                {
+                                    File.Delete(dicomFilePath);
+                                    logContext.LogDebug("Cleaned up partial DICOM file");
+                                }
+                                catch (Exception ex)
+                                {
+                                    logContext.LogWarning($"Failed to clean up partial DICOM: {ex.Message}");
+                                }
+                            }
+                        }
+                        break;
+
+                    default:
+                        // Leave files as-is
+                        logContext.LogDebug("No post-processing action");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                logContext.LogWarning($"Failed to perform {action}: {ex.Message}");
+                // Don't fail the overall processing for post-processing errors
+            }
+        }
+
+        private async Task MoveToErrorFolderAsync(string filePath, string errorMessage, LogContext logContext)
+        {
+            try
+            {
+                var errorFolder = _pipelineConfig.ProcessingOptions.ErrorFolder;
+                Directory.CreateDirectory(errorFolder);
+
+                var errorFileName = $"{Path.GetFileNameWithoutExtension(filePath)}" +
+                                   $"_{DateTime.Now:yyyyMMdd_HHmmss}" +
+                                   $"{Path.GetExtension(filePath)}";
+
+                var errorPath = Path.Combine(errorFolder, errorFileName);
+
+                // Write error info file
+                var errorInfoPath = Path.ChangeExtension(errorPath, ".error.txt");
+                await File.WriteAllTextAsync(errorInfoPath,
+                    $"Error Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                    $"Pipeline: {_pipelineConfig.Name}\n" +
+                    $"Source File: {filePath}\n" +
+                    $"Correlation ID: {logContext.CorrelationId}\n" +
+                    $"Error: {errorMessage}");
+
+                // Move the file
+                if (File.Exists(filePath))
+                {
+                    File.Move(filePath, errorPath, true);
+                    logContext.LogDebug("Moved failed file to error folder");
+                }
+            }
+            catch (Exception ex)
+            {
+                logContext.LogError(ex, "Failed to move file to error folder");
+            }
+        }
+
+        // Rest of the methods remain the same...
+
+        /// <summary>
+        /// Determines if a file should be processed based on pipeline configuration
+        /// </summary>
+        public bool ShouldProcessFile(string filePath)
+        {
+            try
+            {
+                var fileInfo = new FileInfo(filePath);
+                var extension = fileInfo.Extension.ToLowerInvariant();
+
+                // Check file extension
+                var filePattern = _pipelineConfig.WatchSettings.FilePattern;
+                var patterns = string.IsNullOrEmpty(filePattern)
+                    ? new[] { "*.jpg", "*.jpeg" }
+                    : filePattern.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+                var isValidExtension = patterns.Any(pattern =>
+                {
+                    var patternExt = Path.GetExtension(pattern).ToLowerInvariant();
+                    return patternExt == extension || patternExt == ".*";
+                });
+
+                if (!isValidExtension)
+                {
+                    return false;
+                }
+
+                // Check file age
+                if (_pipelineConfig.ProcessingOptions.MaxFileAge.HasValue)
+                {
+                    var age = DateTime.UtcNow - fileInfo.CreationTimeUtc;
+                    if (age > _pipelineConfig.ProcessingOptions.MaxFileAge.Value)
+                    {
+                        _logger.LogDebug("File {FileName} is too old ({Age} days)",
+                            fileInfo.Name, age.TotalDays);
+                        return false;
+                    }
+                }
+
+                // Check file size
+                if (_pipelineConfig.ProcessingOptions.MinimumFileSizeBytes.HasValue &&
+                    fileInfo.Length < _pipelineConfig.ProcessingOptions.MinimumFileSizeBytes.Value)
+                {
+                    _logger.LogDebug("File {FileName} is too small ({Size} bytes)",
+                        fileInfo.Name, fileInfo.Length);
+                    return false;
+                }
+
+                if (_pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.HasValue &&
+                    fileInfo.Length > _pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.Value)
+                {
+                    _logger.LogDebug("File {FileName} is too large ({Size} bytes)",
+                        fileInfo.Name, fileInfo.Length);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error checking file {FilePath}", filePath);
+                return false;
+            }
+        }
+
+        private string GenerateCorrelationId(string filePath)
+        {
+            // Format: F{HHmmssff}-{FilePrefix8}
+            // Example: F10234512-IMG_1234
+            var timestamp = DateTime.Now.ToString("HHmmssff");
+            var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+            var filePrefix = fileNameWithoutExt.Length > 8
+                ? fileNameWithoutExt.Substring(0, 8)
+                : fileNameWithoutExt;
+
+            return $"F{timestamp}-{filePrefix}";
+        }
+
+        private void ValidateInputFile(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException($"Source file not found: {filePath}");
+            }
+
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            if (extension != ".jpg" && extension != ".jpeg")
+            {
+                throw new InvalidOperationException($"Invalid file type: {extension}. Expected JPEG file.");
+            }
+        }
+
+        private string DetermineOutputPath(ImageMetadata metadata, string sourceFile)
+        {
+            // FIXED: Use ArchiveFolder as DICOM output if no OutputPath configured
+            var baseOutputPath = _pipelineConfig.WatchSettings.OutputPath;
+
+            if (string.IsNullOrEmpty(baseOutputPath))
+            {
+                // Fallback to ArchiveFolder if no OutputPath (current config behavior)
+                baseOutputPath = _pipelineConfig.ProcessingOptions.ArchiveFolder;
+                _logger.LogWarning("No OutputPath in WatchSettings, using ArchiveFolder as output: {Path}",
+                    Path.GetFullPath(baseOutputPath));
+            }
+
+            // ALWAYS make path absolute!
+            if (!Path.IsPathRooted(baseOutputPath))
+            {
+                // If relative path, make it relative to service executable location
+                var serviceDir = AppDomain.CurrentDomain.BaseDirectory;
+                baseOutputPath = Path.Combine(serviceDir, baseOutputPath);
+                _logger.LogWarning("OutputPath was relative, converted to absolute: {Path}",
+                    Path.GetFullPath(baseOutputPath));
+            }
+
+            _logger.LogDebug("Base output path for pipeline {Pipeline}: {Path}",
+                _pipelineConfig.Name, Path.GetFullPath(baseOutputPath));
+
+            var organization = _pipelineConfig.ProcessingOptions.OutputOrganization;
+            var fileName = Path.GetFileNameWithoutExtension(sourceFile);
+
+            // Build organized path based on configuration
+            var outputDir = baseOutputPath;
+
+            switch (organization)
+            {
+                case OutputOrganization.ByPatient:
+                    if (!string.IsNullOrEmpty(metadata.Patient?.PatientName))
+                    {
+                        var safeName = SanitizeForPath(metadata.Patient.PatientName);
+                        outputDir = Path.Combine(baseOutputPath, safeName);
+                        _logger.LogDebug("Output organized by patient: {PatientName} -> {SafeName}",
+                            metadata.Patient.PatientName, safeName);
+                    }
+                    else
+                    {
+                        outputDir = Path.Combine(baseOutputPath, "Unknown Patient");
+                        _logger.LogWarning("No patient name found, using 'Unknown Patient' folder");
+                    }
+                    break;
+
+                case OutputOrganization.ByDate:
+                    // ALWAYS use current date for organization
+                    var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
+                    outputDir = Path.Combine(baseOutputPath, dateFolder);
+                    _logger.LogDebug("Output organized by date: {Date}", dateFolder);
+                    break;
+
+                case OutputOrganization.ByPatientAndDate:
+                    if (!string.IsNullOrEmpty(metadata.Patient?.PatientName))
+                    {
+                        var safeName = SanitizeForPath(metadata.Patient.PatientName);
+                        // ALWAYS use current date for organization
+                        var dateFolder2 = DateTime.Now.ToString("yyyy-MM-dd");
+                        outputDir = Path.Combine(baseOutputPath, safeName, dateFolder2);
+                        _logger.LogDebug("Output organized by patient/date: {PatientName}/{Date}",
+                            safeName, dateFolder2);
+                    }
+                    else
+                    {
+                        var dateFolder3 = DateTime.Now.ToString("yyyy-MM-dd");
+                        outputDir = Path.Combine(baseOutputPath, "Unknown Patient", dateFolder3);
+                        _logger.LogWarning("No patient name found, using 'Unknown Patient/{Date}' folder", dateFolder3);
+                    }
+                    break;
+
+                case OutputOrganization.None:
+                default:
+                    // Use base output path as-is
+                    break;
+            }
+
+            // Add DICOM extension
+            var dicomPath = Path.Combine(outputDir, $"{fileName}.dcm");
+
+            // CRITICAL: ALWAYS return ABSOLUTE path!
+            var absolutePath = Path.GetFullPath(dicomPath);
+            _logger.LogInformation("Determined DICOM output path: {FullPath}", absolutePath);
+            return absolutePath;
+        }
+
+        private string SanitizeForPath(string input)
+        {
+            var invalid = Path.GetInvalidFileNameChars()
+                .Concat(Path.GetInvalidPathChars())
+                .Distinct()
+                .ToArray();
+
+            return string.Join("_", input.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private DicomSettings ApplyDicomOverrides(DicomSettings global, DicomOverrides? overrides)
+        {
+            if (overrides == null)
+                return global;
+
+            // Create a copy of global settings with overrides applied
+            var settings = new DicomSettings
+            {
+                InstitutionName = overrides.InstitutionName ?? global.InstitutionName,
+                InstitutionDepartment = overrides.InstitutionDepartment ?? global.InstitutionDepartment,
+                StationName = global.StationName,
+                SourceApplicationEntityTitle = global.SourceApplicationEntityTitle,
+                ImplementationVersionName = global.ImplementationVersionName,
+                ImplementationClassUid = global.ImplementationClassUid,
+                Modality = global.Modality,
+                ValidateAfterCreation = global.ValidateAfterCreation
+            };
+
+            _logger.LogDebug("Applied DICOM overrides for pipeline: {PipelineName}", _pipelineConfig.Name);
+            return settings;
+        }
+
+        /// <summary>
+        /// Creates minimal default metadata when extraction fails
+        /// </summary>
+        private ImageMetadata CreateDefaultMetadata(string sourceFile)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(sourceFile);
+            var now = DateTime.Now;
+
+            _logger.LogWarning("Creating default metadata for {FileName} with date {Date}",
+                fileName, now.ToString("yyyy-MM-dd"));
+
+            // Create default patient info with constructor
+            var patientId = new PatientId($"DEFAULT_{now:yyyyMMddHHmmss}");
+            var patient = new PatientInfo(
+                id: patientId,
+                name: "Unknown Patient",
+                birthDate: null,
+                gender: Gender.Other
+            );
+
+            // Create default study info with constructor
+            var studyId = new StudyId(Guid.NewGuid().ToString().Substring(0, 16)); // Max 16 chars
+            var study = new StudyInfo(
+                studyId: studyId,
+                examId: null,
+                description: "CamBridge JPEG to DICOM Conversion",
+                modality: "XC",  // Photographic Image
+                studyDate: now,
+                accessionNumber: $"ACC{now:yyyyMMddHHmmss}",
+                referringPhysician: null,
+                comment: null
+            );
+
+            // Create technical data (minimal)
+            var technicalData = new ImageTechnicalData
+            {
+                Manufacturer = "Unknown",
+                Model = "Unknown"
+            };
+
+            // Create EXIF data dictionary
+            var exifData = new Dictionary<string, string>
+            {
+                ["FileName"] = fileName,
+                ["FileDate"] = now.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["Source"] = "CamBridge Default"
+            };
+
+            // Create metadata with full constructor
+            var metadata = new ImageMetadata(
+                sourceFilePath: sourceFile,
+                captureDateTime: now,
+                patient: patient,
+                study: study,
+                technicalData: technicalData,
+                userComment: null,
+                barcodeData: null,
+                instanceNumber: 1,
+                instanceUid: null,
+                exifData: exifData
+            );
+
+            return metadata;
+        }
+    }
+
+    /// <summary>
+    /// Event arguments for file processing events with correlation support
+    /// </summary>
+    public class FileProcessingEventArgs : EventArgs
+    {
+        public string FilePath { get; set; } = string.Empty;
+        public string? OutputPath { get; set; }
+        public string CorrelationId { get; set; } = string.Empty;
+        public string PipelineName { get; set; } = string.Empty;
+        public ProcessingStage Stage { get; set; } = ProcessingStage.FileDetected;
+    }
+
+    /// <summary>
+    /// Event arguments for file processing errors with correlation support
+    /// </summary>
+    public class FileProcessingErrorEventArgs : EventArgs
+    {
+        public string FilePath { get; set; } = string.Empty;
+        public Exception Error { get; set; } = null!;
+        public string CorrelationId { get; set; } = string.Empty;
+        public string PipelineName { get; set; } = string.Empty;
+        public ProcessingStage Stage { get; set; } = ProcessingStage.Error;
+    }
+
+    /// <summary>
+    /// Result of file processing operation with correlation tracking
+    /// </summary>
+    public class FileProcessingResult
+    {
+        public string SourceFile { get; set; } = string.Empty;
+        public string? OutputFile { get; set; }
+        public string? DicomFile { get; set; }
+        public bool Success { get; set; }
+        public string? ErrorMessage { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public long ProcessingTimeMs { get; set; }
+        public Guid PipelineId { get; set; }
+        public string CorrelationId { get; set; } = string.Empty;
+    }
+}
+
+// src/CamBridge.Infrastructure/Services/ProcessingQueue.cs
+// Version: 0.8.10
+// Description: Thread-safe queue with duplicate detection and CORRELATION IDS
+// Session: 107 - Added correlation IDs using PM prefix (part of PipelineManager)
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Thread-safe queue for managing file processing with retry logic
+    /// FIXED: Prevents duplicate processing of successfully completed files
+    /// FIXED: NullReferenceException in StopAsync
+    /// FIXED: Added correlation IDs to all logs
+    /// </summary>
+    public class ProcessingQueue
+    {
+        private readonly ILogger<ProcessingQueue> _logger;
+        private readonly FileProcessor _fileProcessor;
+        private readonly ProcessingOptions _options;
+        private readonly string _pipelineName;  // NEW: For correlation IDs
+        private readonly ConcurrentQueue<ProcessingItem> _queue = new();
+        private readonly ConcurrentDictionary<string, ProcessingItem> _activeItems = new();
+        private readonly SemaphoreSlim _processingSlots;
+        private CancellationTokenSource? _cancellationSource;
+        private Task? _processingTask;
+
+        // FIX: Track processed and enqueued files to prevent duplicates
+        private readonly HashSet<string> _processedFiles = new();
+        private readonly HashSet<string> _enqueuedFiles = new();
+        private readonly object _trackingLock = new object();
+
+        // Statistics
+        private int _totalProcessed;
+        private int _totalSuccessful;
+        private int _totalFailed;
+        private readonly DateTime _startTime = DateTime.UtcNow;
+        private readonly ConcurrentDictionary<string, int> _errorCounts = new();
+        private readonly object _statsLock = new object();
+
+        // Public statistics properties
+        public int QueueLength => _queue.Count;
+        public int ActiveCount => _activeItems.Count;
+        public int TotalProcessed => _totalProcessed;
+        public int TotalSuccessful => _totalSuccessful;
+        public int TotalFailed => _totalFailed;
+        public TimeSpan UpTime => DateTime.UtcNow - _startTime;
+
+        /// <summary>
+        /// Creates a ProcessingQueue with a specific FileProcessor for this pipeline
+        /// </summary>
+        public ProcessingQueue(
+            ILogger<ProcessingQueue> logger,
+            FileProcessor fileProcessor,
+            IOptions<ProcessingOptions> options,
+            string pipelineName)  // NEW: Add pipeline name
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _fileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
+            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _pipelineName = pipelineName ?? "Unknown";  // NEW: Store pipeline name
+
+            _processingSlots = new SemaphoreSlim(
+                _options.MaxConcurrentProcessing,
+                _options.MaxConcurrentProcessing);
+        }
+
+        /// <summary>
+        /// Enqueues a file for processing
+        /// </summary>
+        public bool TryEnqueue(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                return false;
+
+            var correlationId = $"PM{DateTime.Now:HHmmssff}-QUEUE-{_pipelineName}";  // Using PM prefix!
+
+            lock (_trackingLock)
+            {
+                // FIX: Check if already successfully processed
+                if (_processedFiles.Contains(filePath))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [QueueDuplicate] File {FilePath} already processed, ignoring duplicate event",
+                        correlationId, filePath);
+                    return false;
+                }
+
+                // FIX: Check if already in queue
+                if (_enqueuedFiles.Contains(filePath))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [QueueDuplicate] File {FilePath} already in queue, ignoring duplicate event",
+                        correlationId, filePath);
+                    return false;
+                }
+
+                // Check if already being processed
+                if (_activeItems.ContainsKey(filePath))
+                {
+                    _logger.LogDebug("[{CorrelationId}] [QueueActive] File {FilePath} is currently being processed",
+                        correlationId, filePath);
+                    return false;
+                }
+
+                // Add to tracking
+                _enqueuedFiles.Add(filePath);
+            }
+
+            var item = new ProcessingItem(filePath);
+            _queue.Enqueue(item);
+
+            _logger.LogInformation("[{CorrelationId}] [QueueEnqueue] Enqueued {FilePath} for processing (queue length: {QueueLength})",
+                correlationId, filePath, _queue.Count);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Async wrapper for TryEnqueue to match PipelineManager expectations
+        /// </summary>
+        public Task<bool> EnqueueAsync(string filePath, CancellationToken cancellationToken = default)
+        {
+            var result = TryEnqueue(filePath);
+            return Task.FromResult(result);
+        }
+
+        /// <summary>
+        /// Processes items from the queue
+        /// </summary>
+        public async Task ProcessAsync(CancellationToken cancellationToken)
+        {
+            var startCorrelationId = $"PM{DateTime.Now:HHmmssff}-QSTART-{_pipelineName}";
+            _logger.LogInformation("[{CorrelationId}] [QueueStart] Processing queue started [{Pipeline}]",
+                startCorrelationId, _pipelineName);
+
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    if (_queue.TryDequeue(out var item))
+                    {
+                        await _processingSlots.WaitAsync(cancellationToken);
+
+                        // Fire and forget - process in background
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await ProcessItemAsync(item, cancellationToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                var errorCorrelationId = $"PM{DateTime.Now:HHmmssff}-QERROR-{_pipelineName}";
+                                _logger.LogError(ex, "[{CorrelationId}] [QueueError] Unexpected error in background processing",
+                                    errorCorrelationId);
+                            }
+                        }, cancellationToken);
+                    }
+                    else
+                    {
+                        // No items to process, wait a bit
+                        await Task.Delay(100, cancellationToken);
+                    }
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // This is normal during shutdown
+                var cancelCorrelationId = $"PM{DateTime.Now:HHmmssff}-QCANCEL-{_pipelineName}";
+                _logger.LogInformation("[{CorrelationId}] [QueueCancelled] Processing queue cancelled [{Pipeline}]",
+                    cancelCorrelationId, _pipelineName);
+                throw;  // Re-throw so PipelineManager can handle it
+            }
+            finally
+            {
+                var stopCorrelationId = $"PM{DateTime.Now:HHmmssff}-QSTOP-{_pipelineName}";
+                _logger.LogInformation("[{CorrelationId}] [QueueStop] Processing queue stopped [{Pipeline}]",
+                    stopCorrelationId, _pipelineName);
+            }
+        }
+
+        /// <summary>
+        /// Compatibility wrapper for PipelineManager that expects ProcessQueueAsync
+        /// </summary>
+        public Task ProcessQueueAsync(CancellationToken cancellationToken)
+        {
+            _cancellationSource = new CancellationTokenSource();
+            return ProcessAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Starts the background processing
+        /// </summary>
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _cancellationSource = new CancellationTokenSource();
+            _processingTask = ProcessAsync(_cancellationSource.Token);
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Stops the background processing
+        /// </summary>
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            // FIXED: Null checks added!
+            _cancellationSource?.Cancel();
+
+            if (_processingTask != null)
+            {
+                try
+                {
+                    await _processingTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when canceling
+                }
+            }
+
+            // Dispose cancellation source
+            _cancellationSource?.Dispose();
+            _cancellationSource = null;
+        }
+
+        /// <summary>
+        /// Gets current statistics
+        /// </summary>
+        public ProcessingStatistics GetStatistics()
+        {
+            lock (_statsLock)
+            {
+                return new ProcessingStatistics
+                {
+                    QueueLength = QueueLength,
+                    ActiveCount = ActiveCount,
+                    TotalProcessed = TotalProcessed,
+                    TotalSuccessful = TotalSuccessful,
+                    TotalFailed = TotalFailed,
+                    UpTime = UpTime,
+                    ProcessingRate = TotalProcessed > 0 ? TotalProcessed / UpTime.TotalMinutes : 0,
+                    TopErrors = _errorCounts
+                        .OrderByDescending(x => x.Value)
+                        .Take(5)
+                        .ToDictionary(x => x.Key, x => x.Value)
+                };
+            }
+        }
+
+        private async Task ProcessItemAsync(ProcessingItem item, CancellationToken cancellationToken)
+        {
+            // Use same format as FileProcessor: F{timestamp}-{fileprefix}
+            var fileName = Path.GetFileNameWithoutExtension(item.FilePath);
+            var filePrefix = fileName.Length > 8 ? fileName.Substring(0, 8) : fileName;
+            var itemCorrelationId = $"F{DateTime.Now:HHmmssff}-{filePrefix}";
+
+            try
+            {
+                // Mark as active
+                _activeItems.TryAdd(item.FilePath, item);
+                item.StartTime = DateTime.UtcNow;
+                item.AttemptCount++;
+
+                _logger.LogInformation("[{CorrelationId}] [ProcessStart] Starting processing of {FilePath} (attempt {Attempt}) [{Pipeline}]",
+                    itemCorrelationId, item.FilePath, item.AttemptCount, _pipelineName);
+
+                // Process the file with THIS pipeline's FileProcessor!
+                var result = await _fileProcessor.ProcessFileAsync(item.FilePath);
+
+                // Update statistics
+                lock (_statsLock)
+                {
+                    _totalProcessed++;
+                    if (result.Success)
+                    {
+                        _totalSuccessful++;
+                    }
+                    else
+                    {
+                        _totalFailed++;
+                        TrackError(result.ErrorMessage ?? "Unknown error");
+                    }
+                }
+
+                if (result.Success)
+                {
+                    // FIX: Mark as successfully processed
+                    lock (_trackingLock)
+                    {
+                        _processedFiles.Add(item.FilePath);
+                        _enqueuedFiles.Remove(item.FilePath);
+
+                        // Cleanup old entries if too many (prevent memory leak)
+                        if (_processedFiles.Count > 10000)
+                        {
+                            var cleanupCorrelationId = $"PM{DateTime.Now:HHmmssff}-CLEANUP-{_pipelineName}";
+                            _logger.LogInformation("[{CorrelationId}] [QueueMaintenance] Cleaning up processed files tracking (>10000 entries) [{Pipeline}]",
+                                cleanupCorrelationId, _pipelineName);
+                            _processedFiles.Clear();
+                        }
+                    }
+                }
+                else if (ShouldRetry(item))
+                {
+                    // Schedule retry
+                    await ScheduleRetryAsync(item, cancellationToken);
+                }
+                else
+                {
+                    // Final failure - remove from tracking
+                    lock (_trackingLock)
+                    {
+                        _enqueuedFiles.Remove(item.FilePath);
+                    }
+
+                    _logger.LogError("[{CorrelationId}] [ProcessFailed] Failed to process {FilePath} after {Attempts} attempts: {Error} [{Pipeline}]",
+                        itemCorrelationId, item.FilePath, item.AttemptCount, result.ErrorMessage, _pipelineName);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[{CorrelationId}] [ProcessError] Unexpected error processing {FilePath} [{Pipeline}]",
+                    itemCorrelationId, item.FilePath, _pipelineName);
+
+                lock (_statsLock)
+                {
+                    _totalProcessed++;
+                    _totalFailed++;
+                    TrackError(ex.Message);
+                }
+
+                if (ShouldRetry(item))
+                {
+                    await ScheduleRetryAsync(item, cancellationToken);
+                }
+                else
+                {
+                    // Final failure - remove from tracking
+                    lock (_trackingLock)
+                    {
+                        _enqueuedFiles.Remove(item.FilePath);
+                    }
+
+                    _logger.LogError("[{CorrelationId}] [ProcessAbandoned] Failed to process {FilePath} after {Attempts} attempts [{Pipeline}]",
+                        itemCorrelationId, item.FilePath, item.AttemptCount, _pipelineName);
+                }
+            }
+            finally
+            {
+                // Remove from active items
+                _activeItems.TryRemove(item.FilePath, out _);
+
+                // Release processing slot
+                _processingSlots.Release();
+            }
+        }
+
+        private bool ShouldRetry(ProcessingItem item)
+        {
+            return _options.RetryOnFailure &&
+                   item.AttemptCount < _options.MaxRetryAttempts;
+        }
+
+        private async Task ScheduleRetryAsync(ProcessingItem item, CancellationToken cancellationToken)
+        {
+            var delay = TimeSpan.FromSeconds(_options.RetryDelaySeconds * item.AttemptCount);
+            var retryCorrelationId = $"PM{DateTime.Now:HHmmssff}-RETRY-{_pipelineName}";
+
+            _logger.LogInformation("[{CorrelationId}] [RetryScheduled] Scheduling retry for {FilePath} in {Delay} seconds [{Pipeline}]",
+                retryCorrelationId, item.FilePath, delay.TotalSeconds, _pipelineName);
+
+            // Wait before re-enqueueing
+            await Task.Delay(delay, cancellationToken);
+
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                item.StartTime = null; // Reset start time
+                _queue.Enqueue(item);
+            }
+        }
+
+        private void TrackError(string error)
+        {
+            var category = CategorizeError(error);
+            _errorCounts.TryGetValue(category, out var count);
+            _errorCounts[category] = count + 1;
+        }
+
+        private string CategorizeError(string error)
+        {
+            if (error.Contains("EXIF", StringComparison.OrdinalIgnoreCase))
+                return "EXIF extraction failed";
+            if (error.Contains("DICOM", StringComparison.OrdinalIgnoreCase))
+                return "DICOM conversion failed";
+            if (error.Contains("Patient", StringComparison.OrdinalIgnoreCase))
+                return "Patient data missing";
+            if (error.Contains("File", StringComparison.OrdinalIgnoreCase))
+                return "File access error";
+            if (error.Contains("Memory", StringComparison.OrdinalIgnoreCase))
+                return "Memory error";
+            return "Other error";
+        }
+
+        /// <summary>
+        /// Processing item with retry tracking
+        /// </summary>
+        private class ProcessingItem
+        {
+            public string FilePath { get; }
+            public int AttemptCount { get; set; }
+            public DateTime? StartTime { get; set; }
+            public DateTime EnqueuedTime { get; }
+
+            public ProcessingItem(string filePath)
+            {
+                FilePath = filePath;
+                EnqueuedTime = DateTime.UtcNow;
+            }
+        }
+    }
+
+    // Statistics classes remain the same...
+    public class ProcessingStatistics
+    {
+        public int QueueLength { get; set; }
+        public int ActiveCount { get; set; }
+        public int TotalProcessed { get; set; }
+        public int TotalSuccessful { get; set; }
+        public int TotalFailed { get; set; }
+        public TimeSpan UpTime { get; set; }
+        public double ProcessingRate { get; set; }
+        public Dictionary<string, int> TopErrors { get; set; } = new();
+    }
+
+    public class ProcessingItemStatus
+    {
+        public string FilePath { get; set; } = string.Empty;
+        public DateTime? StartTime { get; set; }
+        public int AttemptCount { get; set; }
+        public TimeSpan Duration { get; set; }
+    }
+}
+

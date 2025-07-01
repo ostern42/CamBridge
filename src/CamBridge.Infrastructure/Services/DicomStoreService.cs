@@ -1,5 +1,5 @@
 // src\CamBridge.Infrastructure\Services\DicomStoreService.cs
-// Version: 0.8.3
+// Version: 0.8.10
 // Description: DICOM C-STORE service with enhanced error handling and user-friendly messages
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
@@ -71,22 +71,23 @@ namespace CamBridge.Infrastructure.Services
         /// <summary>
         /// Store DICOM file to PACS with enhanced error messages
         /// </summary>
-        public async Task<StoreResult> StoreFileAsync(string dicomPath, PacsConfiguration config)
+        public async Task<StoreResult> StoreFileAsync(string dicomPath, PacsConfiguration config, string? correlationId = null)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (string.IsNullOrEmpty(dicomPath)) throw new ArgumentException("Path required", nameof(dicomPath));
 
             if (!File.Exists(dicomPath))
             {
-                _logger.LogError("DICOM file not found: {Path}", dicomPath);
+                _logger.LogError("[{CorrelationId}] [PacsStore] DICOM file not found: {Path}",
+                    correlationId ?? "NO-ID", dicomPath);
                 return StoreResult.CreateFailure(
                     $"File not found: {dicomPath}",
                     $"DICOM-Datei nicht gefunden: {Path.GetFileName(dicomPath)}",
                     DicomErrorType.FileNotFound);
             }
 
-            _logger.LogInformation("Starting C-STORE to {Host}:{Port} for {File}",
-                config.Host, config.Port, Path.GetFileName(dicomPath));
+            _logger.LogInformation("[{CorrelationId}] [PacsStore] Starting C-STORE to {Host}:{Port} for {File}",
+                correlationId ?? "NO-ID", config.Host, config.Port, Path.GetFileName(dicomPath));
 
             try
             {
@@ -95,8 +96,8 @@ namespace CamBridge.Infrastructure.Services
                 var sopInstanceUid = dicomFile.Dataset.GetSingleValue<string>(DicomTag.SOPInstanceUID);
                 var patientName = dicomFile.Dataset.GetSingleValueOrDefault<string>(DicomTag.PatientName, "Unknown");
 
-                _logger.LogDebug("Loaded DICOM: SOP Instance UID={Uid}, Patient={Patient}",
-                    sopInstanceUid, patientName);
+                _logger.LogDebug("[{CorrelationId}] [PacsStore] Loaded DICOM: SOP Instance UID={Uid}, Patient={Patient}",
+                    correlationId ?? "NO-ID", sopInstanceUid, patientName);
 
                 // Create client
                 var client = DicomClientFactory.Create(
@@ -117,8 +118,8 @@ namespace CamBridge.Infrastructure.Services
                     OnResponseReceived = (req, res) =>
                     {
                         response = res;
-                        _logger.LogDebug("C-STORE Response: Status={Status} ({Code:X4})",
-                            res.Status.State, res.Status.Code);
+                        _logger.LogDebug("[{CorrelationId}] [PacsStore] C-STORE Response: Status={Status} ({Code:X4})",
+                            correlationId ?? "NO-ID", res.Status.State, res.Status.Code);
                         responseReceived.TrySetResult(true);
                     }
                 };
@@ -136,7 +137,8 @@ namespace CamBridge.Infrastructure.Services
                 }
                 catch (OperationCanceledException)
                 {
-                    _logger.LogError("C-STORE timeout after {Timeout}s", config.TimeoutSeconds);
+                    _logger.LogError("[{CorrelationId}] [PacsStore] C-STORE timeout after {Timeout}s",
+                        correlationId ?? "NO-ID", config.TimeoutSeconds);
                     return StoreResult.CreateFailure(
                         $"Timeout after {config.TimeoutSeconds} seconds",
                         $"PACS antwortet nicht nach {config.TimeoutSeconds} Sekunden. Ist der PACS-Server erreichbar?",
@@ -146,21 +148,23 @@ namespace CamBridge.Infrastructure.Services
                 // Check response
                 if (response?.Status == DicomStatus.Success)
                 {
-                    _logger.LogInformation("C-STORE successful for {File}, SOP Instance UID: {Uid}",
-                        Path.GetFileName(dicomPath), sopInstanceUid);
+                    _logger.LogInformation("[{CorrelationId}] [PacsStore] C-STORE successful for {File}, SOP Instance UID: {Uid}",
+                        correlationId ?? "NO-ID", Path.GetFileName(dicomPath), sopInstanceUid);
                     return StoreResult.CreateSuccess(sopInstanceUid);
                 }
                 else
                 {
                     var errorMsg = $"C-STORE failed with status: {response?.Status?.Description ?? "Unknown"}";
                     var userMsg = TranslateDicomStatus(response?.Status);
-                    _logger.LogWarning(errorMsg);
+                    _logger.LogWarning("[{CorrelationId}] [PacsStore] {ErrorMsg}",
+                        correlationId ?? "NO-ID", errorMsg);
                     return StoreResult.CreateFailure(errorMsg, userMsg, DicomErrorType.PacsRejection);
                 }
             }
             catch (DicomAssociationRejectedException ex)
             {
-                _logger.LogError(ex, "DICOM association rejected");
+                _logger.LogError(ex, "[{CorrelationId}] [PacsStore] DICOM association rejected",
+                    correlationId ?? "NO-ID");
                 var userMsg = TranslateAssociationRejection(ex);
                 return StoreResult.CreateFailure(
                     $"Association rejected: {ex.Message}",
@@ -169,7 +173,8 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (DicomNetworkException ex) when (ex.InnerException is SocketException socketEx)
             {
-                _logger.LogError(ex, "Network error during C-STORE");
+                _logger.LogError(ex, "[{CorrelationId}] [PacsStore] Network error during C-STORE",
+                    correlationId ?? "NO-ID");
                 var userMsg = TranslateSocketError(socketEx, config);
                 return StoreResult.CreateFailure(
                     $"Network error: {ex.Message}",
@@ -178,7 +183,8 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "C-STORE failed for {File}", Path.GetFileName(dicomPath));
+                _logger.LogError(ex, "[{CorrelationId}] [PacsStore] C-STORE failed for {File}",
+                    correlationId ?? "NO-ID", Path.GetFileName(dicomPath));
                 var userMsg = $"Unerwarteter Fehler beim PACS-Upload: {ex.GetType().Name}. Details siehe Log.";
                 return StoreResult.CreateFailure($"Store failed: {ex.Message}", userMsg);
             }
@@ -187,7 +193,7 @@ namespace CamBridge.Infrastructure.Services
         /// <summary>
         /// Test PACS connection with C-ECHO and enhanced feedback
         /// </summary>
-        public async Task<StoreResult> TestConnectionAsync(PacsConfiguration config)
+        public async Task<StoreResult> TestConnectionAsync(PacsConfiguration config, string? correlationId = null)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
 
@@ -209,8 +215,8 @@ namespace CamBridge.Infrastructure.Services
                     DicomErrorType.InvalidConfiguration);
             }
 
-            _logger.LogInformation("Testing connection to {Host}:{Port} as {CallingAe} → {CalledAe}",
-                config.Host, config.Port, config.CallingAeTitle, config.CalledAeTitle);
+            _logger.LogInformation("[{CorrelationId}] [PacsTest] Testing connection to {Host}:{Port} as {CallingAe} → {CalledAe}",
+                correlationId ?? "NO-ID", config.Host, config.Port, config.CallingAeTitle, config.CalledAeTitle);
 
             try
             {
@@ -233,7 +239,8 @@ namespace CamBridge.Infrastructure.Services
                     OnResponseReceived = (req, res) =>
                     {
                         response = res;
-                        _logger.LogDebug("C-ECHO Response: {Status}", res.Status);
+                        _logger.LogDebug("[{CorrelationId}] [PacsTest] C-ECHO Response: {Status}",
+                            correlationId ?? "NO-ID", res.Status);
                         responseReceived.TrySetResult(true);
                     }
                 };
@@ -251,7 +258,8 @@ namespace CamBridge.Infrastructure.Services
                 }
                 catch (OperationCanceledException)
                 {
-                    _logger.LogError("C-ECHO timeout after {Timeout}s", config.TimeoutSeconds);
+                    _logger.LogError("[{CorrelationId}] [PacsTest] C-ECHO timeout after {Timeout}s",
+                        correlationId ?? "NO-ID", config.TimeoutSeconds);
                     return StoreResult.CreateFailure(
                         $"Connection timeout after {config.TimeoutSeconds} seconds",
                         $"Verbindungstimeout nach {config.TimeoutSeconds} Sekunden.\n" +
@@ -265,20 +273,23 @@ namespace CamBridge.Infrastructure.Services
                 // Check response
                 if (response?.Status == DicomStatus.Success)
                 {
-                    _logger.LogInformation("C-ECHO successful - PACS connection verified");
+                    _logger.LogInformation("[{CorrelationId}] [PacsTest] C-ECHO successful - PACS connection verified",
+                        correlationId ?? "NO-ID");
                     return StoreResult.CreateSuccess("ECHO-OK");
                 }
                 else
                 {
                     var errorMsg = $"C-ECHO failed: {response?.Status?.Description ?? "No response"}";
                     var userMsg = TranslateDicomStatus(response?.Status);
-                    _logger.LogWarning(errorMsg);
+                    _logger.LogWarning("[{CorrelationId}] [PacsTest] {ErrorMsg}",
+                        correlationId ?? "NO-ID", errorMsg);
                     return StoreResult.CreateFailure(errorMsg, userMsg, DicomErrorType.PacsRejection);
                 }
             }
             catch (DicomAssociationRejectedException ex)
             {
-                _logger.LogError(ex, "C-ECHO association rejected");
+                _logger.LogError(ex, "[{CorrelationId}] [PacsError] C-ECHO association rejected",
+                    correlationId ?? "NO-ID");
                 var userMsg = TranslateAssociationRejection(ex);
                 return StoreResult.CreateFailure(
                     $"Association rejected: {ex.Message}",
@@ -287,7 +298,9 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (DicomNetworkException ex) when (ex.InnerException is SocketException socketEx)
             {
-                _logger.LogError(ex, "Network error during C-ECHO");
+                _logger.LogError(ex, "[{CorrelationId}] [PacsError] Network error during C-ECHO",
+                    correlationId ?? "NO-ID");
+
                 var userMsg = TranslateSocketError(socketEx, config);
                 return StoreResult.CreateFailure(
                     $"Network error: {ex.Message}",
@@ -296,7 +309,9 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "C-ECHO failed");
+                _logger.LogError(ex, "[{CorrelationId}] [PacsError] C-ECHO failed",
+                    correlationId ?? "NO-ID");
+
                 return StoreResult.CreateFailure(
                     $"Connection test failed: {ex.Message}",
                     $"Verbindungstest fehlgeschlagen: {ex.GetType().Name}\nDetails siehe Log.",
@@ -310,11 +325,12 @@ namespace CamBridge.Infrastructure.Services
         public async Task<StoreResult> StoreFileWithRetryAsync(
             string dicomPath,
             PacsConfiguration config,
+            string? correlationId = null,
             CancellationToken cancellationToken = default)
         {
             if (!config.RetryOnFailure)
             {
-                return await StoreFileAsync(dicomPath, config);
+                return await StoreFileAsync(dicomPath, config, correlationId);
             }
 
             var attempts = 0;
@@ -324,17 +340,18 @@ namespace CamBridge.Infrastructure.Services
             while (attempts < config.MaxRetryAttempts && !cancellationToken.IsCancellationRequested)
             {
                 attempts++;
-                _logger.LogInformation("C-STORE attempt {Attempt}/{Max} for {File}",
-                    attempts, config.MaxRetryAttempts, fileName);
 
-                lastResult = await StoreFileAsync(dicomPath, config);
+                _logger.LogInformation("[{CorrelationId}] [PacsRetry] C-STORE attempt {Attempt}/{Max} for {File}",
+                    correlationId ?? "NO-ID", attempts, config.MaxRetryAttempts, fileName);
+
+                lastResult = await StoreFileAsync(dicomPath, config, correlationId);
 
                 if (lastResult.Success)
                 {
                     if (attempts > 1)
                     {
-                        _logger.LogInformation("C-STORE succeeded after {Attempts} attempts for {File}",
-                            attempts, fileName);
+                        _logger.LogInformation("[{CorrelationId}] [PacsRetry] C-STORE succeeded after {Attempts} attempts for {File}",
+                            correlationId ?? "NO-ID", attempts, fileName);
                     }
                     return lastResult;
                 }
@@ -342,25 +359,24 @@ namespace CamBridge.Infrastructure.Services
                 // Check if error is retryable
                 if (IsNonRetryableError(lastResult.ErrorType))
                 {
-                    _logger.LogWarning("Non-retryable error detected for {File}: {ErrorType}",
-                        fileName, lastResult.ErrorType);
+                    _logger.LogWarning("[{CorrelationId}] [PacsRetry] Non-retryable error detected for {File}: {ErrorType}",
+                        correlationId ?? "NO-ID", fileName, lastResult.ErrorType);
                     break;
                 }
 
                 if (attempts < config.MaxRetryAttempts)
                 {
                     var delay = TimeSpan.FromSeconds(config.RetryDelaySeconds * attempts);
-                    _logger.LogWarning("C-STORE failed for {File}, retrying in {Delay}s. Error: {Error}",
-                        fileName, delay.TotalSeconds, lastResult.UserFriendlyMessage);
-
+                    _logger.LogWarning("[{CorrelationId}] [PacsRetry] C-STORE failed for {File}, retrying in {Delay}s. Error: {Error}",
+                        correlationId ?? "NO-ID", fileName, delay.TotalSeconds, lastResult.UserFriendlyMessage);
                     await Task.Delay(delay, cancellationToken);
                 }
             }
 
             if (attempts >= config.MaxRetryAttempts)
             {
-                _logger.LogError("C-STORE failed after {Attempts} attempts for {File}. Final error: {Error}",
-                    attempts, fileName, lastResult?.UserFriendlyMessage);
+                _logger.LogError("[{CorrelationId}] [PacsRetry] C-STORE failed after {Attempts} attempts for {File}. Final error: {Error}",
+                    correlationId ?? "NO-ID", attempts, fileName, lastResult?.UserFriendlyMessage);
             }
 
             return lastResult ?? StoreResult.CreateFailure("No attempts made");

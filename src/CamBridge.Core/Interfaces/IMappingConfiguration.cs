@@ -1,4 +1,10 @@
-﻿using System.Collections.Generic;
+// File: src/CamBridge.Core/Interfaces/IMappingConfiguration.cs
+// Version: 0.8.10
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Modified: 2025-06-30
+// Status: Added correlation ID overload
+
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace CamBridge.Core.Interfaces
@@ -19,6 +25,14 @@ namespace CamBridge.Core.Interfaces
         /// <param name="filePath">Path to the configuration file (optional)</param>
         /// <returns>True if loaded successfully, false otherwise</returns>
         Task<bool> LoadConfigurationAsync(string? filePath = null);
+
+        /// <summary>
+        /// Loads mapping configuration from a file with correlation ID for logging
+        /// </summary>
+        /// <param name="filePath">Path to the configuration file (optional)</param>
+        /// <param name="correlationId">Correlation ID for log tracking</param>
+        /// <returns>True if loaded successfully, false otherwise</returns>
+        Task<bool> LoadConfigurationAsync(string? filePath, string? correlationId);
 
         /// <summary>
         /// Saves mapping configuration to a file

@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\PipelineConfigPage.xaml -->
-<!-- Version: 0.8.1 -->
-<!-- Description: Pipeline Configuration - With PACS Upload Tab -->
+<!-- Version: 0.8.10 -->
+<!-- Description: Pipeline Configuration - With OutputPath Fix & PACS Upload Tab -->
 
 <Page x:Class="CamBridge.Config.Views.PipelineConfigPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -337,10 +337,31 @@
                                                   Content="Include subdirectories"
                                                   Margin="0,0,0,16"/>
 
+                                        <!-- NEW: Output Path (Session 107 Fix) -->
                                         <TextBlock Grid.Row="3" Grid.Column="0"
-                                                   Text="Output Folder:"
-                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                                   Text="Output Path:"
+                                                   Style="{StaticResource SettingLabelStyle}"
+                                                   ToolTip="Primary output location for processed files (optional)"/>
                                         <Grid Grid.Row="3" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding SelectedPipeline.WatchSettings.OutputPath, UpdateSourceTrigger=PropertyChanged}"
+                                                     ui:ControlHelper.PlaceholderText="Leave empty to use Archive Folder"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseOutputPath_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0"
+                                                   Text="Archive Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"
+                                                   ToolTip="Archive location for successfully processed files"/>
+                                        <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
@@ -351,13 +372,13 @@
                                                     Content="Browse..."
                                                     Width="80"
                                                     Margin="8,0,0,0"
-                                                    Click="BrowseOutputFolder_Click"/>
+                                                    Click="BrowseArchiveFolder_Click"/>
                                         </Grid>
 
-                                        <TextBlock Grid.Row="4" Grid.Column="0"
+                                        <TextBlock Grid.Row="5" Grid.Column="0"
                                                    Text="Error Folder:"
                                                    Style="{StaticResource SettingLabelStyle}"/>
-                                        <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
+                                        <Grid Grid.Row="5" Grid.Column="1" Margin="0,0,0,8">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
@@ -369,23 +390,6 @@
                                                     Width="80"
                                                     Margin="8,0,0,0"
                                                     Click="BrowseErrorFolder_Click"/>
-                                        </Grid>
-
-                                        <TextBlock Grid.Row="5" Grid.Column="0"
-                                                   Text="Dead Letter Folder:"
-                                                   Style="{StaticResource SettingLabelStyle}"/>
-                                        <Grid Grid.Row="5" Grid.Column="1" Margin="0,0,0,8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBox Grid.Column="0"
-                                                     Text="{Binding SelectedPipeline.ProcessingOptions.DeadLetterFolder}"/>
-                                            <Button Grid.Column="1"
-                                                    Content="Browse..."
-                                                    Width="80"
-                                                    Margin="8,0,0,0"
-                                                    Click="BrowseDeadLetterFolder_Click"/>
                                         </Grid>
 
                                         <TextBlock Grid.Row="6" Grid.Column="0"

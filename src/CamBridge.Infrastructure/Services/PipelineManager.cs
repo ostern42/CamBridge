@@ -1,5 +1,5 @@
 // src/CamBridge.Infrastructure/Services/PipelineManager.cs
-// Version: 0.8.9
+// Version: 0.8.10
 // Last Modified: 2025-06-30
 // Description: Manages multiple processing pipelines with hierarchical logging
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
@@ -173,8 +173,11 @@ namespace CamBridge.Infrastructure.Services
                     // Log pipeline configuration
                     logContext.LogInformation("Watch folder: {WatchFolder}", config.WatchSettings.Path);
 
-                    // Debug output path resolution
-                    var outputPath = config.WatchSettings.OutputPath ?? config.ProcessingOptions.ArchiveFolder;
+                    // FIXED SESSION 107: Use IsNullOrWhiteSpace for empty string handling!
+                    var outputPath = !string.IsNullOrWhiteSpace(config.WatchSettings.OutputPath)
+                        ? config.WatchSettings.OutputPath
+                        : config.ProcessingOptions.ArchiveFolder;
+
                     logContext.LogInformation("Output path resolution: WatchSettings.OutputPath={OutputPath}, ArchiveFolder={ArchiveFolder}, Final={Final}",
                         config.WatchSettings.OutputPath ?? "(null)",
                         config.ProcessingOptions.ArchiveFolder ?? "(null)",
@@ -214,7 +217,7 @@ namespace CamBridge.Infrastructure.Services
                     try
                     {
                         // Load mapping configuration - returns bool
-                        var loadSuccess = await _mappingLoader.LoadConfigurationAsync(mappingConfigPath);
+                        var loadSuccess = await _mappingLoader.LoadConfigurationAsync(mappingConfigPath, logContext.CorrelationId);
                         if (loadSuccess)
                         {
                             logContext.LogInformation("Mapping configuration loaded successfully");
@@ -230,14 +233,15 @@ namespace CamBridge.Infrastructure.Services
                     }
 
                     // Create processing components
-                    var components = CreateProcessingComponents(config, pipelineLogger);
+                    var components = CreateProcessingComponents(config, pipelineLogger, logContext.CorrelationId);
 
                     // Create PACS upload queue if enabled
                     PacsUploadQueue? pacsQueue = null;
                     if (config.PacsConfiguration?.Enabled == true && _dicomStoreService != null)
                     {
                         pacsQueue = new PacsUploadQueue(config, _dicomStoreService,
-                            _loggerFactory.CreateLogger<PacsUploadQueue>());
+                            _loggerFactory.CreateLogger<PacsUploadQueue>(),
+                            logContext.CorrelationId);
                         logContext.LogInformation("PACS upload queue created for {AeTitle}",
                             config.PacsConfiguration.CallingAeTitle);
                     }
@@ -249,18 +253,20 @@ namespace CamBridge.Infrastructure.Services
                         components.ExifTool,
                         components.DicomConverter,
                         config,
-                        settings.GlobalDicomSettings,  // FIXED: Use settings from IOptionsMonitor
+                        settings.GlobalDicomSettings,
                         components.TagMapper,
-                        _mappingLoader,  // FIXED: _mappingLoader implements IMappingConfiguration
+                        _mappingLoader,
                         pacsQueue,
-                        logVerbosity);
+                        logVerbosity,
+                        logContext.CorrelationId);
 
                     // Create processing queue with options wrapper
                     var processingOptions = Options.Create(config.ProcessingOptions);
                     var queue = new ProcessingQueue(
                         _loggerFactory.CreateLogger<ProcessingQueue>(),
                         fileProcessor,
-                        processingOptions);
+                        processingOptions,
+                        config.Name);
 
                     logContext.LogInformation("Created processing queue with max concurrent: {MaxConcurrent}",
                         config.ProcessingOptions.MaxConcurrentProcessing);
@@ -398,7 +404,7 @@ namespace CamBridge.Infrastructure.Services
         /// Creates processing components for a pipeline
         /// </summary>
         private (ExifToolReader ExifTool, DicomConverter DicomConverter, DicomTagMapper TagMapper)
-            CreateProcessingComponents(PipelineConfiguration config, ILogger pipelineLogger)
+            CreateProcessingComponents(PipelineConfiguration config, ILogger pipelineLogger, string correlationId)
         {
             // Create DICOM converter
             var dicomConverter = new DicomConverter(_loggerFactory.CreateLogger<DicomConverter>());
@@ -414,7 +420,8 @@ namespace CamBridge.Infrastructure.Services
 
             var exifTool = new ExifToolReader(
                 _loggerFactory.CreateLogger<ExifToolReader>(),
-                exifToolPath);
+                exifToolPath,
+                correlationId); // NEU: Correlation ID hinzugefügt
 
             return (exifTool, dicomConverter, tagMapper);
         }
@@ -630,42 +637,52 @@ namespace CamBridge.Infrastructure.Services
             {
                 // FIXED: Use stored correlation ID or create new one
                 var pipelineCorrelationId = status.CorrelationId ?? $"PS{DateTime.Now:HHmmssff}-{status.Configuration.Name}";
-                _logger.LogInformation("[{CorrelationId}] [PipelineShutdown] Stopping pipeline {Name}",
-                    pipelineCorrelationId, status.Configuration.Name);
-
-                // Stop watching for new files
-                status.Watcher.EnableRaisingEvents = false;
-                status.Watcher.Dispose();
-
-                // Stop queue processing
-                await status.Queue.StopAsync(cancellationToken);
-
-                // Wait for processing to complete
-                if (status.ProcessingTask != null)
+                // FIXED: Handle TaskCanceledException separately
+                try
                 {
-                    try
-                    {
-                        await status.ProcessingTask.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
-                    }
-                    catch (TimeoutException)
-                    {
-                        _logger.LogWarning("[{CorrelationId}] [PipelineShutdown] Pipeline {Name} processing task did not complete in time",
-                            pipelineCorrelationId, status.Configuration.Name);
-                    }
-                }
+                    _logger.LogInformation("[{CorrelationId}] [PipelineShutdown] Stopping pipeline {Name}",
+                        pipelineCorrelationId, status.Configuration.Name);
 
-                // Stop PACS queue if present
-                if (status.PacsQueue != null)
+                    // Stop watching for new files
+                    status.Watcher.EnableRaisingEvents = false;
+                    status.Watcher.Dispose();
+
+                    // Stop queue processing
+                    await status.Queue.StopAsync(cancellationToken);
+
+                    // Wait for processing to complete
+                    if (status.ProcessingTask != null)
+                    {
+                        try
+                        {
+                            await status.ProcessingTask.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                        }
+                        catch (TimeoutException)
+                        {
+                            _logger.LogWarning("[{CorrelationId}] [PipelineShutdown] Pipeline {Name} processing task did not complete in time",
+                                pipelineCorrelationId, status.Configuration.Name);
+                        }
+                    }
+
+                    // Stop PACS queue if present
+                    if (status.PacsQueue != null)
+                    {
+                        status.PacsQueue.Dispose();
+                    }
+
+                    status.IsRunning = false;
+                    status.StopTime = DateTime.UtcNow;
+
+                    // FIXED: Add correlation ID
+                    _logger.LogInformation("[{CorrelationId}] [PipelineShutdown] Pipeline {Name} stopped",
+                        pipelineCorrelationId, status.Configuration.Name);
+                }
+                catch (TaskCanceledException)
                 {
-                    status.PacsQueue.Dispose();
+                    // FIXED: Log cancellation as INFO, not ERROR
+                    _logger.LogInformation("[{CorrelationId}] [PipelineShutdown] Pipeline {Name} cancelled",
+                        pipelineCorrelationId, status.Configuration.Name);
                 }
-
-                status.IsRunning = false;
-                status.StopTime = DateTime.UtcNow;
-
-                // FIXED: Add correlation ID
-                _logger.LogInformation("[{CorrelationId}] [PipelineShutdown] Pipeline {Name} stopped",
-                    pipelineCorrelationId, status.Configuration.Name);
             }
             catch (Exception ex)
             {
@@ -687,6 +704,11 @@ namespace CamBridge.Infrastructure.Services
                 var status = kvp.Value;
                 var stats = status.Queue.GetStatistics();
 
+                // FIXED SESSION 107: Use IsNullOrWhiteSpace for proper fallback
+                var outputFolder = !string.IsNullOrWhiteSpace(status.Configuration.WatchSettings.OutputPath)
+                    ? status.Configuration.WatchSettings.OutputPath
+                    : status.Configuration.ProcessingOptions.ArchiveFolder;
+
                 result[kvp.Key] = new PipelineInfo
                 {
                     Name = kvp.Key,
@@ -697,8 +719,7 @@ namespace CamBridge.Infrastructure.Services
                     ErrorCount = stats.TotalFailed,
                     QueueLength = stats.QueueLength,
                     WatchFolder = status.Configuration.WatchSettings.Path,
-                    OutputFolder = status.Configuration.WatchSettings.OutputPath ??
-                                   status.Configuration.ProcessingOptions.ArchiveFolder
+                    OutputFolder = outputFolder
                 };
             }
 
@@ -714,6 +735,11 @@ namespace CamBridge.Infrastructure.Services
             {
                 var stats = status.Queue.GetStatistics();
 
+                // FIXED SESSION 107: Use IsNullOrWhiteSpace for proper fallback
+                var outputFolder = !string.IsNullOrWhiteSpace(status.Configuration.WatchSettings.OutputPath)
+                    ? status.Configuration.WatchSettings.OutputPath
+                    : status.Configuration.ProcessingOptions.ArchiveFolder;
+
                 return new PipelineInfo
                 {
                     Name = pipelineName,
@@ -724,8 +750,7 @@ namespace CamBridge.Infrastructure.Services
                     ErrorCount = stats.TotalFailed,
                     QueueLength = stats.QueueLength,
                     WatchFolder = status.Configuration.WatchSettings.Path,
-                    OutputFolder = status.Configuration.WatchSettings.OutputPath ??
-                                   status.Configuration.ProcessingOptions.ArchiveFolder
+                    OutputFolder = outputFolder
                 };
             }
 

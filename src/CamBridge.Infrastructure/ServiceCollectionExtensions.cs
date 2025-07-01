@@ -42,7 +42,8 @@ namespace CamBridge.Infrastructure
                 var settings = sp.GetRequiredService<IOptionsMonitor<CamBridgeSettingsV2>>().CurrentValue;
                 return new ExifToolReader(
                     sp.GetRequiredService<ILogger<ExifToolReader>>(),
-                    settings.ExifToolPath ?? "Tools\\exiftool.exe"
+                    settings.ExifToolPath ?? "Tools\\exiftool.exe",
+                    null  // No correlation ID for global instance
                 );
             });
 

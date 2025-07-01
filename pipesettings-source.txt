@@ -1,8 +1,7 @@
-// src\CamBridge.Config\Services\PipelineSettingsService.cs
-// Version: 0.8.10
-// Description: Implementation of pipeline settings service - DeadLetterFolder removed!
+﻿// src\CamBridge.Config\Services\PipelineSettingsService.cs
+// Version: 0.8.5
+// Description: Implementation of pipeline settings service
 // Session: 95 - Business logic extracted from ViewModels
-// Session: 107 - DeadLetterFolder cleanup
 
 using CamBridge.Core;
 using System;
@@ -131,7 +130,7 @@ namespace CamBridge.Config.Services
                 {
                     ArchiveFolder = @"C:\CamBridge\Archive",
                     ErrorFolder = @"C:\CamBridge\Errors",
-                    // DeadLetterFolder removed! Just use ErrorFolder for all failures
+                    DeadLetterFolder = @"C:\CamBridge\DeadLetters",
                     SuccessAction = PostProcessingAction.Archive,
                     FailureAction = PostProcessingAction.MoveToError,
                     CreateBackup = true,
@@ -223,8 +222,8 @@ namespace CamBridge.Config.Services
                 RetryOnFailure = source.RetryOnFailure,
                 MaxRetryAttempts = source.MaxRetryAttempts,
                 OutputOrganization = source.OutputOrganization,
-                ProcessExistingOnStartup = source.ProcessExistingOnStartup
-                // DeadLetterFolder removed! ErrorFolder handles all failures now
+                ProcessExistingOnStartup = source.ProcessExistingOnStartup,
+                DeadLetterFolder = source.DeadLetterFolder
             };
         }
     }

@@ -1,0 +1,3583 @@
+﻿
+
+=== src\CamBridge.Config\Views\PipelineConfigPage.xaml ===
+<!-- src\CamBridge.Config\Views\PipelineConfigPage.xaml -->
+<!-- Version: 0.8.1 -->
+<!-- Description: Pipeline Configuration - With PACS Upload Tab -->
+
+<Page x:Class="CamBridge.Config.Views.PipelineConfigPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.modernwpf.com/2019"
+      xmlns:conv="clr-namespace:CamBridge.Config.Converters"
+      xmlns:core="clr-namespace:CamBridge.Core;assembly=CamBridge.Core">
+
+    <Page.Resources>
+        <!-- Converters -->
+        <conv:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+
+        <!-- Styles -->
+        <Style x:Key="SettingHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,16,0,8"/>
+        </Style>
+
+        <Style x:Key="SettingLabelStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="Width" Value="150"/>
+        </Style>
+
+        <Style x:Key="TabHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <Grid Height="60">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="Pipeline Configuration"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="24,0,0,0"/>
+
+                <StackPanel Grid.Column="1" 
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,0,24,0">
+                    <StackPanel Margin="0,0,16,0" 
+                                VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Pipelines.Count, StringFormat='{}{0} pipelines configured'}"
+                                   HorizontalAlignment="Right"
+                                   FontSize="11"
+                                   Opacity="0.7"/>
+                        <TextBlock HorizontalAlignment="Right"
+                                   FontSize="11"
+                                   Opacity="0.7">
+                            <Run Text="âœ“" Foreground="Green" FontSize="10"/>
+                            <Run Text=" Auto-backup enabled"/>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <Button Command="{Binding SaveAllCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            MinWidth="140">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Save All Pipelines" Margin="0,0,8,0"/>
+                            <TextBlock Text="(Ctrl+S)" Opacity="0.7" FontSize="11"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Pipeline Area -->
+            <Grid Grid.Row="0" Margin="16,16,16,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="320" MinWidth="280"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Pipeline List -->
+                <Border Grid.Column="0"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="2">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- List Header -->
+                        <Border Grid.Row="0"
+                            Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="12,8">
+                            <TextBlock Text="Pipelines"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"/>
+                        </Border>
+
+                        <!-- Pipeline Items -->
+                        <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Pipelines}"
+                             SelectedItem="{Binding SelectedPipeline}"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.Style>
+                                <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                </Style>
+                            </ListBox.Style>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
+                                    <Setter Property="Padding" Value="10,6"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <CheckBox Grid.Column="0"
+                                              IsChecked="{Binding Enabled}"
+                                              Margin="0,0,8,0"
+                                              VerticalAlignment="Center"/>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Name}"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding WatchSettings.Path}"
+                                                   FontSize="11"
+                                                   Opacity="0.7"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip="{Binding WatchSettings.Path}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <!-- Add Button -->
+                        <Border Grid.Row="2"
+                            Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                            BorderThickness="0,1,0,0"
+                            Padding="10">
+                            <Button Command="{Binding AddPipelineCommand}"
+                                HorizontalAlignment="Stretch">
+                                <TextBlock Text="+ Add Pipeline"/>
+                            </Button>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Splitter -->
+                <GridSplitter Grid.Column="1"
+                          Width="2"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch"
+                          Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                          Margin="8,0"/>
+
+                <!-- Pipeline Details -->
+                <Grid Grid.Column="2"
+                  Margin="8,0,0,0"
+                  Visibility="{Binding SelectedPipeline, Converter={StaticResource NullToVisibility}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Pipeline Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="{Binding SelectedPipeline.Name}"
+                               FontSize="20"
+                               FontWeight="SemiBold"/>
+
+                        <Button Grid.Column="1"
+                            Content="Delete Pipeline"
+                            Command="{Binding DeletePipelineCommand}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}"/>
+                    </Grid>
+
+                    <!-- Configuration Tabs -->
+                    <TabControl Grid.Row="1"
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                Padding="0">
+
+                        <!-- General Tab -->
+                        <TabItem Header="General">
+                            <ScrollViewer Padding="12">
+                                <StackPanel>
+                                    <TextBlock Text="Basic Configuration" Style="{StaticResource TabHeaderStyle}"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="Pipeline Name:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="0" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.Name, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="Description:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.Description}"
+                                                 TextWrapping="Wrap"
+                                                 AcceptsReturn="True"
+                                                 Height="60"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="Active:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="2" Grid.Column="1"
+                                                  IsChecked="{Binding SelectedPipeline.Enabled}"
+                                                  Content="Enable this pipeline"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0"
+                                                   Text="Mapping Set:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="3" Grid.Column="1"
+                                                  ItemsSource="{Binding MappingSets}"
+                                                  SelectedValue="{Binding SelectedPipeline.MappingSetId}"
+                                                  SelectedValuePath="Id"
+                                                  DisplayMemberPath="Name"
+                                                  HorizontalAlignment="Stretch"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- Folders Tab -->
+                        <TabItem Header="Folders">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="Folder Configuration" Style="{StaticResource TabHeaderStyle}"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="Watch Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding SelectedPipeline.WatchSettings.Path, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseWatchFolder_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="File Pattern:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.WatchSettings.FilePattern}"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="Subdirectories:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="2" Grid.Column="1"
+                                                  IsChecked="{Binding SelectedPipeline.WatchSettings.IncludeSubdirectories}"
+                                                  Content="Include subdirectories"
+                                                  Margin="0,0,0,16"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0"
+                                                   Text="Output Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <Grid Grid.Row="3" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding SelectedPipeline.ProcessingOptions.ArchiveFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseOutputFolder_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0"
+                                                   Text="Error Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding SelectedPipeline.ProcessingOptions.ErrorFolder}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseErrorFolder_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="5" Grid.Column="0"
+                                                   Text="Dead Letter Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <Grid Grid.Row="5" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding SelectedPipeline.ProcessingOptions.DeadLetterFolder}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseDeadLetterFolder_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="6" Grid.Column="0"
+                                                   Text="Output Organization:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="6" Grid.Column="1"
+                                                  ItemsSource="{Binding OutputOrganizations}"
+                                                  SelectedItem="{Binding SelectedPipeline.ProcessingOptions.OutputOrganization}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- PACS Upload Tab -->
+                        <TabItem Header="PACS Upload">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="PACS Upload Configuration" Style="{StaticResource TabHeaderStyle}"/>
+                                    <TextBlock Text="Automatically upload DICOM files to PACS after creation"
+                                               FontSize="12"
+                                               Opacity="0.7"
+                                               Margin="0,0,0,16"/>
+
+                                    <!-- Enable PACS -->
+                                    <CheckBox IsChecked="{Binding SelectedPipeline.PacsConfiguration.Enabled}"
+                                              Content="Enable automatic PACS upload after DICOM creation"
+                                              FontSize="14" FontWeight="SemiBold"
+                                              Margin="0,0,0,20"/>
+
+                                    <!-- Server Settings -->
+                                    <GroupBox Header="PACS Server Configuration" 
+                                              IsEnabled="{Binding SelectedPipeline.PacsConfiguration.Enabled}"
+                                              Margin="0,0,0,15">
+                                        <Grid Margin="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <TextBlock Grid.Row="0" Grid.Column="0" 
+                                                       Text="Host/IP:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="0" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.Host}"
+                                                     ui:ControlHelper.PlaceholderText="192.168.1.100 or pacs.hospital.local"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="1" Grid.Column="0" 
+                                                       Text="Port:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="1" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.Port}"
+                                                     ui:ControlHelper.PlaceholderText="104"
+                                                     HorizontalAlignment="Left"
+                                                     Width="100"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="2" Grid.Column="0" 
+                                                       Text="Called AE Title:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="2" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.CalledAeTitle}"
+                                                     ui:ControlHelper.PlaceholderText="PACS_SERVER"
+                                                     CharacterCasing="Upper"
+                                                     MaxLength="16"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="3" Grid.Column="0" 
+                                                       Text="Calling AE Title:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="3" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.CallingAeTitle}"
+                                                     ui:ControlHelper.PlaceholderText="CAMBRIDGE"
+                                                     CharacterCasing="Upper"
+                                                     MaxLength="16"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="4" Grid.Column="0" 
+                                                       Text="Timeout (seconds):" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="4" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.TimeoutSeconds}"
+                                                     HorizontalAlignment="Left"
+                                                     Width="100"/>
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <!-- Retry Settings -->
+                                    <GroupBox Header="Retry Configuration" 
+                                              IsEnabled="{Binding SelectedPipeline.PacsConfiguration.Enabled}"
+                                              Margin="0,0,0,15">
+                                        <Grid Margin="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <TextBlock Grid.Row="0" Grid.Column="0" 
+                                                       Text="Max Retry Attempts:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="0" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.MaxRetryAttempts}"
+                                                     HorizontalAlignment="Left"
+                                                     Width="100"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="1" Grid.Column="0" 
+                                                       Text="Retry Delay (seconds):" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="1" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.RetryDelaySeconds}"
+                                                     HorizontalAlignment="Left"
+                                                     Width="100"
+                                                     Margin="0,0,0,8"/>
+
+                                            <TextBlock Grid.Row="2" Grid.Column="0" 
+                                                       Text="Concurrent Uploads:" 
+                                                       Style="{StaticResource SettingLabelStyle}"/>
+                                            <TextBox Grid.Row="2" Grid.Column="1" 
+                                                     Text="{Binding SelectedPipeline.PacsConfiguration.MaxConcurrentUploads}"
+                                                     HorizontalAlignment="Left"
+                                                     Width="100"/>
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <!-- Test Connection Button -->
+                                    <Button Content="Test Connection (C-ECHO)"
+                                            Click="TestPacsConnection_Click"
+                                            IsEnabled="{Binding SelectedPipeline.PacsConfiguration.Enabled}"
+                                            HorizontalAlignment="Left"
+                                            Padding="20,8"
+                                            Margin="0,0,0,10"/>
+
+                                    <TextBlock Text="{Binding PacsConfigViewModel.PacsTestResult}"
+                                               Foreground="{Binding PacsConfigViewModel.PacsTestResultColor}"
+                                               FontWeight="SemiBold"
+                                               Margin="0,5,0,0"/>
+
+                                    <!-- Info Box -->
+                                    <Border Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="12"
+                                            Margin="0,20,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="â„¹ PACS Upload Information" 
+                                                       FontWeight="SemiBold"
+                                                       Margin="0,0,0,8"/>
+                                            <TextBlock TextWrapping="Wrap" FontSize="12">
+                                                â€¢ DICOM files are uploaded immediately after successful creation<LineBreak/>
+                                                â€¢ Failed uploads are retried automatically based on retry settings<LineBreak/>
+                                                â€¢ AE Titles must be configured on the PACS server<LineBreak/>
+                                                â€¢ Standard DICOM port is 104 (may vary by installation)<LineBreak/>
+                                                â€¢ Test connection uses C-ECHO to verify connectivity
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- DICOM Tab -->
+                        <TabItem Header="DICOM">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="DICOM Overrides (Optional)" Style="{StaticResource TabHeaderStyle}"/>
+                                    <TextBlock Text="Leave empty to use global DICOM settings"
+                                               FontSize="12"
+                                               Opacity="0.7"
+                                               Margin="0,0,0,16"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="Institution Name:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="0" Grid.Column="1"
+                                                 Text="{Binding SelectedPipelineDicomOverrides.InstitutionName}"
+                                                 ui:ControlHelper.PlaceholderText="e.g. Radiology Department"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="Department:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1"
+                                                 Text="{Binding SelectedPipelineDicomOverrides.InstitutionDepartment}"
+                                                 ui:ControlHelper.PlaceholderText="e.g. Emergency Room"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="Station Name:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="2" Grid.Column="1"
+                                                 Text="{Binding SelectedPipelineDicomOverrides.StationName}"
+                                                 ui:ControlHelper.PlaceholderText="e.g. ER_WORKSTATION_01"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- Processing Tab -->
+                        <TabItem Header="Processing">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="Processing Options" Style="{StaticResource TabHeaderStyle}"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="File Delay (seconds):"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="0" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.WatchSettings.MinimumFileAgeSeconds}"
+                                                 HorizontalAlignment="Left"
+                                                 Width="120"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="Max Concurrent:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.ProcessingOptions.MaxConcurrentProcessing}"
+                                                 HorizontalAlignment="Left"
+                                                 Width="120"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="On Success:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="2" Grid.Column="1"
+                                                  ItemsSource="{Binding ProcessingActions}"
+                                                  SelectedItem="{Binding SelectedPipeline.ProcessingOptions.SuccessAction}"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0"
+                                                   Text="On Failure:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="3" Grid.Column="1"
+                                                  ItemsSource="{Binding ProcessingActions}"
+                                                  SelectedItem="{Binding SelectedPipeline.ProcessingOptions.FailureAction}"
+                                                  Margin="0,0,0,16"/>
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0"
+                                                   Text="Retry Options:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="4" Grid.Column="1"
+                                                  IsChecked="{Binding SelectedPipeline.ProcessingOptions.RetryOnFailure}"
+                                                  Content="Enable retry on failure"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="5" Grid.Column="0"
+                                                   Text="Max Retries:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="5" Grid.Column="1"
+                                                 Text="{Binding SelectedPipeline.ProcessingOptions.MaxRetryAttempts}"
+                                                 HorizontalAlignment="Left"
+                                                 Width="120"
+                                                 IsEnabled="{Binding SelectedPipeline.ProcessingOptions.RetryOnFailure}"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="6" Grid.Column="0"
+                                                   Text="Backup Files:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="6" Grid.Column="1"
+                                                  IsChecked="{Binding SelectedPipeline.ProcessingOptions.CreateBackup}"
+                                                  Content="Create backup before processing"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="7" Grid.Column="0"
+                                                   Text="Process Existing:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="7" Grid.Column="1"
+                                                  IsChecked="{Binding SelectedPipeline.ProcessingOptions.ProcessExistingOnStartup}"
+                                                  Content="Process existing files on startup"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- Logging Tab -->
+                        <TabItem Header="Logging">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="Pipeline-specific Logging" Style="{StaticResource TabHeaderStyle}"/>
+                                    <TextBlock Text="Override global logging settings for this pipeline"
+                                               FontSize="12"
+                                               Opacity="0.7"
+                                               Margin="0,0,0,16"/>
+
+                                    <CheckBox Content="Use custom logging for this pipeline"
+                                              IsChecked="{Binding UseCustomLogging}"
+                                              Margin="0,0,0,16"/>
+
+                                    <Grid IsEnabled="{Binding UseCustomLogging}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="Log Level:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="0" Grid.Column="1"
+                                                  ItemsSource="{Binding LogLevels}"
+                                                  SelectedItem="{Binding PipelineLogLevel}"
+                                                  HorizontalAlignment="Left"
+                                                  Width="200"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="Log Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <Grid Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding PipelineLogFolder}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseLogFolder_Click"/>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="Retention Days:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="2" Grid.Column="1"
+                                                 Text="{Binding PipelineLogRetentionDays}"
+                                                 HorizontalAlignment="Left"
+                                                 Width="120"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- Notifications Tab -->
+                        <TabItem Header="Notifications">
+                            <ScrollViewer Padding="16">
+                                <StackPanel>
+                                    <TextBlock Text="Pipeline-specific Notifications" Style="{StaticResource TabHeaderStyle}"/>
+                                    <TextBlock Text="Configure alerts and notifications for this pipeline"
+                                               FontSize="12"
+                                               Opacity="0.7"
+                                               Margin="0,0,0,16"/>
+
+                                    <CheckBox Content="Override global notification settings"
+                                              IsChecked="{Binding UseCustomNotifications}"
+                                              Margin="0,0,0,16"/>
+
+                                    <Grid IsEnabled="{Binding UseCustomNotifications}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   Text="Email To:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <TextBox Grid.Row="0" Grid.Column="1"
+                                                 Text="{Binding PipelineEmailTo}"
+                                                 ui:ControlHelper.PlaceholderText="dept@hospital.com;manager@hospital.com"
+                                                 Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   Text="Alert Level:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <ComboBox Grid.Row="1" Grid.Column="1"
+                                                  ItemsSource="{Binding NotificationLevels}"
+                                                  SelectedItem="{Binding PipelineAlertLevel}"
+                                                  HorizontalAlignment="Left"
+                                                  Width="200"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                                   Text="Daily Summary:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="2" Grid.Column="1"
+                                                  IsChecked="{Binding PipelineSendDailySummary}"
+                                                  Content="Send daily processing summary"
+                                                  Margin="0,0,0,8"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0"
+                                                   Text="Alert on Errors:"
+                                                   Style="{StaticResource SettingLabelStyle}"/>
+                                        <CheckBox Grid.Row="3" Grid.Column="1"
+                                                  IsChecked="{Binding PipelineAlertOnErrors}"
+                                                  Content="Send immediate alerts for errors"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                    </TabControl>
+                </Grid>
+
+                <!-- No Selection Message -->
+                <Grid Grid.Column="2"
+                  Margin="8,0,0,0"
+                  Visibility="{Binding SelectedPipeline, Converter={StaticResource NullToVisibility}, ConverterParameter=Inverse}"
+                  VerticalAlignment="Center"
+                  HorizontalAlignment="Center">
+                    <StackPanel MaxWidth="400">
+                        <TextBlock Text="No Pipeline Selected"
+                               FontSize="18"
+                               Opacity="0.5"
+                               HorizontalAlignment="Center"/>
+                        <TextBlock Text="Select a pipeline from the list or create a new one"
+                               FontSize="13"
+                               Opacity="0.5"
+                               Margin="0,8,0,0"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <!-- Status Bar -->
+            <Border Grid.Row="1"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                Height="28">
+                <Grid Margin="16,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Loading -->
+                    <ui:ProgressRing Grid.Column="0"
+                                 IsActive="{Binding IsLoading}"
+                                 Width="12"
+                                 Height="12"
+                                 Margin="0,0,8,0"
+                                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
+
+                    <!-- Status -->
+                    <TextBlock Grid.Column="1"
+                           Text="{Binding StatusMessage}"
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Opacity="0.8"
+                           Visibility="{Binding StatusMessage, Converter={StaticResource NullToVisibility}}"/>
+
+                    <!-- Changes -->
+                    <TextBlock Grid.Column="2"
+                           FontSize="11"
+                           Opacity="0.8"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibility}}">
+                    <Run Text="â€¢" Foreground="Orange" FontSize="8"/>
+                    <Run Text=" Unsaved changes"/>
+                    </TextBlock>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>
+
+
+
+=== src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs ===
+// src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
+// Version: 0.8.5
+// Description: Pipeline Configuration page - Code Behind with Test Connection Handler
+
+using System;
+using System.Runtime.Versioning;
+using System.Windows;
+using System.Windows.Controls;
+using CamBridge.Config.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
+
+namespace CamBridge.Config.Views
+{
+    /// <summary>
+    /// Pipeline Configuration page - Zero Global Settings!
+    /// NavigationService ALREADY injects the ViewModel, so we just need to initialize it
+    /// </summary>
+    [SupportedOSPlatform("windows")]
+    public partial class PipelineConfigPage : Page
+    {
+        public PipelineConfigPage()
+        {
+            InitializeComponent();
+
+            // Use Loaded event instead of OnInitialized to ensure NavigationService has done its job
+            this.Loaded += Page_Loaded;
+        }
+
+        private async void Page_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Only run once
+            this.Loaded -= Page_Loaded;
+
+            Debug.WriteLine("=== PipelineConfigPage Loaded ===");
+
+            // NavigationService should have already set our DataContext
+            if (DataContext is PipelineConfigViewModel vm)
+            {
+                Debug.WriteLine("ViewModel found! Initializing...");
+                try
+                {
+                    await vm.InitializeAsync();
+                    Debug.WriteLine($"Initialization complete. Pipelines: {vm.Pipelines.Count}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Initialization failed: {ex.Message}");
+                    MessageBox.Show(
+                        $"Failed to load pipeline configuration:\n{ex.Message}",
+                        "Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"ERROR: DataContext is {DataContext?.GetType().Name ?? "null"} - expected PipelineConfigViewModel");
+
+                // Fallback - try to get it ourselves
+                var app = Application.Current as App;
+                if (app?.Host?.Services != null)
+                {
+                    var viewModel = app.Host.Services.GetRequiredService<PipelineConfigViewModel>();
+                    DataContext = viewModel;
+                    await viewModel.InitializeAsync();
+                }
+            }
+        }
+
+        // NEW: Test PACS Connection Click Handler (Session 95 - Quick Fix)
+        private async void TestPacsConnection_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button == null) return;
+
+            Debug.WriteLine("TestPacsConnection_Click called");
+
+            try
+            {
+                button.IsEnabled = false;
+                var originalContent = button.Content;
+                button.Content = "Testing...";
+
+                if (DataContext is PipelineConfigViewModel vm)
+                {
+                    Debug.WriteLine($"ViewModel found: {vm != null}");
+                    Debug.WriteLine($"PacsConfigViewModel exists: {vm.PacsConfigViewModel != null}");
+                    Debug.WriteLine($"SelectedPipeline: {vm.SelectedPipeline?.Name ?? "null"}");
+                    Debug.WriteLine($"PacsConfiguration: {vm.SelectedPipeline?.PacsConfiguration != null}");
+
+                    if (vm.PacsConfigViewModel != null &&
+                        vm.SelectedPipeline?.PacsConfiguration != null)
+                    {
+                        // Initialize if needed
+                        vm.PacsConfigViewModel.Initialize(vm.SelectedPipeline);
+
+                        // Call test method directly
+                        await vm.PacsConfigViewModel.TestPacsConnectionAsync();
+                        Debug.WriteLine("Test completed");
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            "PACS configuration not available.\n\nPlease ensure:\n" +
+                            "- A pipeline is selected\n" +
+                            "- PACS upload is enabled\n" +
+                            "- PACS settings are configured",
+                            "Configuration Required",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("DataContext is not PipelineConfigViewModel!");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"TestPacsConnection_Click error: {ex}");
+                MessageBox.Show(
+                    $"Error testing connection:\n{ex.Message}",
+                    "Test Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                // Restore button state
+                if (button != null && DataContext is PipelineConfigViewModel viewModel)
+                {
+                    button.IsEnabled = viewModel.SelectedPipeline?.PacsConfiguration?.Enabled ?? false;
+                    button.Content = "Test Connection (C-ECHO)";
+                }
+            }
+        }
+
+        // Browse button handlers
+        private void BrowseWatchFolder_Click(object sender, RoutedEventArgs e)
+        {
+            BrowseFolder("Select Watch Folder", path =>
+            {
+                if (DataContext is PipelineConfigViewModel vm && vm.SelectedPipeline != null)
+                {
+                    vm.SelectedPipeline.WatchSettings.Path = path;
+                }
+            });
+        }
+
+        private void BrowseOutputFolder_Click(object sender, RoutedEventArgs e)
+        {
+            BrowseFolder("Select Output Folder", path =>
+            {
+                if (DataContext is PipelineConfigViewModel vm && vm.SelectedPipeline != null)
+                {
+                    vm.SelectedPipeline.ProcessingOptions.ArchiveFolder = path;
+                }
+            });
+        }
+
+        private void BrowseErrorFolder_Click(object sender, RoutedEventArgs e)
+        {
+            BrowseFolder("Select Error Folder", path =>
+            {
+                if (DataContext is PipelineConfigViewModel vm && vm.SelectedPipeline != null)
+                {
+                    vm.SelectedPipeline.ProcessingOptions.ErrorFolder = path;
+                }
+            });
+        }
+
+        private void BrowseDeadLetterFolder_Click(object sender, RoutedEventArgs e)
+        {
+            BrowseFolder("Select Dead Letter Folder", path =>
+            {
+                if (DataContext is PipelineConfigViewModel vm && vm.SelectedPipeline != null)
+                {
+                    vm.SelectedPipeline.ProcessingOptions.DeadLetterFolder = path;
+                }
+            });
+        }
+
+        private void BrowseLogFolder_Click(object sender, RoutedEventArgs e)
+        {
+            BrowseFolder("Select Log Folder", path =>
+            {
+                if (DataContext is PipelineConfigViewModel vm)
+                {
+                    vm.PipelineLogFolder = path;
+                }
+            });
+        }
+
+        private void BrowseFolder(string description, Action<string> setPath)
+        {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog
+            {
+                Description = description,
+                ShowNewFolderButton = true
+            };
+
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                setPath(dialog.SelectedPath);
+            }
+        }
+    }
+}
+
+
+
+=== src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs ===
+// src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs
+// Version: 0.8.5
+// Description: Pipeline Configuration ViewModel - Refactored with child ViewModels
+
+using CamBridge.Config.Services;
+using CamBridge.Core;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.Versioning;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Diagnostics;
+
+namespace CamBridge.Config.ViewModels
+{
+    [SupportedOSPlatform("windows")]
+    public partial class PipelineConfigViewModel : ViewModelBase
+    {
+        private readonly IConfigurationService _configurationService;
+        private readonly IPipelineSettingsService _pipelineSettingsService;
+        private readonly PacsConfigViewModel _pacsConfigViewModel;
+        private CamBridgeSettingsV2? _originalSettings;
+
+        // Collections
+        [ObservableProperty]
+        private ObservableCollection<PipelineConfiguration> _pipelines = new();
+
+        [ObservableProperty]
+        private ObservableCollection<MappingSet> _mappingSets = new();
+
+        // Child ViewModels
+        public PacsConfigViewModel PacsConfigViewModel => _pacsConfigViewModel;
+
+        // Selected Pipeline
+        private PipelineConfiguration? _selectedPipeline;
+        public PipelineConfiguration? SelectedPipeline
+        {
+            get => _selectedPipeline;
+            set
+            {
+                if (SetProperty(ref _selectedPipeline, value))
+                {
+                    Debug.WriteLine($"SelectedPipeline changed to: {value?.Name ?? "null"}");
+
+                    // Initialize child ViewModels
+                    _pacsConfigViewModel.Initialize(value);
+
+                    OnPropertyChanged(nameof(SelectedPipelineDicomOverrides));
+                    OnPropertyChanged(nameof(UseCustomLogging));
+                    OnPropertyChanged(nameof(UseCustomNotifications));
+                    UpdateCommands();
+                }
+            }
+        }
+
+        // Pipeline-specific properties for binding
+        public DicomOverrides? SelectedPipelineDicomOverrides
+        {
+            get
+            {
+                if (SelectedPipeline?.DicomOverrides == null && SelectedPipeline != null)
+                {
+                    SelectedPipeline.DicomOverrides = new DicomOverrides();
+                }
+                return SelectedPipeline?.DicomOverrides;
+            }
+        }
+
+        // ComboBox Collections
+        public ObservableCollection<string> LogLevels { get; } = new()
+        {
+            "Trace", "Debug", "Information", "Warning", "Error", "Critical"
+        };
+
+        public ObservableCollection<PostProcessingAction> ProcessingActions { get; } = new()
+        {
+            PostProcessingAction.Leave,
+            PostProcessingAction.Archive,
+            PostProcessingAction.Delete,
+            PostProcessingAction.MoveToError
+        };
+
+        public ObservableCollection<OutputOrganization> OutputOrganizations { get; } = new()
+        {
+            OutputOrganization.None,
+            OutputOrganization.ByPatient,
+            OutputOrganization.ByDate,
+            OutputOrganization.ByPatientAndDate
+        };
+
+        public ObservableCollection<NotificationLevel> NotificationLevels { get; } = new()
+        {
+            NotificationLevel.Information,
+            NotificationLevel.Warning,
+            NotificationLevel.Error,
+            NotificationLevel.Critical
+        };
+
+        // Pipeline-specific logging settings
+        [ObservableProperty]
+        private bool _useCustomLogging;
+
+        [ObservableProperty]
+        private string _pipelineLogLevel = "Information";
+
+        [ObservableProperty]
+        private string _pipelineLogFolder = @"C:\CamBridge\Logs";
+
+        [ObservableProperty]
+        private int _pipelineLogRetentionDays = 30;
+
+        // Pipeline-specific notification settings
+        [ObservableProperty]
+        private bool _useCustomNotifications;
+
+        [ObservableProperty]
+        private string? _pipelineEmailTo;
+
+        [ObservableProperty]
+        private NotificationLevel _pipelineAlertLevel = NotificationLevel.Warning;
+
+        [ObservableProperty]
+        private bool _pipelineSendDailySummary;
+
+        [ObservableProperty]
+        private bool _pipelineAlertOnErrors = true;
+
+        // Status properties
+        [ObservableProperty]
+        private bool _isLoading;
+
+        [ObservableProperty]
+        private bool _isSaving;
+
+        [ObservableProperty]
+        private string _statusMessage = "";
+
+        [ObservableProperty]
+        private bool _isError;
+
+        [ObservableProperty]
+        private bool _hasUnsavedChanges;
+
+        [ObservableProperty]
+        private int _unsavedChangesCount;
+
+        [ObservableProperty]
+        private bool _selectedPipelineHasChanges;
+
+        public PipelineConfigViewModel(
+            IConfigurationService configurationService,
+            IPipelineSettingsService pipelineSettingsService,
+            PacsConfigViewModel pacsConfigViewModel)
+        {
+            _configurationService = configurationService;
+            _pipelineSettingsService = pipelineSettingsService;
+            _pacsConfigViewModel = pacsConfigViewModel;
+
+            Debug.WriteLine("PipelineConfigViewModel constructor called");
+
+            // Wire up configuration changes from child ViewModels
+            _pacsConfigViewModel.ConfigurationChanged += (s, e) =>
+            {
+                if (!IsLoading)
+                {
+                    HasUnsavedChanges = true;
+                    UnsavedChangesCount++;
+                    SelectedPipelineHasChanges = true;
+                }
+            };
+
+            // Subscribe to collection changes
+            Pipelines.CollectionChanged += (s, e) =>
+            {
+                Debug.WriteLine($"Pipelines collection changed: Count = {Pipelines.Count}");
+                if (!IsLoading)
+                {
+                    HasUnsavedChanges = true;
+                    UnsavedChangesCount++;
+                }
+            };
+        }
+
+        public async Task InitializeAsync()
+        {
+            Debug.WriteLine("=== PipelineConfigViewModel.InitializeAsync START ===");
+            try
+            {
+                await LoadSettingsAsync();
+
+                // Ensure we have at least one pipeline
+                if (Pipelines.Count == 0)
+                {
+                    Debug.WriteLine("No pipelines loaded, creating default");
+                    CreateDefaultPipeline();
+                }
+
+                Debug.WriteLine($"InitializeAsync completed. Pipeline count: {Pipelines.Count}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"InitializeAsync FAILED: {ex.Message}");
+                Debug.WriteLine($"Stack: {ex.StackTrace}");
+                StatusMessage = $"Error: {ex.Message}";
+                IsError = true;
+
+                // Create default pipeline even on error
+                CreateDefaultPipeline();
+            }
+            finally
+            {
+                Debug.WriteLine("=== PipelineConfigViewModel.InitializeAsync END ===");
+            }
+        }
+
+        [RelayCommand]
+        private async Task LoadSettingsAsync()
+        {
+            Debug.WriteLine("LoadSettingsAsync called");
+            try
+            {
+                IsLoading = true;
+                IsError = false;
+                StatusMessage = "";
+
+                var settings = await _pipelineSettingsService.LoadSettingsAsync();
+
+                if (settings != null)
+                {
+                    Debug.WriteLine($"Settings loaded: Version={settings.Version}, Pipelines={settings.Pipelines.Count}");
+                    _originalSettings = settings;
+                    MapFromSettings(settings);
+
+                    // Create system default mapping sets if needed
+                    EnsureSystemDefaults();
+
+                    HasUnsavedChanges = false;
+                    UnsavedChangesCount = 0;
+                    StatusMessage = "";
+                }
+                else
+                {
+                    Debug.WriteLine("Settings is null - creating default pipeline");
+                    CreateDefaultPipeline();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"LoadSettingsAsync ERROR: {ex.Message}");
+                Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                StatusMessage = $"Error: {ex.Message}";
+                IsError = true;
+
+                // Ensure we have at least one pipeline
+                if (Pipelines.Count == 0)
+                {
+                    CreateDefaultPipeline();
+                }
+            }
+            finally
+            {
+                IsLoading = false;
+                Debug.WriteLine($"LoadSettingsAsync completed. Pipelines count: {Pipelines.Count}");
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanSaveAll))]
+        private async Task SaveAllAsync()
+        {
+            try
+            {
+                IsSaving = true;
+                IsError = false;
+                StatusMessage = "Saving all pipelines...";
+
+                var settings = MapToSettings();
+                await _pipelineSettingsService.SaveSettingsAsync(settings);
+
+                _originalSettings = settings;
+                HasUnsavedChanges = false;
+                UnsavedChangesCount = 0;
+                SelectedPipelineHasChanges = false;
+
+                // Show save confirmation briefly
+                StatusMessage = $"Saved at {DateTime.Now:HH:mm:ss}";
+
+                // Clear status message after 3 seconds
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
+                    StatusMessage = "";
+                });
+
+                // Notify success
+                var backupPath = _pipelineSettingsService.GetBackupPath();
+
+                MessageBox.Show($"Pipeline configuration saved successfully!\n\nAuto-backup created at:\n{backupPath}",
+                               "Success",
+                               MessageBoxButton.OK,
+                               MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+                IsError = true;
+
+                MessageBox.Show($"Failed to save configuration:\n{ex.Message}",
+                               "Error",
+                               MessageBoxButton.OK,
+                               MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsSaving = false;
+            }
+        }
+
+        private bool CanSaveAll() => HasUnsavedChanges && !IsLoading && !IsSaving;
+
+        [RelayCommand]
+        private void AddPipeline()
+        {
+            Debug.WriteLine("AddPipeline called");
+
+            var newPipeline = _pipelineSettingsService.CreateDefaultPipeline($"Pipeline {Pipelines.Count + 1}");
+
+            // Subscribe to property changes
+            newPipeline.PropertyChanged += Pipeline_PropertyChanged;
+            newPipeline.WatchSettings.PropertyChanged += Pipeline_PropertyChanged;
+            newPipeline.ProcessingOptions.PropertyChanged += Pipeline_PropertyChanged;
+            if (newPipeline.PacsConfiguration != null)
+            {
+                newPipeline.PacsConfiguration.PropertyChanged += Pipeline_PropertyChanged;
+            }
+
+            // Add to collection
+            Pipelines.Add(newPipeline);
+            SelectedPipeline = newPipeline;
+
+            HasUnsavedChanges = true;
+            UnsavedChangesCount++;
+
+            Debug.WriteLine($"Pipeline added. Total count: {Pipelines.Count}");
+        }
+
+        [RelayCommand(CanExecute = nameof(CanDeletePipeline))]
+        private void DeletePipeline()
+        {
+            if (SelectedPipeline == null) return;
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to delete the pipeline '{SelectedPipeline.Name}'?\n\nThis action cannot be undone.",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                var pipelineName = SelectedPipeline.Name;
+                Pipelines.Remove(SelectedPipeline);
+                SelectedPipeline = Pipelines.FirstOrDefault();
+
+                HasUnsavedChanges = true;
+                UnsavedChangesCount++;
+            }
+        }
+
+        private bool CanDeletePipeline() => SelectedPipeline != null && Pipelines.Count > 1;
+
+        [RelayCommand(CanExecute = nameof(CanApplyPipeline))]
+        private void ApplyPipeline()
+        {
+            if (SelectedPipeline == null) return;
+
+            // Mark changes as applied
+            SelectedPipelineHasChanges = false;
+        }
+
+        private bool CanApplyPipeline() => SelectedPipelineHasChanges && !IsLoading && !IsSaving;
+
+        [RelayCommand(CanExecute = nameof(CanResetPipeline))]
+        private void ResetPipeline()
+        {
+            if (SelectedPipeline == null || _originalSettings == null) return;
+
+            // Find original pipeline by ID
+            var originalPipeline = _originalSettings.Pipelines.FirstOrDefault(p => p.Id == SelectedPipeline.Id);
+            if (originalPipeline != null)
+            {
+                // Reset to original values
+                var index = Pipelines.IndexOf(SelectedPipeline);
+                if (index >= 0)
+                {
+                    var cloned = _pipelineSettingsService.ClonePipeline(originalPipeline);
+                    cloned.PropertyChanged += Pipeline_PropertyChanged;
+                    cloned.WatchSettings.PropertyChanged += Pipeline_PropertyChanged;
+                    cloned.ProcessingOptions.PropertyChanged += Pipeline_PropertyChanged;
+                    if (cloned.PacsConfiguration != null)
+                    {
+                        cloned.PacsConfiguration.PropertyChanged += Pipeline_PropertyChanged;
+                    }
+
+                    Pipelines[index] = cloned;
+                    SelectedPipeline = Pipelines[index];
+                }
+            }
+
+            SelectedPipelineHasChanges = false;
+        }
+
+        private bool CanResetPipeline() => SelectedPipelineHasChanges && !IsLoading && !IsSaving;
+
+        private void MapFromSettings(CamBridgeSettingsV2 settings)
+        {
+            Debug.WriteLine($"MapFromSettings called. Settings has {settings.Pipelines.Count} pipelines, {settings.MappingSets.Count} mapping sets");
+
+            // Clear existing
+            Pipelines.Clear();
+            MappingSets.Clear();
+
+            // Map mapping sets
+            foreach (var mappingSet in settings.MappingSets)
+            {
+                MappingSets.Add(mappingSet);
+                Debug.WriteLine($"Added mapping set: {mappingSet.Name}");
+            }
+
+            // Map pipelines
+            foreach (var pipeline in settings.Pipelines)
+            {
+                var clonedPipeline = _pipelineSettingsService.ClonePipeline(pipeline);
+
+                // Subscribe to property changes
+                clonedPipeline.PropertyChanged += Pipeline_PropertyChanged;
+                clonedPipeline.WatchSettings.PropertyChanged += Pipeline_PropertyChanged;
+                clonedPipeline.ProcessingOptions.PropertyChanged += Pipeline_PropertyChanged;
+                if (clonedPipeline.PacsConfiguration != null)
+                {
+                    clonedPipeline.PacsConfiguration.PropertyChanged += Pipeline_PropertyChanged;
+                }
+
+                Pipelines.Add(clonedPipeline);
+                Debug.WriteLine($"Added pipeline: {clonedPipeline.Name}");
+            }
+
+            // Select first pipeline
+            SelectedPipeline = Pipelines.FirstOrDefault();
+            Debug.WriteLine($"Selected first pipeline: {SelectedPipeline?.Name ?? "none"}");
+        }
+
+        private void Pipeline_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (!IsLoading)
+            {
+                SelectedPipelineHasChanges = true;
+                HasUnsavedChanges = true;
+                Debug.WriteLine($"Pipeline property changed: {e.PropertyName}");
+            }
+        }
+
+        private CamBridgeSettingsV2 MapToSettings()
+        {
+            var settings = new CamBridgeSettingsV2
+            {
+                Version = "2.0",
+                GlobalDicomSettings = _originalSettings?.GlobalDicomSettings ?? new DicomSettings(),
+                DefaultProcessingOptions = _originalSettings?.DefaultProcessingOptions ?? new ProcessingOptions(),
+                Logging = _originalSettings?.Logging ?? new LoggingSettings(),
+                Service = _originalSettings?.Service ?? new ServiceSettings(),
+                Notifications = _originalSettings?.Notifications ?? new NotificationSettings()
+            };
+
+            // Map pipelines
+            settings.Pipelines.Clear();
+            foreach (var pipeline in Pipelines)
+            {
+                settings.Pipelines.Add(_pipelineSettingsService.ClonePipeline(pipeline));
+            }
+
+            // Map mapping sets
+            settings.MappingSets.Clear();
+            foreach (var mappingSet in MappingSets)
+            {
+                settings.MappingSets.Add(mappingSet);
+            }
+
+            return settings;
+        }
+
+        private void CreateDefaultPipeline()
+        {
+            Debug.WriteLine("CreateDefaultPipeline called");
+
+            // Don't clear if we already have pipelines
+            if (Pipelines.Count > 0)
+            {
+                Debug.WriteLine($"Already have {Pipelines.Count} pipelines, not creating default");
+                return;
+            }
+
+            // Clear mapping sets if needed
+            MappingSets.Clear();
+
+            // Create default mapping set
+            var defaultMappingSet = new MappingSet
+            {
+                Id = Guid.NewGuid(),
+                Name = "Default Mapping",
+                Description = "Default EXIF to DICOM mapping",
+                IsSystemDefault = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            MappingSets.Add(defaultMappingSet);
+
+            // Create default pipeline
+            var defaultPipeline = _pipelineSettingsService.CreateDefaultPipeline("Default Pipeline");
+            defaultPipeline.MappingSetId = defaultMappingSet.Id;
+
+            defaultPipeline.PropertyChanged += Pipeline_PropertyChanged;
+            defaultPipeline.WatchSettings.PropertyChanged += Pipeline_PropertyChanged;
+            defaultPipeline.ProcessingOptions.PropertyChanged += Pipeline_PropertyChanged;
+            if (defaultPipeline.PacsConfiguration != null)
+            {
+                defaultPipeline.PacsConfiguration.PropertyChanged += Pipeline_PropertyChanged;
+            }
+
+            Pipelines.Add(defaultPipeline);
+            SelectedPipeline = defaultPipeline;
+
+            Debug.WriteLine($"Default pipeline created. Pipelines count: {Pipelines.Count}");
+        }
+
+        private void EnsureSystemDefaults()
+        {
+            // Check if we have system default mapping sets
+            if (!MappingSets.Any(m => m.IsSystemDefault))
+            {
+                // Add Ricoh Standard as system default
+                var ricohStandard = new MappingSet
+                {
+                    Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                    Name = "[System] Ricoh Standard",
+                    Description = "Built-in mapping for Ricoh cameras",
+                    IsSystemDefault = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                MappingSets.Insert(0, ricohStandard);
+                Debug.WriteLine("Added system default mapping set: Ricoh Standard");
+            }
+        }
+
+        private void UpdateCommands()
+        {
+            DeletePipelineCommand.NotifyCanExecuteChanged();
+            ApplyPipelineCommand.NotifyCanExecuteChanged();
+            ResetPipelineCommand.NotifyCanExecuteChanged();
+        }
+
+        // Handle property changes
+        protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+        {
+            base.OnPropertyChanged(e);
+
+            // Update save command when changes occur
+            if (e.PropertyName == nameof(HasUnsavedChanges))
+            {
+                SaveAllCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
+}
+
+
+
+=== src\CamBridge.Core\PipelineConfiguration.cs ===
+// src\CamBridge.Core\PipelineConfiguration.cs
+// Version: 0.8.0
+// Description: Pipeline configuration model with PACS support
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Represents a complete processing pipeline from input to output
+    /// </summary>
+    public class PipelineConfiguration : INotifyPropertyChanged
+    {
+        private Guid _id = Guid.NewGuid();
+        private string _name = "New Pipeline";
+        private string? _description;
+        private bool _enabled = true;
+        private PipelineWatchSettings _watchSettings = new();
+        private ProcessingOptions _processingOptions = new();
+        private DicomOverrides? _dicomOverrides;
+        private Guid? _mappingSetId;
+        private PacsConfiguration? _pacsConfiguration;
+
+        /// <summary>
+        /// Unique identifier for this pipeline
+        /// </summary>
+        public Guid Id
+        {
+            get => _id;
+            set { _id = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Display name for this pipeline
+        /// </summary>
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Optional description
+        /// </summary>
+        public string? Description
+        {
+            get => _description;
+            set { _description = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether this pipeline is active
+        /// </summary>
+        public bool Enabled
+        {
+            get => _enabled;
+            set { _enabled = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Watch folder configuration for this pipeline
+        /// </summary>
+        public PipelineWatchSettings WatchSettings
+        {
+            get => _watchSettings;
+            set { _watchSettings = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Processing options specific to this pipeline
+        /// </summary>
+        public ProcessingOptions ProcessingOptions
+        {
+            get => _processingOptions;
+            set { _processingOptions = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// DICOM overrides for this pipeline (optional)
+        /// </summary>
+        public DicomOverrides? DicomOverrides
+        {
+            get => _dicomOverrides;
+            set { _dicomOverrides = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// ID of the mapping set to use
+        /// </summary>
+        public Guid? MappingSetId
+        {
+            get => _mappingSetId;
+            set { _mappingSetId = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// PACS upload configuration for this pipeline (optional)
+        /// </summary>
+        public PacsConfiguration? PacsConfiguration
+        {
+            get => _pacsConfiguration;
+            set { _pacsConfiguration = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Pipeline-specific metadata
+        /// </summary>
+        public Dictionary<string, string> Metadata { get; set; } = new();
+
+        /// <summary>
+        /// Creation timestamp
+        /// </summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Last modification timestamp
+        /// </summary>
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Calculated property for UI display
+        /// </summary>
+        [JsonIgnore]
+        public string ProcessedToday => "0 files"; // TODO: Implement actual counting
+
+        [JsonIgnore]
+        public bool IsValid => WatchSettings?.IsValid ?? false;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Watch folder settings for a pipeline
+    /// </summary>
+    public class PipelineWatchSettings : INotifyPropertyChanged
+    {
+        private string _path = string.Empty;
+        private string _filePattern = "*.jpg;*.jpeg";
+        private bool _includeSubdirectories = false;
+        private string? _outputPath;
+        private int _minimumFileAgeSeconds = 2;
+
+        /// <summary>
+        /// Folder path to watch
+        /// </summary>
+        public string Path
+        {
+            get => _path;
+            set { _path = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsValid)); }
+        }
+
+        /// <summary>
+        /// File pattern to match (e.g., "*.jpg;*.jpeg")
+        /// </summary>
+        public string FilePattern
+        {
+            get => _filePattern;
+            set { _filePattern = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Include subdirectories in watch
+        /// </summary>
+        public bool IncludeSubdirectories
+        {
+            get => _includeSubdirectories;
+            set { _includeSubdirectories = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Custom output path (overrides processing options)
+        /// </summary>
+        public string? OutputPath
+        {
+            get => _outputPath;
+            set { _outputPath = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Minimum file age before processing (to ensure write completion)
+        /// </summary>
+        public int MinimumFileAgeSeconds
+        {
+            get => _minimumFileAgeSeconds;
+            set { _minimumFileAgeSeconds = value; OnPropertyChanged(); }
+        }
+
+        [JsonIgnore]
+        public bool IsValid => !string.IsNullOrWhiteSpace(Path) &&
+                              System.IO.Directory.Exists(Path);
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// DICOM settings that can be overridden per pipeline
+    /// </summary>
+    public class DicomOverrides : INotifyPropertyChanged
+    {
+        private string? _institutionName;
+        private string? _institutionDepartment;
+        private string? _stationName;
+
+        /// <summary>
+        /// Override institution name for this pipeline
+        /// </summary>
+        public string? InstitutionName
+        {
+            get => _institutionName;
+            set { _institutionName = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Override institution department for this pipeline
+        /// </summary>
+        public string? InstitutionDepartment
+        {
+            get => _institutionDepartment;
+            set { _institutionDepartment = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Override station name for this pipeline
+        /// </summary>
+        public string? StationName
+        {
+            get => _stationName;
+            set { _stationName = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Additional DICOM tags to set/override
+        /// </summary>
+        public Dictionary<string, string> AdditionalTags { get; set; } = new();
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Represents a reusable mapping configuration set
+    /// </summary>
+    public class MappingSet : INotifyPropertyChanged
+    {
+        private Guid _id = Guid.NewGuid();
+        private string _name = "New Mapping Set";
+        private string? _description;
+        private bool _isSystemDefault = false;
+
+        /// <summary>
+        /// Unique identifier
+        /// </summary>
+        public Guid Id
+        {
+            get => _id;
+            set { _id = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Display name
+        /// </summary>
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Optional description
+        /// </summary>
+        public string? Description
+        {
+            get => _description;
+            set { _description = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// The actual mapping rules
+        /// </summary>
+        public List<MappingRule> Rules { get; set; } = new();
+
+        /// <summary>
+        /// Whether this is a system default (read-only)
+        /// </summary>
+        public bool IsSystemDefault
+        {
+            get => _isSystemDefault;
+            set { _isSystemDefault = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Creation timestamp
+        /// </summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Last modification timestamp
+        /// </summary>
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Tags for categorization
+        /// </summary>
+        public List<string> Tags { get; set; } = new();
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// PACS (Picture Archiving and Communication System) configuration for automatic upload
+    /// </summary>
+    public class PacsConfiguration : INotifyPropertyChanged
+    {
+        private bool _enabled = false;
+        private string _host = string.Empty;
+        private int _port = 104;
+        private string _calledAeTitle = string.Empty;
+        private string _callingAeTitle = "CAMBRIDGE";
+        private int _timeoutSeconds = 30;
+        private int _maxConcurrentUploads = 1;
+        private bool _retryOnFailure = true;
+        private int _maxRetryAttempts = 3;
+        private int _retryDelaySeconds = 5;
+
+        /// <summary>
+        /// Enable automatic PACS upload after DICOM creation
+        /// </summary>
+        public bool Enabled
+        {
+            get => _enabled;
+            set { _enabled = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// PACS server hostname or IP address
+        /// </summary>
+        public string Host
+        {
+            get => _host;
+            set { _host = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// PACS server port (default: 104)
+        /// </summary>
+        public int Port
+        {
+            get => _port;
+            set { _port = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Called AE Title (PACS server's AE Title)
+        /// </summary>
+        public string CalledAeTitle
+        {
+            get => _calledAeTitle;
+            set { _calledAeTitle = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Calling AE Title (our AE Title)
+        /// </summary>
+        public string CallingAeTitle
+        {
+            get => _callingAeTitle;
+            set { _callingAeTitle = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Connection timeout in seconds
+        /// </summary>
+        public int TimeoutSeconds
+        {
+            get => _timeoutSeconds;
+            set { _timeoutSeconds = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum concurrent uploads per pipeline
+        /// </summary>
+        public int MaxConcurrentUploads
+        {
+            get => _maxConcurrentUploads;
+            set { _maxConcurrentUploads = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Enable retry on upload failure
+        /// </summary>
+        public bool RetryOnFailure
+        {
+            get => _retryOnFailure;
+            set { _retryOnFailure = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum retry attempts
+        /// </summary>
+        public int MaxRetryAttempts
+        {
+            get => _maxRetryAttempts;
+            set { _maxRetryAttempts = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Delay between retry attempts in seconds
+        /// </summary>
+        public int RetryDelaySeconds
+        {
+            get => _retryDelaySeconds;
+            set { _retryDelaySeconds = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Validate configuration
+        /// </summary>
+        public bool IsValid() =>
+            !string.IsNullOrWhiteSpace(Host) &&
+            Port > 0 &&
+            Port < 65536 &&
+            !string.IsNullOrWhiteSpace(CalledAeTitle) &&
+            !string.IsNullOrWhiteSpace(CallingAeTitle) &&
+            CalledAeTitle.Length <= 16 &&
+            CallingAeTitle.Length <= 16;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+}
+
+
+
+=== src\CamBridge.Core\ProcessingOptions.cs ===
+// src\CamBridge.Core\ProcessingOptions.cs
+// Version: 0.6.5
+// Description: Processing options with INotifyPropertyChanged support
+
+using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Options for processing JPEG files
+    /// </summary>
+    public class ProcessingOptions : INotifyPropertyChanged
+    {
+        private PostProcessingAction _successAction = PostProcessingAction.Archive;
+        private PostProcessingAction _failureAction = PostProcessingAction.MoveToError;
+        private string _archiveFolder = @"C:\CamBridge\Archive";
+        private string _errorFolder = @"C:\CamBridge\Errors";
+        private string _backupFolder = @"C:\CamBridge\Backup";
+        private string? _deadLetterFolder = @"C:\CamBridge\DeadLetters";
+        private bool _createBackup = true;
+        private int _maxConcurrentProcessing = 2;
+        private bool _retryOnFailure = true;
+        private int _maxRetryAttempts = 3;
+        private OutputOrganization _outputOrganization = OutputOrganization.ByPatientAndDate;
+        private bool _processExistingOnStartup = true;
+        private TimeSpan? _maxFileAge;
+        private long? _minimumFileSizeBytes;
+        private long? _maximumFileSizeBytes;
+        private string? _outputFilePattern;
+        private int _retryDelaySeconds = 5;
+
+        /// <summary>
+        /// Action to take on successful processing
+        /// </summary>
+        public PostProcessingAction SuccessAction
+        {
+            get => _successAction;
+            set { _successAction = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Action to take on failed processing
+        /// </summary>
+        public PostProcessingAction FailureAction
+        {
+            get => _failureAction;
+            set { _failureAction = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Archive folder for successfully processed files
+        /// </summary>
+        public string ArchiveFolder
+        {
+            get => _archiveFolder;
+            set { _archiveFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Error folder for failed files
+        /// </summary>
+        public string ErrorFolder
+        {
+            get => _errorFolder;
+            set { _errorFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Backup folder for original files
+        /// </summary>
+        public string BackupFolder
+        {
+            get => _backupFolder;
+            set { _backupFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Dead letter folder for unprocessable files
+        /// </summary>
+        public string? DeadLetterFolder
+        {
+            get => _deadLetterFolder;
+            set { _deadLetterFolder = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether to create backup before processing
+        /// </summary>
+        public bool CreateBackup
+        {
+            get => _createBackup;
+            set { _createBackup = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum concurrent file processing
+        /// </summary>
+        public int MaxConcurrentProcessing
+        {
+            get => _maxConcurrentProcessing;
+            set { _maxConcurrentProcessing = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether to retry on failure
+        /// </summary>
+        public bool RetryOnFailure
+        {
+            get => _retryOnFailure;
+            set { _retryOnFailure = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum retry attempts
+        /// </summary>
+        public int MaxRetryAttempts
+        {
+            get => _maxRetryAttempts;
+            set { _maxRetryAttempts = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Output folder organization strategy
+        /// </summary>
+        public OutputOrganization OutputOrganization
+        {
+            get => _outputOrganization;
+            set { _outputOrganization = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Whether to process existing files on startup
+        /// </summary>
+        public bool ProcessExistingOnStartup
+        {
+            get => _processExistingOnStartup;
+            set { _processExistingOnStartup = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum age of files to process
+        /// </summary>
+        public TimeSpan? MaxFileAge
+        {
+            get => _maxFileAge;
+            set { _maxFileAge = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Minimum file size in bytes
+        /// </summary>
+        public long? MinimumFileSizeBytes
+        {
+            get => _minimumFileSizeBytes;
+            set { _minimumFileSizeBytes = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Maximum file size in bytes
+        /// </summary>
+        public long? MaximumFileSizeBytes
+        {
+            get => _maximumFileSizeBytes;
+            set { _maximumFileSizeBytes = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Pattern for output file naming
+        /// </summary>
+        public string? OutputFilePattern
+        {
+            get => _outputFilePattern;
+            set { _outputFilePattern = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Delay between retry attempts in seconds
+        /// </summary>
+        public int RetryDelaySeconds
+        {
+            get => _retryDelaySeconds;
+            set { _retryDelaySeconds = value; OnPropertyChanged(); }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    /// <summary>
+    /// Actions to take after processing
+    /// </summary>
+    public enum PostProcessingAction
+    {
+        /// <summary>
+        /// Leave the file in place
+        /// </summary>
+        Leave,
+
+        /// <summary>
+        /// Move to archive folder
+        /// </summary>
+        Archive,
+
+        /// <summary>
+        /// Delete the file
+        /// </summary>
+        Delete,
+
+        /// <summary>
+        /// Move to error folder
+        /// </summary>
+        MoveToError
+    }
+
+    /// <summary>
+    /// File action types
+    /// </summary>
+    public enum FileActionType
+    {
+        Delete,
+        Move,
+        Keep
+    }
+
+    /// <summary>
+    /// Output organization types
+    /// </summary>
+    public enum OutputOrganizationType
+    {
+        Flat,           // All files in one folder
+        YearMonth,      // Year/Month subfolders
+        PatientStudy,   // Patient/Study subfolders
+        DatePatient     // Date/Patient subfolders
+    }
+
+
+    /// <summary>
+    /// Output folder organization strategies
+    /// </summary>
+    public enum OutputOrganization
+    {
+        /// <summary>
+        /// No organization
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// Organize by patient name
+        /// </summary>
+        ByPatient,
+
+        /// <summary>
+        /// Organize by date
+        /// </summary>
+        ByDate,
+
+        /// <summary>
+        /// Organize by patient and date
+        /// </summary>
+        ByPatientAndDate
+
+        
+    }
+}
+
+
+
+=== src\CamBridge.Service\appsettings.json ===
+{
+  "CamBridge": {
+    "Version": "2.0",
+    "Pipelines": [
+      {
+        "Id": "50fece4b-dc95-4ec2-8f27-ece47b713b33",
+        "Name": "Radiology",
+        "Description": "New pipeline configuration1",
+        "Enabled": true,
+        "WatchSettings": {
+          "Path": "C:\\CamBridge\\Watch\\Radiology",
+          "FilePattern": "*.jpg;*.jpeg",
+          "IncludeSubdirectories": false,
+          "OutputPath": null,
+          "MinimumFileAgeSeconds": 4
+        },
+        "ProcessingOptions": {
+          "SuccessAction": "Leave",
+          "FailureAction": "MoveToError",
+          "ArchiveFolder": "C:\\CamBridge\\Output\\Radiology",
+          "ErrorFolder": "C:\\CamBridge\\Errors\\Radiology",
+          "BackupFolder": "C:\\CamBridge\\NewPipeline\\Backup",
+          "DeadLetterFolder": "C:\\CamBridge\\Errors\\Radiology",
+          "CreateBackup": false,
+          "MaxConcurrentProcessing": 2,
+          "RetryOnFailure": true,
+          "MaxRetryAttempts": 3,
+          "OutputOrganization": "ByPatientAndDate",
+          "ProcessExistingOnStartup": false,
+          "MaxFileAge": null,
+          "MinimumFileSizeBytes": null,
+          "MaximumFileSizeBytes": null,
+          "OutputFilePattern": null,
+          "RetryDelaySeconds": 5
+        },
+        "DicomOverrides": {
+          "InstitutionName": null,
+          "InstitutionDepartment": null,
+          "StationName": null,
+          "AdditionalTags": {}
+        },
+        "MappingSetId": "5a0209b1-5e56-454e-8b6a-9d660017be14",
+        "PacsConfiguration": {
+          "Enabled": true,
+          "Host": "127.0.0.1",
+          "Port": 4242,
+          "CalledAeTitle": "ORTHANC",
+          "CallingAeTitle": "CAMBRIDGE",
+          "TimeoutSeconds": 30,
+          "MaxConcurrentUploads": 1,
+          "RetryOnFailure": true,
+          "MaxRetryAttempts": 3,
+          "RetryDelaySeconds": 5
+        },
+        "Metadata": {},
+        "CreatedAt": "2025-06-14T15:53:52.671366Z",
+        "UpdatedAt": "2025-06-27T12:37:40.895808Z"
+      }
+    ],
+    "MappingSets": [
+      {
+        "Id": "00000000-0000-0000-0000-000000000001",
+        "Name": "[System] Ricoh Standard",
+        "Description": "Built-in mapping for Ricoh cameras",
+        "Rules": [],
+        "IsSystemDefault": true,
+        "CreatedAt": "2025-06-22T22:26:18.6564995Z",
+        "UpdatedAt": "2025-06-22T22:26:18.6565473Z",
+        "Tags": []
+      },
+      {
+        "Id": "ec4135df-7b66-4d8b-8979-56b992d862af",
+        "Name": "New Mapping Set 221151",
+        "Description": "Custom mapping configuration",
+        "Rules": [
+          {
+            "name": null,
+            "description": "New Rule 221159",
+            "sourceType": "QRBridge",
+            "sourceField": "newField",
+            "targetTag": "(0010,0010)",
+            "dicomTag": "(0010,0010)",
+            "transform": "None",
+            "required": false,
+            "defaultValue": null,
+            "valueRepresentation": null,
+            "transformParameters": null
+          },
+          {
+            "name": null,
+            "description": "New Rule 221201",
+            "sourceType": "QRBridge",
+            "sourceField": "newField",
+            "targetTag": "(0010,0010)",
+            "dicomTag": "(0010,0010)",
+            "transform": "None",
+            "required": false,
+            "defaultValue": null,
+            "valueRepresentation": null,
+            "transformParameters": null
+          },
+          {
+            "name": null,
+            "description": "New Rule 221201",
+            "sourceType": "QRBridge",
+            "sourceField": "newField",
+            "targetTag": "(0010,0010)",
+            "dicomTag": "(0010,0010)",
+            "transform": "None",
+            "required": false,
+            "defaultValue": null,
+            "valueRepresentation": null,
+            "transformParameters": null
+          }
+        ],
+        "IsSystemDefault": false,
+        "CreatedAt": "2025-06-17T20:11:51.3864038Z",
+        "UpdatedAt": "2025-06-17T20:12:04.6110432Z",
+        "Tags": []
+      },
+      {
+        "Id": "5a0209b1-5e56-454e-8b6a-9d660017be14",
+        "Name": "testmapping",
+        "Description": "Custom mapping configuration",
+        "Rules": [
+          {
+            "name": null,
+            "description": "Examination ID",
+            "sourceType": "QRBridge",
+            "sourceField": "examid",
+            "targetTag": "(0020,0010)",
+            "dicomTag": "(0020,0010)",
+            "transform": "ToUpperCase",
+            "required": false,
+            "defaultValue": null,
+            "valueRepresentation": null,
+            "transformParameters": null
+          },
+          {
+            "name": null,
+            "description": "Gender",
+            "sourceType": "QRBridge",
+            "sourceField": "gender",
+            "targetTag": "(0010,0040)",
+            "dicomTag": "(0010,0040)",
+            "transform": "MapGender",
+            "required": false,
+            "defaultValue": null,
+            "valueRepresentation": null,
+            "transformParameters": null
+          },
+          {
+            "name": null,
+            "description": "Camera Model",
+            "sourceType": "EXIF",
+            "sourceField": "Model",
+            "targetTag": "(0008,1090)",
+            "dicomTag": "(0008,1090)",
+            "transform": "Trim",
+            "required": false,
+            "defaultValue": null,
+            "valueRepresentation": null,
+            "transformParameters": null
+          }
+        ],
+        "IsSystemDefault": false,
+        "CreatedAt": "2025-06-18T09:35:25.0536248Z",
+        "UpdatedAt": "2025-06-18T13:29:55.1798535Z",
+        "Tags": []
+      }
+    ],
+    "GlobalDicomSettings": {
+      "ImplementationClassUid": "1.2.276.0.7230010.3.0.3.6.4",
+      "ImplementationVersionName": "CAMBRIDGE_001",
+      "SourceApplicationEntityTitle": "CAMBRIDGE",
+      "InstitutionName": null,
+      "InstitutionDepartment": null,
+      "StationName": null,
+      "Modality": "OT",
+      "ValidateAfterCreation": true
+    },
+    "DefaultProcessingOptions": {
+      "SuccessAction": "Archive",
+      "FailureAction": "MoveToError",
+      "ArchiveFolder": "C:\\CamBridge\\Archive",
+      "ErrorFolder": "C:\\CamBridge\\Errors",
+      "BackupFolder": "C:\\CamBridge\\Backup",
+      "DeadLetterFolder": "C:\\CamBridge\\DeadLetters",
+      "CreateBackup": true,
+      "MaxConcurrentProcessing": 2,
+      "RetryOnFailure": true,
+      "MaxRetryAttempts": 3,
+      "OutputOrganization": "ByPatientAndDate",
+      "ProcessExistingOnStartup": true,
+      "MaxFileAge": null,
+      "MinimumFileSizeBytes": null,
+      "MaximumFileSizeBytes": null,
+      "OutputFilePattern": null,
+      "RetryDelaySeconds": 5
+    },
+    "Logging": {
+      "LogLevel": "Information",
+      "LogFolder": "C:\\CamBridge\\Logs",
+      "EnableFileLogging": true,
+      "EnableEventLog": true,
+      "MaxLogFileSizeMB": 10,
+      "MaxLogFiles": 10
+    },
+    "Service": {
+      "ServiceName": "CamBridgeService",
+      "DisplayName": "CamBridge JPEG to DICOM Converter",
+      "Description": "Monitors folders for JPEG files from Ricoh cameras and converts them to DICOM format",
+      "StartupDelaySeconds": 5,
+      "FileProcessingDelayMs": 500,
+      "ApiPort": 5111,
+      "LogVerbosity": "Detailed"
+    },
+    "Notifications": {
+      "Enabled": true,
+      "EnableEventLog": true,
+      "EnableEmail": false,
+      "MinimumEmailLevel": 4,
+      "DeadLetterThreshold": 100,
+      "SendDailySummary": true,
+      "DailySummaryHour": 8,
+      "Email": {
+        "Enabled": false,
+        "SmtpHost": "",
+        "From": "",
+        "To": "",
+        "SmtpServer": "",
+        "SmtpPort": 587,
+        "UseSsl": true,
+        "Username": "",
+        "Password": "",
+        "FromAddress": "",
+        "FromDisplayName": "CamBridge Service",
+        "ToAddresses": [],
+        "CcAddresses": [],
+        "SubjectPrefix": "[CamBridge]",
+        "TimeoutSeconds": 30
+      },
+      "EventLog": {
+        "Enabled": true,
+        "LogName": "Application",
+        "SourceName": "CamBridge",
+        "CreateSourceIfMissing": true
+      },
+      "Webhook": {
+        "Enabled": false,
+        "Url": "",
+        "Method": "POST",
+        "Headers": {},
+        "ContentType": "application/json",
+        "TimeoutSeconds": 30,
+        "RetryCount": 3,
+        "RetryDelaySeconds": 5
+      },
+      "Rules": {
+        "MinimumIntervalMinutes": 5,
+        "Triggers": {
+          "OnServiceStart": true,
+          "OnServiceStop": true,
+          "OnError": true,
+          "OnWarning": false,
+          "OnSuccess": false,
+          "OnPipelineComplete": true,
+          "OnFolderWatchError": true,
+          "OnConfigurationChange": true,
+          "OnHealthCheckFailure": true,
+          "ErrorThreshold": 5,
+          "ErrorThresholdWindowMinutes": 60
+        },
+        "DailySummary": {
+          "Enabled": true,
+          "SendTime": "08:00:00",
+          "IncludeStatistics": true,
+          "IncludeErrors": true,
+          "IncludeWarnings": false,
+          "OnlyIfActivity": true
+        },
+        "Batching": {
+          "Enabled": false,
+          "BatchSize": 10,
+          "BatchWindowMinutes": 15,
+          "GroupBySeverity": true
+        }
+      }
+    },
+    "ExifToolPath": "Tools\\exiftool.exe"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "CamBridge": "Information"
+    }
+  }
+}
+
+
+
+=== src\CamBridge.Infrastructure\Services\PipelineManager.cs ===
+// src/CamBridge.Infrastructure/Services/PipelineManager.cs
+// Version: 0.8.9
+// Last Modified: 2025-06-30
+// Description: Manages multiple processing pipelines with hierarchical logging
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using CamBridge.Core;
+using CamBridge.Core.Enums;
+using CamBridge.Core.Logging;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Manages multiple file processing pipelines
+    /// </summary>
+    public class PipelineManager : IHostedService, IDisposable
+    {
+        private readonly ILogger<PipelineManager> _logger;
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly IOptionsMonitor<CamBridgeSettingsV2> _settingsMonitor;  // FIXED: Use IOptionsMonitor
+        private readonly MappingConfigurationLoader _mappingLoader;
+        private readonly NotificationService _notificationService;
+        private readonly DicomStoreService? _dicomStoreService;
+
+        private readonly ConcurrentDictionary<string, PipelineStatus> _pipelines;
+        private readonly SemaphoreSlim _startupSemaphore;
+        private CancellationTokenSource? _shutdownTokenSource;
+
+        public PipelineManager(
+            ILogger<PipelineManager> logger,
+            ILoggerFactory loggerFactory,
+            IOptionsMonitor<CamBridgeSettingsV2> settingsMonitor,  // FIXED: Accept IOptionsMonitor
+            MappingConfigurationLoader mappingLoader,
+            NotificationService notificationService,
+            DicomStoreService? dicomStoreService = null)
+        {
+            _logger = logger;
+            _loggerFactory = loggerFactory;
+            _settingsMonitor = settingsMonitor;  // FIXED: Store IOptionsMonitor
+            _mappingLoader = mappingLoader;
+            _notificationService = notificationService;
+            _dicomStoreService = dicomStoreService;
+
+            _pipelines = new ConcurrentDictionary<string, PipelineStatus>();
+            _startupSemaphore = new SemaphoreSlim(1, 1);
+        }
+
+        /// <summary>
+        /// Starts all configured pipelines
+        /// </summary>
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            await _startupSemaphore.WaitAsync(cancellationToken);
+            try
+            {
+                // FIXED: Add correlation ID for startup
+                var startupCorrelationId = $"PM{DateTime.Now:HHmmssff}-START";
+                _logger.LogInformation("[{CorrelationId}] [ServiceStartup] Starting PipelineManager", startupCorrelationId);
+
+                _shutdownTokenSource = new CancellationTokenSource();
+
+                // FIXED: Get current settings value
+                var settings = _settingsMonitor.CurrentValue;
+
+                // Validate settings
+                if (settings?.Pipelines == null || !settings.Pipelines.Any())
+                {
+                    _logger.LogWarning("[{CorrelationId}] [ServiceStartup] No pipelines configured", startupCorrelationId);
+                    return;
+                }
+
+                // DEBUG: Log what we actually loaded
+                foreach (var pipeline in settings.Pipelines)
+                {
+                    _logger.LogDebug("[{CorrelationId}] [ServiceStartup] Pipeline {Name}: Enabled={Enabled}, WatchPath={Watch}, ArchiveFolder={Archive}",
+                        startupCorrelationId,
+                        pipeline.Name,
+                        pipeline.Enabled,
+                        pipeline.WatchSettings?.Path ?? "(null)",
+                        pipeline.ProcessingOptions?.ArchiveFolder ?? "(null)");
+                }
+
+                // Start each pipeline
+                var startTasks = settings.Pipelines
+                    .Where(p => p.Enabled)
+                    .Select(p => CreateAndStartPipelineAsync(p, _shutdownTokenSource.Token));
+
+                await Task.WhenAll(startTasks);
+
+                // FIXED: Add correlation ID
+                _logger.LogInformation("[{CorrelationId}] [ServiceStartup] Started {Count} pipelines",
+                    startupCorrelationId, _pipelines.Count);
+            }
+            catch (Exception ex)
+            {
+                var errorCorrelationId = $"PM{DateTime.Now:HHmmssff}-ERROR";
+                _logger.LogError(ex, "[{CorrelationId}] [Error] Failed to start pipelines", errorCorrelationId);
+                await _notificationService.NotifyErrorAsync($"Failed to start pipelines: {ex.Message}", ex);
+                throw;
+            }
+            finally
+            {
+                _startupSemaphore.Release();
+            }
+        }
+
+        /// <summary>
+        /// Stops all running pipelines
+        /// </summary>
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            // FIXED: Add correlation ID for shutdown
+            var shutdownCorrelationId = $"PM{DateTime.Now:HHmmssff}-STOP";
+            _logger.LogInformation("[{CorrelationId}] [ServiceShutdown] Stopping PipelineManager", shutdownCorrelationId);
+
+            // Signal shutdown to all pipelines
+            _shutdownTokenSource?.Cancel();
+
+            // Stop all pipelines
+            var stopTasks = _pipelines.Values.Select(p => StopPipelineAsync(p, cancellationToken));
+            await Task.WhenAll(stopTasks);
+
+            // Clear pipeline dictionary
+            _pipelines.Clear();
+
+            // FIXED: Add correlation ID
+            _logger.LogInformation("[{CorrelationId}] [ServiceShutdown] PipelineManager stopped", shutdownCorrelationId);
+        }
+
+        /// <summary>
+        /// Creates and starts a single pipeline
+        /// </summary>
+        private async Task CreateAndStartPipelineAsync(PipelineConfiguration config, CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Generate correlation ID for this pipeline session
+                var pipelineCorrelationId = $"P{DateTime.Now:yyyyMMddHHmmss}-{SanitizeForFileName(config.Name)}";
+
+                // FIXED: Get current settings value
+                var settings = _settingsMonitor.CurrentValue;
+                var logVerbosity = settings.Service?.LogVerbosity ?? LogVerbosity.Detailed;  // Add null check with default
+
+                // Create named logger for this pipeline
+                var pipelineLogger = _loggerFactory.CreateLogger($"Pipeline.{config.Name}");
+                var logContext = pipelineLogger.CreateContext(pipelineCorrelationId, config.Name, logVerbosity);
+
+                // Note: LogContext is not IDisposable, use BeginStage for timing
+                var stageContext = logContext.BeginStage(ProcessingStage.PipelineInitialization, $"Starting pipeline {config.Name}");
+                try
+                {
+                    // Validate configuration
+                    ValidatePipelineConfiguration(config);
+
+                    // Extra validation logging
+                    if (config.ProcessingOptions == null)
+                    {
+                        var ex = new InvalidOperationException($"ProcessingOptions is null for pipeline {config.Name}");
+                        logContext.LogError(ex, "ProcessingOptions is NULL for pipeline {Pipeline}!", config.Name);
+                        throw ex;
+                    }
+
+                    // Log pipeline configuration
+                    logContext.LogInformation("Watch folder: {WatchFolder}", config.WatchSettings.Path);
+
+                    // Debug output path resolution
+                    var outputPath = config.WatchSettings.OutputPath ?? config.ProcessingOptions.ArchiveFolder;
+                    logContext.LogInformation("Output path resolution: WatchSettings.OutputPath={OutputPath}, ArchiveFolder={ArchiveFolder}, Final={Final}",
+                        config.WatchSettings.OutputPath ?? "(null)",
+                        config.ProcessingOptions.ArchiveFolder ?? "(null)",
+                        outputPath ?? "(null)");
+
+                    logContext.LogInformation("Output folder: {OutputFolder}", outputPath);
+                    logContext.LogInformation("File pattern: {Pattern}", config.WatchSettings.FilePattern);
+                    logContext.LogInformation("Max concurrent: {MaxConcurrent}", config.ProcessingOptions.MaxConcurrentProcessing);
+
+                    if (config.PacsConfiguration?.Enabled == true)
+                    {
+                        // FIXED: Add correlation ID for PACS message!
+                        var correlationId = $"PM{DateTime.Now:HHmmssff}-PACS-{config.Name}";
+                        _logger.LogInformation("[{CorrelationId}] [PipelineInitialization] PACS upload enabled for pipeline {Pipeline} -> {Host}:{Port}",
+                            correlationId, config.Name, config.PacsConfiguration.Host, config.PacsConfiguration.Port);
+                    }
+
+                    // Create output directory structure
+                    // EXTRA VALIDATION: Make sure we have a valid path
+                    if (string.IsNullOrWhiteSpace(outputPath))
+                    {
+                        outputPath = Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                            "CamBridge",
+                            "Output",
+                            config.Name
+                        );
+                        logContext.LogWarning("Neither OutputPath nor ArchiveFolder configured for pipeline {Pipeline}, using default: {Path}",
+                            config.Name, outputPath);
+                    }
+
+                    CreateOutputDirectoryStructure(outputPath, config.ProcessingOptions, logContext);
+
+                    // Load mapping configuration from the mapping set
+                    var mappingConfigPath = GetMappingConfigPath(config);
+
+                    try
+                    {
+                        // Load mapping configuration - returns bool
+                        var loadSuccess = await _mappingLoader.LoadConfigurationAsync(mappingConfigPath);
+                        if (loadSuccess)
+                        {
+                            logContext.LogInformation("Mapping configuration loaded successfully");
+                        }
+                        else
+                        {
+                            logContext.LogWarning("Failed to load mapping configuration, using defaults");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logContext.LogWarning("Error loading mapping configuration, using defaults: {Message}", ex.Message);
+                    }
+
+                    // Create processing components
+                    var components = CreateProcessingComponents(config, pipelineLogger);
+
+                    // Create PACS upload queue if enabled
+                    PacsUploadQueue? pacsQueue = null;
+                    if (config.PacsConfiguration?.Enabled == true && _dicomStoreService != null)
+                    {
+                        pacsQueue = new PacsUploadQueue(config, _dicomStoreService,
+                            _loggerFactory.CreateLogger<PacsUploadQueue>());
+                        logContext.LogInformation("PACS upload queue created for {AeTitle}",
+                            config.PacsConfiguration.CallingAeTitle);
+                    }
+
+                    // Create file processor with all components
+                    // FIXED: Use _mappingLoader which implements IMappingConfiguration
+                    var fileProcessor = new FileProcessor(
+                        pipelineLogger,
+                        components.ExifTool,
+                        components.DicomConverter,
+                        config,
+                        settings.GlobalDicomSettings,  // FIXED: Use settings from IOptionsMonitor
+                        components.TagMapper,
+                        _mappingLoader,  // FIXED: _mappingLoader implements IMappingConfiguration
+                        pacsQueue,
+                        logVerbosity);
+
+                    // Create processing queue with options wrapper
+                    var processingOptions = Options.Create(config.ProcessingOptions);
+                    var queue = new ProcessingQueue(
+                        _loggerFactory.CreateLogger<ProcessingQueue>(),
+                        fileProcessor,
+                        processingOptions);
+
+                    logContext.LogInformation("Created processing queue with max concurrent: {MaxConcurrent}",
+                        config.ProcessingOptions.MaxConcurrentProcessing);
+
+                    // Create file watcher
+                    var watcher = CreateFileWatcher(config, queue);
+                    logContext.LogInformation("Created file watcher for pattern {Pattern}",
+                        config.WatchSettings.FilePattern);
+
+                    // Start queue processing
+                    var queueProcessingTask = queue.ProcessQueueAsync(cancellationToken);
+
+                    // Create pipeline status
+                    var status = new PipelineStatus
+                    {
+                        Configuration = config,
+                        Queue = queue,
+                        Watcher = watcher,
+                        ProcessingTask = queueProcessingTask,
+                        StartTime = DateTime.UtcNow,
+                        LastActivityTime = DateTime.UtcNow,
+                        IsRunning = true,
+                        PacsQueue = pacsQueue,
+                        CorrelationId = pipelineCorrelationId  // Store for later use
+                    };
+
+                    // Register pipeline
+                    if (!_pipelines.TryAdd(config.Name, status))
+                    {
+                        throw new InvalidOperationException($"Pipeline {config.Name} already exists");
+                    }
+
+                    // Start watching for files
+                    watcher.EnableRaisingEvents = true;
+                    logContext.LogInformation("Pipeline {Name} started successfully", config.Name);
+                }
+                finally
+                {
+                    stageContext?.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorCorrelationId = $"PE{DateTime.Now:HHmmssff}-{config.Name}";
+                _logger.LogError(ex, "[{CorrelationId}] [Error] Failed to start pipeline {Name}", errorCorrelationId, config.Name);
+                await _notificationService.NotifyErrorAsync($"Pipeline {config.Name} failed to start: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the mapping configuration path for a pipeline
+        /// </summary>
+        private string GetMappingConfigPath(PipelineConfiguration config)
+        {
+            // For now, use a default path - later this will use MappingSetId
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mappings.json");
+        }
+
+        /// <summary>
+        /// Creates the output directory structure for a pipeline
+        /// </summary>
+        private void CreateOutputDirectoryStructure(string outputFolder, ProcessingOptions options, LogContext logContext)
+        {
+            // FIXED: Validate outputFolder and provide sensible default
+            if (string.IsNullOrWhiteSpace(outputFolder))
+            {
+                // Don't crash - use a default instead!
+                outputFolder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "CamBridge",
+                    "Output"
+                );
+                logContext.LogWarning("No output folder configured, using default: {Path}", outputFolder);
+            }
+
+            // Create main output directory
+            if (!Directory.Exists(outputFolder))
+            {
+                Directory.CreateDirectory(outputFolder);
+                logContext.LogDebug("Created output directory: {Path}", outputFolder);
+            }
+
+            // FIXED: Create subdirectories based on actual configured paths
+            // NOTE: BackupFolder has no UI control in PipelineConfigPage!
+            // This is documented in WISDOM_DEBT.md as missing GUI element
+            var subdirectories = new Dictionary<string, string?>
+            {
+                { "Archive", options.ArchiveFolder },
+                { "Error", options.ErrorFolder }
+                // Don't create Backup subdirectory - BackupFolder should be absolute path
+            };
+
+            // Handle BackupFolder separately if configured
+            if (!string.IsNullOrWhiteSpace(options.BackupFolder))
+            {
+                try
+                {
+                    if (!Directory.Exists(options.BackupFolder))
+                    {
+                        Directory.CreateDirectory(options.BackupFolder);
+                        logContext.LogDebug("Created backup directory: {Path}", options.BackupFolder);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logContext.LogWarning("Failed to create backup directory at {Path}: {Error}",
+                        options.BackupFolder, ex.Message);
+                }
+            }
+
+            // Create other directories (these are absolute paths, not subdirectories!)
+            foreach (var kvp in subdirectories)
+            {
+                if (!string.IsNullOrWhiteSpace(kvp.Value))
+                {
+                    try
+                    {
+                        if (!Directory.Exists(kvp.Value))
+                        {
+                            Directory.CreateDirectory(kvp.Value);
+                            logContext.LogDebug("Created {Type} directory: {Path}", kvp.Key, kvp.Value);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logContext.LogWarning("Failed to create {Type} directory at {Path}: {Error}",
+                            kvp.Key, kvp.Value, ex.Message);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates processing components for a pipeline
+        /// </summary>
+        private (ExifToolReader ExifTool, DicomConverter DicomConverter, DicomTagMapper TagMapper)
+            CreateProcessingComponents(PipelineConfiguration config, ILogger pipelineLogger)
+        {
+            // Create DICOM converter
+            var dicomConverter = new DicomConverter(_loggerFactory.CreateLogger<DicomConverter>());
+
+            // Create tag mapper
+            var tagMapper = new DicomTagMapper(_loggerFactory.CreateLogger<DicomTagMapper>());
+
+            // Create ExifTool reader - get path from configuration
+            var exifToolPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "Tools",
+                "exiftool.exe");
+
+            var exifTool = new ExifToolReader(
+                _loggerFactory.CreateLogger<ExifToolReader>(),
+                exifToolPath);
+
+            return (exifTool, dicomConverter, tagMapper);
+        }
+
+        /// <summary>
+        /// Validates pipeline configuration
+        /// </summary>
+        private void ValidatePipelineConfiguration(PipelineConfiguration config)
+        {
+            if (string.IsNullOrWhiteSpace(config.Name))
+                throw new ArgumentException("Pipeline name is required");
+
+            if (config.WatchSettings == null)
+                throw new ArgumentException($"Watch settings are required for pipeline {config.Name}");
+
+            if (string.IsNullOrWhiteSpace(config.WatchSettings.Path))
+                throw new ArgumentException($"Watch folder is required for pipeline {config.Name}");
+
+            if (!Directory.Exists(config.WatchSettings.Path))
+                throw new DirectoryNotFoundException($"Watch folder not found for pipeline {config.Name}: {config.WatchSettings.Path}");
+
+            if (config.ProcessingOptions == null)
+                throw new ArgumentException($"Processing options are required for pipeline {config.Name}");
+
+            // Don't require ArchiveFolder if OutputPath is set
+            if (string.IsNullOrWhiteSpace(config.WatchSettings.OutputPath) &&
+                string.IsNullOrWhiteSpace(config.ProcessingOptions.ArchiveFolder))
+            {
+                _logger.LogWarning("Pipeline {Name} has no output path configured, will use default", config.Name);
+            }
+
+            if (string.IsNullOrWhiteSpace(config.WatchSettings.FilePattern))
+                throw new ArgumentException($"File pattern is required for pipeline {config.Name}");
+
+            if (config.ProcessingOptions.MaxConcurrentProcessing <= 0)
+                throw new ArgumentException($"Max concurrent processing must be positive for pipeline {config.Name}");
+        }
+
+        /// <summary>
+        /// Creates a file watcher for the pipeline
+        /// </summary>
+        private FileSystemWatcher CreateFileWatcher(PipelineConfiguration config, ProcessingQueue queue)
+        {
+            var watcher = new FileSystemWatcher(config.WatchSettings.Path)
+            {
+                Filter = GetFirstPattern(config.WatchSettings.FilePattern),
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.CreationTime,
+                IncludeSubdirectories = config.WatchSettings.IncludeSubdirectories
+            };
+
+            // Handle file events
+            watcher.Created += async (s, e) => await OnFileDetectedAsync(config.Name, e.FullPath, queue);
+            watcher.Changed += async (s, e) => await OnFileDetectedAsync(config.Name, e.FullPath, queue);
+            watcher.Error += (s, e) => OnWatcherError(config.Name, e);
+
+            return watcher;
+        }
+
+        /// <summary>
+        /// Gets the first pattern from a semicolon-separated list
+        /// </summary>
+        private string GetFirstPattern(string patterns)
+        {
+            var parts = patterns.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length > 0 ? parts[0].Trim() : "*.*";
+        }
+
+        /// <summary>
+        /// Handles file detection events
+        /// </summary>
+        private async Task OnFileDetectedAsync(string pipelineName, string filePath, ProcessingQueue queue)
+        {
+            try
+            {
+                // Skip temporary files
+                if (Path.GetFileName(filePath).StartsWith("~") ||
+                    Path.GetFileName(filePath).StartsWith("."))
+                {
+                    return;
+                }
+
+                // Check file pattern (if multiple patterns)
+                if (!IsFilePatternMatch(filePath, pipelineName))
+                {
+                    return;
+                }
+
+                // Add to queue
+                var added = await queue.EnqueueAsync(filePath);
+                if (added)
+                {
+                    _logger.LogDebug("[{Pipeline}] File queued: {File}", pipelineName, Path.GetFileName(filePath));
+
+                    // Update last activity time
+                    if (_pipelines.TryGetValue(pipelineName, out var status))
+                    {
+                        status.LastActivityTime = DateTime.UtcNow;
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("[{Pipeline}] Queue full or duplicate, file skipped: {File}",
+                        pipelineName, Path.GetFileName(filePath));
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorCorrelationId = $"FD{DateTime.Now:HHmmssff}-{pipelineName}";
+                _logger.LogError(ex, "[{CorrelationId}] [Error] Error handling file detection for {File} in pipeline {Pipeline}",
+                    errorCorrelationId, filePath, pipelineName);
+            }
+        }
+
+        /// <summary>
+        /// Checks if file matches any of the pipeline's patterns
+        /// </summary>
+        private bool IsFilePatternMatch(string filePath, string pipelineName)
+        {
+            if (_pipelines.TryGetValue(pipelineName, out var status))
+            {
+                var patterns = status.Configuration.WatchSettings.FilePattern
+                    .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => p.Trim());
+
+                var fileName = Path.GetFileName(filePath);
+                foreach (var pattern in patterns)
+                {
+                    if (FileMatchesPattern(fileName, pattern))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Simple pattern matching
+        /// </summary>
+        private bool FileMatchesPattern(string fileName, string pattern)
+        {
+            // Simple implementation - can be enhanced
+            if (pattern == "*.*") return true;
+
+            var extension = Path.GetExtension(fileName);
+            var patternExt = pattern.StartsWith("*.") ? pattern.Substring(1) : pattern;
+
+            return string.Equals(extension, patternExt, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Handles watcher errors
+        /// </summary>
+        private void OnWatcherError(string pipelineName, ErrorEventArgs e)
+        {
+            var ex = e.GetException();
+            // FIXED: Add correlation ID
+            var errorCorrelationId = $"WE{DateTime.Now:HHmmssff}-{pipelineName}";
+            _logger.LogError(ex, "[{CorrelationId}] [WatcherError] File watcher error for pipeline {Pipeline}",
+                errorCorrelationId, pipelineName);
+
+            // Try to recover by recreating the watcher
+            Task.Run(async () =>
+            {
+                await Task.Delay(5000);
+                await RecoverPipelineAsync(pipelineName);
+            });
+        }
+
+        /// <summary>
+        /// Attempts to recover a failed pipeline
+        /// </summary>
+        private async Task RecoverPipelineAsync(string pipelineName)
+        {
+            try
+            {
+                // FIXED: Add correlation ID
+                var recoveryCorrelationId = $"PR{DateTime.Now:HHmmssff}-{pipelineName}";
+                _logger.LogInformation("[{CorrelationId}] [PipelineRecovery] Attempting to recover pipeline {Pipeline}",
+                    recoveryCorrelationId, pipelineName);
+
+                if (_pipelines.TryGetValue(pipelineName, out var status))
+                {
+                    // Stop the current pipeline
+                    await StopPipelineAsync(status, CancellationToken.None);
+
+                    // Remove from dictionary
+                    _pipelines.TryRemove(pipelineName, out _);
+
+                    // Restart if we're not shutting down
+                    if (_shutdownTokenSource != null && !_shutdownTokenSource.Token.IsCancellationRequested)
+                    {
+                        await CreateAndStartPipelineAsync(status.Configuration, _shutdownTokenSource.Token);
+                        // FIXED: Add correlation ID
+                        _logger.LogInformation("[{CorrelationId}] [PipelineRecovery] Pipeline {Pipeline} recovered successfully",
+                            recoveryCorrelationId, pipelineName);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // FIXED: Add correlation ID
+                var errorCorrelationId = $"PR{DateTime.Now:HHmmssff}-{pipelineName}-FAIL";
+                _logger.LogError(ex, "[{CorrelationId}] [Error] Failed to recover pipeline {Pipeline}",
+                    errorCorrelationId, pipelineName);
+            }
+        }
+
+        /// <summary>
+        /// Stops a single pipeline
+        /// </summary>
+        private async Task StopPipelineAsync(PipelineStatus status, CancellationToken cancellationToken)
+        {
+            try
+            {
+                // FIXED: Use stored correlation ID or create new one
+                var pipelineCorrelationId = status.CorrelationId ?? $"PS{DateTime.Now:HHmmssff}-{status.Configuration.Name}";
+                _logger.LogInformation("[{CorrelationId}] [PipelineShutdown] Stopping pipeline {Name}",
+                    pipelineCorrelationId, status.Configuration.Name);
+
+                // Stop watching for new files
+                status.Watcher.EnableRaisingEvents = false;
+                status.Watcher.Dispose();
+
+                // Stop queue processing
+                await status.Queue.StopAsync(cancellationToken);
+
+                // Wait for processing to complete
+                if (status.ProcessingTask != null)
+                {
+                    try
+                    {
+                        await status.ProcessingTask.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                    }
+                    catch (TimeoutException)
+                    {
+                        _logger.LogWarning("[{CorrelationId}] [PipelineShutdown] Pipeline {Name} processing task did not complete in time",
+                            pipelineCorrelationId, status.Configuration.Name);
+                    }
+                }
+
+                // Stop PACS queue if present
+                if (status.PacsQueue != null)
+                {
+                    status.PacsQueue.Dispose();
+                }
+
+                status.IsRunning = false;
+                status.StopTime = DateTime.UtcNow;
+
+                // FIXED: Add correlation ID
+                _logger.LogInformation("[{CorrelationId}] [PipelineShutdown] Pipeline {Name} stopped",
+                    pipelineCorrelationId, status.Configuration.Name);
+            }
+            catch (Exception ex)
+            {
+                var errorCorrelationId = $"PS{DateTime.Now:HHmmssff}-{status.Configuration.Name}-ERROR";
+                _logger.LogError(ex, "[{CorrelationId}] [Error] Error stopping pipeline {Name}",
+                    errorCorrelationId, status.Configuration.Name);
+            }
+        }
+
+        /// <summary>
+        /// Gets the current status of all pipelines
+        /// </summary>
+        public IReadOnlyDictionary<string, PipelineInfo> GetPipelineStatus()
+        {
+            var result = new Dictionary<string, PipelineInfo>();
+
+            foreach (var kvp in _pipelines)
+            {
+                var status = kvp.Value;
+                var stats = status.Queue.GetStatistics();
+
+                result[kvp.Key] = new PipelineInfo
+                {
+                    Name = kvp.Key,
+                    IsRunning = status.IsRunning,
+                    StartTime = status.StartTime,
+                    LastActivityTime = status.LastActivityTime,
+                    ProcessedCount = stats.TotalProcessed,
+                    ErrorCount = stats.TotalFailed,
+                    QueueLength = stats.QueueLength,
+                    WatchFolder = status.Configuration.WatchSettings.Path,
+                    OutputFolder = status.Configuration.WatchSettings.OutputPath ??
+                                   status.Configuration.ProcessingOptions.ArchiveFolder
+                };
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gets detailed information about a specific pipeline
+        /// </summary>
+        public PipelineInfo? GetPipelineInfo(string pipelineName)
+        {
+            if (_pipelines.TryGetValue(pipelineName, out var status))
+            {
+                var stats = status.Queue.GetStatistics();
+
+                return new PipelineInfo
+                {
+                    Name = pipelineName,
+                    IsRunning = status.IsRunning,
+                    StartTime = status.StartTime,
+                    LastActivityTime = status.LastActivityTime,
+                    ProcessedCount = stats.TotalProcessed,
+                    ErrorCount = stats.TotalFailed,
+                    QueueLength = stats.QueueLength,
+                    WatchFolder = status.Configuration.WatchSettings.Path,
+                    OutputFolder = status.Configuration.WatchSettings.OutputPath ??
+                                   status.Configuration.ProcessingOptions.ArchiveFolder
+                };
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets pipeline statuses for Worker.cs
+        /// </summary>
+        public List<PipelineStatusInfo> GetPipelineStatuses()
+        {
+            var result = new List<PipelineStatusInfo>();
+
+            foreach (var kvp in _pipelines)
+            {
+                var status = kvp.Value;
+                var stats = status.Queue.GetStatistics();
+
+                result.Add(new PipelineStatusInfo
+                {
+                    Name = kvp.Key,
+                    IsActive = status.IsRunning,
+                    WatchPath = status.Configuration.WatchSettings.Path,
+                    QueueDepth = stats.QueueLength,
+                    ProcessedCount = stats.TotalProcessed,
+                    ErrorCount = stats.TotalFailed
+                });
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Stops all pipelines (called by Worker.cs)
+        /// </summary>
+        public async Task StopAsync()
+        {
+            await StopAsync(CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Sanitizes a string for use in file names
+        /// </summary>
+        private string SanitizeForFileName(string name)
+        {
+            var invalid = Path.GetInvalidFileNameChars()
+                .Concat(new[] { ' ', '.', ',', '/', '\\', ':', '-' })
+                .Distinct()
+                .ToArray();
+
+            return string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        public void Dispose()
+        {
+            _shutdownTokenSource?.Cancel();
+            _shutdownTokenSource?.Dispose();
+            _startupSemaphore?.Dispose();
+
+            // Dispose all pipeline resources
+            foreach (var status in _pipelines.Values)
+            {
+                status.Watcher?.Dispose();
+                status.PacsQueue?.Dispose();
+            }
+
+            _pipelines.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Internal class to track pipeline status
+    /// </summary>
+    internal class PipelineStatus
+    {
+        public required PipelineConfiguration Configuration { get; init; }
+        public required ProcessingQueue Queue { get; init; }
+        public required FileSystemWatcher Watcher { get; init; }
+        public Task? ProcessingTask { get; init; }
+        public DateTime StartTime { get; init; }
+        public DateTime? StopTime { get; set; }
+        public DateTime LastActivityTime { get; set; }
+        public bool IsRunning { get; set; }
+        public PacsUploadQueue? PacsQueue { get; init; }
+        public string? CorrelationId { get; set; }  // FIXED: Add for tracking
+    }
+
+    /// <summary>
+    /// Public information about a pipeline
+    /// </summary>
+    public class PipelineInfo
+    {
+        public string Name { get; init; } = string.Empty;
+        public bool IsRunning { get; init; }
+        public DateTime StartTime { get; init; }
+        public DateTime LastActivityTime { get; init; }
+        public int ProcessedCount { get; init; }
+        public int ErrorCount { get; init; }
+        public int QueueLength { get; init; }
+        public string WatchFolder { get; init; } = string.Empty;
+        public string OutputFolder { get; init; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Status info for Worker.cs compatibility
+    /// </summary>
+    public class PipelineStatusInfo
+    {
+        public string Name { get; init; } = string.Empty;
+        public bool IsActive { get; init; }
+        public string WatchPath { get; init; } = string.Empty;
+        public int QueueDepth { get; init; }
+        public int ProcessedCount { get; init; }
+        public int ErrorCount { get; init; }
+    }
+}
+

@@ -1,163 +1,105 @@
-﻿# WISDOM FILE TREE v0.8.7
-**Generated**: 2025-06-30 09:44  
-**Total Files**: 218  
+﻿# WISDOM FILE TREE v0.8.10
+**Generated**: 2025-07-02 01:01  
+**Total Files**: 230  
 **Your Daily Code Dashboard** - Everything important at a glance!
 
 ## RECENTLY MODIFIED (Last 7 days)
 
 ### Today [HOT]
-- **src\CamBridge.Service\Controllers\StatusController.cs**
-- **src\CamBridge.Service\Worker.cs** [Classes: Worker]
-- **src\CamBridge.Infrastructure\Services\PipelineManager.cs** [MONSTER] [Classes: PipelineManager, PipelineInfo, PipelineStatusInfo]
-- **FILETREE_WISDOM.md**
-- **src\CamBridge.Core\Enums\ProcessingStage.cs**
-- **pipelinemanager-original.txt**
-- **src\CamBridge.Config\ViewModels\LogViewerViewModel.cs** [MONSTER] [Classes: FilePositionInfo, PipelineSelection, LogViewerViewModel, LogEntry, CorrelationGroup, StageGroup]
-- **src\CamBridge.Config\Views\LogViewerPage.xaml**
-- **src\CamBridge.Core\Logging\LogContext.cs** [Classes: LogContext]
-- **session99-treeview-debug-sources.txt**
-- **Version.props**
-- **src\CamBridge.Config\Views\LogViewerPage.xaml.cs** [Classes: LogViewerPage]
-- **session98-logviewer-sources.txt**
-- **src\CamBridge.Core\CamBridge.Core.csproj**
-- **CHANGELOG.md**
-- **src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs** [MONSTER] [Classes: ServiceControlViewModel]
-- **src\CamBridge.Core\CamBridgeSettingsV2.cs** [Classes: CamBridgeSettingsV2, DicomSettings, LoggingSettings, ServiceSettings, NotificationSettings, EmailSettings, EventLogSettings, WebhookSettings, NotificationRules, NotificationTriggers, DailySummarySettings, BatchNotificationSettings]
-- **src\CamBridge.Infrastructure\Services\FileProcessor.cs** [MONSTER] [Classes: FileProcessor, FileProcessingEventArgs, FileProcessingErrorEventArgs, FileProcessingResult]
-- **session97-logging-sources.txt**
-- **session96-logviewer-source.txt**
-- **session96-logcontext-source.txt**
-- **session96-logcontext-sources.txt**
-- **session96-correlation-sources.txt**
-- **src\CamBridge.Config\Views\ServiceControlPage.xaml.cs** [Classes: ServiceControlPage]
 - **src\CamBridge.Infrastructure\Services\PacsUploadQueue.cs** [Classes: PacsUploadQueue]
-- **src\CamBridge.Core\Enums\LogVerbosity.cs**
-- **src\CamBridge.Config\Views\ServiceControlPage.xaml**
-- **service_control_sources.txt**
-- **session96-servicecontrol-sources.txt**
-- **session96-log-sources.txt**
-- **src\CamBridge.Config\Converters\ValueConverters.cs** [MONSTER] [Classes: IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter]
-- **session95-colors-sources.txt**
-- **src\CamBridge.Config\Views\DashboardPage.xaml**
-- **src\CamBridge.Config\ViewModels\PacsConfigViewModel.cs** [Classes: PacsConfigViewModel]
-- **src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs** [Classes: PipelineConfigPage]
-- **src\CamBridge.Config\Views\PipelineConfigPage.xaml**
-- **session95-ui-sources.txt**
-- **src\CamBridge.Config\App.xaml.cs** [Classes: App]
-- **src\CamBridge.Config\Services\PipelineSettingsService.cs** [Classes: PipelineSettingsService]
-- **src\CamBridge.Config\Services\IPipelineSettingsService.cs** [Classes: ValidationResult]
-- **src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs** [MONSTER] [Classes: PipelineConfigViewModel]
-- **refactoring-sources-95.txt**
-- **CamBridge.sln**
-- **WISDOM_DEBT.md**
+- **src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs** [Classes: MappingConfigurationLoader]
+- **src\CamBridge.Infrastructure\Services\DicomStoreService.cs** [Classes: StoreResult, DicomStoreService]
+- **session110-correlation-sources.txt**
+- **src\CamBridge.Infrastructure\Services\DicomConverter.cs** [Classes: DicomConverter, ConversionResult, ValidationResult]
+- **src\CamBridge.Infrastructure\Services\DicomTagMapper.cs** [Classes: DicomTagMapper]
+- **src\CamBridge.Infrastructure\Services\ExifToolReader.cs** [MONSTER] [Classes: ExifToolReader]
+- **src\CamBridge.Infrastructure\Services\ProcessingQueue.cs** [Classes: ProcessingQueue, ProcessingStatistics, ProcessingItemStatus]
+- **src\CamBridge.Infrastructure\Services\FileProcessor.cs** [MONSTER] [Classes: FileProcessor, FileProcessingEventArgs, FileProcessingErrorEventArgs, FileProcessingResult]
+- **session109-sources.txt**
+- **FILETREE_WISDOM.md**
+- **src\CamBridge.Service\Program.cs** [Classes: Program]
+- **docs\sources\SOURCES_INDEX.md**
+- **docs\sources\SOURCES_SERVICE.txt**
+- **docs\sources\SOURCES_INFRASTRUCTURE.txt**
+- **docs\sources\SOURCES_CORE.txt**
+- **docs\sources\SOURCES_CONFIG.txt**
+
+### Yesterday
+- src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs
+- src\CamBridge.Infrastructure\Services\PipelineManager.cs
+- src\CamBridge.Core\Interfaces\IMappingConfiguration.cs
+- src\CamBridge.Config\Services\IPipelineSettingsService.cs
+- src\CamBridge.Config\Services\PipelineSettingsService.cs
+- src\CamBridge.Service\appsettings.json
+- src\CamBridge.Core\ConfigurationPaths.cs
+- deadletter-references.txt
+- pipesettings-source.txt
+- src\CamBridge.Config\Views\PipelineConfigPage.xaml
+- src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
+- src\CamBridge.Core\ProcessingOptions.cs
+- Version.props
+- prio0-sources.txt
+- CHANGELOG.md
+- src\CamBridge.Config\Views\LogViewerPage.xaml
+- src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
+- src\CamBridge.Config\Converters\ValueConverters.cs
+- session106-sources.txt
+- src\CamBridge.Core\Enums\ProcessingStage.cs
+- worker-source.txt
+- logviewer-old.xaml
+- session105-sample-log.txt
+- session105-sources.txt
+- src\CamBridge.Config\Views\LogViewerPage.xaml.cs
+- session104-logviewer-sources.txt
+- src\CamBridge.Core\Logging\LogContext.cs
+- src\CamBridge.Service\Worker.cs
+- di-debug-sources.txt
+- src\CamBridge.Service\Controllers\StatusController.cs
 
 ### This Week
-- src\CamBridge.Infrastructure\Services\DicomStoreService.cs *(5 days ago)*
-- src\CamBridge.Service\Program.cs *(5 days ago)*
-- WISDOM_TECHNICAL_PATTERNS.txt *(5 days ago)*
-- WISDOM_TECHNICAL_FIXES.md *(5 days ago)*
-- WISDOM_META.md *(5 days ago)*
-- WISDOM_TECHNICAL_APIS.md *(5 days ago)*
-- WISDOM_CLAUDE.md *(5 days ago)*
-- Create-DeploymentPackage_250624.ps1 *(5 days ago)*
-- Get-WisdomProjectTree.ps1 *(6 days ago)*
-- tests\CamBridge.PacsTest\Program.cs *(6 days ago)*
-- tests\CamBridge.PacsTest\CamBridge.PacsTest.csproj *(6 days ago)*
-- src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs *(6 days ago)*
-- src\CamBridge.Core\PipelineConfiguration.cs *(6 days ago)*
-- docs\sources\SOURCES_INDEX.md *(7 days ago)*
-- docs\sources\SOURCES_QRBRIDGE.txt *(7 days ago)*
-- docs\sources\SOURCES_SERVICE.txt *(7 days ago)*
-- docs\sources\SOURCES_INFRASTRUCTURE.txt *(7 days ago)*
-- docs\sources\SOURCES_CORE.txt *(7 days ago)*
-- docs\sources\SOURCES_CONFIG.txt *(7 days ago)*
-- Get-WisdomSources_Dynamic.ps1 *(7 days ago)*
-- src\CamBridge.Infrastructure\Services\ExifToolReader.cs *(7 days ago)*
-- src\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj *(7 days ago)*
-- src\CamBridge.Core\ProcessingOptions.cs *(7 days ago)*
-- WISDOM_PO.md *(7 days ago)*
-- WISDOM_TECHNICAL.md *(7 days ago)*
-- src\CamBridge.Infrastructure\Services\ProcessingQueue.cs *(7 days ago)*
-- src\CamBridge.Service\ServiceInfo.cs *(7 days ago)*
-- src\CamBridge.Service\ConfigValidator.cs *(7 days ago)*
-- src\CamBridge.Service\CamBridgeHealthCheck.cs *(7 days ago)*
-- src\CamBridge.QRBridge\Services\QRCodeService.cs *(7 days ago)*
-- src\CamBridge.QRBridge\Services\ArgumentParser.cs *(7 days ago)*
-- src\CamBridge.QRBridge\Forms\QRDisplayForm.cs *(7 days ago)*
-- src\CamBridge.QRBridge\Constants\QRBridgeConstants.cs *(7 days ago)*
-- src\CamBridge.QRBridge\Program.cs *(7 days ago)*
-- src\CamBridge.QRBridge\GlobalUsings.cs *(7 days ago)*
-- src\CamBridge.Infrastructure\Services\NotificationService.cs *(7 days ago)*
-- src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs *(7 days ago)*
-- src\CamBridge.Infrastructure\Services\DicomTagMapper.cs *(7 days ago)*
-- src\CamBridge.Infrastructure\Services\DicomConverter.cs *(7 days ago)*
-- src\CamBridge.Infrastructure\GlobalUsings.cs *(7 days ago)*
-- src\CamBridge.Core\ValueObjects\StudyId.cs *(7 days ago)*
-- src\CamBridge.Core\ValueObjects\PatientId.cs *(7 days ago)*
-- src\CamBridge.Core\ValueObjects\ExifTag.cs *(7 days ago)*
-- src\CamBridge.Core\ValueObjects\DicomTag.cs *(7 days ago)*
-- src\CamBridge.Core\Interfaces\IMappingConfiguration.cs *(7 days ago)*
-- src\CamBridge.Core\Interfaces\IDicomTagMapper.cs *(7 days ago)*
-- src\CamBridge.Core\Entities\StudyInfo.cs *(7 days ago)*
-- src\CamBridge.Core\Entities\QRCodeRequest.cs *(7 days ago)*
-- src\CamBridge.Core\Entities\ProcessingResult.cs *(7 days ago)*
-- src\CamBridge.Core\Entities\PatientInfo.cs *(7 days ago)*
-- src\CamBridge.Core\Entities\ImageTechnicalData.cs *(7 days ago)*
-- src\CamBridge.Core\Entities\ImageMetadata.cs *(7 days ago)*
-- src\CamBridge.Core\ValueTransform.cs *(7 days ago)*
-- src\CamBridge.Core\UserPreferences.cs *(7 days ago)*
-- src\CamBridge.Core\SystemSettings.cs *(7 days ago)*
-- src\CamBridge.Core\ProcessingSummary.cs *(7 days ago)*
-- src\CamBridge.Core\MappingRule.cs *(7 days ago)*
-- src\CamBridge.Core\DeadLetterStatistics.cs *(7 days ago)*
-- src\CamBridge.Core\CustomMappingConfiguration.cs *(7 days ago)*
-- src\CamBridge.Core\ConfigurationPaths.cs *(7 days ago)*
-- src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs *(7 days ago)*
-- src\CamBridge.Config\Views\MappingEditorPage.xaml.cs *(7 days ago)*
-- src\CamBridge.Config\Views\DeadLettersPage.xaml.cs *(7 days ago)*
-- src\CamBridge.Config\Views\DashboardPage.xaml.cs *(7 days ago)*
-- src\CamBridge.Config\Views\AboutPage.xaml.cs *(7 days ago)*
-- src\CamBridge.Config\ViewModels\ViewModelBase.cs *(7 days ago)*
-- src\CamBridge.Config\ViewModels\ServiceControlViewModelExtension.cs *(7 days ago)*
-- src\CamBridge.Config\ViewModels\RecentActivityViewModel.cs *(7 days ago)*
-- src\CamBridge.Config\ViewModels\PipelineStatusViewModel.cs *(7 days ago)*
-- src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs *(7 days ago)*
-- src\CamBridge.Config\ViewModels\MainViewModel.cs *(7 days ago)*
-- src\CamBridge.Config\ViewModels\DeadLettersViewModel.cs *(7 days ago)*
-- src\CamBridge.Config\ViewModels\DashboardViewModel.cs *(7 days ago)*
-- src\CamBridge.Config\Services\ServiceManager.cs *(7 days ago)*
-- src\CamBridge.Config\Services\NavigationService.cs *(7 days ago)*
-- src\CamBridge.Config\Services\ISettingsService.cs *(7 days ago)*
-- src\CamBridge.Config\Services\IServiceManager.cs *(7 days ago)*
-- src\CamBridge.Config\Services\INavigationService.cs *(7 days ago)*
-- src\CamBridge.Config\Services\IConfigurationService.cs *(7 days ago)*
-- src\CamBridge.Config\Services\IApiService.cs *(7 days ago)*
-- src\CamBridge.Config\Services\HttpApiService.cs *(7 days ago)*
-- src\CamBridge.Config\Services\ConfigurationService.cs *(7 days ago)*
-- src\CamBridge.Config\Models\ServiceStatusModel.cs *(7 days ago)*
-- src\CamBridge.Config\Models\DeadLetterModels.cs *(7 days ago)*
-- src\CamBridge.Config\Helpers\PasswordBoxHelper.cs *(7 days ago)*
-- src\CamBridge.Config\Extensions\MappingRuleExtensions.cs *(7 days ago)*
-- src\CamBridge.Config\Extensions\MappingConfigurationExtensions.cs *(7 days ago)*
-- src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs *(7 days ago)*
-- src\CamBridge.Config\Dialogs\DicomTagBrowserDialog.xaml.cs *(7 days ago)*
-- src\CamBridge.Config\MainWindow.xaml.cs *(7 days ago)*
+- pipelinemanager-original.txt *(2 days ago)*
+- session99-treeview-debug-sources.txt *(2 days ago)*
+- session98-logviewer-sources.txt *(2 days ago)*
+- src\CamBridge.Core\CamBridge.Core.csproj *(2 days ago)*
+- src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs *(2 days ago)*
+- src\CamBridge.Core\CamBridgeSettingsV2.cs *(2 days ago)*
+- session97-logging-sources.txt *(2 days ago)*
+- session96-logviewer-source.txt *(2 days ago)*
+- session96-logcontext-source.txt *(2 days ago)*
+- session96-logcontext-sources.txt *(2 days ago)*
+- session96-correlation-sources.txt *(2 days ago)*
+- src\CamBridge.Config\Views\ServiceControlPage.xaml.cs *(2 days ago)*
+- src\CamBridge.Core\Enums\LogVerbosity.cs *(2 days ago)*
+- src\CamBridge.Config\Views\ServiceControlPage.xaml *(2 days ago)*
+- service_control_sources.txt *(2 days ago)*
+- session96-servicecontrol-sources.txt *(2 days ago)*
+- session96-log-sources.txt *(2 days ago)*
+- session95-colors-sources.txt *(2 days ago)*
+- src\CamBridge.Config\Views\DashboardPage.xaml *(2 days ago)*
+- src\CamBridge.Config\ViewModels\PacsConfigViewModel.cs *(2 days ago)*
+- session95-ui-sources.txt *(2 days ago)*
+- src\CamBridge.Config\App.xaml.cs *(2 days ago)*
+- src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs *(2 days ago)*
+- refactoring-sources-95.txt *(2 days ago)*
+- CamBridge.sln *(2 days ago)*
+- WISDOM_DEBT.md *(2 days ago)*
 
 ## MONSTER FILES (Need Refactoring!)
 
 File | Lines | Classes | Status
 -----|-------|---------|--------
-src\CamBridge.Config\ViewModels\LogViewerViewModel.cs | **1405** | FilePositionInfo, PipelineSelection, LogViewerViewModel, LogEntry, CorrelationGroup, StageGroup | CRITICAL
+src\CamBridge.Config\ViewModels\LogViewerViewModel.cs | **1567** | FilePositionInfo, PipelineSelection, LogViewerViewModel, LogEntry, CorrelationGroup, StageGroup | CRITICAL
 src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs | **1190** | MappingEditorViewModel, SourceFieldInfo, MappingRuleViewModel | CRITICAL
+src\CamBridge.Infrastructure\Services\PipelineManager.cs | **870** | PipelineManager, PipelineInfo, PipelineStatusInfo | HIGH
 src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs | **777** | ServiceControlViewModel | HIGH
-src\CamBridge.Infrastructure\Services\PipelineManager.cs | **715** | PipelineManager, PipelineInfo, PipelineStatusInfo | HIGH
-src\CamBridge.Infrastructure\Services\FileProcessor.cs | **695** | FileProcessor, FileProcessingEventArgs, FileProcessingErrorEventArgs, FileProcessingResult | MEDIUM
+src\CamBridge.Infrastructure\Services\FileProcessor.cs | **718** | FileProcessor, FileProcessingEventArgs, FileProcessingErrorEventArgs, FileProcessingResult | HIGH
+src\CamBridge.Config\Converters\ValueConverters.cs | **669** | IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter, CombineStagesConverter, ColorToBrushConverter | MEDIUM
 CamBridge.ParserDebug\Program.cs | **610** | - | MEDIUM
-src\CamBridge.Config\Converters\ValueConverters.cs | **596** | IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter | MEDIUM
 src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs | **579** | PipelineConfigViewModel | MEDIUM
+src\CamBridge.Infrastructure\Services\ExifToolReader.cs | **563** | ExifToolReader | MEDIUM
 src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | TransformEditorDialog | MEDIUM
 
-**Total Monster Lines**: 7091 lines to refactor!
+**Total Monster Lines**: 8067 lines to refactor!
 
 ## QUICK CLASS FINDER
 
@@ -171,7 +113,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
   - Classes: App
 
 **src\CamBridge.Config\Converters\ValueConverters.cs**
-  - Classes: IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter
+  - Classes: IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter, CombineStagesConverter, ColorToBrushConverter
 
 **src\CamBridge.Config\Dialogs\DicomTagBrowserDialog.xaml.cs**
   - Classes: DicomTagBrowserDialog, DicomTagInfo
@@ -394,13 +336,13 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 ## PROJECT STRUCTURE
 
 ### [CamBridge.Config]
-*55 files, 9737 lines, 75 classes*
+*55 files, 9959 lines, 77 classes*
  **WARNING: 6 monster files**
 
 - src\CamBridge.Config\App.xaml
-- src\CamBridge.Config\App.xaml.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Config\App.xaml.cs [HAS-CLASSES]
 - src\CamBridge.Config\CamBridge.Config.csproj
-- src\CamBridge.Config\Converters\ValueConverters.cs [TODAY] [MONSTER] [HAS-CLASSES]
+- src\CamBridge.Config\Converters\ValueConverters.cs [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Config\Dialogs\DicomTagBrowserDialog.xaml
 - src\CamBridge.Config\Dialogs\DicomTagBrowserDialog.xaml.cs [HAS-CLASSES]
 - src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml
@@ -418,46 +360,46 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.Config\Services\IApiService.cs
 - src\CamBridge.Config\Services\IConfigurationService.cs
 - src\CamBridge.Config\Services\INavigationService.cs
-- src\CamBridge.Config\Services\IPipelineSettingsService.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Config\Services\IPipelineSettingsService.cs [HAS-CLASSES]
 - src\CamBridge.Config\Services\IServiceManager.cs
 - src\CamBridge.Config\Services\ISettingsService.cs [HAS-CLASSES]
 - src\CamBridge.Config\Services\NavigationService.cs [HAS-CLASSES]
-- src\CamBridge.Config\Services\PipelineSettingsService.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Config\Services\PipelineSettingsService.cs [HAS-CLASSES]
 - src\CamBridge.Config\Services\ServiceManager.cs [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\DashboardViewModel.cs [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\DeadLettersViewModel.cs [HAS-CLASSES]
-- src\CamBridge.Config\ViewModels\LogViewerViewModel.cs [TODAY] [MONSTER] [HAS-CLASSES]
+- src\CamBridge.Config\ViewModels\LogViewerViewModel.cs [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\MainViewModel.cs [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs [MONSTER] [HAS-CLASSES]
-- src\CamBridge.Config\ViewModels\PacsConfigViewModel.cs [TODAY] [HAS-CLASSES]
-- src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs [TODAY] [MONSTER] [HAS-CLASSES]
+- src\CamBridge.Config\ViewModels\PacsConfigViewModel.cs [HAS-CLASSES]
+- src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\PipelineStatusViewModel.cs [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\RecentActivityViewModel.cs [HAS-CLASSES]
-- src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs [TODAY] [MONSTER] [HAS-CLASSES]
+- src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\ServiceControlViewModelExtension.cs
 - src\CamBridge.Config\ViewModels\ViewModelBase.cs [HAS-CLASSES]
 - src\CamBridge.Config\Views\AboutPage.xaml
 - src\CamBridge.Config\Views\AboutPage.xaml.cs [HAS-CLASSES]
-- src\CamBridge.Config\Views\DashboardPage.xaml [TODAY]
+- src\CamBridge.Config\Views\DashboardPage.xaml
 - src\CamBridge.Config\Views\DashboardPage.xaml.cs [HAS-CLASSES]
 - src\CamBridge.Config\Views\DeadLettersPage.xaml
 - src\CamBridge.Config\Views\DeadLettersPage.xaml.cs [HAS-CLASSES]
-- src\CamBridge.Config\Views\LogViewerPage.xaml [TODAY]
-- src\CamBridge.Config\Views\LogViewerPage.xaml.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Config\Views\LogViewerPage.xaml
+- src\CamBridge.Config\Views\LogViewerPage.xaml.cs [HAS-CLASSES]
 - src\CamBridge.Config\Views\MappingEditorPage.xaml
 - src\CamBridge.Config\Views\MappingEditorPage.xaml.cs [HAS-CLASSES]
-- src\CamBridge.Config\Views\PipelineConfigPage.xaml [TODAY]
-- src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs [TODAY] [HAS-CLASSES]
-- src\CamBridge.Config\Views\ServiceControlPage.xaml [TODAY]
-- src\CamBridge.Config\Views\ServiceControlPage.xaml.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Config\Views\PipelineConfigPage.xaml
+- src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs [HAS-CLASSES]
+- src\CamBridge.Config\Views\ServiceControlPage.xaml
+- src\CamBridge.Config\Views\ServiceControlPage.xaml.cs [HAS-CLASSES]
 - src\CamBridge.Config\Views\VogonPoetryWindow.xaml
 - src\CamBridge.Config\Views\VogonPoetryWindow.xaml.cs [HAS-CLASSES]
 
 ### [CamBridge.Core]
-*27 files, 3214 lines, 36 classes*
+*27 files, 3247 lines, 36 classes*
 
-- src\CamBridge.Core\CamBridge.Core.csproj [TODAY]
-- src\CamBridge.Core\CamBridgeSettingsV2.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Core\CamBridge.Core.csproj
+- src\CamBridge.Core\CamBridgeSettingsV2.cs [HAS-CLASSES]
 - src\CamBridge.Core\ConfigurationPaths.cs
 - src\CamBridge.Core\CustomMappingConfiguration.cs [HAS-CLASSES]
 - src\CamBridge.Core\DeadLetterStatistics.cs [HAS-CLASSES]
@@ -467,11 +409,11 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.Core\Entities\ProcessingResult.cs [HAS-CLASSES]
 - src\CamBridge.Core\Entities\QRCodeRequest.cs
 - src\CamBridge.Core\Entities\StudyInfo.cs [HAS-CLASSES]
-- src\CamBridge.Core\Enums\LogVerbosity.cs [TODAY]
-- src\CamBridge.Core\Enums\ProcessingStage.cs [TODAY]
+- src\CamBridge.Core\Enums\LogVerbosity.cs
+- src\CamBridge.Core\Enums\ProcessingStage.cs
 - src\CamBridge.Core\Interfaces\IDicomTagMapper.cs
 - src\CamBridge.Core\Interfaces\IMappingConfiguration.cs
-- src\CamBridge.Core\Logging\LogContext.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Core\Logging\LogContext.cs [HAS-CLASSES]
 - src\CamBridge.Core\MappingRule.cs [HAS-CLASSES]
 - src\CamBridge.Core\PipelineConfiguration.cs [HAS-CLASSES]
 - src\CamBridge.Core\ProcessingOptions.cs [HAS-CLASSES]
@@ -485,22 +427,22 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.Core\ValueTransform.cs
 
 ### [CamBridge.Infrastructure]
-*13 files, 4084 lines, 20 classes*
- **WARNING: 2 monster files**
+*13 files, 4669 lines, 20 classes*
+ **WARNING: 3 monster files**
 
 - src\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj
 - src\CamBridge.Infrastructure\GlobalUsings.cs
 - src\CamBridge.Infrastructure\ServiceCollectionExtensions.cs
-- src\CamBridge.Infrastructure\Services\DicomConverter.cs [HAS-CLASSES]
-- src\CamBridge.Infrastructure\Services\DicomStoreService.cs [HAS-CLASSES]
-- src\CamBridge.Infrastructure\Services\DicomTagMapper.cs [HAS-CLASSES]
-- src\CamBridge.Infrastructure\Services\ExifToolReader.cs [HAS-CLASSES]
+- src\CamBridge.Infrastructure\Services\DicomConverter.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Infrastructure\Services\DicomStoreService.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Infrastructure\Services\DicomTagMapper.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Infrastructure\Services\ExifToolReader.cs [TODAY] [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Infrastructure\Services\FileProcessor.cs [TODAY] [MONSTER] [HAS-CLASSES]
-- src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs [HAS-CLASSES]
+- src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs [TODAY] [HAS-CLASSES]
 - src\CamBridge.Infrastructure\Services\NotificationService.cs [HAS-CLASSES]
 - src\CamBridge.Infrastructure\Services\PacsUploadQueue.cs [TODAY] [HAS-CLASSES]
-- src\CamBridge.Infrastructure\Services\PipelineManager.cs [TODAY] [MONSTER] [HAS-CLASSES]
-- src\CamBridge.Infrastructure\Services\ProcessingQueue.cs [HAS-CLASSES]
+- src\CamBridge.Infrastructure\Services\PipelineManager.cs [MONSTER] [HAS-CLASSES]
+- src\CamBridge.Infrastructure\Services\ProcessingQueue.cs [TODAY] [HAS-CLASSES]
 
 ### [CamBridge.PacsTest] [TEST]
 *2 files, 202 lines, 0 classes*
@@ -526,20 +468,20 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.QRBridge\Services\QRCodeService.cs [HAS-CLASSES]
 
 ### [CamBridge.Service]
-*12 files, 1395 lines, 3 classes*
+*12 files, 1392 lines, 3 classes*
 
 - src\CamBridge.Service\appsettings.json
 - src\CamBridge.Service\CamBridge.Service.csproj
 - src\CamBridge.Service\CamBridgeHealthCheck.cs [HAS-CLASSES]
 - src\CamBridge.Service\ConfigValidator.cs
-- src\CamBridge.Service\Controllers\StatusController.cs [TODAY]
+- src\CamBridge.Service\Controllers\StatusController.cs
 - src\CamBridge.Service\mappings.json
-- src\CamBridge.Service\Program.cs [HAS-CLASSES]
+- src\CamBridge.Service\Program.cs [TODAY] [HAS-CLASSES]
 - src\CamBridge.Service\Properties\launchSettings.json
 - src\CamBridge.Service\ServiceInfo.cs
 - src\CamBridge.Service\Tools\exiftool_files\readme_windows.txt
 - src\CamBridge.Service\Tools\exiftool_files\windows_exiftool.txt
-- src\CamBridge.Service\Worker.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Service\Worker.cs [HAS-CLASSES]
 
 ### [CamBridge.TestConsole] [TEST]
 *3 files, 316 lines, 1 classes*
@@ -549,7 +491,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - tests\CamBridge.TestConsole\Program.cs [HAS-CLASSES]
 
 ### [ROOT]
-*95 files, 1144 lines, 2 classes*
+*107 files, 1144 lines, 2 classes*
 
 - _archive\old_collectors\collect-sources.bat
 - _archive\old_collectors\collect-sources-balanced.bat
@@ -578,9 +520,9 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - CamBridge.ServiceDebug.csproj
 - CamBridge.ServiceDebug\CamBridge.ServiceDebug.csproj
 - CamBridge.ServiceDebug\Program.cs
-- CamBridge.sln [TODAY]
+- CamBridge.sln
 - CAMBRIDGE_OVERVIEW.md
-- CHANGELOG.md [TODAY]
+- CHANGELOG.md
 - Cleanup-DeadLetter.ps1
 - COLLECTOR_README.md
 - ConnectionTest\ConnectionTest.cs [HAS-CLASSES]
@@ -591,13 +533,15 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - Create-DeploymentPackage.ps1
 - Create-DeploymentPackage_250624.ps1
 - Create-NumberedTools.ps1
+- deadletter-references.txt
+- di-debug-sources.txt
 - Directory.Build.props
-- docs\sources\SOURCES_CONFIG.txt
-- docs\sources\SOURCES_CORE.txt
-- docs\sources\SOURCES_INDEX.md
-- docs\sources\SOURCES_INFRASTRUCTURE.txt
+- docs\sources\SOURCES_CONFIG.txt [TODAY]
+- docs\sources\SOURCES_CORE.txt [TODAY]
+- docs\sources\SOURCES_INDEX.md [TODAY]
+- docs\sources\SOURCES_INFRASTRUCTURE.txt [TODAY]
 - docs\sources\SOURCES_QRBRIDGE.txt
-- docs\sources\SOURCES_SERVICE.txt
+- docs\sources\SOURCES_SERVICE.txt [TODAY]
 - Emergency-Fix-CamBridge.ps1
 - ExifToolQuickTest\exif_output.json
 - ExifToolQuickTest\ExifToolQuickTest.csproj
@@ -610,35 +554,44 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - Get-WisdomSources.ps1
 - Get-WisdomSources_Dynamic.ps1
 - h-help.ps1
+- logviewer-old.xaml
 - Migrate-CamBridgeConfig.ps1
-- pipelinemanager-original.txt [TODAY]
+- pipelinemanager-original.txt
+- pipesettings-source.txt
+- prio0-sources.txt
 - Program.cs
 - PROJECT_WISDOM.md
 - qrbridge-constants.txt
 - README-Deployment.md
-- refactoring-sources-95.txt [TODAY]
-- service_control_sources.txt [TODAY]
+- refactoring-sources-95.txt
+- service_control_sources.txt
 - service-manager.ps1
-- session95-colors-sources.txt [TODAY]
-- session95-ui-sources.txt [TODAY]
-- session96-correlation-sources.txt [TODAY]
-- session96-logcontext-source.txt [TODAY]
-- session96-logcontext-sources.txt [TODAY]
-- session96-log-sources.txt [TODAY]
-- session96-logviewer-source.txt [TODAY]
-- session96-servicecontrol-sources.txt [TODAY]
-- session97-logging-sources.txt [TODAY]
-- session98-logviewer-sources.txt [TODAY]
-- session99-treeview-debug-sources.txt [TODAY]
+- session104-logviewer-sources.txt
+- session105-sample-log.txt
+- session105-sources.txt
+- session106-sources.txt
+- session109-sources.txt [TODAY]
+- session110-correlation-sources.txt [TODAY]
+- session95-colors-sources.txt
+- session95-ui-sources.txt
+- session96-correlation-sources.txt
+- session96-logcontext-source.txt
+- session96-logcontext-sources.txt
+- session96-log-sources.txt
+- session96-logviewer-source.txt
+- session96-servicecontrol-sources.txt
+- session97-logging-sources.txt
+- session98-logviewer-sources.txt
+- session99-treeview-debug-sources.txt
 - ShowVersion.targets
 - test-api.ps1
 - Test-CompletePipeline.ps1
 - Test-QRBridge.ps1
-- Version.props [TODAY]
+- Version.props
 - WISDOM_ARCHITECTURE.md
 - WISDOM_CLAUDE - 250614.md
 - WISDOM_CLAUDE.md
-- WISDOM_DEBT.md [TODAY]
+- WISDOM_DEBT.md
 - WISDOM_META.md
 - WISDOM_PO.md
 - WISDOM_TECHNICAL - 250614.md
@@ -646,6 +599,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - WISDOM_TECHNICAL_APIS.md
 - WISDOM_TECHNICAL_FIXES.md
 - WISDOM_TECHNICAL_PATTERNS.txt
+- worker-source.txt
 
 ### [TOOLS]
 *2 files, 0 lines, 0 classes*
@@ -657,13 +611,13 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 
 Metric | Value
 -------|-------
-Total Files | **218**
-Total Lines of Code | **21027**
-Files Modified Today | **44**
-Files Modified This Week | **134**
-Monster Files (>500 lines) | **9**
+Total Files | **230**
+Total Lines of Code | **21864**
+Files Modified Today | **17**
+Files Modified This Week | **73**
+Monster Files (>500 lines) | **10**
 Test Files | **7**
-Total Classes Found | **141**
+Total Classes Found | **143**
 Total Interfaces Found | **9**
 
 ## WISDOM TIPS

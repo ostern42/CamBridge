@@ -1,6 +1,6 @@
 // src\CamBridge.Config\Views\PipelineConfigPage.xaml.cs
-// Version: 0.8.5
-// Description: Pipeline Configuration page - Code Behind with Test Connection Handler
+// Version: 0.8.10
+// Description: Pipeline Configuration page - Code Behind with Output Path Handler
 
 using System;
 using System.Runtime.Versioning;
@@ -148,9 +148,22 @@ namespace CamBridge.Config.Views
             });
         }
 
-        private void BrowseOutputFolder_Click(object sender, RoutedEventArgs e)
+        // NEW: Output Path handler (Session 107 Fix)
+        private void BrowseOutputPath_Click(object sender, RoutedEventArgs e)
         {
-            BrowseFolder("Select Output Folder", path =>
+            BrowseFolder("Select Output Path", path =>
+            {
+                if (DataContext is PipelineConfigViewModel vm && vm.SelectedPipeline != null)
+                {
+                    vm.SelectedPipeline.WatchSettings.OutputPath = path;
+                }
+            });
+        }
+
+        // RENAMED: Was BrowseOutputFolder_Click, now BrowseArchiveFolder_Click
+        private void BrowseArchiveFolder_Click(object sender, RoutedEventArgs e)
+        {
+            BrowseFolder("Select Archive Folder", path =>
             {
                 if (DataContext is PipelineConfigViewModel vm && vm.SelectedPipeline != null)
                 {
@@ -166,17 +179,6 @@ namespace CamBridge.Config.Views
                 if (DataContext is PipelineConfigViewModel vm && vm.SelectedPipeline != null)
                 {
                     vm.SelectedPipeline.ProcessingOptions.ErrorFolder = path;
-                }
-            });
-        }
-
-        private void BrowseDeadLetterFolder_Click(object sender, RoutedEventArgs e)
-        {
-            BrowseFolder("Select Dead Letter Folder", path =>
-            {
-                if (DataContext is PipelineConfigViewModel vm && vm.SelectedPipeline != null)
-                {
-                    vm.SelectedPipeline.ProcessingOptions.DeadLetterFolder = path;
                 }
             });
         }

@@ -1,41 +1,24 @@
 ﻿# CamBridge Sources Index
-Generated: 2025-06-23 20:28:25
-Version: Dynamic Collection v2.0
-
-## Summary
-- **Total Files**: 122
-- **Total Lines**: 22701
-- **Total Size**: 883,70 KB
+Generated: 2025-07-01 14:22:49
+Version: 0.7.11
 
 ## Purpose
 These files contain the complete source code of CamBridge for efficient project knowledge access.
-All files are collected dynamically with full metadata for better navigation and understanding.
+This enables token-efficient pattern matching and prevents code duplication.
 
 ## Files Generated
-- **SOURCES_CONFIG.txt** - CONFIG: WPF configuration tool, UI, ViewModels (0.48 MB)
-- **SOURCES_CORE.txt** - CORE: Domain models, entities, value objects, interfaces (0.21 MB)
-- **SOURCES_INFRASTRUCTURE.txt** - INFRASTRUCTURE: Services, implementations, business logic (0.13 MB)
-- **SOURCES_SERVICE.txt** - SERVICE: Windows service, API endpoints, worker (0.07 MB)
-- **SOURCES_QRBRIDGE.txt** - QRBRIDGE: QR code generation tool (0.03 MB)
-
-## Features of Dynamic Collection
-- Recursive file discovery (no hardcoded paths)
-- Complete metadata (size, lines, modification date)
-- Directory structure visualization
-- File type statistics
-- Exclusion of generated files
-- Automatic detection of new projects
+- **SOURCES_CONFIG.txt** - CONFIG implementation (0.64 MB)
+- **SOURCES_CORE.txt** - CORE implementation (0.12 MB)
+- **SOURCES_INFRASTRUCTURE.txt** - INFRASTRUCTURE implementation (0.18 MB)
+- **SOURCES_SERVICE.txt** - SERVICE implementation (0.49 MB)
 
 ## Usage
 Upload these files to project knowledge for:
-1. Complete codebase access without token overhead
-2. Understanding project structure at a glance
-3. Finding files by metadata (recent changes, size)
-4. Navigating complex directory hierarchies
-5. Preventing phantom property syndrome!
+1. Instant code access without token-heavy requests
+2. Pattern matching across entire codebase
+3. Preventing accidental code duplication
+4. Understanding existing implementations
 
-## Collection Settings
-- Extensions: *.cs, *.csproj, *.xaml, *.json, *.xml, *.config, *.props, *.targets
-- Excluded: *.Designer.cs, *.g.cs, *.g.i.cs, AssemblyInfo.cs, GlobalUsings.cs, *.Generated.cs, *.g.xaml
-- Include Generated: False
-- Include Tests: False
+## Note
+These files are preprocessed for optimal project knowledge usage.
+Claude can search and reference them efficiently.
