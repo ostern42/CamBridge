@@ -1,18 +1,20 @@
 // src/CamBridge.Config/ViewModels/LogViewerViewModel.cs
-// Version: 0.8.16
-// Description: SLIM log viewer ViewModel - only UI logic!
+// Version: 0.8.18
+// Description: SLIM log viewer ViewModel with search history!
 // Copyright: (C) 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Config.Models;
 using CamBridge.Config.Services;
 using CamBridge.Config.Services.Interfaces;
 using CamBridge.Core;
+using CamBridge.Core.Enums;
 using CamBridge.Core.Infrastructure;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -39,6 +41,7 @@ namespace CamBridge.Config.ViewModels
         private readonly Timer _refreshTimer;
 
         private const int RefreshIntervalMs = 1000;
+        private const int MaxHistoryItems = 10;
 
         public LogViewerViewModel(
             ILogger<LogViewerViewModel> logger,
@@ -60,13 +63,16 @@ namespace CamBridge.Config.ViewModels
             CombinedLogEntries = new ObservableCollection<LogEntry>();
             CorrelationGroups = new ObservableCollection<CorrelationGroup>();
             PipelineSelections = new ObservableCollection<PipelineSelection>();
+            Filter1History = new ObservableCollection<string>();
+            Filter2History = new ObservableCollection<string>();
+            Filter3History = new ObservableCollection<string>();
 
             // Initialize commands
             RefreshCommand = new AsyncRelayCommand(RefreshLogsAsync);
             ClearLogCommand = new RelayCommand(() => { CombinedLogEntries.Clear(); ApplyFilters(); });
             ExportLogCommand = new AsyncRelayCommand(ExportLogsAsync);
             OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
-            ClearFiltersCommand = new RelayCommand(() => { SearchText = Filter1 = Filter2 = Filter3 = ""; });
+            ClearFiltersCommand = new RelayCommand(() => { Filter1 = Filter2 = Filter3 = ""; });
             CopyLineCommand = new RelayCommand<LogEntry>(CopyLine);
             CopyGroupCommand = new RelayCommand<CorrelationGroup>(CopyGroup);
 
@@ -92,12 +98,8 @@ namespace CamBridge.Config.ViewModels
         private ObservableCollection<CorrelationGroup> correlationGroups;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(SelectedPipelineCount))]
         private ObservableCollection<PipelineSelection> pipelineSelections;
-
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(FilteredCombinedEntries))]
-        [NotifyPropertyChangedFor(nameof(CorrelationGroups))]
-        private string? searchText;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(FilteredCombinedEntries))]
@@ -113,6 +115,15 @@ namespace CamBridge.Config.ViewModels
         [NotifyPropertyChangedFor(nameof(FilteredCombinedEntries))]
         [NotifyPropertyChangedFor(nameof(CorrelationGroups))]
         private string filter3 = string.Empty;
+
+        [ObservableProperty]
+        private ObservableCollection<string> filter1History;
+
+        [ObservableProperty]
+        private ObservableCollection<string> filter2History;
+
+        [ObservableProperty]
+        private ObservableCollection<string> filter3History;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(FilteredCombinedEntries))]
@@ -143,6 +154,7 @@ namespace CamBridge.Config.ViewModels
         private bool isAutoScrollEnabled;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayedLineCount))]
         private bool isTreeViewEnabled;
 
         [ObservableProperty]
@@ -248,6 +260,9 @@ namespace CamBridge.Config.ViewModels
             // Subscribe to changes
             foreach (var sel in PipelineSelections)
                 sel.PropertyChanged += OnPipelineSelectionChanged;
+
+            // Notify initial pipeline count
+            OnPropertyChanged(nameof(SelectedPipelineCount));
         }
 
         private async Task RefreshLogsAsync()
@@ -296,28 +311,121 @@ namespace CamBridge.Config.ViewModels
                 ShowWarning = ShowWarning,
                 ShowError = ShowError,
                 ShowCritical = ShowCritical,
-                SearchText = SearchText,
+                SearchText = null, // No separate search field anymore
                 Filter1 = Filter1,
                 Filter2 = Filter2,
                 Filter3 = Filter3
             };
 
+            // Apply all filters to get matching entries
             var filtered = _logFilterService.ApplyFilters(CombinedLogEntries, criteria);
-
-            FilteredCombinedEntries.Clear();
-            foreach (var e in filtered)
-                FilteredCombinedEntries.Add(e);
 
             if (IsTreeViewEnabled)
             {
-                var groups = _logTreeBuilder.BuildCorrelationGroups(filtered,
-                    !string.IsNullOrEmpty(Filter1 + Filter2 + Filter3),
-                    Filter1, Filter2, Filter3);
+                // For TreeView: Build groups from ALL entries, but only show filtered entries
+                var allGroups = _logTreeBuilder.BuildCorrelationGroups(CombinedLogEntries, false);
+
+                // Create a set of filtered entry references for fast lookup
+                var filteredSet = new HashSet<LogEntry>(filtered);
+
+                // Now filter the groups to only include those with matching entries
+                var groupsWithMatches = new List<CorrelationGroup>();
+
+                foreach (var group in allGroups)
+                {
+                    // Check if this group has any matching entries
+                    var hasMatch = group.AllEntries.Any(e => filteredSet.Contains(e));
+
+                    if (hasMatch)
+                    {
+                        // Create a filtered version of the group
+                        var filteredGroup = new CorrelationGroup
+                        {
+                            CorrelationId = group.CorrelationId,
+                            Pipeline = group.Pipeline,
+                            Status = group.Status,
+                            IsExpanded = group.IsExpanded
+                        };
+
+                        // Add only filtered entries to stages
+                        foreach (var stage in group.Stages)
+                        {
+                            var filteredStage = new StageGroup
+                            {
+                                Stage = stage.Stage,
+                                IsExpanded = stage.IsExpanded
+                            };
+
+                            var stageFilteredEntries = stage.Entries.Where(e => filteredSet.Contains(e)).ToList();
+                            if (stageFilteredEntries.Any())
+                            {
+                                foreach (var entry in stageFilteredEntries)
+                                {
+                                    filteredStage.Entries.Add(entry);
+                                }
+
+                                // Update stage times based on filtered entries
+                                filteredStage.StartTime = stageFilteredEntries.Min(e => e.Timestamp);
+                                filteredStage.EndTime = stageFilteredEntries.Max(e => e.Timestamp);
+
+                                filteredGroup.Stages.Add(filteredStage);
+                            }
+                        }
+
+                        // Add filtered ungrouped entries
+                        foreach (var entry in group.UngroupedEntries.Where(e => filteredSet.Contains(e)))
+                        {
+                            filteredGroup.UngroupedEntries.Add(entry);
+                        }
+
+                        if (filteredGroup.TotalEntries > 0)
+                        {
+                            // Update group times based on all filtered entries
+                            var allFilteredEntries = filteredGroup.AllEntries.ToList();
+                            filteredGroup.StartTime = allFilteredEntries.Min(e => e.Timestamp);
+                            filteredGroup.EndTime = allFilteredEntries.Max(e => e.Timestamp);
+
+                            groupsWithMatches.Add(filteredGroup);
+                        }
+                    }
+                }
 
                 CorrelationGroups.Clear();
-                foreach (var g in groups)
+                foreach (var g in groupsWithMatches)
                     CorrelationGroups.Add(g);
+
+                // Update FilteredCombinedEntries to match what's shown in TreeView
+                FilteredCombinedEntries.Clear();
+                foreach (var e in filtered)
+                    FilteredCombinedEntries.Add(e);
             }
+            else
+            {
+                // For flat view: Just show filtered entries
+                FilteredCombinedEntries.Clear();
+                foreach (var e in filtered)
+                    FilteredCombinedEntries.Add(e);
+            }
+
+            // Notify that the displayed count has changed
+            OnPropertyChanged(nameof(DisplayedLineCount));
+        }
+
+        private void AddToHistory(string value, ObservableCollection<string> history)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            // Remove if already exists
+            if (history.Contains(value))
+                history.Remove(value);
+
+            // Add to beginning
+            history.Insert(0, value);
+
+            // Keep only last N items
+            while (history.Count > MaxHistoryItems)
+                history.RemoveAt(history.Count - 1);
         }
 
         private async Task ExportLogsAsync()
@@ -381,6 +489,7 @@ namespace CamBridge.Config.ViewModels
         {
             if (e.PropertyName == nameof(PipelineSelection.IsSelected))
             {
+                // Force update of SelectedPipelineCount
                 OnPropertyChanged(nameof(SelectedPipelineCount));
                 _ = RefreshLogsAsync();
             }
@@ -390,16 +499,41 @@ namespace CamBridge.Config.ViewModels
 
         #region Property Change Handlers
 
-        partial void OnSearchTextChanged(string? value) => ApplyFilters();
         partial void OnShowDebugChanged(bool value) => ApplyFilters();
         partial void OnShowInformationChanged(bool value) => ApplyFilters();
         partial void OnShowWarningChanged(bool value) => ApplyFilters();
         partial void OnShowErrorChanged(bool value) => ApplyFilters();
         partial void OnShowCriticalChanged(bool value) => ApplyFilters();
         partial void OnIsTreeViewEnabledChanged(bool value) => ApplyFilters();
-        partial void OnFilter1Changed(string value) => ApplyFilters();
-        partial void OnFilter2Changed(string value) => ApplyFilters();
-        partial void OnFilter3Changed(string value) => ApplyFilters();
+
+        partial void OnFilter1Changed(string value)
+        {
+            ApplyFilters();
+            if (!string.IsNullOrWhiteSpace(value))
+                AddToHistory(value, Filter1History);
+        }
+
+        partial void OnFilter2Changed(string value)
+        {
+            ApplyFilters();
+            if (!string.IsNullOrWhiteSpace(value))
+                AddToHistory(value, Filter2History);
+        }
+
+        partial void OnFilter3Changed(string value)
+        {
+            ApplyFilters();
+            if (!string.IsNullOrWhiteSpace(value))
+                AddToHistory(value, Filter3History);
+        }
+
+        partial void OnIsAutoScrollEnabledChanged(bool value)
+        {
+            if (value)
+                _refreshTimer.Change(RefreshIntervalMs, RefreshIntervalMs);
+            else
+                _refreshTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
 
         #endregion
     }

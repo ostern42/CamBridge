@@ -1,6 +1,6 @@
 // src/CamBridge.Config/Services/LogFilterService.cs
-// Version: 0.8.16
-// Description: Service for filtering log entries
+// Version: 0.8.18
+// Description: Service for filtering log entries with implicit wildcards
 // Copyright: (C) 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -82,6 +82,17 @@ namespace CamBridge.Config.Services
         {
             if (string.IsNullOrWhiteSpace(pattern))
                 return true;
+
+            // Trim the pattern
+            pattern = pattern.Trim();
+
+            // If pattern doesn't contain wildcards and doesn't start/end with *,
+            // add implicit wildcards for easier searching
+            bool hasWildcards = pattern.Contains('*') || pattern.Contains('?');
+            if (!hasWildcards)
+            {
+                pattern = $"*{pattern}*";
+            }
 
             // Convert wildcard pattern to regex
             var regexPattern = "^" + Regex.Escape(pattern)

@@ -7,6 +7,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.8.18] - 2025-07-03 - Session 121
+
+### 🎯 Changed - Complete Filter Architecture Overhaul
+- **LogViewer**: Unified filter behavior - TreeView and FlatView now show EXACTLY the same filtered entries
+- **Search Interface**: Replaced confusing Search + 3 Filters with 3 equal search boxes with AND combination
+- **Search History**: Each search box now has dropdown with last 10 searches (per session)
+- **Implicit Wildcards**: Search terms without wildcards are auto-wrapped (`ERROR` → `*ERROR*`)
+- **TreeView Filtering**: Shows only matching entries while maintaining hierarchy structure
+- **Pipeline Dropdown**: Fixed to show "X selected" instead of object.ToString()
+
+### 🎨 UI/UX Improvements
+- **FlatView**: Removed grid lines for cleaner look, added 2px row spacing
+- **Unified Search**: Removed redundant "Search" field - all 3 boxes work identically  
+- **Clear Button**: Added to reset all search filters at once
+- **Column Widths**: Optimized for better space usage
+- **Font Sizes**: Adjusted for better readability (TreeView items, headers)
+
+### 🐛 Fixed
+- TreeView completely empty when typing in filter (wrong filter order)
+- Pipeline dropdown always showing "No pipelines selected"
+- Binding errors on read-only properties (Mode=OneWay added)
+
+### 🏗️ Technical
+- Single filter logic shared between Tree and Flat views
+- Removed complex group-level filtering attempts
+- Search history stored in ObservableCollection<string> (10 items max)
+- Consistent PropertyChanged notifications for all filter properties
+
 ## [0.8.17] - 2025-01-03 - Session 120 - Log Viewer TreeView Implementation
 
 ### Added

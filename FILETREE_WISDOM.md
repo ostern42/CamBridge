@@ -1,25 +1,30 @@
-﻿# WISDOM FILE TREE v0.8.16
-**Generated**: 2025-07-03 19:58  
-**Total Files**: 224  
+﻿# WISDOM FILE TREE v0.8.18
+**Generated**: 2025-07-03 22:37  
+**Total Files**: 227  
 **Your Daily Code Dashboard** - Everything important at a glance!
 
 ## RECENTLY MODIFIED (Last 7 days)
 
 ### Today [HOT]
 - **src\CamBridge.Config\Views\LogViewerPage.xaml**
+- **src\CamBridge.Config\ViewModels\LogViewerViewModel.cs** [MONSTER] [Classes: LogViewerViewModel]
+- **src\CamBridge.Config\Services\LogFilterService.cs** [Classes: LogFilterService]
+- **session121-parsing.txt**
+- **Version.props**
+- **session121-sources.txt**
+- **src\CamBridge.Config\ViewModels\DeadLettersViewModel.cs** [Classes: DeadLettersViewModel]
+- **session121-filter-sources.txt**
+- **CHANGELOG.md**
+- **FILETREE_WISDOM.md**
 - **src\CamBridge.Config\Views\LogViewerPage.xaml.cs** [Classes: LogViewerPage]
 - **src\CamBridge.Config\CamBridge.Config.csproj**
 - **src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs** [MONSTER] [Classes: PipelineConfigViewModel]
-- **Version.props**
-- **CHANGELOG.md**
 - **src\CamBridge.Config\App.xaml.cs** [Classes: App]
 - **src\CamBridge.Config\Converters\ValueConverters.cs** [MONSTER] [Classes: ExpandIconConverter, IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter, CombineStagesConverter, StatusToColorConverter, ColorToBrushConverter]
 - **src\CamBridge.Config\Models\CorrelationGroup.cs** [Classes: CorrelationGroup]
 - **src\CamBridge.Config\Services\LogFileService.cs** [Classes: LogFileService]
 - **src\CamBridge.Core\CamBridge.Core.csproj**
-- **src\CamBridge.Config\ViewModels\LogViewerViewModel.cs** [Classes: LogViewerViewModel]
 - **src\CamBridge.Config\Services\LogParsingService.cs** [Classes: LogParsingService]
-- **src\CamBridge.Config\Services\LogFilterService.cs** [Classes: LogFilterService]
 - **src\CamBridge.Config\Services\LogTreeBuilder.cs** [Classes: LogTreeBuilder]
 - **src\CamBridge.Config\Services\LogServiceExtensions.cs**
 - **src\CamBridge.Config\Models\ILogServices.cs** [Classes: LogFilterCriteria]
@@ -33,7 +38,6 @@
 - **src\CamBridge.Infrastructure\Services\DicomConverter.cs** [MONSTER] [Classes: DicomConverter, ConversionResult, ValidationResult]
 - **src\CamBridge.Core\MappingRule.cs** [Classes: MappingRule]
 - **sources.txt**
-- **FILETREE_WISDOM.md**
 - **CamBridge.sln**
 - **WISDOM_DEBT.md**
 - **WISDOM_TECHNICAL_FIXES.md**
@@ -101,10 +105,11 @@ src\CamBridge.Config\Converters\ValueConverters.cs | **668** | ExpandIconConvert
 CamBridge.ParserDebug\Program.cs | **610** | - | MEDIUM
 src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs | **579** | PipelineConfigViewModel | MEDIUM
 src\CamBridge.Infrastructure\Services\ExifToolReader.cs | **563** | ExifToolReader | MEDIUM
+src\CamBridge.Config\ViewModels\LogViewerViewModel.cs | **541** | LogViewerViewModel | MEDIUM
 src\CamBridge.Infrastructure\Services\DicomConverter.cs | **539** | DicomConverter, ConversionResult, ValidationResult | MEDIUM
 src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | TransformEditorDialog | MEDIUM
 
-**Total Monster Lines**: 7076 lines to refactor!
+**Total Monster Lines**: 7617 lines to refactor!
 
 ## QUICK CLASS FINDER
 
@@ -369,8 +374,8 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 ## PROJECT STRUCTURE
 
 ### [CamBridge.Config]
-*65 files, 10010 lines, 84 classes*
- **WARNING: 5 monster files**
+*65 files, 10155 lines, 84 classes*
+ **WARNING: 6 monster files**
 
 - src\CamBridge.Config\App.xaml
 - src\CamBridge.Config\App.xaml.cs [TODAY] [HAS-CLASSES]
@@ -410,8 +415,8 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.Config\Services\PipelineSettingsService.cs [HAS-CLASSES]
 - src\CamBridge.Config\Services\ServiceManager.cs [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\DashboardViewModel.cs [HAS-CLASSES]
-- src\CamBridge.Config\ViewModels\DeadLettersViewModel.cs [HAS-CLASSES]
-- src\CamBridge.Config\ViewModels\LogViewerViewModel.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Config\ViewModels\DeadLettersViewModel.cs [TODAY] [HAS-CLASSES]
+- src\CamBridge.Config\ViewModels\LogViewerViewModel.cs [TODAY] [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\MainViewModel.cs [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs [TODAY] [MONSTER] [HAS-CLASSES]
 - src\CamBridge.Config\ViewModels\PacsConfigViewModel.cs [HAS-CLASSES]
@@ -534,7 +539,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - tests\CamBridge.TestConsole\Program.cs [HAS-CLASSES]
 
 ### [ROOT]
-*91 files, 1144 lines, 2 classes*
+*94 files, 1144 lines, 2 classes*
 
 - _archive\old_collectors\collect-sources.bat
 - _archive\old_collectors\collect-sources-balanced.bat
@@ -610,6 +615,9 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - session113-mapping-sources.txt [TODAY]
 - session113-pipeline-config.txt [TODAY]
 - session113-sources.txt [TODAY]
+- session121-filter-sources.txt [TODAY]
+- session121-parsing.txt [TODAY]
+- session121-sources.txt [TODAY]
 - ShowVersion.targets
 - sources.txt [TODAY]
 - test-api.ps1
@@ -638,11 +646,11 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 
 Metric | Value
 -------|-------
-Total Files | **224**
-Total Lines of Code | **22231**
-Files Modified Today | **45**
-Files Modified This Week | **78**
-Monster Files (>500 lines) | **10**
+Total Files | **227**
+Total Lines of Code | **22376**
+Files Modified Today | **49**
+Files Modified This Week | **82**
+Monster Files (>500 lines) | **11**
 Test Files | **7**
 Total Classes Found | **150**
 Total Interfaces Found | **13**

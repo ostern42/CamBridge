@@ -1,5 +1,5 @@
 <!-- src\CamBridge.Config\Views\Pages\LogViewerPage.xaml -->
-<!-- Version: 0.8.16 - Enhanced with TreeView! -->
+<!-- Version: 0.8.18 - Complete UI overhaul with search history -->
 <!-- Description: Log viewer with hierarchical correlation display -->
 <!-- Copyright: © 2025 Claude's Improbably Reliable Software Solutions -->
 
@@ -103,7 +103,7 @@
                                Margin="0,0,12,0" FontWeight="SemiBold"/>
 
                     <ComboBox Grid.Column="1" ItemsSource="{Binding PipelineSelections}"
-                              MinWidth="250" MaxWidth="400" Height="32"
+                              MinWidth="250" Width="350" MaxWidth="500" Height="32"
                               VerticalContentAlignment="Center">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
@@ -193,63 +193,51 @@
                     <!-- Search and Filters -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
-                        <TextBox Width="200" Height="28" Margin="0,0,12,0"
-                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 VerticalContentAlignment="Center"/>
 
-                        <TextBlock Text="Filters:" VerticalAlignment="Center" Margin="0,0,8,0" 
-                                   FontWeight="SemiBold" Opacity="0.7"/>
-                        <TextBox Width="140" Height="28" Margin="0,0,4,0"
-                                 Text="{Binding Filter1, UpdateSourceTrigger=PropertyChanged}"
-                                 ToolTip="Filter 1 (wildcards supported)"
-                                 VerticalContentAlignment="Center"
-                                 IsEnabled="False">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox">
-                                    <Setter Property="Background" Value="#F5F5F5"/>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Opacity" Value="0.6"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
-                        <TextBox Width="140" Height="28" Margin="0,0,4,0"
-                                 Text="{Binding Filter2, UpdateSourceTrigger=PropertyChanged}"
-                                 ToolTip="Filter 2 (wildcards supported)"
-                                 VerticalContentAlignment="Center"
-                                 IsEnabled="False">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox">
-                                    <Setter Property="Background" Value="#F5F5F5"/>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Opacity" Value="0.6"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
-                        <TextBox Width="140" Height="28" Margin="0,0,8,0"
-                                 Text="{Binding Filter3, UpdateSourceTrigger=PropertyChanged}"
-                                 ToolTip="Filter 3 (wildcards supported)"
-                                 VerticalContentAlignment="Center"
-                                 IsEnabled="False">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox">
-                                    <Setter Property="Background" Value="#F5F5F5"/>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Opacity" Value="0.6"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
+                        <!-- Search ComboBox 1 with history -->
+                        <ComboBox Width="180" Height="28" Margin="0,0,4,0"
+                                  IsEditable="True"
+                                  IsTextSearchEnabled="False"
+                                  Text="{Binding Filter1, UpdateSourceTrigger=PropertyChanged}"
+                                  ItemsSource="{Binding Filter1History}"
+                                  ToolTip="Search in all fields - auto-wraps with * unless you use wildcards">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="9"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
 
-                        <Button Content="Clear Filters" Command="{Binding ClearFiltersCommand}"
-                                Padding="10,6" Margin="4,0" IsEnabled="False" Opacity="0.6"/>
+                        <!-- Search ComboBox 2 with history -->
+                        <ComboBox Width="180" Height="28" Margin="0,0,4,0"
+                                  IsEditable="True"
+                                  IsTextSearchEnabled="False"
+                                  Text="{Binding Filter2, UpdateSourceTrigger=PropertyChanged}"
+                                  ItemsSource="{Binding Filter2History}"
+                                  ToolTip="Additional search - combine with AND">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="9"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <!-- Search ComboBox 3 with history -->
+                        <ComboBox Width="180" Height="28" Margin="0,0,8,0"
+                                  IsEditable="True"
+                                  IsTextSearchEnabled="False"
+                                  Text="{Binding Filter3, UpdateSourceTrigger=PropertyChanged}"
+                                  ItemsSource="{Binding Filter3History}"
+                                  ToolTip="Additional search - combine with AND">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="9"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <Button Content="Clear" Command="{Binding ClearFiltersCommand}"
+                                Padding="10,6" Margin="4,0" MinWidth="60"/>
                     </StackPanel>
 
                     <!-- Level filters -->
@@ -310,19 +298,19 @@
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat='HH:mm:ss.fff', Mode=OneWay}" 
-                                           FontFamily="Consolas" FontSize="11" Opacity="0.8"/>
+                                           FontFamily="Consolas" FontSize="9" Opacity="0.8"/>
                                 <TextBlock Grid.Column="1" Text="{Binding LevelText, Mode=OneWay}" 
-                                           FontFamily="Consolas" FontSize="11"
+                                           FontFamily="Consolas" FontSize="9"
                                            Foreground="{Binding LevelColor, Mode=OneWay}"/>
                                 <TextBlock Grid.Column="2" Text="{Binding StageIcon, Mode=OneWay}" 
-                                           FontFamily="Consolas" FontSize="11" Opacity="0.7"/>
+                                           FontFamily="Consolas" FontSize="9" Opacity="0.7"/>
                                 <TextBlock Grid.Column="3" Text="{Binding Pipeline, Mode=OneWay}" 
-                                           FontFamily="Consolas" FontSize="11" Opacity="0.7"/>
+                                           FontFamily="Consolas" FontSize="9" Opacity="0.7"/>
                                 <TextBlock Grid.Column="4" Text="{Binding FormattedDuration, Mode=OneWay}" 
-                                           FontFamily="Consolas" FontSize="11" Opacity="0.6"
+                                           FontFamily="Consolas" FontSize="9" Opacity="0.6"
                                            HorizontalAlignment="Right"/>
                                 <TextBlock Grid.Column="5" Text="{Binding Message, Mode=OneWay}" 
-                                           FontFamily="Consolas" FontSize="11"
+                                           FontFamily="Consolas" FontSize="9"
                                            TextWrapping="Wrap" Margin="8,0,0,0"/>
                             </Grid>
                         </Border>
@@ -392,7 +380,7 @@
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       CanUserDeleteRows="False"
-                      GridLinesVisibility="Horizontal"
+                      GridLinesVisibility="None"
                       HeadersVisibility="Column"
                       IsReadOnly="True"
                       SelectionMode="Extended"
@@ -400,8 +388,9 @@
                       CanUserSortColumns="True"
                       ClipboardCopyMode="IncludeHeader"
                       FontFamily="Consolas"
-                      FontSize="11"
-                      BorderThickness="0">
+                      FontSize="9"
+                      BorderThickness="0"
+                      RowHeight="16">
 
                 <!-- Context Menu for DataGrid -->
                 <DataGrid.ContextMenu>
@@ -425,21 +414,43 @@
                                         Width="50"/>
                     <DataGridTextColumn Header="Correlation" 
                                         Binding="{Binding CorrelationId}" 
-                                        Width="140"/>
+                                        Width="160"/>
                     <DataGridTextColumn Header="Pipeline" 
                                         Binding="{Binding Pipeline}" 
-                                        Width="120"/>
+                                        Width="110"/>
                     <DataGridTextColumn Header="Stage" 
                                         Binding="{Binding Stage}" 
-                                        Width="120"/>
+                                        Width="190"/>
                     <DataGridTextColumn Header="Message" 
                                         Binding="{Binding Message}" 
                                         Width="*"/>
                 </DataGrid.Columns>
 
+                <!-- Cell style to reduce padding -->
+                <DataGrid.CellStyle>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="Padding" Value="2,0"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="DataGridCell">
+                                    <Border Padding="{TemplateBinding Padding}" 
+                                            Background="{TemplateBinding Background}">
+                                        <ContentPresenter VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </DataGrid.CellStyle>
+
                 <!-- Row style for level colors -->
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
+                        <Setter Property="Margin" Value="0,0.5"/>
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="MinHeight" Value="16"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding LevelText}" Value="ERR">
                                 <Setter Property="Foreground" Value="#D32F2F"/>
@@ -450,6 +461,12 @@
                             <DataTrigger Binding="{Binding LevelText}" Value="DBG">
                                 <Setter Property="Foreground" Value="#616161"/>
                             </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#F5F5F5"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#E3F2FD"/>
+                            </Trigger>
                         </Style.Triggers>
                     </Style>
                 </DataGrid.RowStyle>
