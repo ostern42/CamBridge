@@ -1,7 +1,7 @@
 // src/CamBridge.Config/Services/LogParsingService.cs
-// Version: 0.8.16
-// Description: Service for parsing log lines into structured entries
-// Copyright: (C) 2025 Claude's Improbably Reliable Software Solutions
+// Version: 0.8.19
+// Description: Service for parsing log lines with MILLISECOND support
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Globalization;
@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace CamBridge.Config.Services
 {
     /// <summary>
-    /// Service implementation for log line parsing
+    /// Service implementation for log line parsing with millisecond precision
     /// </summary>
     public class LogParsingService : ILogParsingService
     {
@@ -41,9 +41,9 @@ namespace CamBridge.Config.Services
                 }
 
                 // Pattern 1: Full format with stage in quotes
-                // [HH:mm:ss LEVEL] [CorrelationId] ["Stage"] Message [Pipeline]
+                // [HH:mm:ss.fff LEVEL] [CorrelationId] ["Stage"] Message [Pipeline]
                 var fullFormatQuoted = Regex.Match(line,
-                    @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+\[([^\]]+)\]\s+\[""([^""]+)""\]\s+(.+)$");
+                    @"^\[(\d{2}:\d{2}:\d{2}\.\d{3})\s+(\w+)\]\s+\[([^\]]+)\]\s+\[""([^""]+)""\]\s+(.+)$");
 
                 if (fullFormatQuoted.Success)
                 {
@@ -51,9 +51,9 @@ namespace CamBridge.Config.Services
                 }
 
                 // Pattern 2: Full format with stage without quotes
-                // [HH:mm:ss LEVEL] [CorrelationId] [Stage] Message [Pipeline]
+                // [HH:mm:ss.fff LEVEL] [CorrelationId] [Stage] Message [Pipeline]
                 var fullFormatUnquoted = Regex.Match(line,
-                    @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+\[([^\]]+)\]\s+\[([^\]]+)\]\s+(.+)$");
+                    @"^\[(\d{2}:\d{2}:\d{2}\.\d{3})\s+(\w+)\]\s+\[([^\]]+)\]\s+\[([^\]]+)\]\s+(.+)$");
 
                 if (fullFormatUnquoted.Success)
                 {
@@ -61,9 +61,9 @@ namespace CamBridge.Config.Services
                 }
 
                 // Pattern 3: Format with correlation ID but no stage
-                // [HH:mm:ss LEVEL] [CorrelationId] Message
+                // [HH:mm:ss.fff LEVEL] [CorrelationId] Message
                 var noStageFormat = Regex.Match(line,
-                    @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+\[([^\]]+)\]\s+(.+)$");
+                    @"^\[(\d{2}:\d{2}:\d{2}\.\d{3})\s+(\w+)\]\s+\[([^\]]+)\]\s+(.+)$");
 
                 if (noStageFormat.Success)
                 {
@@ -72,8 +72,8 @@ namespace CamBridge.Config.Services
                     var correlationId = noStageFormat.Groups[3].Value;
                     var message = noStageFormat.Groups[4].Value;
 
-                    // Parse timestamp
-                    var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss", CultureInfo.InvariantCulture);
+                    // Parse timestamp with milliseconds
+                    var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss.fff", CultureInfo.InvariantCulture);
                     timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
 
                     // Extract pipeline if present at end
@@ -83,6 +83,14 @@ namespace CamBridge.Config.Services
                     {
                         pipeline = pipelineMatch.Groups[1].Value;
                         message = message.Substring(0, message.Length - pipelineMatch.Value.Length).Trim();
+                    }
+
+                    // Extract duration if present
+                    int? durationMs = null;
+                    var durationMatch = Regex.Match(message, @"\[(\d+)ms\]");
+                    if (durationMatch.Success)
+                    {
+                        durationMs = int.Parse(durationMatch.Groups[1].Value);
                     }
 
                     // Try to infer stage from message patterns
@@ -96,20 +104,44 @@ namespace CamBridge.Config.Services
                         RawLine = line,
                         CorrelationId = correlationId,
                         Stage = stage,
-                        Pipeline = pipeline
+                        Pipeline = pipeline,
+                        DurationMs = durationMs
                     };
                 }
 
-                // Pattern 4: Simple format without correlation ID
+                // Pattern 4: Simple format without correlation ID (with milliseconds)
+                // [HH:mm:ss.fff LEVEL] Message
+                var simpleFormatMs = Regex.Match(line,
+                    @"^\[(\d{2}:\d{2}:\d{2}\.\d{3})\s+(\w+)\]\s+(.+)$");
+
+                if (simpleFormatMs.Success)
+                {
+                    var timeStr = simpleFormatMs.Groups[1].Value;
+                    var levelStr = simpleFormatMs.Groups[2].Value;
+                    var message = simpleFormatMs.Groups[3].Value;
+
+                    var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                    timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
+
+                    return new LogEntry
+                    {
+                        Timestamp = timestamp,
+                        Level = ParseLogLevel(levelStr),
+                        Message = message,
+                        RawLine = line
+                    };
+                }
+
+                // Pattern 5: Legacy format without milliseconds (backward compatibility)
                 // [HH:mm:ss LEVEL] Message
-                var simpleFormat = Regex.Match(line,
+                var legacyFormat = Regex.Match(line,
                     @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+(.+)$");
 
-                if (simpleFormat.Success)
+                if (legacyFormat.Success)
                 {
-                    var timeStr = simpleFormat.Groups[1].Value;
-                    var levelStr = simpleFormat.Groups[2].Value;
-                    var message = simpleFormat.Groups[3].Value;
+                    var timeStr = legacyFormat.Groups[1].Value;
+                    var levelStr = legacyFormat.Groups[2].Value;
+                    var message = legacyFormat.Groups[3].Value;
 
                     var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss", CultureInfo.InvariantCulture);
                     timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
@@ -226,8 +258,17 @@ namespace CamBridge.Config.Services
             var stageStr = match.Groups[4].Value;
             var messageAndMore = match.Groups[5].Value;
 
-            // Parse timestamp
-            var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss", CultureInfo.InvariantCulture);
+            // Parse timestamp with milliseconds
+            DateTime timestamp;
+            if (timeStr.Contains("."))
+            {
+                timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss.fff", CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                // Legacy format without milliseconds
+                timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss", CultureInfo.InvariantCulture);
+            }
             timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
 
             // Parse log level
@@ -248,13 +289,13 @@ namespace CamBridge.Config.Services
                 pipeline = pipelineMatch.Groups[2].Value;
             }
 
-            // Extract duration if present
+            // Extract duration if present - look for [XXXms] pattern
             int? durationMs = null;
             var durationMatch = Regex.Match(message, @"\[(\d+)ms\]");
             if (durationMatch.Success)
             {
                 durationMs = int.Parse(durationMatch.Groups[1].Value);
-                message = message.Replace(durationMatch.Value, "").Trim();
+                // Don't remove from message - keep for display
             }
 
             return new LogEntry

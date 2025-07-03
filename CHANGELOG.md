@@ -6,6 +6,49 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.20] - 2025-01-05
+
+### Added
+- Beautiful TreeView display for correlated log entries with date/time pills
+- Search history dropdown for all three filter boxes  
+- Date range selector with quick buttons (Today, Week, Month)
+- Expand/Collapse All buttons for TreeView
+- Color-coded log level dots and stage icons
+- "Filters active" indicator in status bar
+
+### Fixed
+- LogViewerViewModel duplicate OnPropertyChanged method error
+- Missing event handlers in LogViewerPage code-behind
+- MaterialDesign style references replaced with ModernWpf defaults
+- WPF binding errors on read-only properties (added Mode=OneWay)
+- Pipeline dropdown now correctly shows selection count
+
+### Known Issues
+- TreeView shows duplicate expand/collapse arrows
+- Export commands in context menu not functional
+- All durations show 0ms (parsing issue?)
+- TreeView layout needs grid alignment for cleaner appearance
+
+## [0.8.19] - 2025-07-03 - Session 122 (Partial)
+
+### 🔧 Fixed
+- **Log Timestamps**: Added millisecond precision to all log outputs (`HH:mm:ss.fff`)
+- **LogParsingService**: Updated regex patterns to parse milliseconds from new format
+
+### 🎨 UI/UX Improvements  
+- **Compact Layout**: Reduced header padding and margins (~25% space saved)
+- **Optimized Font Sizes**: Minimum 10pt for High-DPI compatibility
+- **Search History**: Fixed to only save on Enter/Tab (not every keystroke)
+
+### ⚠️ INCOMPLETE - Build Errors
+- LogViewerViewModel expects different model properties
+- Need to check actual model definitions before proceeding
+- Version NOT deployed
+
+### 📋 TODO for Session 123
+- Fix model mismatches (Sources First!)
+- Complete Duration display fix
+- Add DPI Awareness manifest
 
 ## [0.8.18] - 2025-07-03 - Session 121
 

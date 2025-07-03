@@ -1,4 +1,4 @@
-﻿<!-- Temporäre Debug-Version - src/CamBridge.Config/CamBridge.Config.csproj -->
+﻿<!-- src/CamBridge.Config/CamBridge.Config.csproj - COMPLETE with DPI -->
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
@@ -8,11 +8,13 @@
 		<UseWPF>true</UseWPF>
 		<Platform>x64</Platform>
 		<Platforms>x64</Platforms>
-		
+
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<!-- Ensure manifest is used -->
+		<NoWin32Manifest>false</NoWin32Manifest>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -33,11 +35,16 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\CamBridge.Core\CamBridge.Core.csproj" />
-				<ProjectReference Include="..\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj" />
+		<ProjectReference Include="..\CamBridge.Infrastructure\CamBridge.Infrastructure.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Reference Include="System.Windows.Forms" />
+	</ItemGroup>
+
+	<!-- Include the app.manifest file -->
+	<ItemGroup>
+		<None Include="app.manifest" />
 	</ItemGroup>
 
 </Project>

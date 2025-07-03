@@ -1,6 +1,6 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.8.10
-// Description: Windows service entry point
+// Version: 0.8.19
+// Description: Windows service entry point with FIXED timestamp format
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
@@ -112,7 +112,7 @@ try
                 path: Path.Combine(baseLogPath, "service_.log"),
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 30,
-                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+                outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}",
                 shared: true))
 
         // Event Log for service events
@@ -121,7 +121,7 @@ try
         // Console output when not running as service
         .WriteTo.Conditional(
             _ => !isService,
-            wt => wt.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"));
+            wt => wt.Console(outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}"));
 
     // Create a separate log file for each pipeline
     if (settings?.Pipelines != null)
@@ -139,7 +139,7 @@ try
                     path: Path.Combine(baseLogPath, $"pipeline_{sanitizedName}_.log"),
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 30,
-                    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+                    outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}",
                     shared: true));
 
             Log.Information("Configured logging for pipeline: {Pipeline} -> {LogFile}",

@@ -2,6 +2,10 @@
 // Version: 0.8.11 - SAFE VERSION (nur Unicode-Fixes, keine riskanten neuen Features)
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
+using CamBridge.Config.Models;
+using CamBridge.Config.ViewModels;
+using CamBridge.Core;
+using CamBridge.Core.Enums;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -10,12 +14,99 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
-using CamBridge.Config.ViewModels;
-using CamBridge.Config.Models;
-using CamBridge.Core;
 
 namespace CamBridge.Config.Converters
 {
+    /// <summary>
+    /// Converts ProcessingStage to color for visual distinction
+    /// </summary>
+    public class StageToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ProcessingStage stage)
+            {
+                var color = stage switch
+                {
+                    ProcessingStage.ServiceStartup => Colors.DodgerBlue,        // Blue
+                    ProcessingStage.ConfigurationLoading => Colors.SteelBlue,   // Dark Blue
+                    ProcessingStage.PipelineInitialization => Colors.CornflowerBlue,
+                    ProcessingStage.ServiceShutdown => Colors.DarkGray,
+
+                    ProcessingStage.FileDetected => Colors.DarkTurquoise,       // Cyan
+                    ProcessingStage.ExifExtraction => Colors.MediumPurple,      // Purple
+                    ProcessingStage.TagMapping => Colors.MediumOrchid,          // Light Purple
+                    ProcessingStage.DicomConversion => Colors.DarkOrange,       // Orange
+                    ProcessingStage.PacsUpload => Colors.Goldenrod,            // Gold
+
+                    ProcessingStage.Complete => Colors.ForestGreen,             // Green
+                    ProcessingStage.PostProcessing => Colors.SeaGreen,
+
+                    ProcessingStage.Error => Colors.Crimson,                    // Red
+                    ProcessingStage.WatcherError => Colors.IndianRed,
+                    ProcessingStage.PipelineShutdown => Colors.DarkRed,
+                    ProcessingStage.PipelineRecovery => Colors.OrangeRed,
+
+                    ProcessingStage.HealthCheck => Colors.LimeGreen,
+                    _ => Colors.Gray
+                };
+
+                return new SolidColorBrush(color);
+            }
+
+            return new SolidColorBrush(Colors.Gray);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts ProcessingStage to icon symbol
+    /// </summary>
+    public class StageToIconConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ProcessingStage stage)
+            {
+                return stage switch
+                {
+                    ProcessingStage.ServiceStartup => "▶",        // Play
+                    ProcessingStage.ConfigurationLoading => "⚙",  // Gear
+                    ProcessingStage.PipelineInitialization => "🔧",
+                    ProcessingStage.ServiceShutdown => "◼",        // Stop
+
+                    ProcessingStage.FileDetected => "📄",          // File
+                    ProcessingStage.ExifExtraction => "🔍",        // Magnifier
+                    ProcessingStage.TagMapping => "🏷",            // Tag
+                    ProcessingStage.DicomConversion => "🏥",       // Hospital
+                    ProcessingStage.PacsUpload => "☁",            // Cloud
+
+                    ProcessingStage.Complete => "✓",              // Check
+                    ProcessingStage.PostProcessing => "📦",
+
+                    ProcessingStage.Error => "✗",                 // X
+                    ProcessingStage.WatcherError => "👁",         // Eye
+                    ProcessingStage.PipelineShutdown => "⛔",
+                    ProcessingStage.PipelineRecovery => "♻",     // Recycle
+
+                    ProcessingStage.HealthCheck => "💚",          // Heart
+                    _ => "•"
+                };
+            }
+
+            return "•";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     /// <summary>
     /// SAFE: Fixed expand/collapse icons (Unicode → proper symbols)
     /// </summary>

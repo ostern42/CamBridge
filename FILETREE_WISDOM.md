@@ -1,21 +1,34 @@
-﻿# WISDOM FILE TREE v0.8.18
-**Generated**: 2025-07-03 22:37  
-**Total Files**: 227  
+﻿# WISDOM FILE TREE v0.8.19
+**Generated**: 2025-07-03 23:28  
+**Total Files**: 238  
 **Your Daily Code Dashboard** - Everything important at a glance!
 
 ## RECENTLY MODIFIED (Last 7 days)
 
 ### Today [HOT]
-- **src\CamBridge.Config\Views\LogViewerPage.xaml**
+- **CHANGELOG.md**
+- **src\CamBridge.Config\Services\LogParsingService.cs** [Classes: LogParsingService]
+- **src\CamBridge.Service\Program.cs** [Classes: Program]
 - **src\CamBridge.Config\ViewModels\LogViewerViewModel.cs** [MONSTER] [Classes: LogViewerViewModel]
+- **src\CamBridge.Config\Views\LogViewerPage.xaml**
+- **session122-logviewer-xaml.txt**
+- **Version.props**
+- **session122-program-full.txt**
+- **session122-duration-logs.txt**
+- **session122-serilog-format.txt**
+- **session122-sample-log.txt**
+- **session122-logcontext.txt**
+- **session122-logentry.txt**
+- **session122-parsing.txt**
+- **session122-changelog-current.txt**
+- **session122-logviewer-header.txt**
+- **session122-version.txt**
+- **FILETREE_WISDOM.md**
 - **src\CamBridge.Config\Services\LogFilterService.cs** [Classes: LogFilterService]
 - **session121-parsing.txt**
-- **Version.props**
 - **session121-sources.txt**
 - **src\CamBridge.Config\ViewModels\DeadLettersViewModel.cs** [Classes: DeadLettersViewModel]
 - **session121-filter-sources.txt**
-- **CHANGELOG.md**
-- **FILETREE_WISDOM.md**
 - **src\CamBridge.Config\Views\LogViewerPage.xaml.cs** [Classes: LogViewerPage]
 - **src\CamBridge.Config\CamBridge.Config.csproj**
 - **src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs** [MONSTER] [Classes: PipelineConfigViewModel]
@@ -24,7 +37,6 @@
 - **src\CamBridge.Config\Models\CorrelationGroup.cs** [Classes: CorrelationGroup]
 - **src\CamBridge.Config\Services\LogFileService.cs** [Classes: LogFileService]
 - **src\CamBridge.Core\CamBridge.Core.csproj**
-- **src\CamBridge.Config\Services\LogParsingService.cs** [Classes: LogParsingService]
 - **src\CamBridge.Config\Services\LogTreeBuilder.cs** [Classes: LogTreeBuilder]
 - **src\CamBridge.Config\Services\LogServiceExtensions.cs**
 - **src\CamBridge.Config\Models\ILogServices.cs** [Classes: LogFilterCriteria]
@@ -53,10 +65,10 @@
 - **session112-mapping-sources.txt**
 - **session112-sources.txt**
 - **session111-treeview-sources.txt**
-- **session111-sources.txt**
-- **session111-complete-sources.txt**
 
 ### Yesterday
+- session111-sources.txt
+- session111-complete-sources.txt
 - src\CamBridge.Infrastructure\Services\MappingConfigurationLoader.cs
 - src\CamBridge.Infrastructure\Services\PacsUploadQueue.cs
 - src\CamBridge.Infrastructure\Services\DicomStoreService.cs
@@ -64,7 +76,6 @@
 - src\CamBridge.Infrastructure\Services\ExifToolReader.cs
 - src\CamBridge.Infrastructure\Services\ProcessingQueue.cs
 - src\CamBridge.Infrastructure\Services\FileProcessor.cs
-- src\CamBridge.Service\Program.cs
 
 ### This Week
 - docs\sources\SOURCES_INDEX.md *(2 days ago)*
@@ -101,15 +112,15 @@ src\CamBridge.Config\ViewModels\MappingEditorViewModel.cs | **1234** | MappingEd
 src\CamBridge.Infrastructure\Services\PipelineManager.cs | **864** | PipelineManager, PipelineInfo, PipelineStatusInfo | HIGH
 src\CamBridge.Config\ViewModels\ServiceControlViewModel.cs | **777** | ServiceControlViewModel | HIGH
 src\CamBridge.Infrastructure\Services\FileProcessor.cs | **718** | FileProcessor, FileProcessingEventArgs, FileProcessingErrorEventArgs, FileProcessingResult | HIGH
+src\CamBridge.Config\ViewModels\LogViewerViewModel.cs | **701** | LogViewerViewModel | HIGH
 src\CamBridge.Config\Converters\ValueConverters.cs | **668** | ExpandIconConverter, IntToVisibilityConverter, BooleanToVisibilityConverter, InverseBooleanToVisibilityConverter, GreaterThanZeroConverter, NullToVisibilityConverter, ZeroToVisibilityConverter, ErrorCountToColorConverter, InverseBooleanConverter, EmptyStringToVisibilityConverter, ServiceStatusToColorConverter, SecondsToMillisecondsConverter, EnumToBooleanConverter, FileSelectConverter, MultiBooleanOrConverter, EnumToCollectionConverter, FileSizeConverter, TimeSpanToStringConverter, MultiBooleanAndConverter, NullBooleanAndConverter, BoolToColorConverter, TransformToSymbolConverter, TransformToDescriptionConverter, CombineStagesConverter, StatusToColorConverter, ColorToBrushConverter | MEDIUM
 CamBridge.ParserDebug\Program.cs | **610** | - | MEDIUM
 src\CamBridge.Config\ViewModels\PipelineConfigViewModel.cs | **579** | PipelineConfigViewModel | MEDIUM
 src\CamBridge.Infrastructure\Services\ExifToolReader.cs | **563** | ExifToolReader | MEDIUM
-src\CamBridge.Config\ViewModels\LogViewerViewModel.cs | **541** | LogViewerViewModel | MEDIUM
 src\CamBridge.Infrastructure\Services\DicomConverter.cs | **539** | DicomConverter, ConversionResult, ValidationResult | MEDIUM
 src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | TransformEditorDialog | MEDIUM
 
-**Total Monster Lines**: 7617 lines to refactor!
+**Total Monster Lines**: 7777 lines to refactor!
 
 ## QUICK CLASS FINDER
 
@@ -374,7 +385,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 ## PROJECT STRUCTURE
 
 ### [CamBridge.Config]
-*65 files, 10155 lines, 84 classes*
+*65 files, 10356 lines, 84 classes*
  **WARNING: 6 monster files**
 
 - src\CamBridge.Config\App.xaml
@@ -524,7 +535,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - src\CamBridge.Service\ConfigValidator.cs
 - src\CamBridge.Service\Controllers\StatusController.cs
 - src\CamBridge.Service\mappings.json
-- src\CamBridge.Service\Program.cs [HAS-CLASSES]
+- src\CamBridge.Service\Program.cs [TODAY] [HAS-CLASSES]
 - src\CamBridge.Service\Properties\launchSettings.json
 - src\CamBridge.Service\ServiceInfo.cs
 - src\CamBridge.Service\Tools\exiftool_files\readme_windows.txt
@@ -539,7 +550,7 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - tests\CamBridge.TestConsole\Program.cs [HAS-CLASSES]
 
 ### [ROOT]
-*94 files, 1144 lines, 2 classes*
+*105 files, 1144 lines, 2 classes*
 
 - _archive\old_collectors\collect-sources.bat
 - _archive\old_collectors\collect-sources-balanced.bat
@@ -606,8 +617,8 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - qrbridge-constants.txt
 - README-Deployment.md
 - service-manager.ps1
-- session111-complete-sources.txt [TODAY]
-- session111-sources.txt [TODAY]
+- session111-complete-sources.txt
+- session111-sources.txt
 - session111-treeview-sources.txt [TODAY]
 - session112-mapping-sources.txt [TODAY]
 - session112-sources.txt [TODAY]
@@ -618,6 +629,17 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 - session121-filter-sources.txt [TODAY]
 - session121-parsing.txt [TODAY]
 - session121-sources.txt [TODAY]
+- session122-changelog-current.txt [TODAY]
+- session122-duration-logs.txt [TODAY]
+- session122-logcontext.txt [TODAY]
+- session122-logentry.txt [TODAY]
+- session122-logviewer-header.txt [TODAY]
+- session122-logviewer-xaml.txt [TODAY]
+- session122-parsing.txt [TODAY]
+- session122-program-full.txt [TODAY]
+- session122-sample-log.txt [TODAY]
+- session122-serilog-format.txt [TODAY]
+- session122-version.txt [TODAY]
 - ShowVersion.targets
 - sources.txt [TODAY]
 - test-api.ps1
@@ -646,10 +668,10 @@ src\CamBridge.Config\Dialogs\TransformEditorDialog.xaml.cs | **524** | Transform
 
 Metric | Value
 -------|-------
-Total Files | **227**
-Total Lines of Code | **22376**
-Files Modified Today | **49**
-Files Modified This Week | **82**
+Total Files | **238**
+Total Lines of Code | **22577**
+Files Modified Today | **59**
+Files Modified This Week | **93**
 Monster Files (>500 lines) | **11**
 Test Files | **7**
 Total Classes Found | **150**
