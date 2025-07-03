@@ -1,6 +1,6 @@
 <!-- src\CamBridge.Config\Views\MappingEditorPage.xaml -->
-<!-- Version: 0.7.28 -->
-<!-- Description: Mapping Editor with Unified Header Design -->
+<!-- Version: 0.8.15 -->
+<!-- Description: Mapping Editor with System Fields UI Integration -->
 
 <Page x:Class="CamBridge.Config.Views.MappingEditorPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -238,6 +238,42 @@
                                        Margin="0,16,0,8"
                                        Opacity="0.7"/>
                             <ItemsControl ItemsSource="{Binding ExifFields}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource SourceFieldStyle}"
+                                                ToolTip="{Binding DisplayName}"
+                                                PreviewMouseLeftButtonDown="SourceField_MouseLeftButtonDown"
+                                                PreviewMouseMove="SourceField_MouseMove">
+                                            <TextBlock Text="{Binding FieldName}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- System Fields (NEW!) -->
+                            <TextBlock Text="System Fields"
+                                       FontWeight="SemiBold"
+                                       Margin="0,16,0,8"
+                                       Opacity="0.7"/>
+                            <ItemsControl ItemsSource="{Binding SystemFields}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource SourceFieldStyle}"
+                                                ToolTip="{Binding DisplayName}"
+                                                PreviewMouseLeftButtonDown="SourceField_MouseLeftButtonDown"
+                                                PreviewMouseMove="SourceField_MouseMove">
+                                            <TextBlock Text="{Binding FieldName}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- File Info Fields (NEW!) -->
+                            <TextBlock Text="File Information"
+                                       FontWeight="SemiBold"
+                                       Margin="0,16,0,8"
+                                       Opacity="0.7"/>
+                            <ItemsControl ItemsSource="{Binding FileInfoFields}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Style="{StaticResource SourceFieldStyle}"

@@ -11,6 +11,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using CamBridge.Config.ViewModels;
+using CamBridge.Config.Models;
 using CamBridge.Core;
 
 namespace CamBridge.Config.Converters

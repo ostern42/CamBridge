@@ -1,130 +1,85 @@
-// src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
-// Version: 0.8.11
-// Description: Enhanced log viewer with FIXED TreeView parser and compact view
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// src/CamBridge.Config/ViewModels/LogViewerViewModel.cs
+// Version: 0.8.16
+// Description: SLIM log viewer ViewModel - only UI logic!
+// Copyright: (C) 2025 Claude's Improbably Reliable Software Solutions
 
+using CamBridge.Config.Models;
 using CamBridge.Config.Services;
+using CamBridge.Config.Services.Interfaces;
 using CamBridge.Core;
-using CamBridge.Core.Enums;
 using CamBridge.Core.Infrastructure;
-using CamBridge.Core.Logging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Data;
-using System.Windows.Input;
-using System.Windows.Media;
-
 
 namespace CamBridge.Config.ViewModels
 {
     /// <summary>
-    /// Tracks file position for incremental reading
-    /// </summary>
-    public class FilePositionInfo
-    {
-        public long Position { get; set; }
-        public DateTime LastRead { get; set; }
-    }
-
-    /// <summary>
-    /// Represents a selectable pipeline in the multi-select dropdown
-    /// </summary>
-    public class PipelineSelection : ViewModelBase
-    {
-        private bool _isSelected;
-
-        public string Name { get; set; } = string.Empty;
-        public string SanitizedName { get; set; } = string.Empty;
-
-        public bool IsSelected
-        {
-            get => _isSelected;
-            set => SetProperty(ref _isSelected, value);
-        }
-    }
-
-    /// <summary>
-    /// Enhanced ViewModel for the log viewer with correlation ID support
+    /// SLIM ViewModel for log viewer - delegates all logic to services
     /// </summary>
     public partial class LogViewerViewModel : ViewModelBase
     {
         private readonly ILogger<LogViewerViewModel> _logger;
         private readonly IConfigurationService _configurationService;
-        private readonly Dictionary<string, string> _pipelineNameMapping;
+        private readonly ILogFileService _logFileService;
+        private readonly ILogParsingService _logParsingService;
+        private readonly ILogFilterService _logFilterService;
+        private readonly ILogTreeBuilder _logTreeBuilder;
         private readonly Timer _refreshTimer;
-        private readonly Dictionary<string, long> _filePositions;
-        private CancellationTokenSource? _watcherCancellation;
-        private FileSystemWatcher? _logWatcher;
 
-        // Constants
-        private const int MaxDisplayedEntries = 10000;
-        private const int TailLineCount = 1000;
         private const int RefreshIntervalMs = 1000;
 
         public LogViewerViewModel(
             ILogger<LogViewerViewModel> logger,
-            IConfigurationService configurationService)
+            IConfigurationService configurationService,
+            ILogFileService logFileService,
+            ILogParsingService logParsingService,
+            ILogFilterService logFilterService,
+            ILogTreeBuilder logTreeBuilder)
         {
             _logger = logger;
             _configurationService = configurationService;
-            _pipelineNameMapping = new Dictionary<string, string>();
-            _filePositions = new Dictionary<string, long>();
+            _logFileService = logFileService;
+            _logParsingService = logParsingService;
+            _logFilterService = logFilterService;
+            _logTreeBuilder = logTreeBuilder;
 
             // Initialize collections
-            LogEntries = new ObservableCollection<LogEntry>();
             FilteredCombinedEntries = new ObservableCollection<LogEntry>();
             CombinedLogEntries = new ObservableCollection<LogEntry>();
             CorrelationGroups = new ObservableCollection<CorrelationGroup>();
-            AvailablePipelines = new ObservableCollection<string>();
             PipelineSelections = new ObservableCollection<PipelineSelection>();
 
             // Initialize commands
             RefreshCommand = new AsyncRelayCommand(RefreshLogsAsync);
-            ClearLogCommand = new RelayCommand(ClearLogs);
+            ClearLogCommand = new RelayCommand(() => { CombinedLogEntries.Clear(); ApplyFilters(); });
             ExportLogCommand = new AsyncRelayCommand(ExportLogsAsync);
-            ToggleTreeViewCommand = new RelayCommand(() => IsTreeViewEnabled = !IsTreeViewEnabled);
-            ExpandAllCommand = new RelayCommand(ExpandAll);
-            CollapseAllCommand = new RelayCommand(CollapseAll);
-            CopySelectedCommand = new RelayCommand(CopySelected);
             OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
-            ClearFiltersCommand = new RelayCommand(ClearFilters);
-            CopyLineCommand = new RelayCommand<object>(CopyLine);
-            CopyGroupCommand = new RelayCommand<object>(CopyGroup);
-            ExpandGroupCommand = new RelayCommand<object>(ExpandGroup);
+            ClearFiltersCommand = new RelayCommand(() => { SearchText = Filter1 = Filter2 = Filter3 = ""; });
+            CopyLineCommand = new RelayCommand<LogEntry>(CopyLine);
+            CopyGroupCommand = new RelayCommand<CorrelationGroup>(CopyGroup);
 
-            // Initialize timer for auto-refresh
-            _refreshTimer = new Timer(OnRefreshTimer, null, Timeout.Infinite, Timeout.Infinite);
+            // Timer for auto-refresh
+            _refreshTimer = new Timer(_ => { if (IsAutoScrollEnabled) _ = RefreshLogsAsync(); },
+                                    null, Timeout.Infinite, Timeout.Infinite);
 
-            // Set default filter values
-            ShowDebug = false;  // Debug meist zu viel
-            ShowInformation = true;
-            ShowWarning = true;
-            ShowError = true;
-            ShowCritical = true;
-            IsAutoScrollEnabled = false; // Default OFF to prevent flicker
-            IsTreeViewEnabled = true; // Default to tree view for correlation
+            // Set defaults
+            ShowInformation = ShowWarning = ShowError = ShowCritical = true;
+            IsTreeViewEnabled = true;
         }
 
         #region Properties
-
-        [ObservableProperty]
-        private ObservableCollection<LogEntry> logEntries;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(DisplayedLineCount))]
@@ -135,9 +90,6 @@ namespace CamBridge.Config.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<CorrelationGroup> correlationGroups;
-
-        [ObservableProperty]
-        private ObservableCollection<string> availablePipelines;
 
         [ObservableProperty]
         private ObservableCollection<PipelineSelection> pipelineSelections;
@@ -197,37 +149,16 @@ namespace CamBridge.Config.ViewModels
         private bool isLoading;
 
         [ObservableProperty]
-        private string currentLogFile = "No log file loaded";
-
-        [ObservableProperty]
         private string currentLogFiles = "No files selected";
 
         [ObservableProperty]
         private int totalLineCount;
 
-        [ObservableProperty]
-        private DateTime lastUpdateTime = DateTime.Now;
-
-        public int DisplayedLineCount =>
-            IsTreeViewEnabled
-                ? CorrelationGroups?.Sum(g => g.TotalEntries) ?? 0
-                : FilteredCombinedEntries?.Count ?? 0;
+        public int DisplayedLineCount => IsTreeViewEnabled
+            ? CorrelationGroups?.Sum(g => g.TotalEntries) ?? 0
+            : FilteredCombinedEntries?.Count ?? 0;
 
         public int SelectedPipelineCount => PipelineSelections?.Count(p => p.IsSelected) ?? 0;
-
-        public int SelectedLevelCount
-        {
-            get
-            {
-                var count = 0;
-                if (ShowDebug) count++;
-                if (ShowInformation) count++;
-                if (ShowWarning) count++;
-                if (ShowError) count++;
-                if (ShowCritical) count++;
-                return count;
-            }
-        }
 
         #endregion
 
@@ -236,15 +167,10 @@ namespace CamBridge.Config.ViewModels
         public IAsyncRelayCommand RefreshCommand { get; }
         public IRelayCommand ClearLogCommand { get; }
         public IAsyncRelayCommand ExportLogCommand { get; }
-        public IRelayCommand ToggleTreeViewCommand { get; }
-        public IRelayCommand ExpandAllCommand { get; }
-        public IRelayCommand CollapseAllCommand { get; }
-        public IRelayCommand CopySelectedCommand { get; }
         public IRelayCommand OpenLogFolderCommand { get; }
         public IRelayCommand ClearFiltersCommand { get; }
-        public ICommand CopyLineCommand { get; }
-        public ICommand CopyGroupCommand { get; }
-        public ICommand ExpandGroupCommand { get; }
+        public IRelayCommand<LogEntry> CopyLineCommand { get; }
+        public IRelayCommand<CorrelationGroup> CopyGroupCommand { get; }
 
         #endregion
 
@@ -254,485 +180,74 @@ namespace CamBridge.Config.ViewModels
         {
             try
             {
-                _logger.LogInformation("Initializing Enhanced LogViewerViewModel");
-
-                // Load available pipelines
-                await LoadAvailablePipelinesAsync();
-
-                // Update count display
-                OnPropertyChanged(nameof(SelectedPipelineCount));
-                OnPropertyChanged(nameof(SelectedLevelCount));
-
-                // Log initial filter state
-                _logger.LogInformation("Initial filter state: Debug={Debug}, Info={Info}, Warn={Warn}, Error={Error}, Critical={Critical}",
-                    ShowDebug, ShowInformation, ShowWarning, ShowError, ShowCritical);
-
-                // Log selected pipelines
-                var selected = PipelineSelections.Where(p => p.IsSelected).Select(p => p.Name).ToList();
-                _logger.LogInformation("Selected pipelines: {Pipelines}", string.Join(", ", selected));
-
-                // Load initial logs
+                await LoadPipelinesAsync();
                 await RefreshLogsAsync();
 
-                // Start auto-refresh if enabled
                 if (IsAutoScrollEnabled)
-                {
                     _refreshTimer.Change(RefreshIntervalMs, RefreshIntervalMs);
-                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize LogViewerViewModel");
+                _logger.LogError(ex, "Failed to initialize");
             }
         }
 
         public void Cleanup()
         {
-            try
-            {
-                _refreshTimer?.Change(Timeout.Infinite, Timeout.Infinite);
-                _refreshTimer?.Dispose();
-                _watcherCancellation?.Cancel();
-                _watcherCancellation?.Dispose();
-                _logWatcher?.Dispose();
-
-                // Unsubscribe from selection changes
-                foreach (var selection in PipelineSelections)
-                {
-                    selection.PropertyChanged -= OnPipelineSelectionChanged;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during cleanup");
-            }
+            _refreshTimer?.Dispose();
+            _logFileService.StopWatching();
+            foreach (var sel in PipelineSelections)
+                sel.PropertyChanged -= OnPipelineSelectionChanged;
         }
 
         #endregion
 
-        #region Copy Command Implementations
+        #region Private Methods
 
-        private void CopyLine(object? parameter)
+        private async Task LoadPipelinesAsync()
         {
-            if (parameter is LogEntry entry)
-            {
-                var text = $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{entry.CorrelationId}] [{entry.Stage}] {entry.Message}";
-                Clipboard.SetText(text);
-            }
-        }
+            PipelineSelections.Clear();
 
-        private void CopyGroup(object? parameter)
-        {
-            if (parameter is CorrelationGroup group)
+            // Add service log
+            PipelineSelections.Add(new PipelineSelection
             {
-                var sb = new StringBuilder();
-                sb.AppendLine($"=== {group.CorrelationId} - {group.Pipeline} [{group.DurationText}] ===");
+                Name = "Service (Global)",
+                SanitizedName = "service",
+                IsSelected = true
+            });
 
-                // Get all entries sorted
-                var allEntries = new List<LogEntry>();
-                foreach (var stage in group.Stages)
+            // Add configured pipelines
+            var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>();
+            if (settings?.Pipelines != null)
+            {
+                var isFirst = true;
+                foreach (var p in settings.Pipelines)
                 {
-                    allEntries.AddRange(stage.Entries);
-                }
-                allEntries.AddRange(group.UngroupedEntries);
-
-                foreach (var entry in allEntries.OrderBy(e => e.Timestamp))
-                {
-                    sb.AppendLine($"{entry.Timestamp:HH:mm:ss.fff} {entry.Stage}: {entry.Message}");
-                }
-
-                Clipboard.SetText(sb.ToString());
-            }
-        }
-
-        private void ExpandGroup(object? parameter)
-        {
-            if (parameter is CorrelationGroup group)
-            {
-                group.IsExpanded = true;
-                // In compact view we don't have nested stages anymore
-            }
-        }
-
-        #endregion
-
-        private void ApplyFilters()
-        {
-            // WICHTIG: Muss auf dem UI Thread laufen!
-            if (!Application.Current.Dispatcher.CheckAccess())
-            {
-                Application.Current.Dispatcher.Invoke(() => ApplyFilters());
-                return;
-            }
-
-            _logger.LogDebug("ApplyFilters: Starting with {Count} combined entries", CombinedLogEntries.Count);
-
-            var filtered = CombinedLogEntries.AsEnumerable();
-
-            // Apply level filters
-            var anyLevelSelected = ShowDebug || ShowInformation || ShowWarning || ShowError || ShowCritical;
-
-            if (anyLevelSelected)
-            {
-                filtered = filtered.Where(e =>
-                    (ShowDebug && e.Level == LogLevel.Debug) ||
-                    (ShowInformation && e.Level == LogLevel.Information) ||
-                    (ShowWarning && e.Level == LogLevel.Warning) ||
-                    (ShowError && e.Level == LogLevel.Error) ||
-                    (ShowCritical && e.Level == LogLevel.Critical));
-            }
-
-            // Apply search filter (legacy single search)
-            if (!string.IsNullOrWhiteSpace(SearchText))
-            {
-                var searchLower = SearchText.ToLowerInvariant();
-                filtered = filtered.Where(e =>
-                    e.Message.ToLowerInvariant().Contains(searchLower) ||
-                    e.LevelText.ToLowerInvariant().Contains(searchLower) ||
-                    e.Source.ToLowerInvariant().Contains(searchLower) ||
-                    (e.CorrelationId?.ToLowerInvariant().Contains(searchLower) ?? false) ||
-                    (e.Stage?.ToString().ToLowerInvariant().Contains(searchLower) ?? false));
-            }
-
-            var filteredList = filtered.ToList();
-            _logger.LogDebug("After level/search filtering: {Count} entries remain", filteredList.Count);
-
-            // For flat view, update filtered entries
-            FilteredCombinedEntries.Clear();
-            foreach (var entry in filteredList)
-            {
-                FilteredCombinedEntries.Add(entry);
-            }
-
-            // Update correlation groups for tree view
-            if (IsTreeViewEnabled)
-            {
-                UpdateCorrelationGroupsWithFilters(filteredList);
-            }
-        }
-
-        private void UpdateCorrelationGroupsWithFilters(List<LogEntry> entries)
-        {
-            CorrelationGroups.Clear();
-
-            // If we have text filters, apply them at the GROUP level
-            bool hasTextFilters = !string.IsNullOrWhiteSpace(Filter1) ||
-                                  !string.IsNullOrWhiteSpace(Filter2) ||
-                                  !string.IsNullOrWhiteSpace(Filter3);
-
-            if (hasTextFilters)
-            {
-                // Filter groups where ANY entry matches ALL filters
-                var groupsToShow = new HashSet<string>();
-
-                foreach (var entry in entries.Where(e => !string.IsNullOrEmpty(e.CorrelationId)))
-                {
-                    var fullText = $"{entry.Timestamp:HH:mm:ss.fff} {entry.LevelText} {entry.CorrelationId} {entry.Stage} {entry.Message} {entry.Pipeline}".ToLowerInvariant();
-
-                    if (MatchesWildcard(fullText, Filter1) &&
-                        MatchesWildcard(fullText, Filter2) &&
-                        MatchesWildcard(fullText, Filter3))
+                    PipelineSelections.Add(new PipelineSelection
                     {
-                        groupsToShow.Add(entry.CorrelationId!);
-                    }
-                }
-
-                // Only process groups that have matching entries
-                entries = entries.Where(e => string.IsNullOrEmpty(e.CorrelationId) || groupsToShow.Contains(e.CorrelationId!)).ToList();
-            }
-
-            // Group by correlation ID
-            var groups = entries
-                .Where(e => !string.IsNullOrEmpty(e.CorrelationId))
-                .GroupBy(e => e.CorrelationId!)
-                .OrderByDescending(g => g.Max(e => e.Timestamp));
-
-            foreach (var group in groups)
-            {
-                var correlationGroup = new CorrelationGroup
-                {
-                    CorrelationId = group.Key,
-                    StartTime = group.Min(e => e.Timestamp),
-                    EndTime = group.Max(e => e.Timestamp),
-                    Pipeline = group.FirstOrDefault(e => !string.IsNullOrEmpty(e.Pipeline))?.Pipeline ?? "Unknown",
-                    IsExpanded = true // Default expanded for compact view
-                };
-
-                // Build stage hierarchy
-                var stages = new Dictionary<ProcessingStage, StageGroup>();
-
-                foreach (var entry in group.OrderBy(e => e.Timestamp))
-                {
-                    if (entry.Stage.HasValue)
-                    {
-                        if (!stages.ContainsKey(entry.Stage.Value))
-                        {
-                            stages[entry.Stage.Value] = new StageGroup
-                            {
-                                Stage = entry.Stage.Value,
-                                StartTime = entry.Timestamp,
-                                IsExpanded = true
-                            };
-                        }
-
-                        stages[entry.Stage.Value].Entries.Add(entry);
-                        stages[entry.Stage.Value].EndTime = entry.Timestamp;
-                    }
-                    else
-                    {
-                        correlationGroup.UngroupedEntries.Add(entry);
-                    }
-                }
-
-                // Add stages to correlation group
-                foreach (var stage in stages.Values.OrderBy(s => s.StartTime))
-                {
-                    correlationGroup.Stages.Add(stage);
-                }
-
-                // Determine overall status
-                if (stages.ContainsKey(ProcessingStage.Error))
-                {
-                    correlationGroup.Status = ProcessingStatus.Failed;
-                }
-                else if (stages.ContainsKey(ProcessingStage.Complete))
-                {
-                    correlationGroup.Status = ProcessingStatus.Completed;
-                }
-                else
-                {
-                    correlationGroup.Status = ProcessingStatus.InProgress;
-                }
-
-                CorrelationGroups.Add(correlationGroup);
-            }
-
-            // Add entries without correlation ID if no text filters or they match
-            var uncorrelatedEntries = entries.Where(e => string.IsNullOrEmpty(e.CorrelationId)).ToList();
-
-            if (uncorrelatedEntries.Any())
-            {
-                var uncorrelatedGroup = new CorrelationGroup
-                {
-                    CorrelationId = "Uncorrelated",
-                    StartTime = uncorrelatedEntries.Min(e => e.Timestamp),
-                    EndTime = uncorrelatedEntries.Max(e => e.Timestamp),
-                    Pipeline = "Various",
-                    IsExpanded = true,
-                    Status = ProcessingStatus.Unknown
-                };
-
-                foreach (var entry in uncorrelatedEntries.OrderBy(e => e.Timestamp))
-                {
-                    uncorrelatedGroup.UngroupedEntries.Add(entry);
-                }
-
-                CorrelationGroups.Add(uncorrelatedGroup);
-            }
-        }
-
-        private bool MatchesWildcard(string text, string pattern)
-        {
-            if (string.IsNullOrWhiteSpace(pattern)) return true;
-
-            // Convert wildcard pattern to regex
-            var regexPattern = "^" + Regex.Escape(pattern)
-                .Replace("\\*", ".*")    // * = any number of chars
-                .Replace("\\?", ".")     // ? = exactly one char
-                + "$";
-
-            return Regex.IsMatch(text, regexPattern, RegexOptions.IgnoreCase);
-        }
-
-        private void ClearFilters()
-        {
-            SearchText = string.Empty;
-            Filter1 = string.Empty;
-            Filter2 = string.Empty;
-            Filter3 = string.Empty;
-        }
-
-        private void ExpandAll()
-        {
-            foreach (var group in CorrelationGroups)
-            {
-                group.IsExpanded = true;
-                foreach (var stage in group.Stages)
-                {
-                    stage.IsExpanded = true;
-                }
-            }
-        }
-
-        private void CollapseAll()
-        {
-            foreach (var group in CorrelationGroups)
-            {
-                group.IsExpanded = false;
-                foreach (var stage in group.Stages)
-                {
-                    stage.IsExpanded = false;
-                }
-            }
-        }
-
-        private void CopySelected()
-        {
-            // Copy all visible log entries to clipboard
-            var sb = new StringBuilder();
-
-            if (IsTreeViewEnabled)
-            {
-                // Copy tree structure
-                foreach (var group in CorrelationGroups)
-                {
-                    sb.AppendLine($"=== {group.CorrelationId} - {group.Pipeline} [{group.DurationText}] ===");
-
-                    foreach (var stage in group.Stages)
-                    {
-                        sb.AppendLine($"  {stage.Stage} [{stage.DurationText}]");
-                        foreach (var entry in stage.Entries)
-                        {
-                            sb.AppendLine($"    {entry.Timestamp:HH:mm:ss.fff} {entry.LevelText} {entry.Message}");
-                        }
-                    }
-
-                    if (group.UngroupedEntries.Any())
-                    {
-                        sb.AppendLine("  [Ungrouped]");
-                        foreach (var entry in group.UngroupedEntries)
-                        {
-                            sb.AppendLine($"    {entry.Timestamp:HH:mm:ss.fff} {entry.LevelText} {entry.Message}");
-                        }
-                    }
-
-                    sb.AppendLine();
-                }
-            }
-            else
-            {
-                // Copy flat list
-                foreach (var entry in FilteredCombinedEntries)
-                {
-                    sb.AppendLine($"{entry.Timestamp:HH:mm:ss.fff} {entry.LevelText} [{entry.CorrelationId}] [{entry.Stage}] {entry.Message}");
-                }
-            }
-
-            if (sb.Length > 0)
-            {
-                Clipboard.SetText(sb.ToString());
-                _logger.LogInformation("Copied {Count} entries to clipboard",
-                    IsTreeViewEnabled ? CorrelationGroups.Sum(g => g.TotalEntries) : FilteredCombinedEntries.Count);
-            }
-        }
-
-        private void OpenLogFolder()
-        {
-            try
-            {
-                var logPath = ConfigurationPaths.GetLogsDirectory();
-                if (Directory.Exists(logPath))
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = logPath,
-                        UseShellExecute = true,
-                        Verb = "open"
+                        Name = p.Name,
+                        SanitizedName = _logFileService.GetLogFileName(p.Name),
+                        IsSelected = isFirst
                     });
-                    _logger.LogInformation("Opened log folder: {Path}", logPath);
-                }
-                else
-                {
-                    _logger.LogWarning("Log folder does not exist: {Path}", logPath);
+                    isFirst = false;
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to open log folder");
-            }
-        }
-        private async Task LoadAvailablePipelinesAsync()
-        {
-            try
-            {
-                AvailablePipelines.Clear();
-                PipelineSelections.Clear();
-                _pipelineNameMapping.Clear();
 
-                // Always add Service (Global) log
-                AvailablePipelines.Add("Service (Global)");
+            // Add archived logs
+            var archived = await _logFileService.GetAvailableLogFilesAsync();
+            foreach (var kvp in archived.Where(a => !PipelineSelections.Any(p => p.Name == a.Key)))
+            {
                 PipelineSelections.Add(new PipelineSelection
                 {
-                    Name = "Service (Global)",
-                    SanitizedName = "service",
-                    IsSelected = true // Default selected
+                    Name = kvp.Key,
+                    SanitizedName = kvp.Value,
+                    IsSelected = false
                 });
-
-                // Get configured pipelines
-                var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>();
-                if (settings?.Pipelines != null)
-                {
-                    var isFirstPipeline = true;
-                    foreach (var pipeline in settings.Pipelines)
-                    {
-                        var displayName = $"{pipeline.Name}";
-                        var sanitizedName = SanitizeForFileName(pipeline.Name);
-
-                        AvailablePipelines.Add(displayName);
-                        _pipelineNameMapping[displayName] = sanitizedName;
-
-                        PipelineSelections.Add(new PipelineSelection
-                        {
-                            Name = displayName,
-                            SanitizedName = sanitizedName,
-                            IsSelected = isFirstPipeline // Select first pipeline by default
-                        });
-
-                        isFirstPipeline = false;
-                    }
-                }
-
-                // Also check for existing log files that might not be in config
-                var logPath = ConfigurationPaths.GetLogsDirectory();
-                if (Directory.Exists(logPath))
-                {
-                    var pipelineLogFiles = Directory.GetFiles(logPath, "pipeline_*.log")
-                        .Select(Path.GetFileNameWithoutExtension)
-                        .Where(f => f != null && f.StartsWith("pipeline_"))
-                        .Select(f => f!.Substring("pipeline_".Length))
-                        .Distinct();
-
-                    foreach (var logName in pipelineLogFiles)
-                    {
-                        if (!_pipelineNameMapping.Values.Contains(logName))
-                        {
-                            var displayName = $"{logName} (Archived)";
-                            AvailablePipelines.Add(displayName);
-                            _pipelineNameMapping[displayName] = logName;
-
-                            PipelineSelections.Add(new PipelineSelection
-                            {
-                                Name = displayName,
-                                SanitizedName = logName,
-                                IsSelected = false
-                            });
-                        }
-                    }
-                }
-
-                // Listen for selection changes
-                foreach (var selection in PipelineSelections)
-                {
-                    selection.PropertyChanged += OnPipelineSelectionChanged;
-                }
-
-                // Update initial count
-                OnPropertyChanged(nameof(SelectedPipelineCount));
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to load available pipelines");
-            }
+
+            // Subscribe to changes
+            foreach (var sel in PipelineSelections)
+                sel.PropertyChanged += OnPipelineSelectionChanged;
         }
 
         private async Task RefreshLogsAsync()
@@ -740,540 +255,125 @@ namespace CamBridge.Config.ViewModels
             try
             {
                 IsLoading = true;
+                var selected = PipelineSelections.Where(p => p.IsSelected).ToList();
+                if (!selected.Any()) return;
 
-                // Get selected pipelines
-                var selectedPipelines = PipelineSelections.Where(p => p.IsSelected).ToList();
-                if (!selectedPipelines.Any())
-                {
-                    CombinedLogEntries.Clear();
-                    CorrelationGroups.Clear();
-                    CurrentLogFiles = "No pipelines selected";
-                    return;
-                }
+                CurrentLogFiles = selected.Count == 1 ? selected[0].Name : $"{selected.Count} pipelines";
 
-                // Update current files display
-                if (selectedPipelines.Count == 0)
-                {
-                    CurrentLogFiles = "No pipelines selected";
-                }
-                else if (selectedPipelines.Count == 1)
-                {
-                    CurrentLogFiles = selectedPipelines[0].Name;
-                }
-                else
-                {
-                    CurrentLogFiles = $"{selectedPipelines.Count} pipelines selected";
-                }
-
-                // Collect all log entries from selected pipelines
+                // Collect entries
                 var allEntries = new List<LogEntry>();
-
-                foreach (var pipeline in selectedPipelines)
+                foreach (var pipeline in selected)
                 {
-                    var logFileName = GetLogFileName(pipeline.Name);
-                    var logPath = Path.Combine(ConfigurationPaths.GetLogsDirectory(), logFileName);
-
-                    if (File.Exists(logPath))
+                    var path = Path.Combine(ConfigurationPaths.GetLogsDirectory(),
+                                          _logFileService.GetLogFileName(pipeline.Name));
+                    if (File.Exists(path))
                     {
-                        // Read entries from this pipeline
-                        var entries = await ReadLogFileAsync(logPath, pipeline.Name);
+                        var entries = await _logFileService.ReadLogFileAsync(path, pipeline.Name);
                         allEntries.AddRange(entries);
                     }
                 }
 
-                // Sort all entries by timestamp (millisecond precision)
-                var sortedEntries = allEntries
-                    .OrderBy(e => e.Timestamp)
-                    .TakeLast(MaxDisplayedEntries)
-                    .ToList();
-
-                // Update collection efficiently (minimize UI updates)
+                // Update UI
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    // For auto-scroll, append only new entries to prevent flicker
-                    if (IsAutoScrollEnabled && CombinedLogEntries.Count > 0)
-                    {
-                        // Find the last timestamp we have
-                        var lastTimestamp = CombinedLogEntries.Last().Timestamp;
-
-                        // Add only newer entries
-                        var newEntries = sortedEntries
-                            .Where(e => e.Timestamp > lastTimestamp)
-                            .ToList();
-
-                        foreach (var entry in newEntries)
-                        {
-                            CombinedLogEntries.Add(entry);
-
-                            // Maintain max entries
-                            if (CombinedLogEntries.Count > MaxDisplayedEntries)
-                                CombinedLogEntries.RemoveAt(0);
-                        }
-                    }
-                    else
-                    {
-                        // Full refresh when not auto-scrolling
-                        CombinedLogEntries.Clear();
-                        foreach (var entry in sortedEntries)
-                        {
-                            CombinedLogEntries.Add(entry);
-                        }
-                    }
+                    CombinedLogEntries.Clear();
+                    foreach (var e in allEntries.OrderBy(x => x.Timestamp).TakeLast(10000))
+                        CombinedLogEntries.Add(e);
                 });
 
                 TotalLineCount = CombinedLogEntries.Count;
-                LastUpdateTime = DateTime.Now;
                 ApplyFilters();
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to refresh logs");
-            }
-            finally
-            {
-                IsLoading = false;
-            }
+            finally { IsLoading = false; }
         }
 
-        private async Task<List<LogEntry>> ReadLogFileAsync(string logPath, string sourcePipeline)
+        private void ApplyFilters()
         {
-            var entries = new List<LogEntry>();
-
-            try
+            var criteria = new LogFilterCriteria
             {
-                _logger.LogInformation("Reading log file: {Path} for pipeline: {Pipeline}", logPath, sourcePipeline);
-
-                using (var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var reader = new StreamReader(fs, Encoding.UTF8))
-                {
-                    string? line;
-                    int lineCount = 0;
-                    int parsedCount = 0;
-
-                    while ((line = await reader.ReadLineAsync()) != null)
-                    {
-                        lineCount++;
-                        var entry = ParseLogLine(line);
-                        if (entry != null)
-                        {
-                            entry.Source = sourcePipeline; // Tag with source
-                            entries.Add(entry);
-                            parsedCount++;
-                        }
-                    }
-
-                    _logger.LogInformation("Read {Lines} lines, parsed {Parsed} entries from {File}",
-                        lineCount, parsedCount, Path.GetFileName(logPath));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to read log file: {LogPath}", logPath);
-            }
-
-            return entries;
-        }
-
-        private LogEntry? ParseLogLine(string line)
-        {
-            if (string.IsNullOrWhiteSpace(line))
-                return null;
-
-            try
-            {
-                // DEBUG output for first few lines
-                if (TotalLineCount < 10)
-                {
-                    Console.WriteLine($"[DEBUG] Parsing line: {line}");
-                }
-
-                // ROBUST PARSER - Try multiple patterns in order of specificity
-
-                // Pattern 1: Full format with stage in quotes
-                // [HH:mm:ss LEVEL] [CorrelationId] ["Stage"] Message [Pipeline]
-                var fullFormatQuoted = Regex.Match(line,
-                    @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+\[([^\]]+)\]\s+\[""([^""]+)""\]\s+(.+)$");
-
-                if (fullFormatQuoted.Success)
-                {
-                    return ParseFullFormat(line, fullFormatQuoted, true);
-                }
-
-                // Pattern 2: Full format with stage without quotes
-                // [HH:mm:ss LEVEL] [CorrelationId] [Stage] Message [Pipeline]
-                var fullFormatUnquoted = Regex.Match(line,
-                    @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+\[([^\]]+)\]\s+\[([^\]]+)\]\s+(.+)$");
-
-                if (fullFormatUnquoted.Success)
-                {
-                    return ParseFullFormat(line, fullFormatUnquoted, false);
-                }
-
-                // Pattern 3: Format with correlation ID but no stage
-                // [HH:mm:ss LEVEL] [CorrelationId] Message
-                var noStageFormat = Regex.Match(line,
-                    @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+\[([^\]]+)\]\s+(.+)$");
-
-                if (noStageFormat.Success)
-                {
-                    var timeStr = noStageFormat.Groups[1].Value;
-                    var levelStr = noStageFormat.Groups[2].Value;
-                    var correlationId = noStageFormat.Groups[3].Value;
-                    var message = noStageFormat.Groups[4].Value;
-
-                    // Parse timestamp
-                    var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss", CultureInfo.InvariantCulture);
-                    timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
-
-                    // Extract pipeline if present at end
-                    string? pipeline = null;
-                    var pipelineMatch = Regex.Match(message, @"\s*\[([^\]]+)\]\s*$");
-                    if (pipelineMatch.Success)
-                    {
-                        pipeline = pipelineMatch.Groups[1].Value;
-                        message = message.Substring(0, message.Length - pipelineMatch.Value.Length).Trim();
-                    }
-
-                    // Try to infer stage from message patterns
-                    ProcessingStage? stage = InferStageFromMessage(message);
-
-                    return new LogEntry
-                    {
-                        Timestamp = timestamp,
-                        Level = ParseLogLevel(levelStr),
-                        Message = message,
-                        RawLine = line,
-                        CorrelationId = correlationId,
-                        Stage = stage,
-                        Pipeline = pipeline
-                    };
-                }
-
-                // Pattern 4: Simple format without correlation ID
-                // [HH:mm:ss LEVEL] Message
-                var simpleFormat = Regex.Match(line,
-                    @"^\[(\d{2}:\d{2}:\d{2})\s+(\w+)\]\s+(.+)$");
-
-                if (simpleFormat.Success)
-                {
-                    var timeStr = simpleFormat.Groups[1].Value;
-                    var levelStr = simpleFormat.Groups[2].Value;
-                    var message = simpleFormat.Groups[3].Value;
-
-                    var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss", CultureInfo.InvariantCulture);
-                    timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
-
-                    return new LogEntry
-                    {
-                        Timestamp = timestamp,
-                        Level = ParseLogLevel(levelStr),
-                        Message = message,
-                        RawLine = line
-                    };
-                }
-
-                // Fallback: return as-is
-                return new LogEntry
-                {
-                    Timestamp = DateTime.Now,
-                    Level = LogLevel.Information,
-                    Message = line,
-                    RawLine = line
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Failed to parse log line: {Line}", line);
-                return new LogEntry
-                {
-                    Timestamp = DateTime.Now,
-                    Level = LogLevel.Information,
-                    Message = line,
-                    RawLine = line
-                };
-            }
-        }
-
-        private LogEntry ParseFullFormat(string line, Match match, bool stageIsQuoted)
-        {
-            var timeStr = match.Groups[1].Value;
-            var levelStr = match.Groups[2].Value;
-            var correlationId = match.Groups[3].Value;
-            var stageStr = match.Groups[4].Value;
-            var messageAndMore = match.Groups[5].Value;
-
-            // Parse timestamp
-            var timestamp = DateTime.ParseExact(timeStr, "HH:mm:ss", CultureInfo.InvariantCulture);
-            timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
-
-            // Parse log level
-            var level = ParseLogLevel(levelStr);
-
-            // Parse stage - be more flexible
-            ProcessingStage? stage = ParseStage(stageStr);
-
-            // Extract message and pipeline
-            var message = messageAndMore;
-            string? pipeline = null;
-
-            // Check for pipeline at end: [Radiology]
-            var pipelineMatch = Regex.Match(messageAndMore, @"^(.+?)\s*\[([^\]]+)\]\s*$");
-            if (pipelineMatch.Success)
-            {
-                message = pipelineMatch.Groups[1].Value.Trim();
-                pipeline = pipelineMatch.Groups[2].Value;
-            }
-
-            // Extract duration if present
-            int? durationMs = null;
-            var durationMatch = Regex.Match(message, @"\[(\d+)ms\]");
-            if (durationMatch.Success)
-            {
-                durationMs = int.Parse(durationMatch.Groups[1].Value);
-                message = message.Replace(durationMatch.Value, "").Trim();
-            }
-
-            return new LogEntry
-            {
-                Timestamp = timestamp,
-                Level = level,
-                Message = message,
-                RawLine = line,
-                CorrelationId = correlationId,
-                Stage = stage,
-                Pipeline = pipeline,
-                DurationMs = durationMs
+                ShowDebug = ShowDebug,
+                ShowInformation = ShowInformation,
+                ShowWarning = ShowWarning,
+                ShowError = ShowError,
+                ShowCritical = ShowCritical,
+                SearchText = SearchText,
+                Filter1 = Filter1,
+                Filter2 = Filter2,
+                Filter3 = Filter3
             };
-        }
 
-        private ProcessingStage? ParseStage(string stageStr)
-        {
-            if (string.IsNullOrWhiteSpace(stageStr))
-                return null;
+            var filtered = _logFilterService.ApplyFilters(CombinedLogEntries, criteria);
 
-            // Try exact match first
-            if (Enum.TryParse<ProcessingStage>(stageStr, true, out var stage))
-                return stage;
-
-            // Try some common mappings
-            var stageLower = stageStr.ToLowerInvariant();
-
-            if (stageLower.Contains("startup"))
-                return ProcessingStage.ServiceStartup;
-            if (stageLower.Contains("shutdown"))
-                return ProcessingStage.ServiceShutdown;
-            if (stageLower.Contains("initialization") || stageLower.Contains("init"))
-                return ProcessingStage.PipelineInitialization;
-            if (stageLower.Contains("detected"))
-                return ProcessingStage.FileDetected;
-            if (stageLower.Contains("exif"))
-                return ProcessingStage.ExifExtraction;
-            if (stageLower.Contains("mapping"))
-                return ProcessingStage.TagMapping;
-            if (stageLower.Contains("dicom"))
-                return ProcessingStage.DicomConversion;
-            if (stageLower.Contains("pacs"))
-                return ProcessingStage.PacsUpload;
-            if (stageLower.Contains("complete"))
-                return ProcessingStage.Complete;
-            if (stageLower.Contains("error") || stageLower.Contains("failed"))
-                return ProcessingStage.Error;
-
-            return null;
-        }
-
-        private ProcessingStage? InferStageFromMessage(string message)
-        {
-            var messageLower = message.ToLowerInvariant();
-
-            if (messageLower.Contains("starting") && messageLower.Contains("pipeline"))
-                return ProcessingStage.PipelineInitialization;
-            if (messageLower.Contains("processing file") || messageLower.Contains("file detected"))
-                return ProcessingStage.FileDetected;
-            if (messageLower.Contains("exif") || messageLower.Contains("metadata"))
-                return ProcessingStage.ExifExtraction;
-            if (messageLower.Contains("mapping") || messageLower.Contains("tag"))
-                return ProcessingStage.TagMapping;
-            if (messageLower.Contains("dicom") || messageLower.Contains("conversion"))
-                return ProcessingStage.DicomConversion;
-            if (messageLower.Contains("pacs") || messageLower.Contains("upload"))
-                return ProcessingStage.PacsUpload;
-            if (messageLower.Contains("success") || messageLower.Contains("complete"))
-                return ProcessingStage.Complete;
-            if (messageLower.Contains("error") || messageLower.Contains("failed"))
-                return ProcessingStage.Error;
-
-            return null;
-        }
-
-        private LogLevel DetermineLogLevel(ProcessingStage? stage, string message)
-        {
-            // Check stage first
-            if (stage == ProcessingStage.Error)
-                return LogLevel.Error;
-
-            // Check message content
-            var messageLower = message.ToLowerInvariant();
-            if (messageLower.Contains("error") || messageLower.Contains("failed"))
-                return LogLevel.Error;
-
-            if (messageLower.Contains("warning") || messageLower.Contains("warn") || messageLower.Contains("slow"))
-                return LogLevel.Warning;
-
-            if (messageLower.Contains("debug"))
-                return LogLevel.Debug;
-
-            // Default to Information
-            return LogLevel.Information;
-        }
-
-        private LogLevel ParseLogLevel(string levelStr)
-        {
-            return levelStr.ToUpperInvariant() switch
-            {
-                "DBG" or "DEB" or "DEBUG" => LogLevel.Debug,
-                "INF" or "INFO" or "INFORMATION" => LogLevel.Information,
-                "WRN" or "WARN" or "WARNING" => LogLevel.Warning,
-                "ERR" or "ERROR" => LogLevel.Error,
-                "CRT" or "CRIT" or "CRITICAL" or "FTL" or "FATAL" => LogLevel.Critical,
-                _ => LogLevel.Information  // Default to Information instead of failing
-            };
-        }
-
-        private void ClearLogs()
-        {
-            LogEntries.Clear();
-            CombinedLogEntries.Clear();
             FilteredCombinedEntries.Clear();
-            CorrelationGroups.Clear();
-            TotalLineCount = 0;
-            _filePositions.Clear();
+            foreach (var e in filtered)
+                FilteredCombinedEntries.Add(e);
+
+            if (IsTreeViewEnabled)
+            {
+                var groups = _logTreeBuilder.BuildCorrelationGroups(filtered,
+                    !string.IsNullOrEmpty(Filter1 + Filter2 + Filter3),
+                    Filter1, Filter2, Filter3);
+
+                CorrelationGroups.Clear();
+                foreach (var g in groups)
+                    CorrelationGroups.Add(g);
+            }
         }
 
         private async Task ExportLogsAsync()
         {
-            try
+            var dialog = new SaveFileDialog
             {
-                // Create export dialog
-                var dialog = new Microsoft.Win32.SaveFileDialog
+                Filter = "Log files (*.log)|*.log",
+                FileName = $"Export_{DateTime.Now:yyyyMMdd_HHmmss}.log"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                var sb = new StringBuilder();
+                if (IsTreeViewEnabled)
                 {
-                    Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*",
-                    DefaultExt = ".log",
-                    FileName = $"CamBridge_Export_{DateTime.Now:yyyyMMdd_HHmmss}.log"
-                };
-
-                if (dialog.ShowDialog() == true)
-                {
-                    var sb = new StringBuilder();
-
-                    if (IsTreeViewEnabled)
+                    foreach (var g in CorrelationGroups)
                     {
-                        // Export tree structure
-                        foreach (var group in CorrelationGroups)
-                        {
-                            sb.AppendLine($"=== Correlation: {group.CorrelationId} ===");
-                            sb.AppendLine($"Pipeline: {group.Pipeline}");
-                            sb.AppendLine($"Duration: {group.DurationText}");
-                            sb.AppendLine($"Status: {group.Status}");
-                            sb.AppendLine();
-
-                            foreach (var stage in group.Stages)
-                            {
-                                sb.AppendLine($"  Stage: {stage.Stage} [{stage.DurationText}]");
-                                foreach (var entry in stage.Entries)
-                                {
-                                    sb.AppendLine($"    {entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} {entry.LevelText} {entry.Message}");
-                                }
-                                sb.AppendLine();
-                            }
-
-                            if (group.UngroupedEntries.Any())
-                            {
-                                sb.AppendLine("  [Ungrouped Entries]");
-                                foreach (var entry in group.UngroupedEntries)
-                                {
-                                    sb.AppendLine($"    {entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} {entry.LevelText} {entry.Message}");
-                                }
-                                sb.AppendLine();
-                            }
-
-                            sb.AppendLine(new string('=', 50));
-                            sb.AppendLine();
-                        }
+                        sb.AppendLine($"=== {g.CorrelationId} [{g.DurationText}] ===");
+                        foreach (var e in g.AllEntries)
+                            sb.AppendLine($"  {e.Timestamp:HH:mm:ss.fff} {e.Message}");
                     }
-                    else
-                    {
-                        // Export flat list
-                        var lines = FilteredCombinedEntries.Select(e => e.RawLine ??
-                            $"{e.Timestamp:yyyy-MM-dd HH:mm:ss.fff} {e.LevelText} [{e.CorrelationId}] [{e.Stage}] {e.Message}");
-                        foreach (var line in lines)
-                        {
-                            sb.AppendLine(line);
-                        }
-                    }
-
-                    await File.WriteAllTextAsync(dialog.FileName, sb.ToString(), Encoding.UTF8);
-
-                    _logger.LogInformation("Exported {Count} log entries to {FileName}",
-                        IsTreeViewEnabled ? CorrelationGroups.Sum(g => g.TotalEntries) : FilteredCombinedEntries.Count,
-                        dialog.FileName);
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to export logs");
+                else
+                {
+                    foreach (var e in FilteredCombinedEntries)
+                        sb.AppendLine(e.RawLine ?? $"{e.Timestamp:HH:mm:ss.fff} {e.Message}");
+                }
+                await File.WriteAllTextAsync(dialog.FileName, sb.ToString());
             }
         }
 
-        private string GetLogFileName(string pipelineSelection)
+        private void OpenLogFolder()
         {
-            var today = DateTime.Now.ToString("yyyyMMdd");
-
-            if (pipelineSelection == "Service (Global)")
+            Process.Start(new ProcessStartInfo
             {
-                return $"service_{today}.log";
-            }
-
-            if (pipelineSelection == "All Pipelines (Legacy)")
-            {
-                return $"pipelines_{today}.log";
-            }
-
-            // Get sanitized name from mapping
-            if (_pipelineNameMapping.TryGetValue(pipelineSelection, out var sanitizedName))
-            {
-                return $"pipeline_{sanitizedName}_{today}.log";
-            }
-
-            // Fallback - sanitize the selection directly
-            var safeName = SanitizeForFileName(pipelineSelection.Replace(" (Archived)", ""));
-            return $"pipeline_{safeName}_{today}.log";
+                FileName = ConfigurationPaths.GetLogsDirectory(),
+                UseShellExecute = true,
+                Verb = "open"
+            });
         }
 
-        private string SanitizeForFileName(string pipelineName)
+        private void CopyLine(LogEntry? entry)
         {
-            // Replace invalid filename characters and common separators
-            var invalid = Path.GetInvalidFileNameChars()
-                .Concat(new[] { ' ', '.', ',', '/', '\\', ':', '-' })
-                .Distinct()
-                .ToArray();
-
-            var sanitized = string.Join("_", pipelineName.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
-
-            // Limit length
-            if (sanitized.Length > 100)
-            {
-                sanitized = sanitized.Substring(0, 97) + "...";
-            }
-
-            return sanitized;
+            if (entry != null)
+                Clipboard.SetText($"{entry.Timestamp:HH:mm:ss.fff} [{entry.CorrelationId}] {entry.Message}");
         }
 
-        private void OnRefreshTimer(object? state)
+        private void CopyGroup(CorrelationGroup? group)
         {
-            if (IsAutoScrollEnabled && !IsLoading)
+            if (group != null)
             {
-                _ = RefreshLogsAsync();
+                var sb = new StringBuilder();
+                sb.AppendLine($"=== {group.CorrelationId} [{group.DurationText}] ===");
+                foreach (var e in group.AllEntries)
+                    sb.AppendLine($"{e.Timestamp:HH:mm:ss.fff} {e.Message}");
+                Clipboard.SetText(sb.ToString());
             }
         }
 
@@ -1281,246 +381,26 @@ namespace CamBridge.Config.ViewModels
         {
             if (e.PropertyName == nameof(PipelineSelection.IsSelected))
             {
-                // Update count
                 OnPropertyChanged(nameof(SelectedPipelineCount));
-
-                // Update current files display - show selection count when closed
-                var selectedNames = PipelineSelections.Where(p => p.IsSelected).Select(p => p.Name).ToList();
-                if (selectedNames.Count == 0)
-                {
-                    CurrentLogFiles = "No pipelines selected";
-                }
-                else if (selectedNames.Count == 1)
-                {
-                    CurrentLogFiles = selectedNames[0];
-                }
-                else
-                {
-                    CurrentLogFiles = $"{selectedNames.Count} pipelines selected";
-                }
-
-                // Refresh logs with new selection
                 _ = RefreshLogsAsync();
             }
         }
 
-        partial void OnSearchTextChanged(string? value)
-        {
-            // Debounce search to avoid too many updates
-            ApplyFilters();
-        }
+        #endregion
 
-        partial void OnShowDebugChanged(bool value)
-        {
-            ApplyFilters();
-            OnPropertyChanged(nameof(SelectedLevelCount));
-        }
+        #region Property Change Handlers
 
-        partial void OnShowInformationChanged(bool value)
-        {
-            ApplyFilters();
-            OnPropertyChanged(nameof(SelectedLevelCount));
-        }
+        partial void OnSearchTextChanged(string? value) => ApplyFilters();
+        partial void OnShowDebugChanged(bool value) => ApplyFilters();
+        partial void OnShowInformationChanged(bool value) => ApplyFilters();
+        partial void OnShowWarningChanged(bool value) => ApplyFilters();
+        partial void OnShowErrorChanged(bool value) => ApplyFilters();
+        partial void OnShowCriticalChanged(bool value) => ApplyFilters();
+        partial void OnIsTreeViewEnabledChanged(bool value) => ApplyFilters();
+        partial void OnFilter1Changed(string value) => ApplyFilters();
+        partial void OnFilter2Changed(string value) => ApplyFilters();
+        partial void OnFilter3Changed(string value) => ApplyFilters();
 
-        partial void OnShowWarningChanged(bool value)
-        {
-            ApplyFilters();
-            OnPropertyChanged(nameof(SelectedLevelCount));
-        }
-
-        partial void OnShowErrorChanged(bool value)
-        {
-            ApplyFilters();
-            OnPropertyChanged(nameof(SelectedLevelCount));
-        }
-
-        partial void OnShowCriticalChanged(bool value)
-        {
-            ApplyFilters();
-            OnPropertyChanged(nameof(SelectedLevelCount));
-        }
-
-        partial void OnIsTreeViewEnabledChanged(bool value)
-        {
-            ApplyFilters();
-        }
-
-        partial void OnFilter1Changed(string value)
-        {
-            ApplyFilters();
-        }
-
-        partial void OnFilter2Changed(string value)
-        {
-            ApplyFilters();
-        }
-
-        partial void OnFilter3Changed(string value)
-        {
-            ApplyFilters();
-        }
-    }
-
-    /// <summary>
-    /// Enhanced log entry with correlation support
-    /// </summary>
-    public class LogEntry
-    {
-        public DateTime Timestamp { get; set; }
-        public LogLevel Level { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public string? RawLine { get; set; }
-        public string Source { get; set; } = string.Empty; // Which log file this came from
-
-        // Enhanced properties for correlation
-        public string? CorrelationId { get; set; }
-        public ProcessingStage? Stage { get; set; }
-        public string? Pipeline { get; set; }
-        public int? DurationMs { get; set; }
-
-        // UI Helper Properties
-        public string LevelText => Level switch
-        {
-            LogLevel.Debug => "DBG",
-            LogLevel.Information => "INF",
-            LogLevel.Warning => "WRN",
-            LogLevel.Error => "ERR",
-            LogLevel.Critical => "CRT",
-            _ => "???"
-        };
-
-        public string LevelColor => Level switch
-        {
-            LogLevel.Debug => "#808080",      // Gray
-            LogLevel.Information => "#0078D4", // Blue
-            LogLevel.Warning => "#FFA500",     // Orange
-            LogLevel.Error => "#FF0000",       // Red
-            LogLevel.Critical => "#8B0000",    // Dark Red
-            _ => "#000000"
-        };
-
-        // FIXED emoji icons for UTF-8!
-        public string StageIcon => Stage switch
-        {
-            ProcessingStage.ServiceStartup => "🚀",
-            ProcessingStage.ConfigurationLoading => "⚙️",
-            ProcessingStage.PipelineInitialization => "🔧",
-            ProcessingStage.ServiceShutdown => "🛑",
-            ProcessingStage.FileDetected => "📄",
-            ProcessingStage.ExifExtraction => "📷",
-            ProcessingStage.TagMapping => "🏷️",
-            ProcessingStage.DicomConversion => "🏥",
-            ProcessingStage.PostProcessing => "📋",
-            ProcessingStage.PacsUpload => "☁️",
-            ProcessingStage.Complete => "✅",
-            ProcessingStage.Error => "❌",
-            ProcessingStage.PipelineShutdown => "🔴",
-            ProcessingStage.PipelineRecovery => "🔧",
-            ProcessingStage.WatcherError => "👁️",
-            ProcessingStage.HealthCheck => "💚",
-            _ => "📌"
-        };
-
-        public string FormattedDuration => DurationMs.HasValue ? $"{DurationMs}ms" : "";
-    }
-
-    /// <summary>
-    /// Represents a group of log entries with the same correlation ID
-    /// </summary>
-    public class CorrelationGroup : ObservableObject
-    {
-        private bool _isExpanded = true; // Default expanded for compact view
-
-        public string CorrelationId { get; set; } = string.Empty;
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public string Pipeline { get; set; } = string.Empty;
-        public ProcessingStatus Status { get; set; }
-        public ObservableCollection<StageGroup> Stages { get; }
-        public ObservableCollection<LogEntry> UngroupedEntries { get; }
-
-        // CONSTRUCTOR NEU:
-        public CorrelationGroup()
-        {
-            Stages = new ObservableCollection<StageGroup>();
-            UngroupedEntries = new ObservableCollection<LogEntry>();
-
-            // WICHTIG: Bei Änderungen AllEntries benachrichtigen
-            Stages.CollectionChanged += (s, e) => OnPropertyChanged(nameof(AllEntries));
-            UngroupedEntries.CollectionChanged += (s, e) => OnPropertyChanged(nameof(AllEntries));
-        }
-
-        public bool IsExpanded
-        {
-            get => _isExpanded;
-            set => SetProperty(ref _isExpanded, value);
-        }
-
-        public TimeSpan Duration => EndTime - StartTime;
-        public string DurationText => Duration.TotalMilliseconds >= 1000
-            ? $"{Duration.TotalSeconds:0.0}s"
-            : $"{Duration.TotalMilliseconds:0}ms";
-
-        public int TotalEntries => Stages.Sum(s => s.Entries.Count) + UngroupedEntries.Count;
-
-        /// <summary>
-        /// All entries in chronological order for compact display
-        /// </summary>
-        public IEnumerable<LogEntry> AllEntries
-        {
-            get
-            {
-                var allEntries = new List<LogEntry>();
-
-                // Add all stage entries
-                foreach (var stage in Stages.OrderBy(s => s.StartTime))
-                {
-                    allEntries.AddRange(stage.Entries);
-                }
-
-                // Add ungrouped entries
-                allEntries.AddRange(UngroupedEntries);
-
-                // Return sorted by timestamp
-                return allEntries.OrderBy(e => e.Timestamp);
-            }
-        }
-
-        // StatusIcon und StatusColor bleiben unverändert...
-    }
-
-    /// <summary>
-    /// Represents a group of log entries for a specific processing stage
-    /// </summary>
-    public class StageGroup : ObservableObject
-    {
-        private bool _isExpanded;
-
-        public ProcessingStage Stage { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public ObservableCollection<LogEntry> Entries { get; } = new();
-
-        public bool IsExpanded
-        {
-            get => _isExpanded;
-            set => SetProperty(ref _isExpanded, value);
-        }
-
-        public TimeSpan Duration => EndTime - StartTime;
-        public string DurationText => $"{Duration.TotalMilliseconds:0}ms";
-
-        public string StageIcon => Entries.FirstOrDefault()?.StageIcon ?? "📌";
-    }
-
-    /// <summary>
-    /// Processing status for correlation groups
-    /// </summary>
-    public enum ProcessingStatus
-    {
-        Unknown,
-        InProgress,
-        Completed,
-        Failed
+        #endregion
     }
 }

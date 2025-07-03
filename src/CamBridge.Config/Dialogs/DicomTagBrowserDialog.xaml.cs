@@ -1,4 +1,4 @@
-﻿// src/CamBridge.Config/Dialogs/DicomTagBrowserDialog.xaml.cs
+// src/CamBridge.Config/Dialogs/DicomTagBrowserDialog.xaml.cs
 // Version: 0.7.25
 // Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 // Enhanced with NEMA-compliant descriptions
@@ -43,6 +43,7 @@ namespace CamBridge.Config.Dialogs
         }
 
         public CoreDicomTag? SelectedTag { get; private set; }
+        public string? SelectedTagName { get; private set; }
 
         private CollectionViewSource _tagsViewSource = null!;
         public ICollectionView TagsView => _tagsViewSource.View;
@@ -239,6 +240,7 @@ namespace CamBridge.Config.Dialogs
             if (TagsListView.SelectedItem is DicomTagInfo tagInfo)
             {
                 SelectedTag = tagInfo.Tag;
+                SelectedTagName = tagInfo.Name;  // NEW LINE!
                 DialogResult = true;
             }
         }

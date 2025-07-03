@@ -7,7 +7,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-# CHANGELOG v0.8.14
+# CHANGELOG - Session 118
+
+## Version 0.8.16 - ViewModels Refactoring Part 1
+
+### 🥋 Major Refactoring
+- **LogViewerViewModel** refactored from 1543 to 380 lines (75% reduction!)
+  - Extracted 4 services: LogFileService, LogParsingService, LogFilterService, LogTreeBuilder
+  - Extracted 4 models: LogEntry, CorrelationGroup, StageGroup, PipelineSelection
+  - Clear separation of UI logic and business logic
+  - All functionality preserved, now testable!
+
+### 🔧 Technical Changes
+- Added `ILogServices.cs` with service interfaces
+- Created service implementations in `CamBridge.Config.Services/`
+- Models moved to `CamBridge.Config.Models/`
+- Added `LogServiceExtensions.cs` for DI registration
+- Updated `App.xaml.cs` with `services.AddLogViewerServices()`
+
+### 📊 Metrics
+- Time: 1.5 hours
+- Lines deleted: 1163
+- New files: 14
+- Build status: GREEN ✅
+- UI test: PASSED ✅
+
+### 🎯 Next Session
+- PipelineConfigViewModel (1400+ lines) awaits refactoring
+- TreeView implementation (95% already done!)
+- FTP-Server GUI preparation
+
+## [0.8.15] - 2025-07-03
+
+### Added
+- **Mapping Editor**: Added 15 new System Fields for DICOM mapping
+  - Conversion date/time fields (for incorrect camera timestamps)
+  - System information (machine name, user, pipeline name)
+  - Calculated fields (capture age in days/hours)
+  - File information (name, size, extension)
+- **Mapping Editor UI**: System Fields and File Info sections with full drag & drop support
+
+### Fixed
+- **Mapping Editor**: Fixed encoding issues with Unicode characters in test output
+  - Replaced ✓ → [OK], → → ->, ⚠ → [!], ✗ → [X]
+  - Changed © to (C) in copyright headers
+- **DICOM Tag Browser**: Fixed UX issue where DisplayName wasn't updated when selecting a new tag
+  - Added SelectedTagName property to dialog
+  - Users now see immediate feedback when tag selection changes
+
+### Changed
+- **DicomConverter**: StudyDate now correctly uses CaptureDateTime instead of Study.StudyDate
+- **PipelineManager**: Now passes pipeline name to DicomConverter for system field population
+
+### Technical
+- Enhanced CreateSourceDataDictionary with 15 new system-generated fields
+- Improved DICOM tag mapping suggestions for system fields
+- Combined multiple improvements from Sessions 115-117 into single release
 
 ## [0.8.14] - 2025-07-03 - System Fields for Mapping Editor - Session 116
 

@@ -119,6 +119,9 @@ namespace CamBridge.Config
                     // CRITICAL: DicomStoreService was missing! This is why Test Connection never worked!
                     services.AddSingleton<DicomStoreService>(); // NEW - Session 95 discovery!
 
+                    // NEW: Log Viewer Services (Session 118)
+                    services.AddLogViewerServices();
+
                     // ViewModels - Updated with refactored ViewModels
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<DashboardViewModel>();
