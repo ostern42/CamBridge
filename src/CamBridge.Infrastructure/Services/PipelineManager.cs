@@ -396,7 +396,12 @@ namespace CamBridge.Infrastructure.Services
             CreateProcessingComponents(PipelineConfiguration config, ILogger pipelineLogger, string correlationId)
         {
             // Create DICOM converter
-            var dicomConverter = new DicomConverter(_loggerFactory.CreateLogger<DicomConverter>());
+            var dicomConverter = new DicomConverter(
+                _loggerFactory.CreateLogger<DicomConverter>(),
+                null,  // tagMapper
+                null,  // mappingConfiguration  
+                config.Name  // Pipeline Name! ← NEU
+            );
 
             // Create tag mapper
             var tagMapper = new DicomTagMapper(_loggerFactory.CreateLogger<DicomTagMapper>());

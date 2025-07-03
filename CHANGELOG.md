@@ -6,9 +6,74 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# CHANGELOG - Session 107
 
+# CHANGELOG v0.8.14
 
+## [0.8.14] - 2025-07-03 - System Fields for Mapping Editor - Session 116
+
+### Added
+- **System Fields** in DicomConverter for flexible DICOM mapping:
+  - `ConversionDateTime`, `ConversionDate`, `ConversionTime` - For when camera date is unreliable
+  - `MachineName`, `UserName`, `UserDomainName` - System information
+  - `PipelineName` - Current pipeline identification
+  - `CamBridgeVersion`, `StationName`, `InstitutionName`, `InstitutionDepartment` - Installation info
+  - `CaptureAge`, `CaptureAgeHours` - Calculated time since capture
+  - `SourceFileName`, `SourceFileSize`, `SourceFileExtension` - File metadata
+- Pipeline name parameter to DicomConverter constructor
+- Pipeline name propagation from PipelineManager to DicomConverter
+
+### Fixed
+- StudyDate inconsistency in CreateSourceDataDictionary - now uses CaptureDateTime consistently
+- DicomConverter now receives proper pipeline context for System Fields
+
+### Changed
+- DicomConverter constructor enhanced with optional pipelineName parameter
+- PipelineManager.CreateProcessingComponents now passes pipeline name to DicomConverter
+- CreateSourceDataDictionary expanded from ~47 to ~71 fields
+
+### Technical Details
+- 15 new System Fields available for DICOM mapping
+- Backend fully functional, UI integration pending for Session 117
+- Build successful, no breaking changes
+
+### Notes
+Session 116 focused on Mapping Editor Deep Dive:
+- Discovered Mapping Editor already 90% complete with drag & drop
+- Implemented System Fields for flexible date/time handling
+- Prepared foundation for complete DICOM tag control via UI
+
+**Contributors**: Oliver & Claude (Session 116)
+
+## Version 0.8.13 - 2025-01-03 - Session 115
+
+### Fixed
+- **DateTime Transform**: Fixed YYYYMMDDHHMMSS format parsing in MappingRule transforms
+  - Added support for Ricoh camera datetime format "20250530223021"
+  - ExtractDate now correctly extracts "20250530" from the format
+  - ExtractTime now correctly extracts "223021" from the format
+  - Resolves 4 DICOM validation errors per image
+
+- **StudyDate Assignment**: Fixed StudyDate/StudyTime to use image capture time
+  - DicomConverter now uses CaptureDateTime instead of conversion time
+  - Ensures medical compliance with correct examination dates
+  - Mapping data dictionary also updated for consistency
+
+### Changed
+- **Mapping Configuration**: Using Ricoh default mappings when custom mapping not found
+  - Pipeline logs now clearly indicate when defaults are used
+  - Improved error handling for missing mapping configurations
+
+### Verified
+- **PACS Upload**: Confirmed working correctly with complete logging
+  - Upload success/failure logs are present and functional
+  - No "black hole" issue as initially suspected
+
+### Documentation
+- Created MAPPING_EDITOR_ENHANCEMENTS.md for planned improvements
+- Updated sprint planning with revised priorities
+- Documented critical role of Mapping Editor in pipeline
+
+- 
 ## [0.8.12] - 2025-07-03 - Session 114
 
 ### 🔍 Discovered

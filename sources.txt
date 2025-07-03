@@ -1,7 +1,7 @@
-// src/CamBridge.Infrastructure/Services/DicomConverter.cs
-// Version: 0.8.14 - Enhanced with System Fields for Mapping Editor
+﻿// src/CamBridge.Infrastructure/Services/DicomConverter.cs
+// Version: 0.8.11
 // Description: DICOM conversion service with enhanced error handling and user-friendly messages
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
 using System.Collections.Generic;
@@ -28,7 +28,6 @@ namespace CamBridge.Infrastructure.Services
         private readonly IDicomTagMapper? _tagMapper;
         private readonly IMappingConfiguration? _mappingConfiguration;
         private readonly DicomSettings _dicomSettings;
-        private readonly string? _pipelineName; // NEW: For System Fields
 
         /// <summary>
         /// Creates a DicomConverter with optional tag mapping support
@@ -36,13 +35,11 @@ namespace CamBridge.Infrastructure.Services
         public DicomConverter(
             ILogger<DicomConverter> logger,
             IDicomTagMapper? tagMapper = null,
-            IMappingConfiguration? mappingConfiguration = null,
-            string? pipelineName = null) // NEW: Pipeline name parameter
+            IMappingConfiguration? mappingConfiguration = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _tagMapper = tagMapper;
             _mappingConfiguration = mappingConfiguration;
-            _pipelineName = pipelineName;
 
             // Default DICOM settings if not injected
             _dicomSettings = new DicomSettings
@@ -51,8 +48,8 @@ namespace CamBridge.Infrastructure.Services
                 InstitutionDepartment = "Radiology",
                 StationName = "CAMBRIDGE01",
                 SourceApplicationEntityTitle = "CAMBRIDGE",
-                ImplementationVersionName = "CAMBRIDGE_0.8.14",
-                ImplementationClassUid = "1.2.276.0.7230010.3.0.3.8.14",
+                ImplementationVersionName = "CAMBRIDGE_0.8.11",
+                ImplementationClassUid = "1.2.276.0.7230010.3.0.3.8.11",
                 Modality = "XC",
                 ValidateAfterCreation = true
             };
@@ -65,14 +62,12 @@ namespace CamBridge.Infrastructure.Services
             ILogger<DicomConverter> logger,
             DicomSettings dicomSettings,
             IDicomTagMapper? tagMapper = null,
-            IMappingConfiguration? mappingConfiguration = null,
-            string? pipelineName = null) // NEW: Pipeline name parameter
+            IMappingConfiguration? mappingConfiguration = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _dicomSettings = dicomSettings ?? throw new ArgumentNullException(nameof(dicomSettings));
             _tagMapper = tagMapper;
             _mappingConfiguration = mappingConfiguration;
-            _pipelineName = pipelineName;
         }
 
         /// <summary>
@@ -235,12 +230,8 @@ namespace CamBridge.Infrastructure.Services
             {
                 dataset.Add(DicomTag.StudyInstanceUID, DicomUID.Generate());
                 dataset.Add(DicomTag.StudyID, metadata.Study.StudyId.ToString());
-
-                // FIXED: Use CaptureDateTime for StudyDate/StudyTime instead of Study.StudyDate
-                // This ensures the study date reflects when the image was actually taken
-                dataset.Add(DicomTag.StudyDate, metadata.CaptureDateTime);
-                dataset.Add(DicomTag.StudyTime, metadata.CaptureDateTime);
-
+                dataset.Add(DicomTag.StudyDate, metadata.Study.StudyDate);
+                dataset.Add(DicomTag.StudyTime, metadata.Study.StudyDate);
                 dataset.Add(DicomTag.StudyDescription, metadata.Study.Description ?? string.Empty);
                 dataset.Add(DicomTag.AccessionNumber, metadata.Study.AccessionNumber ?? string.Empty);
                 dataset.Add(DicomTag.ReferringPhysicianName, metadata.Study.ReferringPhysician ?? string.Empty);
@@ -303,9 +294,8 @@ namespace CamBridge.Infrastructure.Services
             {
                 data["StudyID"] = metadata.Study.StudyId.ToString();
                 data["StudyDescription"] = metadata.Study.Description ?? "";
-                // FIXED: Use CaptureDateTime instead of Study.StudyDate to match AddRequiredDicomTags
-                data["StudyDate"] = metadata.CaptureDateTime.ToString("yyyyMMdd");
-                data["StudyTime"] = metadata.CaptureDateTime.ToString("HHmmss");
+                data["StudyDate"] = metadata.Study.StudyDate.ToString("yyyyMMdd");
+                data["StudyTime"] = metadata.Study.StudyDate.ToString("HHmmss");
                 data["AccessionNumber"] = metadata.Study.AccessionNumber ?? "";
                 data["ReferringPhysicianName"] = metadata.Study.ReferringPhysician ?? "";
                 data["ExamId"] = metadata.Study.ExamId ?? "";
@@ -329,46 +319,7 @@ namespace CamBridge.Infrastructure.Services
             data["BarcodeData"] = metadata.BarcodeData ?? "";
             data["UserComment"] = metadata.UserComment ?? "";
 
-            // ====== NEW SYSTEM FIELDS FOR MAPPING EDITOR ======
-            // Conversion time fields - useful when camera date is unreliable
-            var conversionTime = DateTime.Now;
-            data["ConversionDateTime"] = conversionTime.ToString("yyyyMMddHHmmss");
-            data["ConversionDate"] = conversionTime.ToString("yyyyMMdd");
-            data["ConversionTime"] = conversionTime.ToString("HHmmss");
-
-            // System information
-            data["MachineName"] = Environment.MachineName;
-            data["UserName"] = Environment.UserName;
-            data["UserDomainName"] = Environment.UserDomainName;
-            data["OSVersion"] = Environment.OSVersion.ToString();
-
-            // Pipeline information
-            data["PipelineName"] = _pipelineName ?? "Default";
-
-            // CamBridge specific
-            data["CamBridgeVersion"] = _dicomSettings.ImplementationVersionName;
-            data["StationName"] = _dicomSettings.StationName;
-            data["InstitutionName"] = _dicomSettings.InstitutionName;
-            data["InstitutionDepartment"] = _dicomSettings.InstitutionDepartment;
-
-            // Calculated fields
-            if (metadata.CaptureDateTime != DateTime.MinValue)
-            {
-                var captureAge = (conversionTime - metadata.CaptureDateTime).Days;
-                data["CaptureAge"] = captureAge.ToString();
-                data["CaptureAgeHours"] = ((conversionTime - metadata.CaptureDateTime).TotalHours).ToString("F0");
-            }
-
-            // File information
-            if (File.Exists(metadata.SourceFilePath))
-            {
-                var fileInfo = new FileInfo(metadata.SourceFilePath);
-                data["SourceFileName"] = fileInfo.Name;
-                data["SourceFileSize"] = fileInfo.Length.ToString();
-                data["SourceFileExtension"] = fileInfo.Extension;
-            }
-
-            // Add all EXIF data (last, to avoid overwriting our fields)
+            // Add all EXIF data
             foreach (var kvp in metadata.ExifData)
             {
                 // Avoid overwriting existing keys

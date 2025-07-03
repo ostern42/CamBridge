@@ -1,24 +1,24 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.8.12 -->
-<!-- Modified: 2025-07-03 -->
-<!-- Purpose: Session 112 - Private Tag Fix & Mapping Configuration Fix -->
+<!-- Version: 0.8.14 -->
+<!-- Modified: 2025-01-03 -->
+<!-- Purpose: Session 116 - Ready for Mapping Editor Deep Dive -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.8.12</VersionPrefix>
+		<VersionPrefix>0.8.14</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
 		<AssemblyVersion>0.8.0.0</AssemblyVersion>
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.8.12.0</FileVersion>
+		<FileVersion>0.8.14.0</FileVersion>
 		<!-- Informational version shown in logs and UI -->
-		<InformationalVersion>0.8.12 - Bug Fixes and Clean Build</InformationalVersion>
+		<InformationalVersion>0.8.14 - Mapping Editor Focus</InformationalVersion>
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.8.12</PackageVersion>
+		<PackageVersion>0.8.14</PackageVersion>
 		<!-- Product information -->
 		<Product>CamBridge</Product>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>
-		<Copyright>Copyright &#169; 2025 Claude's Improbably Reliable Software Solutions</Copyright>
+		<Copyright>Copyright © 2025 Claude's Improbably Reliable Software Solutions</Copyright>
 		<!-- Build metadata -->
 		<RepositoryUrl>https://github.com/yourusername/CamBridge</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>

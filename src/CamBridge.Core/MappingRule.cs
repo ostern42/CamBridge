@@ -1,8 +1,9 @@
-﻿// src\CamBridge.Core\MappingRule.cs
-// Version: 0.6.2
+// src\CamBridge.Core\MappingRule.cs
+// Version: 0.8.13 - FIXED DateTime Transform for YYYYMMDDHHMMSS format
 // Description: DICOM mapping rule configuration
 
 using System;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace CamBridge.Core
@@ -137,6 +138,13 @@ namespace CamBridge.Core
 
         private string ConvertDateToDicom(string input)
         {
+            // First try YYYYMMDDHHMMSS format
+            if (input.Length == 14 && input.All(char.IsDigit))
+            {
+                return input.Substring(0, 8); // Extract YYYYMMDD
+            }
+
+            // Then try standard parsing
             if (DateTime.TryParse(input, out var date))
             {
                 return date.ToString("yyyyMMdd");
@@ -146,6 +154,13 @@ namespace CamBridge.Core
 
         private string ConvertTimeToDicom(string input)
         {
+            // First try YYYYMMDDHHMMSS format
+            if (input.Length == 14 && input.All(char.IsDigit))
+            {
+                return input.Substring(8, 6); // Extract HHMMSS
+            }
+
+            // Then try standard parsing
             if (DateTime.TryParse(input, out var time))
             {
                 return time.ToString("HHmmss");
@@ -155,6 +170,12 @@ namespace CamBridge.Core
 
         private string ConvertDateTimeToDicom(string input)
         {
+            // Already in DICOM format?
+            if (input.Length == 14 && input.All(char.IsDigit))
+            {
+                return input;
+            }
+
             if (DateTime.TryParse(input, out var dateTime))
             {
                 return dateTime.ToString("yyyyMMddHHmmss");
@@ -184,19 +205,39 @@ namespace CamBridge.Core
 
         private string ExtractDateFromDateTime(string input)
         {
+            // FIXED: Handle YYYYMMDDHHMMSS format from Ricoh camera
+            if (input.Length == 14 && input.All(char.IsDigit))
+            {
+                // Format: 20250530223021 -> 20250530
+                return input.Substring(0, 8);
+            }
+
+            // Handle standard date formats
             if (DateTime.TryParse(input, out var dateTime))
             {
                 return dateTime.ToString("yyyyMMdd");
             }
+
+            // If all else fails, return input unchanged
             return input;
         }
 
         private string ExtractTimeFromDateTime(string input)
         {
+            // FIXED: Handle YYYYMMDDHHMMSS format from Ricoh camera
+            if (input.Length == 14 && input.All(char.IsDigit))
+            {
+                // Format: 20250530223021 -> 223021
+                return input.Substring(8, 6);
+            }
+
+            // Handle standard time formats
             if (DateTime.TryParse(input, out var dateTime))
             {
                 return dateTime.ToString("HHmmss");
             }
+
+            // If all else fails, return input unchanged
             return input;
         }
 
