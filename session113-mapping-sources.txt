@@ -1,0 +1,4 @@
+﻿src\CamBridge.Core\CustomMappingConfiguration.cs
+src\CamBridge.Infrastructure\Services\PipelineManager.cs
+src\CamBridge.Core\Interfaces\IMappingConfiguration.cs
+src\CamBridge.Core\MappingRule.cs

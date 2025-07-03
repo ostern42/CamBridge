@@ -1,24 +1,24 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.8.10 -->
-<!-- Modified: 2025-06-30 -->
-<!-- Purpose: Session 107 - Empty String vs Null Fix & GUI/Config Mismatch Discovery -->
+<!-- Version: 0.8.12 -->
+<!-- Modified: 2025-07-03 -->
+<!-- Purpose: Session 112 - Private Tag Fix & Mapping Configuration Fix -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.8.10</VersionPrefix>
+		<VersionPrefix>0.8.12</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
 		<AssemblyVersion>0.8.0.0</AssemblyVersion>
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.8.10.0</FileVersion>
+		<FileVersion>0.8.12.0</FileVersion>
 		<!-- Informational version shown in logs and UI -->
-		<InformationalVersion>0.8.10 - Service Restart Loop Fixed!</InformationalVersion>
+		<InformationalVersion>0.8.12 - Bug Fixes and Clean Build</InformationalVersion>
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.8.10</PackageVersion>
+		<PackageVersion>0.8.12</PackageVersion>
 		<!-- Product information -->
 		<Product>CamBridge</Product>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>
-		<Copyright>Copyright © 2025 Claude's Improbably Reliable Software Solutions</Copyright>
+		<Copyright>Copyright &#169; 2025 Claude's Improbably Reliable Software Solutions</Copyright>
 		<!-- Build metadata -->
 		<RepositoryUrl>https://github.com/yourusername/CamBridge</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>

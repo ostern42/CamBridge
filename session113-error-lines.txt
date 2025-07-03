@@ -1,0 +1,30 @@
+﻿        {
+            // Check if pipeline has inline mappings configured
+            if (config.Mappings != null && config.Mappings.Any())
+            {
+                _logger.LogInformation("[{CorrelationId}] [PipelineInitialization] Using pipeline-specific mappings: {Count} rules from configuration",
+                    correlationId, config.Mappings.Count);
+
+                // Validate the mappings
+                var customConfig = new CustomMappingConfiguration(config.Mappings, $"Pipeline: {config.Name}");
+                try
+                {
+                    customConfig.ValidateRules();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("[{CorrelationId}] [PipelineInitialization] Mapping validation failed: {Error}. Using Ricoh defaults.",
+                        correlationId, ex.Message);
+                    return CustomMappingConfiguration.CreateRicohDefaults();
+                }
+
+                return customConfig;
+            }
+
+            // Check if a MappingSetId is configured (for future use)
+            if (!string.IsNullOrWhiteSpace(config.MappingSetId))
+            {
+                _logger.LogInformation("[{CorrelationId}] [PipelineInitialization] MappingSetId '{MappingSetId}' configured but MappingSet loading not implemented. Using Ricoh defaults.",
+                    correlationId, config.MappingSetId);
+            }
+

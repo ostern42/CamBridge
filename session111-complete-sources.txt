@@ -1,7 +1,7 @@
-// src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
+﻿// src\CamBridge.Config\ViewModels\LogViewerViewModel.cs
 // Version: 0.8.11
-// Description: Enhanced log viewer with FIXED TreeView parser and compact view
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Description: Enhanced log viewer with FIXED TreeView parser
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Config.Services;
 using CamBridge.Core;
@@ -394,52 +394,103 @@ namespace CamBridge.Config.ViewModels
                     (e.Stage?.ToString().ToLowerInvariant().Contains(searchLower) ?? false));
             }
 
+            // Update filtered collection
             var filteredList = filtered.ToList();
-            _logger.LogDebug("After level/search filtering: {Count} entries remain", filteredList.Count);
 
-            // For flat view, update filtered entries
+            // NEW: Apply Triple Text Filter if tree view is enabled
+            if (IsTreeViewEnabled && (!string.IsNullOrWhiteSpace(Filter1) || !string.IsNullOrWhiteSpace(Filter2) || !string.IsNullOrWhiteSpace(Filter3)))
+            {
+                filteredList = ApplyTripleTextFilter(filteredList);
+            }
+
+            _logger.LogDebug("After filtering: {Count} entries remain", filteredList.Count);
+
             FilteredCombinedEntries.Clear();
             foreach (var entry in filteredList)
             {
                 FilteredCombinedEntries.Add(entry);
             }
 
-            // Update correlation groups for tree view
+            // Update correlation groups if tree view is enabled
             if (IsTreeViewEnabled)
             {
-                UpdateCorrelationGroupsWithFilters(filteredList);
+                UpdateCorrelationGroups(filteredList);
             }
         }
 
-        private void UpdateCorrelationGroupsWithFilters(List<LogEntry> entries)
+        private List<LogEntry> ApplyTripleTextFilter(List<LogEntry> entries)
         {
-            CorrelationGroups.Clear();
+            // For tree-aware filtering, we need to check groups
+            var groups = entries
+                .Where(e => !string.IsNullOrEmpty(e.CorrelationId))
+                .GroupBy(e => e.CorrelationId!)
+                .ToList();
 
-            // If we have text filters, apply them at the GROUP level
-            bool hasTextFilters = !string.IsNullOrWhiteSpace(Filter1) ||
-                                  !string.IsNullOrWhiteSpace(Filter2) ||
-                                  !string.IsNullOrWhiteSpace(Filter3);
+            var matchingEntries = new List<LogEntry>();
 
-            if (hasTextFilters)
+            foreach (var group in groups)
             {
-                // Filter groups where ANY entry matches ALL filters
-                var groupsToShow = new HashSet<string>();
-
-                foreach (var entry in entries.Where(e => !string.IsNullOrEmpty(e.CorrelationId)))
+                // Check if ANY entry in the group matches ALL active filters
+                bool groupMatches = group.Any(entry =>
                 {
-                    var fullText = $"{entry.Timestamp:HH:mm:ss.fff} {entry.LevelText} {entry.CorrelationId} {entry.Stage} {entry.Message} {entry.Pipeline}".ToLowerInvariant();
+                    var fullText = $"{entry.Timestamp:HH:mm:ss.fff} {entry.LevelText} {entry.CorrelationId} {entry.Stage} {entry.Message} {entry.Pipeline}";
 
-                    if (MatchesWildcard(fullText, Filter1) &&
-                        MatchesWildcard(fullText, Filter2) &&
-                        MatchesWildcard(fullText, Filter3))
-                    {
-                        groupsToShow.Add(entry.CorrelationId!);
-                    }
+                    return MatchesWildcard(fullText, Filter1) &&
+                           MatchesWildcard(fullText, Filter2) &&
+                           MatchesWildcard(fullText, Filter3);
+                });
+
+                if (groupMatches)
+                {
+                    // Include ALL entries from matching groups (tree-aware!)
+                    matchingEntries.AddRange(group);
                 }
-
-                // Only process groups that have matching entries
-                entries = entries.Where(e => string.IsNullOrEmpty(e.CorrelationId) || groupsToShow.Contains(e.CorrelationId!)).ToList();
             }
+
+            // Also check uncorrelated entries individually
+            var uncorrelated = entries.Where(e => string.IsNullOrEmpty(e.CorrelationId)).ToList();
+            foreach (var entry in uncorrelated)
+            {
+                var fullText = $"{entry.Timestamp:HH:mm:ss.fff} {entry.LevelText} {entry.Message} {entry.Pipeline}";
+
+                if (MatchesWildcard(fullText, Filter1) &&
+                    MatchesWildcard(fullText, Filter2) &&
+                    MatchesWildcard(fullText, Filter3))
+                {
+                    matchingEntries.Add(entry);
+                }
+            }
+
+            return matchingEntries;
+        }
+
+        private bool MatchesWildcard(string text, string pattern)
+        {
+            if (string.IsNullOrWhiteSpace(pattern)) return true;
+
+            // Convert wildcard pattern to regex
+            var regexPattern = "^" + Regex.Escape(pattern)
+                .Replace("\\*", ".*")    // * = any number of chars
+                .Replace("\\?", ".")     // ? = exactly one char
+                + "$";
+
+            return Regex.IsMatch(text, regexPattern, RegexOptions.IgnoreCase);
+        }
+
+        private void ClearFilters()
+        {
+            SearchText = string.Empty;
+            Filter1 = string.Empty;
+            Filter2 = string.Empty;
+            Filter3 = string.Empty;
+        }
+
+        private void UpdateCorrelationGroups(List<LogEntry> entries)
+        {
+            // DEBUG OUTPUT
+            Console.WriteLine($"[DEBUG] UpdateCorrelationGroups called with {entries.Count} entries");
+
+            CorrelationGroups.Clear();
 
             // Group by correlation ID
             var groups = entries
@@ -447,15 +498,19 @@ namespace CamBridge.Config.ViewModels
                 .GroupBy(e => e.CorrelationId!)
                 .OrderByDescending(g => g.Max(e => e.Timestamp));
 
+            Console.WriteLine($"[DEBUG] Found {groups.Count()} correlation groups");
+
             foreach (var group in groups)
             {
+                Console.WriteLine($"[DEBUG] Processing group {group.Key} with {group.Count()} entries");
+
                 var correlationGroup = new CorrelationGroup
                 {
                     CorrelationId = group.Key,
                     StartTime = group.Min(e => e.Timestamp),
                     EndTime = group.Max(e => e.Timestamp),
                     Pipeline = group.FirstOrDefault(e => !string.IsNullOrEmpty(e.Pipeline))?.Pipeline ?? "Unknown",
-                    IsExpanded = true // Default expanded for compact view
+                    IsExpanded = true // Default expanded!
                 };
 
                 // Build stage hierarchy
@@ -471,7 +526,7 @@ namespace CamBridge.Config.ViewModels
                             {
                                 Stage = entry.Stage.Value,
                                 StartTime = entry.Timestamp,
-                                IsExpanded = true
+                                IsExpanded = true // Default expanded!
                             };
                         }
 
@@ -480,6 +535,7 @@ namespace CamBridge.Config.ViewModels
                     }
                     else
                     {
+                        // Add entries without stage directly to correlation group
                         correlationGroup.UngroupedEntries.Add(entry);
                     }
                 }
@@ -507,8 +563,9 @@ namespace CamBridge.Config.ViewModels
                 CorrelationGroups.Add(correlationGroup);
             }
 
-            // Add entries without correlation ID if no text filters or they match
+            // Add entries without correlation ID
             var uncorrelatedEntries = entries.Where(e => string.IsNullOrEmpty(e.CorrelationId)).ToList();
+            Console.WriteLine($"[DEBUG] Found {uncorrelatedEntries.Count} uncorrelated entries");
 
             if (uncorrelatedEntries.Any())
             {
@@ -518,7 +575,7 @@ namespace CamBridge.Config.ViewModels
                     StartTime = uncorrelatedEntries.Min(e => e.Timestamp),
                     EndTime = uncorrelatedEntries.Max(e => e.Timestamp),
                     Pipeline = "Various",
-                    IsExpanded = true,
+                    IsExpanded = true, // Default expanded!
                     Status = ProcessingStatus.Unknown
                 };
 
@@ -529,27 +586,8 @@ namespace CamBridge.Config.ViewModels
 
                 CorrelationGroups.Add(uncorrelatedGroup);
             }
-        }
 
-        private bool MatchesWildcard(string text, string pattern)
-        {
-            if (string.IsNullOrWhiteSpace(pattern)) return true;
-
-            // Convert wildcard pattern to regex
-            var regexPattern = "^" + Regex.Escape(pattern)
-                .Replace("\\*", ".*")    // * = any number of chars
-                .Replace("\\?", ".")     // ? = exactly one char
-                + "$";
-
-            return Regex.IsMatch(text, regexPattern, RegexOptions.IgnoreCase);
-        }
-
-        private void ClearFilters()
-        {
-            SearchText = string.Empty;
-            Filter1 = string.Empty;
-            Filter2 = string.Empty;
-            Filter3 = string.Empty;
+            Console.WriteLine($"[DEBUG] Total CorrelationGroups: {CorrelationGroups.Count}");
         }
 
         private void ExpandAll()
@@ -1402,23 +1440,23 @@ namespace CamBridge.Config.ViewModels
         // FIXED emoji icons for UTF-8!
         public string StageIcon => Stage switch
         {
-            ProcessingStage.ServiceStartup => "🚀",
-            ProcessingStage.ConfigurationLoading => "⚙️",
-            ProcessingStage.PipelineInitialization => "🔧",
-            ProcessingStage.ServiceShutdown => "🛑",
-            ProcessingStage.FileDetected => "📄",
-            ProcessingStage.ExifExtraction => "📷",
-            ProcessingStage.TagMapping => "🏷️",
-            ProcessingStage.DicomConversion => "🏥",
-            ProcessingStage.PostProcessing => "📋",
-            ProcessingStage.PacsUpload => "☁️",
-            ProcessingStage.Complete => "✅",
-            ProcessingStage.Error => "❌",
-            ProcessingStage.PipelineShutdown => "🔴",
-            ProcessingStage.PipelineRecovery => "🔧",
-            ProcessingStage.WatcherError => "👁️",
-            ProcessingStage.HealthCheck => "💚",
-            _ => "📌"
+            ProcessingStage.ServiceStartup => "ðŸš€",
+            ProcessingStage.ConfigurationLoading => "âš™ï¸",
+            ProcessingStage.PipelineInitialization => "ðŸ”§",
+            ProcessingStage.ServiceShutdown => "ðŸ›‘",
+            ProcessingStage.FileDetected => "ðŸ“„",
+            ProcessingStage.ExifExtraction => "ðŸ“·",
+            ProcessingStage.TagMapping => "ðŸ”„",
+            ProcessingStage.DicomConversion => "ðŸ¥",
+            ProcessingStage.PostProcessing => "ðŸ“‹",
+            ProcessingStage.PacsUpload => "â˜ï¸",
+            ProcessingStage.Complete => "âœ…",
+            ProcessingStage.Error => "âŒ",
+            ProcessingStage.PipelineShutdown => "ðŸ”´",
+            ProcessingStage.PipelineRecovery => "ðŸ”§",
+            ProcessingStage.WatcherError => "ðŸ‘ï¸",
+            ProcessingStage.HealthCheck => "ðŸ’š",
+            _ => "ðŸ“Œ"
         };
 
         public string FormattedDuration => DurationMs.HasValue ? $"{DurationMs}ms" : "";
@@ -1429,26 +1467,15 @@ namespace CamBridge.Config.ViewModels
     /// </summary>
     public class CorrelationGroup : ObservableObject
     {
-        private bool _isExpanded = true; // Default expanded for compact view
+        private bool _isExpanded;
 
         public string CorrelationId { get; set; } = string.Empty;
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public string Pipeline { get; set; } = string.Empty;
         public ProcessingStatus Status { get; set; }
-        public ObservableCollection<StageGroup> Stages { get; }
-        public ObservableCollection<LogEntry> UngroupedEntries { get; }
-
-        // CONSTRUCTOR NEU:
-        public CorrelationGroup()
-        {
-            Stages = new ObservableCollection<StageGroup>();
-            UngroupedEntries = new ObservableCollection<LogEntry>();
-
-            // WICHTIG: Bei Änderungen AllEntries benachrichtigen
-            Stages.CollectionChanged += (s, e) => OnPropertyChanged(nameof(AllEntries));
-            UngroupedEntries.CollectionChanged += (s, e) => OnPropertyChanged(nameof(AllEntries));
-        }
+        public ObservableCollection<StageGroup> Stages { get; } = new();
+        public ObservableCollection<LogEntry> UngroupedEntries { get; } = new();
 
         public bool IsExpanded
         {
@@ -1457,36 +1484,25 @@ namespace CamBridge.Config.ViewModels
         }
 
         public TimeSpan Duration => EndTime - StartTime;
-        public string DurationText => Duration.TotalMilliseconds >= 1000
-            ? $"{Duration.TotalSeconds:0.0}s"
-            : $"{Duration.TotalMilliseconds:0}ms";
-
+        public string DurationText => $"{Duration.TotalMilliseconds:0}ms";
         public int TotalEntries => Stages.Sum(s => s.Entries.Count) + UngroupedEntries.Count;
 
-        /// <summary>
-        /// All entries in chronological order for compact display
-        /// </summary>
-        public IEnumerable<LogEntry> AllEntries
+        // FIXED emoji icons!
+        public string StatusIcon => Status switch
         {
-            get
-            {
-                var allEntries = new List<LogEntry>();
+            ProcessingStatus.Completed => "âœ…",
+            ProcessingStatus.Failed => "âŒ",
+            ProcessingStatus.InProgress => "â³",
+            _ => "â“"
+        };
 
-                // Add all stage entries
-                foreach (var stage in Stages.OrderBy(s => s.StartTime))
-                {
-                    allEntries.AddRange(stage.Entries);
-                }
-
-                // Add ungrouped entries
-                allEntries.AddRange(UngroupedEntries);
-
-                // Return sorted by timestamp
-                return allEntries.OrderBy(e => e.Timestamp);
-            }
-        }
-
-        // StatusIcon und StatusColor bleiben unverändert...
+        public string StatusColor => Status switch
+        {
+            ProcessingStatus.Completed => "#4CAF50",
+            ProcessingStatus.Failed => "#F44336",
+            ProcessingStatus.InProgress => "#FFA500",
+            _ => "#808080"
+        };
     }
 
     /// <summary>
@@ -1510,7 +1526,7 @@ namespace CamBridge.Config.ViewModels
         public TimeSpan Duration => EndTime - StartTime;
         public string DurationText => $"{Duration.TotalMilliseconds:0}ms";
 
-        public string StageIcon => Entries.FirstOrDefault()?.StageIcon ?? "📌";
+        public string StageIcon => Entries.FirstOrDefault()?.StageIcon ?? "ðŸ“Œ";
     }
 
     /// <summary>
@@ -1524,3 +1540,1194 @@ namespace CamBridge.Config.ViewModels
         Failed
     }
 }
+
+// src/CamBridge.Config/Converters/ValueConverters.cs
+// Version: 0.8.5
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Linq;
+using System.Windows;
+using System.Windows.Data;
+using System.Windows.Media;
+using CamBridge.Config.ViewModels;
+using CamBridge.Core;
+
+namespace CamBridge.Config.Converters
+{
+    /// <summary>
+    /// Converts IsExpanded boolean to expand/collapse icon
+    /// </summary>
+    public class ExpandIconConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isExpanded)
+            {
+                return isExpanded ? "â–¼" : "â–¶";
+            }
+            return "â–¶";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts integer to Visibility based on comparison with parameter
+    /// NEW in v0.7.28 for LogViewerPage
+    /// </summary>
+    public class IntToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            int intValue = 0;
+            int compareValue = 0;
+
+            // Convert value
+            if (value != null)
+            {
+                try
+                {
+                    intValue = System.Convert.ToInt32(value);
+                }
+                catch
+                {
+                    // Default to 0 if conversion fails
+                }
+            }
+
+            // Convert parameter
+            if (parameter != null)
+            {
+                try
+                {
+                    compareValue = System.Convert.ToInt32(parameter);
+                }
+                catch
+                {
+                    // Default to 0 if conversion fails
+                }
+            }
+
+            // Show when value equals compareValue
+            return intValue == compareValue ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts boolean values to Visibility
+    /// </summary>
+    public class BooleanToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            bool boolValue = value is bool b && b;
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return boolValue ? Visibility.Collapsed : Visibility.Visible;
+            else
+                return boolValue ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Inverts boolean to visibility conversion
+    /// </summary>
+    public class InverseBooleanToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            bool boolValue = value is bool b && b;
+            return boolValue ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts numeric values greater than zero to true
+    /// </summary>
+    public class GreaterThanZeroConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null) return false;
+
+            try
+            {
+                double numValue = System.Convert.ToDouble(value);
+                return numValue > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts null values to Visibility
+    /// </summary>
+    public class NullToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            bool isNull = value == null;
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return isNull ? Visibility.Visible : Visibility.Collapsed;
+            else
+                return isNull ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts zero values to Visibility
+    /// </summary>
+    public class ZeroToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            bool isZero = false;
+
+            if (value != null)
+            {
+                try
+                {
+                    double numValue = System.Convert.ToDouble(value);
+                    isZero = Math.Abs(numValue) < 0.0001; // Floating point comparison
+                }
+                catch
+                {
+                    // If conversion fails, treat as non-zero
+                }
+            }
+
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return isZero ? Visibility.Collapsed : Visibility.Visible;
+            else
+                return isZero ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts error count to color brush
+    /// </summary>
+    public class ErrorCountToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            int errorCount = 0;
+
+            if (value != null)
+            {
+                try
+                {
+                    errorCount = System.Convert.ToInt32(value);
+                }
+                catch
+                {
+                    // Default to 0 if conversion fails
+                }
+            }
+
+            // Return red color if errors exist, otherwise default
+            if (errorCount > 0)
+            {
+                return new SolidColorBrush(Color.FromRgb(255, 107, 107)); // Light red
+            }
+
+            return DependencyProperty.UnsetValue; // Use default style
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts boolean values to inverse boolean
+    /// </summary>
+    public class InverseBooleanConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return !(value is bool b && b);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return !(value is bool b && b);
+        }
+    }
+
+    /// <summary>
+    /// Converts empty string to visibility
+    /// </summary>
+    public class EmptyStringToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            string? str = value as string;
+            bool isEmpty = string.IsNullOrWhiteSpace(str);
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return isEmpty ? Visibility.Visible : Visibility.Collapsed;
+            else
+                return isEmpty ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts service status to color
+    /// UPDATED in v0.8.5 for proper status colors (Session 95)
+    /// FIXED: Added "online" and "offline" mappings
+    /// </summary>
+    public class ServiceStatusToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            string status = value as string ?? "";
+
+            return status.ToLower() switch
+            {
+                "running" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),      // Green #4CAF50
+                "online" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),       // Green #4CAF50 (same as running)
+                "stopped" => new SolidColorBrush(Color.FromRgb(255, 193, 7)),      // Yellow #FFC107 (was Red)
+                "offline" => new SolidColorBrush(Color.FromRgb(255, 193, 7)),      // Yellow #FFC107 (same as stopped)
+                "paused" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),       // Orange #FF9800
+                "startpending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange #FF9800
+                "stoppending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),  // Orange #FF9800
+                "continuepending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange
+                "pausepending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),    // Orange
+                "error" => new SolidColorBrush(Color.FromRgb(244, 67, 54)),        // Red #F44336
+                "notinstalled" => new SolidColorBrush(Color.FromRgb(244, 67, 54)), // Red #F44336
+                _ => new SolidColorBrush(Color.FromRgb(158, 158, 158))             // Gray #9E9E9E
+            };
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts seconds to milliseconds
+    /// </summary>
+    public class SecondsToMillisecondsConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double seconds)
+                return seconds * 1000;
+            if (value is int intSeconds)
+                return intSeconds * 1000;
+            return 0;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double milliseconds)
+                return milliseconds / 1000;
+            if (value is int intMilliseconds)
+                return intMilliseconds / 1000;
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Converts enum value to boolean based on parameter
+    /// </summary>
+    public class EnumToBooleanConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null || parameter == null)
+                return false;
+
+            string enumValue = value.ToString();
+            string targetValue = parameter.ToString();
+
+            return enumValue.Equals(targetValue, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isChecked && isChecked)
+            {
+                if (parameter != null && targetType.IsEnum)
+                {
+                    return Enum.Parse(targetType, parameter.ToString());
+                }
+            }
+
+            return Binding.DoNothing;
+        }
+    }
+
+    /// <summary>
+    /// Converter for file selection dialogs
+    /// </summary>
+    public class FileSelectConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            // Simply pass through the value
+            return value;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            // Simply pass through the value
+            return value;
+        }
+    }
+
+    /// <summary>
+    /// Multi-value boolean OR converter
+    /// </summary>
+    public class MultiBooleanOrConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values == null || values.Length == 0)
+                return false;
+
+            foreach (var value in values)
+            {
+                if (value is bool b && b)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts enum types to collection for ComboBox binding
+    /// </summary>
+    public class EnumToCollectionConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return Enum.GetValues(parameter as Type ?? value?.GetType() ?? typeof(object));
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts file size to human-readable format
+    /// </summary>
+    public class FileSizeConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null) return "0 B";
+
+            long bytes = System.Convert.ToInt64(value);
+            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+            int order = 0;
+            double size = bytes;
+
+            while (size >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                size /= 1024;
+            }
+
+            return $"{size:0.##} {sizes[order]}";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts TimeSpan to readable string
+    /// </summary>
+    public class TimeSpanToStringConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is TimeSpan timeSpan)
+            {
+                if (timeSpan.TotalDays >= 1)
+                    return $"{(int)timeSpan.TotalDays}d {timeSpan.Hours}h {timeSpan.Minutes}m";
+                else if (timeSpan.TotalHours >= 1)
+                    return $"{(int)timeSpan.TotalHours}h {timeSpan.Minutes}m";
+                else
+                    return $"{timeSpan.Minutes}m {timeSpan.Seconds}s";
+            }
+            return "0s";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Multi-value boolean AND converter
+    /// </summary>
+    public class MultiBooleanAndConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values == null || values.Length == 0)
+                return false;
+
+            foreach (var value in values)
+            {
+                if (!(value is bool b) || !b)
+                    return false;
+            }
+
+            return true;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Null and boolean AND converter
+    /// </summary>
+    public class NullBooleanAndConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values == null || values.Length < 2)
+                return false;
+
+            // First value should not be null, second should be true
+            return values[0] != null && values[1] is bool b && b;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts boolean to color (Green for true, Red for false)
+    /// NEW in v0.7.21 for Dashboard minimal
+    /// </summary>
+    public class BoolToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isTrue)
+            {
+                return new SolidColorBrush(isTrue ? Colors.Green : Colors.Red);
+            }
+            return new SolidColorBrush(Colors.Gray);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts Transform enum to a visual symbol for display
+    /// NEW in v0.7.25 for Mapping Editor Redesign
+    /// </summary>
+    public class TransformToSymbolConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ValueTransform transform)
+            {
+                return transform switch
+                {
+                    ValueTransform.None => "â†’",
+                    ValueTransform.DateToDicom => "ðŸ“…â†’",
+                    ValueTransform.TimeToDicom => "â°â†’",
+                    ValueTransform.DateTimeToDicom => "ðŸ“…â°â†’",
+                    ValueTransform.MapGender => "â™‚â™€â†’",
+                    ValueTransform.RemovePrefix => "âœ‚â†’",
+                    ValueTransform.ExtractDate => "ðŸ“…â†",
+                    ValueTransform.ExtractTime => "â°â†",
+                    ValueTransform.ToUpperCase => "Aâ†’",
+                    ValueTransform.ToLowerCase => "aâ†’",
+                    ValueTransform.Trim => "âŽµâ†’",
+                    _ => "â†’"
+                };
+            }
+            return "â†’";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts Transform enum to a descriptive text
+    /// NEW in v0.7.25 for Mapping Editor Redesign
+    /// </summary>
+    public class TransformToDescriptionConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ValueTransform transform)
+            {
+                return transform switch
+                {
+                    ValueTransform.None => "Direct mapping",
+                    ValueTransform.DateToDicom => "Convert date to DICOM format (YYYYMMDD)",
+                    ValueTransform.TimeToDicom => "Convert time to DICOM format (HHMMSS)",
+                    ValueTransform.DateTimeToDicom => "Convert datetime to DICOM format",
+                    ValueTransform.MapGender => "Map gender values (M/F/O)",
+                    ValueTransform.RemovePrefix => "Remove prefix from value",
+                    ValueTransform.ExtractDate => "Extract date from datetime",
+                    ValueTransform.ExtractTime => "Extract time from datetime",
+                    ValueTransform.ToUpperCase => "Convert to uppercase",
+                    ValueTransform.ToLowerCase => "Convert to lowercase",
+                    ValueTransform.Trim => "Remove leading/trailing spaces",
+                    _ => "Unknown transformation"
+                };
+            }
+            return "No transformation";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Combines stage entries and ungrouped entries into a flat list for compact tree view
+    /// </summary>
+    public class CombineStagesConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length != 2) return null;
+
+            var stages = values[0] as ObservableCollection<StageGroup>;
+            var ungrouped = values[1] as ObservableCollection<LogEntry>;
+
+            var combined = new List<LogEntry>();
+
+            // Add all entries from stages (flattened)
+            if (stages != null)
+            {
+                foreach (var stage in stages.OrderBy(s => s.StartTime))
+                {
+                    combined.AddRange(stage.Entries);
+                }
+            }
+
+            // Add ungrouped entries
+            if (ungrouped != null)
+            {
+                combined.AddRange(ungrouped);
+            }
+
+            // Sort by timestamp
+            return combined.OrderBy(e => e.Timestamp).ToList();
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts color string to SolidColorBrush with opacity
+    /// </summary>
+    public class ColorToBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string colorString)
+            {
+                try
+                {
+                    var color = (Color)ColorConverter.ConvertFromString(colorString);
+                    // Add slight transparency for background
+                    color.A = 30; // Very light background
+                    return new SolidColorBrush(color);
+                }
+                catch
+                {
+                    return Brushes.Transparent;
+                }
+            }
+            return Brushes.Transparent;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+}
+
+// src/CamBridge.Infrastructure/Services/DicomConverter.cs
+// Version: 0.8.11
+// Description: DICOM conversion service with enhanced error handling and user-friendly messages
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using CamBridge.Core;
+using CamBridge.Core.Entities;
+using CamBridge.Core.Interfaces;
+using FellowOakDicom;
+using FellowOakDicom.Imaging;
+using FellowOakDicom.IO.Buffer;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.Infrastructure.Services
+{
+    /// <summary>
+    /// Service responsible for converting JPEG images to DICOM format
+    /// </summary>
+    public class DicomConverter
+    {
+        private readonly ILogger<DicomConverter> _logger;
+        private readonly IDicomTagMapper? _tagMapper;
+        private readonly IMappingConfiguration? _mappingConfiguration;
+        private readonly DicomSettings _dicomSettings;
+
+        /// <summary>
+        /// Creates a DicomConverter with optional tag mapping support
+        /// </summary>
+        public DicomConverter(
+            ILogger<DicomConverter> logger,
+            IDicomTagMapper? tagMapper = null,
+            IMappingConfiguration? mappingConfiguration = null)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _tagMapper = tagMapper;
+            _mappingConfiguration = mappingConfiguration;
+
+            // Default DICOM settings if not injected
+            _dicomSettings = new DicomSettings
+            {
+                InstitutionName = "CamBridge Medical Imaging",
+                InstitutionDepartment = "Radiology",
+                StationName = "CAMBRIDGE01",
+                SourceApplicationEntityTitle = "CAMBRIDGE",
+                ImplementationVersionName = "CAMBRIDGE_0.8.11",
+                ImplementationClassUid = "1.2.276.0.7230010.3.0.3.8.11",
+                Modality = "XC",
+                ValidateAfterCreation = true
+            };
+        }
+
+        /// <summary>
+        /// Creates a DicomConverter with specific DICOM settings
+        /// </summary>
+        public DicomConverter(
+            ILogger<DicomConverter> logger,
+            DicomSettings dicomSettings,
+            IDicomTagMapper? tagMapper = null,
+            IMappingConfiguration? mappingConfiguration = null)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _dicomSettings = dicomSettings ?? throw new ArgumentNullException(nameof(dicomSettings));
+            _tagMapper = tagMapper;
+            _mappingConfiguration = mappingConfiguration;
+        }
+
+        /// <summary>
+        /// Converts a JPEG file to DICOM format
+        /// </summary>
+        public async Task<ConversionResult> ConvertToDicomAsync(
+            string sourceJpegPath,
+            string outputDicomPath,
+            ImageMetadata metadata,
+            string? correlationId = null)
+        {
+            if (string.IsNullOrWhiteSpace(sourceJpegPath))
+                throw new ArgumentException("Source JPEG path cannot be empty", nameof(sourceJpegPath));
+
+            if (string.IsNullOrWhiteSpace(outputDicomPath))
+                throw new ArgumentException("Output DICOM path cannot be empty", nameof(outputDicomPath));
+
+            if (metadata == null)
+                throw new ArgumentNullException(nameof(metadata));
+
+            _logger.LogInformation("[{CorrelationId}] [DicomConversion] Starting JPEG to DICOM conversion: {Source} -> {Target}",
+                correlationId ?? "NO-ID", Path.GetFileName(sourceJpegPath), Path.GetFileName(outputDicomPath));
+
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                // Validate source file exists
+                if (!File.Exists(sourceJpegPath))
+                {
+                    throw new FileNotFoundException($"Source JPEG file not found: {sourceJpegPath}");
+                }
+
+                // Ensure output directory exists
+                var outputDir = Path.GetDirectoryName(outputDicomPath);
+                if (!string.IsNullOrEmpty(outputDir))
+                {
+                    Directory.CreateDirectory(outputDir);
+                }
+
+                // Create DICOM dataset with JPEG transfer syntax
+                var dicomFile = new DicomFile();
+                var dataset = new DicomDataset(DicomTransferSyntax.JPEGProcess1);
+
+                // Add required DICOM tags
+                AddRequiredDicomTags(dataset, metadata);
+
+                // Apply custom mappings if available
+                if (_tagMapper != null && _mappingConfiguration != null)
+                {
+                    try
+                    {
+                        _logger.LogDebug("[{CorrelationId}] [DicomConversion] Applying custom tag mappings",
+                            correlationId ?? "NO-ID");
+
+                        // Convert metadata to dictionary for mapping
+                        var sourceData = CreateSourceDataDictionary(metadata);
+                        var mappingRules = _mappingConfiguration.GetMappingRules();
+
+                        // FIXED: Pass correlationId to mapper!
+                        if (_tagMapper is DicomTagMapper mapper)
+                        {
+                            // Use the overloaded method with correlationId
+                            mapper.MapToDataset(dataset, sourceData, mappingRules, correlationId);
+                        }
+                        else
+                        {
+                            // Fallback to interface method without correlationId
+                            _tagMapper.MapToDataset(dataset, sourceData, mappingRules);
+                        }
+
+                        _logger.LogDebug("[{CorrelationId}] [DicomConversion] Applied {Count} mapping rules",
+                            correlationId ?? "NO-ID", mappingRules.Count());
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "[{CorrelationId}] [DicomConversion] Failed to apply custom mappings, continuing with default tags",
+                            correlationId ?? "NO-ID");
+                        // Continue with default tags only
+                    }
+                }
+
+                // Load JPEG and add as pixel data
+                await AddJpegAsPixelDataAsync(dataset, sourceJpegPath);
+
+                // Set file meta info
+                dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.JPEGProcess1;
+                dicomFile.FileMetaInfo.MediaStorageSOPClassUID = DicomUID.SecondaryCaptureImageStorage;
+                dicomFile.FileMetaInfo.MediaStorageSOPInstanceUID = dataset.GetSingleValue<DicomUID>(DicomTag.SOPInstanceUID);
+                dicomFile.FileMetaInfo.ImplementationClassUID = DicomUID.Parse(_dicomSettings.ImplementationClassUid);
+                dicomFile.FileMetaInfo.ImplementationVersionName = _dicomSettings.ImplementationVersionName;
+
+                // Add dataset to file
+                dicomFile.Dataset.AddOrUpdate(dataset);
+
+                // Validate if configured
+                if (_dicomSettings.ValidateAfterCreation)
+                {
+                    var validationResult = ValidateDicomFile(dicomFile);
+                    if (!validationResult.IsValid)
+                    {
+                        _logger.LogWarning("[{CorrelationId}] [DicomConversion] DICOM validation warnings: {Warnings}",
+                            correlationId ?? "NO-ID", string.Join(", ", validationResult.Warnings));
+                    }
+                }
+
+                // Save DICOM file
+                await dicomFile.SaveAsync(outputDicomPath);
+
+                stopwatch.Stop();
+
+                var fileInfo = new FileInfo(outputDicomPath);
+                _logger.LogInformation("[{CorrelationId}] [DicomConversion] DICOM conversion successful in {ElapsedMs}ms, output size: {FileSize} bytes",
+                    correlationId ?? "NO-ID", stopwatch.ElapsedMilliseconds, fileInfo.Length);
+
+                return new ConversionResult
+                {
+                    Success = true,
+                    DicomFilePath = outputDicomPath,
+                    FileSizeBytes = fileInfo.Length,
+                    ProcessingTime = stopwatch.Elapsed
+                };
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogError(ex, "[{CorrelationId}] [DicomConversion] DICOM conversion failed after {ElapsedMs}ms",
+                    correlationId ?? "NO-ID", stopwatch.ElapsedMilliseconds);
+
+                return new ConversionResult
+                {
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    ProcessingTime = stopwatch.Elapsed
+                };
+            }
+        }
+
+        /// <summary>
+        /// Adds required DICOM tags to the dataset
+        /// </summary>
+        private void AddRequiredDicomTags(DicomDataset dataset, ImageMetadata metadata)
+        {
+            // Patient Module
+            if (metadata.Patient != null)
+            {
+                dataset.Add(DicomTag.PatientName, metadata.Patient.PatientName);
+                dataset.Add(DicomTag.PatientID, metadata.Patient.PatientId.ToString());
+
+                if (metadata.Patient.BirthDate.HasValue)
+                {
+                    dataset.Add(DicomTag.PatientBirthDate, metadata.Patient.BirthDate.Value);
+                }
+
+                dataset.Add(DicomTag.PatientSex, metadata.Patient.Gender.ToString().Substring(0, 1).ToUpperInvariant());
+            }
+
+            // Study Module
+            if (metadata.Study != null)
+            {
+                dataset.Add(DicomTag.StudyInstanceUID, DicomUID.Generate());
+                dataset.Add(DicomTag.StudyID, metadata.Study.StudyId.ToString());
+                dataset.Add(DicomTag.StudyDate, metadata.Study.StudyDate);
+                dataset.Add(DicomTag.StudyTime, metadata.Study.StudyDate);
+                dataset.Add(DicomTag.StudyDescription, metadata.Study.Description ?? string.Empty);
+                dataset.Add(DicomTag.AccessionNumber, metadata.Study.AccessionNumber ?? string.Empty);
+                dataset.Add(DicomTag.ReferringPhysicianName, metadata.Study.ReferringPhysician ?? string.Empty);
+            }
+
+            // Series Module
+            dataset.Add(DicomTag.SeriesInstanceUID, DicomUID.Generate());
+            dataset.Add(DicomTag.SeriesNumber, "1");
+            dataset.Add(DicomTag.Modality, _dicomSettings.Modality);
+            dataset.Add(DicomTag.SeriesDescription, "CamBridge JPEG to DICOM Conversion");
+
+            // General Image Module
+            dataset.Add(DicomTag.InstanceNumber, metadata.InstanceNumber.ToString());
+            dataset.Add(DicomTag.ContentDate, metadata.CaptureDateTime);
+            dataset.Add(DicomTag.ContentTime, metadata.CaptureDateTime);
+            dataset.Add(DicomTag.AcquisitionDateTime, metadata.CaptureDateTime);
+
+            // SOP Common Module
+            dataset.Add(DicomTag.SOPClassUID, DicomUID.SecondaryCaptureImageStorage);
+            dataset.Add(DicomTag.SOPInstanceUID, string.IsNullOrEmpty(metadata.InstanceUid) ? DicomUID.Generate() : DicomUID.Parse(metadata.InstanceUid));
+
+            // Equipment Module
+            dataset.Add(DicomTag.Manufacturer, metadata.TechnicalData?.Manufacturer ?? "Unknown");
+            dataset.Add(DicomTag.ManufacturerModelName, metadata.TechnicalData?.Model ?? "Unknown");
+            dataset.Add(DicomTag.StationName, _dicomSettings.StationName);
+            dataset.Add(DicomTag.InstitutionName, _dicomSettings.InstitutionName);
+            dataset.Add(DicomTag.InstitutionalDepartmentName, _dicomSettings.InstitutionDepartment);
+
+            // SC Equipment Module
+            dataset.Add(DicomTag.ConversionType, "WSD"); // Workstation
+            dataset.Add(DicomTag.SecondaryCaptureDeviceManufacturer, "Claude's Improbably Reliable Software Solutions");
+            dataset.Add(DicomTag.SecondaryCaptureDeviceManufacturerModelName, "CamBridge");
+            dataset.Add(DicomTag.SecondaryCaptureDeviceSoftwareVersions, _dicomSettings.ImplementationVersionName);
+
+            // Image Pixel Module
+            dataset.Add(DicomTag.SamplesPerPixel, (ushort)3);
+            dataset.Add(DicomTag.PhotometricInterpretation, PhotometricInterpretation.Rgb.Value);
+            dataset.Add(DicomTag.PlanarConfiguration, (ushort)0);
+
+            // FIXED: Add barcode data as private tag with proper VR
+            if (!string.IsNullOrEmpty(metadata.BarcodeData))
+            {
+                // Add Private Creator first (group 0x0009, element 0x0010)
+                dataset.Add(new DicomTag(0x0009, 0x0010), "CAMBRIDGE");
+
+                // Add the private tag with data - fo-dicom will determine VR
+                dataset.Add(new DicomTag(0x0009, 0x1001), metadata.BarcodeData);
+
+                _logger.LogDebug("[DicomConversion] Added private tag for barcode data: {BarcodeData}", metadata.BarcodeData);
+            }
+        }
+
+        /// <summary>
+        /// Creates a dictionary from metadata for tag mapping
+        /// </summary>
+        private Dictionary<string, string> CreateSourceDataDictionary(ImageMetadata metadata)
+        {
+            var data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            // Patient data
+            if (metadata.Patient != null)
+            {
+                data["PatientName"] = metadata.Patient.PatientName;
+                data["PatientID"] = metadata.Patient.PatientId.ToString();
+                data["PatientBirthDate"] = metadata.Patient.BirthDate?.ToString("yyyyMMdd") ?? "";
+                data["PatientSex"] = metadata.Patient.Gender.ToString().Substring(0, 1).ToUpperInvariant();
+            }
+
+            // Study data
+            if (metadata.Study != null)
+            {
+                data["StudyID"] = metadata.Study.StudyId.ToString();
+                data["StudyDescription"] = metadata.Study.Description ?? "";
+                data["StudyDate"] = metadata.Study.StudyDate.ToString("yyyyMMdd");
+                data["StudyTime"] = metadata.Study.StudyDate.ToString("HHmmss");
+                data["AccessionNumber"] = metadata.Study.AccessionNumber ?? "";
+                data["ReferringPhysicianName"] = metadata.Study.ReferringPhysician ?? "";
+                data["ExamId"] = metadata.Study.ExamId ?? "";
+            }
+
+            // Technical data
+            if (metadata.TechnicalData != null)
+            {
+                data["Manufacturer"] = metadata.TechnicalData.Manufacturer ?? "";
+                data["ManufacturerModelName"] = metadata.TechnicalData.Model ?? "";
+                data["ImageWidth"] = metadata.TechnicalData.ImageWidth.ToString();
+                data["ImageHeight"] = metadata.TechnicalData.ImageHeight.ToString();
+            }
+
+            // General data
+            data["CaptureDateTime"] = metadata.CaptureDateTime.ToString("yyyyMMddHHmmss");
+            data["CaptureDate"] = metadata.CaptureDateTime.ToString("yyyyMMdd");
+            data["CaptureTime"] = metadata.CaptureDateTime.ToString("HHmmss");
+            data["InstanceNumber"] = metadata.InstanceNumber.ToString();
+            data["SourceFilePath"] = metadata.SourceFilePath;
+            data["BarcodeData"] = metadata.BarcodeData ?? "";
+            data["UserComment"] = metadata.UserComment ?? "";
+
+            // Add all EXIF data
+            foreach (var kvp in metadata.ExifData)
+            {
+                // Avoid overwriting existing keys
+                if (!data.ContainsKey(kvp.Key))
+                {
+                    data[kvp.Key] = kvp.Value;
+                }
+            }
+
+            return data;
+        }
+
+        /// <summary>
+        /// Adds JPEG image as pixel data to DICOM dataset
+        /// </summary>
+        private async Task AddJpegAsPixelDataAsync(DicomDataset dataset, string jpegPath)
+        {
+            // Read JPEG file
+            var jpegBytes = await File.ReadAllBytesAsync(jpegPath);
+
+            // Get image dimensions from JPEG
+            // For JPEG, we can read the dimensions from the JPEG header
+            // This is a simplified approach - in production you might use a library
+            var (width, height) = GetJpegDimensions(jpegBytes);
+
+            // Add image dimensions
+            dataset.Add(DicomTag.Rows, (ushort)height);
+            dataset.Add(DicomTag.Columns, (ushort)width);
+            dataset.Add(DicomTag.BitsAllocated, (ushort)8);
+            dataset.Add(DicomTag.BitsStored, (ushort)8);
+            dataset.Add(DicomTag.HighBit, (ushort)7);
+            dataset.Add(DicomTag.PixelRepresentation, (ushort)0);
+
+            // Create pixel data element with JPEG data
+            var pixelData = new DicomOtherByteFragment(DicomTag.PixelData);
+
+            // Add offset table (required for encapsulated data)
+            pixelData.Fragments.Add(new MemoryByteBuffer(new byte[0]));
+
+            // Add JPEG data as fragment
+            pixelData.Fragments.Add(new MemoryByteBuffer(jpegBytes));
+
+            dataset.AddOrUpdate(pixelData);
+        }
+
+        /// <summary>
+        /// Gets JPEG dimensions by reading the JPEG header
+        /// </summary>
+        private (int width, int height) GetJpegDimensions(byte[] jpegData)
+        {
+            // Default dimensions if we can't read them
+            int width = 0;
+            int height = 0;
+
+            // JPEG starts with FFD8
+            if (jpegData.Length < 2 || jpegData[0] != 0xFF || jpegData[1] != 0xD8)
+                return (width, height);
+
+            int offset = 2;
+            while (offset < jpegData.Length - 9)
+            {
+                if (jpegData[offset] != 0xFF)
+                {
+                    offset++;
+                    continue;
+                }
+
+                byte marker = jpegData[offset + 1];
+
+                // Skip any padding FF bytes
+                if (marker == 0xFF)
+                {
+                    offset++;
+                    continue;
+                }
+
+                offset += 2;
+
+                // Check for SOF markers (C0-CF, except C4, C8, CC)
+                if ((marker >= 0xC0 && marker <= 0xCF) &&
+                    marker != 0xC4 && marker != 0xC8 && marker != 0xCC)
+                {
+                    // Skip length (2 bytes) and precision (1 byte)
+                    offset += 3;
+
+                    // Read dimensions
+                    height = (jpegData[offset] << 8) | jpegData[offset + 1];
+                    width = (jpegData[offset + 2] << 8) | jpegData[offset + 3];
+                    break;
+                }
+                else
+                {
+                    // Read the length and skip this segment
+                    int segmentLength = (jpegData[offset] << 8) | jpegData[offset + 1];
+                    offset += segmentLength;
+                }
+            }
+
+            // Fallback to reasonable defaults if parsing fails
+            if (width == 0 || height == 0)
+            {
+                _logger.LogWarning("Failed to read JPEG dimensions, using defaults");
+                width = 1024;
+                height = 768;
+            }
+
+            return (width, height);
+        }
+
+        /// <summary>
+        /// Validates DICOM file for common issues
+        /// </summary>
+        private ValidationResult ValidateDicomFile(DicomFile dicomFile)
+        {
+            var result = new ValidationResult { IsValid = true };
+            var warnings = new List<string>();
+
+            // Check required patient tags
+            if (!dicomFile.Dataset.Contains(DicomTag.PatientName))
+                warnings.Add("Missing PatientName");
+
+            if (!dicomFile.Dataset.Contains(DicomTag.PatientID))
+                warnings.Add("Missing PatientID");
+
+            // Check required study tags
+            if (!dicomFile.Dataset.Contains(DicomTag.StudyInstanceUID))
+                warnings.Add("Missing StudyInstanceUID");
+
+            // Check image data
+            if (!dicomFile.Dataset.Contains(DicomTag.PixelData))
+            {
+                warnings.Add("Missing PixelData");
+                result.IsValid = false;
+            }
+
+            // Check transfer syntax
+            if (dicomFile.FileMetaInfo.TransferSyntax != DicomTransferSyntax.JPEGProcess1)
+            {
+                warnings.Add($"Unexpected transfer syntax: {dicomFile.FileMetaInfo.TransferSyntax}");
+            }
+
+            result.Warnings = warnings;
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Result of DICOM conversion operation
+    /// </summary>
+    public class ConversionResult
+    {
+        public bool Success { get; set; }
+        public string? DicomFilePath { get; set; }
+        public string? ErrorMessage { get; set; }
+        public long FileSizeBytes { get; set; }
+        public TimeSpan ProcessingTime { get; set; }
+    }
+
+    /// <summary>
+    /// Result of DICOM validation
+    /// </summary>
+    public class ValidationResult
+    {
+        public bool IsValid { get; set; }
+        public List<string> Warnings { get; set; } = new List<string>();
+    }
+}
+

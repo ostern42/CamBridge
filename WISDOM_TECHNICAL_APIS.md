@@ -1,7 +1,8 @@
-# WISDOM_TECHNICAL_APIS.md - External API Reference & Gotchas
+# WISDOM_TECHNICAL_APIS.md - External API Reference & Breaking Changes
 **Purpose**: Critical API knowledge that changes between versions  
-**Priority**: fo-dicom 5.2.2 breaking changes (Session 91 trauma!)  
-**Updated**: Session 93 (Destillation)
+**Priority**: fo-dicom 5.2.2 breaking changes, ExifTool gotchas  
+**Updated**: Session 114 (Konsolidiert)
+**Critical**: Check this BEFORE upgrading ANY library!
 
 ## 🚨 fo-dicom 5.2.2 BREAKING CHANGES (MEMORIZE!)
 
@@ -122,6 +123,16 @@ var dataset = new DicomDataset(DicomTransferSyntax.JPEGProcess1);
 - No lowercase (some PACS reject)
 - Pad with spaces if needed
 
+### Private Tag Creation (Session 110/112)
+```csharp
+// WRONG - No VR specified
+dataset.Add(new DicomTag(0x0009, 0x1001), barcodeData);
+
+// RIGHT - Use private creator with VR
+var privateCreator = dataset.AddPrivateCreator("CAMBRIDGE", 0x0009);
+dataset.Add(DicomVR.LO, new DicomTag(0x0009, 0x1001, privateCreator), barcodeData);
+```
+
 ## 🌐 Orthanc PACS Specifics
 
 ### Docker Setup
@@ -189,7 +200,57 @@ switch (element.ValueKind)
 }
 ```
 
-## 📝 Domain Object Contracts (from sources-contract.md)
+## 📚 Internal API Changes (Sessions 96-110)
+
+### LogContext API (NEW!)
+```csharp
+// Session 96-97: Hierarchical logging
+public class LogContext
+{
+    public string CorrelationId { get; }
+    public string PipelineName { get; }
+    public ProcessingStage Stage { get; set; }
+    public DateTime StartTime { get; }
+    public LogVerbosity Verbosity { get; }
+    
+    // Auto-logs stage completion with timing
+    public IDisposable BeginStage(ProcessingStage stage, ILogger logger);
+    
+    // Check if should log at this verbosity
+    public bool ShouldLog(LogVerbosity requiredLevel);
+}
+
+// Usage pattern:
+using (logContext.BeginStage(ProcessingStage.ExifExtraction, logger))
+{
+    // Stage automatically logged with timing
+}
+```
+
+### Enum Namespace Migration (Session 97)
+```csharp
+// OLD location:
+CamBridge.Core.Logging.LogVerbosity
+CamBridge.Core.Logging.ProcessingStage
+
+// NEW location:
+CamBridge.Core.Enums.LogVerbosity
+CamBridge.Core.Enums.ProcessingStage
+
+// Impact: All files using these need 'using CamBridge.Core.Enums;'
+```
+
+### Configuration API Pattern
+```csharp
+// ServiceSettings.LogVerbosity is ENUM not string!
+public LogVerbosity LogVerbosity { get; set; } = LogVerbosity.Detailed;
+
+// ComboBox binding needs conversion:
+SelectedLogVerbosity = settings.Service.LogVerbosity.ToString();
+Enum.TryParse<LogVerbosity>(SelectedLogVerbosity, out var verbosity);
+```
+
+## 🏗️ Domain Object Contracts
 
 ### CRITICAL: Constructor Patterns
 ```csharp
@@ -275,7 +336,24 @@ var echo = new DicomCEchoRequest();
 3. **Wrong Orthanc port** (4242 not 104!)
 4. **Relative paths in services** (System32!)
 5. **Not handling all JSON types** (mixed!)
+6. **Wrong enum namespace** (Core.Enums now!)
+7. **Private tags without VR** (validation fails!)
+
+## 🆕 No Breaking Changes Found (Sessions 100-114)
+
+Good news! No new external API breaking changes discovered in recent sessions:
+- ✅ fo-dicom 5.2.2 stable
+- ✅ ExifTool still working with -G1
+- ✅ Windows Service APIs unchanged
+- ✅ WPF/XAML stable (except MaterialDesign removal)
+- ✅ .NET 6.0 APIs stable
+
+Focus has been on internal architecture and bug fixes!
 
 ---
 
 **Golden Rule**: When updating ANY external library, create a test program FIRST! Session 91 proved this saves hours.
+
+**Latest Status**: All external APIs stable. Internal APIs evolving (LogContext, Enums).
+
+*"The best breaking change is the one you discover in a test program, not production!"* 🧪

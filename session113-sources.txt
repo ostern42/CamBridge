@@ -1,12 +1,24 @@
+﻿===== src\CamBridge.Core\CustomMappingConfiguration.cs =====
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Custom mapping configuration (stub for compatibility)
+    /// </summary>
+    public class CustomMappingConfiguration
+    {
+        // This is a stub class for compatibility
+        // Can be removed or extended later
+    }
+}
+===== src\CamBridge.Infrastructure\Services\PipelineManager.cs =====
 // src/CamBridge.Infrastructure/Services/PipelineManager.cs
-// Version: 0.8.12
-// Last Modified: 2025-07-03
+// Version: 0.8.10
+// Last Modified: 2025-06-30
 // Description: Manages multiple processing pipelines with hierarchical logging
-// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
 using CamBridge.Core.Enums;
-using CamBridge.Core.Interfaces;
 using CamBridge.Core.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -212,14 +224,26 @@ namespace CamBridge.Infrastructure.Services
 
                     CreateOutputDirectoryStructure(outputPath, config.ProcessingOptions, logContext);
 
-                    // MINIMAL FIX: Use Ricoh defaults instead of loading from file
-                    if (config.MappingSetId.HasValue)
+                    // Load mapping configuration from the mapping set
+                    var mappingConfigPath = GetMappingConfigPath(config);
+
+                    try
                     {
-                        logContext.LogInformation("MappingSetId '{MappingSetId}' configured but MappingSet loading not yet implemented. Using Ricoh defaults.",
-                            config.MappingSetId.Value);
+                        // Load mapping configuration - returns bool
+                        var loadSuccess = await _mappingLoader.LoadConfigurationAsync(mappingConfigPath, logContext.CorrelationId);
+                        if (loadSuccess)
+                        {
+                            logContext.LogInformation("Mapping configuration loaded successfully");
+                        }
+                        else
+                        {
+                            logContext.LogWarning("Failed to load mapping configuration, using defaults");
+                        }
                     }
-                    logContext.LogInformation("Using Ricoh default barcode mappings for pipeline {Pipeline}", config.Name);
-                    IMappingConfiguration mappingConfiguration = CustomMappingConfiguration.CreateRicohDefaults();
+                    catch (Exception ex)
+                    {
+                        logContext.LogWarning("Error loading mapping configuration, using defaults: {Message}", ex.Message);
+                    }
 
                     // Create processing components
                     var components = CreateProcessingComponents(config, pipelineLogger, logContext.CorrelationId);
@@ -236,7 +260,7 @@ namespace CamBridge.Infrastructure.Services
                     }
 
                     // Create file processor with all components
-                    // MINIMAL FIX: Use mappingConfiguration instead of _mappingLoader
+                    // FIXED: Use _mappingLoader which implements IMappingConfiguration
                     var fileProcessor = new FileProcessor(
                         pipelineLogger,
                         components.ExifTool,
@@ -244,7 +268,7 @@ namespace CamBridge.Infrastructure.Services
                         config,
                         settings.GlobalDicomSettings,
                         components.TagMapper,
-                        mappingConfiguration,  // Changed from _mappingLoader
+                        _mappingLoader,
                         pacsQueue,
                         logVerbosity,
                         logContext.CorrelationId);
@@ -410,7 +434,7 @@ namespace CamBridge.Infrastructure.Services
             var exifTool = new ExifToolReader(
                 _loggerFactory.CreateLogger<ExifToolReader>(),
                 exifToolPath,
-                correlationId); // NEU: Correlation ID hinzugefügt
+                correlationId); // NEU: Correlation ID hinzugefÃ¼gt
 
             return (exifTool, dicomConverter, tagMapper);
         }
@@ -854,5 +878,282 @@ namespace CamBridge.Infrastructure.Services
         public int QueueDepth { get; init; }
         public int ProcessedCount { get; init; }
         public int ErrorCount { get; init; }
+    }
+}
+===== src\CamBridge.Core\Interfaces\IMappingConfiguration.cs =====
+// File: src/CamBridge.Core/Interfaces/IMappingConfiguration.cs
+// Version: 0.8.10
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+// Modified: 2025-06-30
+// Status: Added correlation ID overload
+
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace CamBridge.Core.Interfaces
+{
+    /// <summary>
+    /// Interface for managing DICOM mapping configurations
+    /// </summary>
+    public interface IMappingConfiguration
+    {
+        /// <summary>
+        /// Gets all configured mapping rules
+        /// </summary>
+        IReadOnlyList<MappingRule> GetMappingRules();
+
+        /// <summary>
+        /// Loads mapping configuration from a file
+        /// </summary>
+        /// <param name="filePath">Path to the configuration file (optional)</param>
+        /// <returns>True if loaded successfully, false otherwise</returns>
+        Task<bool> LoadConfigurationAsync(string? filePath = null);
+
+        /// <summary>
+        /// Loads mapping configuration from a file with correlation ID for logging
+        /// </summary>
+        /// <param name="filePath">Path to the configuration file (optional)</param>
+        /// <param name="correlationId">Correlation ID for log tracking</param>
+        /// <returns>True if loaded successfully, false otherwise</returns>
+        Task<bool> LoadConfigurationAsync(string? filePath, string? correlationId);
+
+        /// <summary>
+        /// Saves mapping configuration to a file
+        /// </summary>
+        /// <param name="rules">The mapping rules to save</param>
+        /// <param name="filePath">Path to save the configuration (optional)</param>
+        /// <returns>True if saved successfully, false otherwise</returns>
+        Task<bool> SaveConfigurationAsync(IEnumerable<MappingRule> rules, string? filePath = null);
+
+        /// <summary>
+        /// Adds a new mapping rule
+        /// </summary>
+        void AddRule(MappingRule rule);
+
+        /// <summary>
+        /// Removes mapping rules for a specific source field
+        /// </summary>
+        void RemoveRule(string sourceField);
+
+        /// <summary>
+        /// Gets the mapping rule for a specific source field
+        /// </summary>
+        MappingRule? GetRuleForSource(string sourceField);
+
+        /// <summary>
+        /// Gets all mapping rules that target a specific DICOM tag
+        /// </summary>
+        IEnumerable<MappingRule> GetRulesForTag(string dicomTag);
+
+        /// <summary>
+        /// Validates all mapping rules
+        /// </summary>
+        void ValidateRules();
+    }
+}
+===== src\CamBridge.Core\MappingRule.cs =====
+// src\CamBridge.Core\MappingRule.cs
+// Version: 0.6.2
+// Description: DICOM mapping rule configuration
+
+using System;
+using System.Text.Json.Serialization;
+
+namespace CamBridge.Core
+{
+    /// <summary>
+    /// Defines a mapping rule from source data to DICOM tag
+    /// </summary>
+    public class MappingRule
+    {
+        /// <summary>
+        /// Unique name for this mapping rule
+        /// </summary>
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        /// <summary>
+        /// Human-readable description of what this rule maps
+        /// </summary>
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+
+        /// <summary>
+        /// Source type: QRBridge, EXIF, Static, etc.
+        /// </summary>
+        [JsonPropertyName("sourceType")]
+        public string SourceType { get; set; } = "QRBridge";
+
+        /// <summary>
+        /// Field name in source data
+        /// </summary>
+        [JsonPropertyName("sourceField")]
+        public string SourceField { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Target DICOM tag in format (XXXX,XXXX)
+        /// </summary>
+        [JsonPropertyName("targetTag")]
+        public string DicomTag { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Alternative property name for compatibility
+        /// </summary>
+        [JsonPropertyName("dicomTag")]
+        public string? TargetTag
+        {
+            get => DicomTag;
+            set => DicomTag = value ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Value transformation to apply
+        /// </summary>
+        [JsonPropertyName("transform")]
+        public string Transform { get; set; } = "None";
+
+        /// <summary>
+        /// Whether this field is required
+        /// </summary>
+        [JsonPropertyName("required")]
+        public bool Required { get; set; }
+
+        /// <summary>
+        /// Default value if source is empty
+        /// </summary>
+        [JsonPropertyName("defaultValue")]
+        public string? DefaultValue { get; set; }
+
+        /// <summary>
+        /// DICOM Value Representation (e.g., PN, DA, TM, etc.)
+        /// </summary>
+        [JsonPropertyName("valueRepresentation")]
+        public string? ValueRepresentation { get; set; }
+
+        /// <summary>
+        /// Transform parameters (JSON serialized)
+        /// </summary>
+        [JsonPropertyName("transformParameters")]
+        public string? TransformParameters { get; set; }
+
+        /// <summary>
+        /// Transform as enum (computed property)
+        /// </summary>
+        [JsonIgnore]
+        public ValueTransform TransformEnum
+        {
+            get
+            {
+                if (Enum.TryParse<ValueTransform>(Transform, out var result))
+                    return result;
+                return ValueTransform.None;
+            }
+            set => Transform = value.ToString();
+        }
+
+        /// <summary>
+        /// Apply the configured transformation
+        /// </summary>
+        public string? ApplyTransform(string? input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return DefaultValue;
+
+            // Fix legacy transform names
+            var normalizedTransform = Transform switch
+            {
+                "GenderToDicom" => "MapGender",
+                "TruncateTo16" => "None", // Not implemented in current version
+                _ => Transform
+            };
+
+            if (!Enum.TryParse<ValueTransform>(normalizedTransform, out var transform))
+                transform = ValueTransform.None;
+
+            return transform switch
+            {
+                ValueTransform.None => input,
+                ValueTransform.DateToDicom => ConvertDateToDicom(input),
+                ValueTransform.TimeToDicom => ConvertTimeToDicom(input),
+                ValueTransform.DateTimeToDicom => ConvertDateTimeToDicom(input),
+                ValueTransform.MapGender => MapGenderValue(input),
+                ValueTransform.RemovePrefix => RemovePrefixTransform(input),
+                ValueTransform.ExtractDate => ExtractDateFromDateTime(input),
+                ValueTransform.ExtractTime => ExtractTimeFromDateTime(input),
+                ValueTransform.ToUpperCase => input.ToUpperInvariant(),
+                ValueTransform.ToLowerCase => input.ToLowerInvariant(),
+                ValueTransform.Trim => input.Trim(),
+                _ => input
+            };
+        }
+
+        #region Transform Methods
+
+        private string ConvertDateToDicom(string input)
+        {
+            if (DateTime.TryParse(input, out var date))
+            {
+                return date.ToString("yyyyMMdd");
+            }
+            return input;
+        }
+
+        private string ConvertTimeToDicom(string input)
+        {
+            if (DateTime.TryParse(input, out var time))
+            {
+                return time.ToString("HHmmss");
+            }
+            return input;
+        }
+
+        private string ConvertDateTimeToDicom(string input)
+        {
+            if (DateTime.TryParse(input, out var dateTime))
+            {
+                return dateTime.ToString("yyyyMMddHHmmss");
+            }
+            return input;
+        }
+
+        private string MapGenderValue(string input)
+        {
+            return input?.ToUpperInvariant() switch
+            {
+                "M" or "MALE" => "M",
+                "F" or "FEMALE" => "F",
+                "O" or "OTHER" => "O",
+                _ => DefaultValue ?? "O"
+            };
+        }
+
+        private string RemovePrefixTransform(string input)
+        {
+            if (input.StartsWith("IMG_", StringComparison.OrdinalIgnoreCase))
+            {
+                return input.Substring(4);
+            }
+            return input;
+        }
+
+        private string ExtractDateFromDateTime(string input)
+        {
+            if (DateTime.TryParse(input, out var dateTime))
+            {
+                return dateTime.ToString("yyyyMMdd");
+            }
+            return input;
+        }
+
+        private string ExtractTimeFromDateTime(string input)
+        {
+            if (DateTime.TryParse(input, out var dateTime))
+            {
+                return dateTime.ToString("HHmmss");
+            }
+            return input;
+        }
+
+        #endregion
     }
 }

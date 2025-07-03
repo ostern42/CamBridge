@@ -1,5 +1,5 @@
 // src/CamBridge.Config/Converters/ValueConverters.cs
-// Version: 0.8.5
+// Version: 0.8.11 - SAFE VERSION (nur Unicode-Fixes, keine riskanten neuen Features)
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -16,8 +16,27 @@ using CamBridge.Core;
 namespace CamBridge.Config.Converters
 {
     /// <summary>
+    /// SAFE: Fixed expand/collapse icons (Unicode → proper symbols)
+    /// </summary>
+    public class ExpandIconConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isExpanded)
+            {
+                return isExpanded ? "▼" : "▶";  // FIXED: proper Unicode symbols
+            }
+            return "▶";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
     /// Converts integer to Visibility based on comparison with parameter
-    /// NEW in v0.7.28 for LogViewerPage
     /// </summary>
     public class IntToVisibilityConverter : IValueConverter
     {
@@ -26,33 +45,18 @@ namespace CamBridge.Config.Converters
             int intValue = 0;
             int compareValue = 0;
 
-            // Convert value
             if (value != null)
             {
-                try
-                {
-                    intValue = System.Convert.ToInt32(value);
-                }
-                catch
-                {
-                    // Default to 0 if conversion fails
-                }
+                try { intValue = System.Convert.ToInt32(value); }
+                catch { /* Default to 0 */ }
             }
 
-            // Convert parameter
             if (parameter != null)
             {
-                try
-                {
-                    compareValue = System.Convert.ToInt32(parameter);
-                }
-                catch
-                {
-                    // Default to 0 if conversion fails
-                }
+                try { compareValue = System.Convert.ToInt32(parameter); }
+                catch { /* Default to 0 */ }
             }
 
-            // Show when value equals compareValue
             return intValue == compareValue ? Visibility.Visible : Visibility.Collapsed;
         }
 
@@ -102,22 +106,22 @@ namespace CamBridge.Config.Converters
     }
 
     /// <summary>
-    /// Converts numeric values greater than zero to true
+    /// SAFE: Converts numeric values greater than zero to Visibility
     /// </summary>
     public class GreaterThanZeroConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value == null) return false;
+            if (value == null) return Visibility.Collapsed;
 
             try
             {
                 double numValue = System.Convert.ToDouble(value);
-                return numValue > 0;
+                return numValue > 0 ? Visibility.Visible : Visibility.Collapsed;
             }
             catch
             {
-                return false;
+                return Visibility.Collapsed;
             }
         }
 
@@ -163,12 +167,9 @@ namespace CamBridge.Config.Converters
                 try
                 {
                     double numValue = System.Convert.ToDouble(value);
-                    isZero = Math.Abs(numValue) < 0.0001; // Floating point comparison
+                    isZero = Math.Abs(numValue) < 0.0001;
                 }
-                catch
-                {
-                    // If conversion fails, treat as non-zero
-                }
+                catch { /* If conversion fails, treat as non-zero */ }
             }
 
             bool invert = parameter as string == "Inverse";
@@ -196,23 +197,16 @@ namespace CamBridge.Config.Converters
 
             if (value != null)
             {
-                try
-                {
-                    errorCount = System.Convert.ToInt32(value);
-                }
-                catch
-                {
-                    // Default to 0 if conversion fails
-                }
+                try { errorCount = System.Convert.ToInt32(value); }
+                catch { /* Default to 0 */ }
             }
 
-            // Return red color if errors exist, otherwise default
             if (errorCount > 0)
             {
-                return new SolidColorBrush(Color.FromRgb(255, 107, 107)); // Light red
+                return new SolidColorBrush(Color.FromRgb(255, 107, 107));
             }
 
-            return DependencyProperty.UnsetValue; // Use default style
+            return DependencyProperty.UnsetValue;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -261,9 +255,7 @@ namespace CamBridge.Config.Converters
     }
 
     /// <summary>
-    /// Converts service status to color
-    /// UPDATED in v0.8.5 for proper status colors (Session 95)
-    /// FIXED: Added "online" and "offline" mappings
+    /// SAFE: Service status to color converter (no changes, was working)
     /// </summary>
     public class ServiceStatusToColorConverter : IValueConverter
     {
@@ -273,18 +265,18 @@ namespace CamBridge.Config.Converters
 
             return status.ToLower() switch
             {
-                "running" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),      // Green #4CAF50
-                "online" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),       // Green #4CAF50 (same as running)
-                "stopped" => new SolidColorBrush(Color.FromRgb(255, 193, 7)),      // Yellow #FFC107 (was Red)
-                "offline" => new SolidColorBrush(Color.FromRgb(255, 193, 7)),      // Yellow #FFC107 (same as stopped)
-                "paused" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),       // Orange #FF9800
-                "startpending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange #FF9800
-                "stoppending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),  // Orange #FF9800
+                "running" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),      // Green
+                "online" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),       // Green
+                "stopped" => new SolidColorBrush(Color.FromRgb(255, 193, 7)),      // Yellow
+                "offline" => new SolidColorBrush(Color.FromRgb(255, 193, 7)),      // Yellow
+                "paused" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),       // Orange
+                "startpending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange
+                "stoppending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),  // Orange
                 "continuepending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange
                 "pausepending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),    // Orange
-                "error" => new SolidColorBrush(Color.FromRgb(244, 67, 54)),        // Red #F44336
-                "notinstalled" => new SolidColorBrush(Color.FromRgb(244, 67, 54)), // Red #F44336
-                _ => new SolidColorBrush(Color.FromRgb(158, 158, 158))             // Gray #9E9E9E
+                "error" => new SolidColorBrush(Color.FromRgb(244, 67, 54)),        // Red
+                "notinstalled" => new SolidColorBrush(Color.FromRgb(244, 67, 54)), // Red
+                _ => new SolidColorBrush(Color.FromRgb(158, 158, 158))             // Gray
             };
         }
 
@@ -301,19 +293,15 @@ namespace CamBridge.Config.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is double seconds)
-                return seconds * 1000;
-            if (value is int intSeconds)
-                return intSeconds * 1000;
+            if (value is double seconds) return seconds * 1000;
+            if (value is int intSeconds) return intSeconds * 1000;
             return 0;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is double milliseconds)
-                return milliseconds / 1000;
-            if (value is int intMilliseconds)
-                return intMilliseconds / 1000;
+            if (value is double milliseconds) return milliseconds / 1000;
+            if (value is int intMilliseconds) return intMilliseconds / 1000;
             return 0;
         }
     }
@@ -325,8 +313,7 @@ namespace CamBridge.Config.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value == null || parameter == null)
-                return false;
+            if (value == null || parameter == null) return false;
 
             string enumValue = value.ToString();
             string targetValue = parameter.ToString();
@@ -355,13 +342,11 @@ namespace CamBridge.Config.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            // Simply pass through the value
             return value;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            // Simply pass through the value
             return value;
         }
     }
@@ -373,13 +358,11 @@ namespace CamBridge.Config.Converters
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (values == null || values.Length == 0)
-                return false;
+            if (values == null || values.Length == 0) return false;
 
             foreach (var value in values)
             {
-                if (value is bool b && b)
-                    return true;
+                if (value is bool b && b) return true;
             }
 
             return false;
@@ -468,13 +451,11 @@ namespace CamBridge.Config.Converters
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (values == null || values.Length == 0)
-                return false;
+            if (values == null || values.Length == 0) return false;
 
             foreach (var value in values)
             {
-                if (!(value is bool b) || !b)
-                    return false;
+                if (!(value is bool b) || !b) return false;
             }
 
             return true;
@@ -493,10 +474,8 @@ namespace CamBridge.Config.Converters
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (values == null || values.Length < 2)
-                return false;
+            if (values == null || values.Length < 2) return false;
 
-            // First value should not be null, second should be true
             return values[0] != null && values[1] is bool b && b;
         }
 
@@ -508,7 +487,6 @@ namespace CamBridge.Config.Converters
 
     /// <summary>
     /// Converts boolean to color (Green for true, Red for false)
-    /// NEW in v0.7.21 for Dashboard minimal
     /// </summary>
     public class BoolToColorConverter : IValueConverter
     {
@@ -528,8 +506,7 @@ namespace CamBridge.Config.Converters
     }
 
     /// <summary>
-    /// Converts Transform enum to a visual symbol for display
-    /// NEW in v0.7.25 for Mapping Editor Redesign
+    /// SAFE: Transform enum converter (fixed Unicode but kept simple)
     /// </summary>
     public class TransformToSymbolConverter : IValueConverter
     {
@@ -540,16 +517,16 @@ namespace CamBridge.Config.Converters
                 return transform switch
                 {
                     ValueTransform.None => "→",
-                    ValueTransform.DateToDicom => "📅→",
-                    ValueTransform.TimeToDicom => "⏰→",
-                    ValueTransform.DateTimeToDicom => "📅⏰→",
-                    ValueTransform.MapGender => "♂♀→",
-                    ValueTransform.RemovePrefix => "✂→",
-                    ValueTransform.ExtractDate => "📅←",
-                    ValueTransform.ExtractTime => "⏰←",
-                    ValueTransform.ToUpperCase => "A→",
-                    ValueTransform.ToLowerCase => "a→",
-                    ValueTransform.Trim => "⎵→",
+                    ValueTransform.DateToDicom => "Date→",
+                    ValueTransform.TimeToDicom => "Time→",
+                    ValueTransform.DateTimeToDicom => "DateTime→",
+                    ValueTransform.MapGender => "Gender→",
+                    ValueTransform.RemovePrefix => "Trim→",
+                    ValueTransform.ExtractDate => "Extract→",
+                    ValueTransform.ExtractTime => "Extract→",
+                    ValueTransform.ToUpperCase => "UPPER→",
+                    ValueTransform.ToLowerCase => "lower→",
+                    ValueTransform.Trim => "Trim→",
                     _ => "→"
                 };
             }
@@ -564,7 +541,6 @@ namespace CamBridge.Config.Converters
 
     /// <summary>
     /// Converts Transform enum to a descriptive text
-    /// NEW in v0.7.25 for Mapping Editor Redesign
     /// </summary>
     public class TransformToDescriptionConverter : IValueConverter
     {
@@ -611,7 +587,6 @@ namespace CamBridge.Config.Converters
 
             var combined = new List<LogEntry>();
 
-            // Add all entries from stages (flattened)
             if (stages != null)
             {
                 foreach (var stage in stages.OrderBy(s => s.StartTime))
@@ -620,17 +595,41 @@ namespace CamBridge.Config.Converters
                 }
             }
 
-            // Add ungrouped entries
             if (ungrouped != null)
             {
                 combined.AddRange(ungrouped);
             }
 
-            // Sort by timestamp
             return combined.OrderBy(e => e.Timestamp).ToList();
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// MISSING: Status to color converter for TreeView
+    /// </summary>
+    public class StatusToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ProcessingStatus status)
+            {
+                return status switch
+                {
+                    ProcessingStatus.Completed => "#4CAF50",  // Green
+                    ProcessingStatus.Failed => "#F44336",     // Red
+                    ProcessingStatus.InProgress => "#2196F3", // Blue
+                    _ => "#9E9E9E"                          // Gray
+                };
+            }
+            return "#9E9E9E";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }
@@ -648,7 +647,6 @@ namespace CamBridge.Config.Converters
                 try
                 {
                     var color = (Color)ColorConverter.ConvertFromString(colorString);
-                    // Add slight transparency for background
                     color.A = 30; // Very light background
                     return new SolidColorBrush(color);
                 }

@@ -8,7 +8,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # CHANGELOG - Session 107
 
-# CHANGELOG.md
+
+## [0.8.12] - 2025-07-03 - Session 114
+
+### 🔍 Discovered
+- **PACS Upload Black Hole**: After "Starting C-STORE" no success/failure/timeout logs appear - critical for production monitoring
+- **DateTime Transform Issue**: CaptureDateTime format "YYYYMMDDHHMMSS" fails DICOM validation for DA/TM tags
+
+### 📚 Documentation
+- **Consolidated all WISDOM documents**: Merged delta files from Sessions 94-113 into main documents
+  - WISDOM_CLAUDE.md: Enhanced with Sessions 96-110 journey (40% → 100% success rate)
+  - WISDOM_TECHNICAL_PATTERNS.md: Added 10 new patterns including Service Restart Loop
+  - WISDOM_META.md: Updated navigation paths and black hole discoveries
+  - WISDOM_TECHNICAL_APIS.md: Added internal API changes (LogContext, Enums)
+  - WISDOM_TECHNICAL_FIXES.md: Added 15+ new fixes including empty string trap
+  - WISDOM_DEBT.md: Updated with critical Backup/Delete race condition
+- **Created SESSION_115_HANDOVER.md**: Comprehensive start prompt with personality activation
+- **Updated SPRINT_FIXES_SESSION_114.md**: Added concrete investigation points, expected logs, and test reproduction steps
+
+### 🐛 Known Issues (Prioritized)
+1. **PACS Upload Logging**: Missing success/failure/timeout logs after C-STORE attempt
+2. **DateTime Validation**: MappingRule.ApplyTransform() doesn't handle YYYYMMDDHHMMSS format
+3. **Backup/Delete Race**: Potential data loss when Archive+Delete configured
+4. **Monster ViewModels**: LogViewerViewModel (1543 LOC!), PipelineConfigViewModel (1400+ LOC)
+
+### 🎯 Next Session Focus
+- Fix PACS upload logging black hole (HIGH PRIORITY)
+- Implement DateTime transform for 14-digit format
+- DataGrid multi-selection copy (if time)
+
+### Internal
+- Success Rate: Maintained 100% Sources First approach
+- Documentation: 6 WISDOM files consolidated from ~15 delta files
+- Code Quality: Identified service extraction needs for monster ViewModels
+
+## [0.8.11] - 2025-01-02 - Session 111 - "One Step Forward, Two Steps Back"
+
+### Changed
+- LogViewer: Reverted to minimal DataGrid implementation after TreeView complexity explosion 😢
+- LogViewer: Removed ambitious hierarchical correlation view (for now)
+- DicomConverter: Removed private tag for barcode data that nobody needed anyway
+
+### Fixed
+- Build errors from missing converters and invalid bindings
+- DICOM conversion failing due to private tag VR issues
+- LogViewer actually displays logs again (flat, but functional)
+
+### Known Issues
+- DataGrid selection/copy only works for single rows
+- TreeView correlation display temporarily disabled
+- Mapping configuration loads from wrong source (mappings.json instead of pipeline config)
+- LogViewerViewModel is a 1543-line monster that needs urgent refactoring
+
+### Technical Debt Added
+- Abandoned sophisticated TreeView implementation
+- Lost correlation hierarchy visualization
+- LogViewer back to basic functionality
+
+### Wisdom Gained
+- Sometimes "minimal" is better than "broken"
+- Monster ViewModels don't fit in AI chat windows
+- Test complex UI changes incrementally
+- The road to TreeView is paved with good intentions
+
+*"In der Beschränkung zeigt sich erst der Meister" - but we're still learning the Beschränkung part*
 
 ## [0.8.10] - 2025-07-02 - Session 110
 

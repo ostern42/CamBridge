@@ -1,5 +1,5 @@
 // src/CamBridge.Infrastructure/Services/DicomConverter.cs
-// Version: 0.8.10
+// Version: 0.8.11
 // Description: DICOM conversion service with enhanced error handling and user-friendly messages
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
@@ -48,8 +48,8 @@ namespace CamBridge.Infrastructure.Services
                 InstitutionDepartment = "Radiology",
                 StationName = "CAMBRIDGE01",
                 SourceApplicationEntityTitle = "CAMBRIDGE",
-                ImplementationVersionName = "CAMBRIDGE_0.8.10",
-                ImplementationClassUid = "1.2.276.0.7230010.3.0.3.8.10",
+                ImplementationVersionName = "CAMBRIDGE_0.8.11",
+                ImplementationClassUid = "1.2.276.0.7230010.3.0.3.8.11",
                 Modality = "XC",
                 ValidateAfterCreation = true
             };
@@ -271,14 +271,6 @@ namespace CamBridge.Infrastructure.Services
             dataset.Add(DicomTag.PhotometricInterpretation, PhotometricInterpretation.Rgb.Value);
             dataset.Add(DicomTag.PlanarConfiguration, (ushort)0);
 
-            // Add barcode data as private tag if present
-            if (!string.IsNullOrEmpty(metadata.BarcodeData))
-            {
-                // Private Creator
-                dataset.Add(new DicomTag(0x0009, 0x0010), "CAMBRIDGE");
-                // Private Tag for Barcode
-                dataset.Add(new DicomTag(0x0009, 0x1001), metadata.BarcodeData);
-            }
         }
 
         /// <summary>
