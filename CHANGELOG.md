@@ -7,9 +7,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-# CHANGELOG - Session 118
+## [0.8.17] - 2025-01-03 - Session 120 - Log Viewer TreeView Implementation
 
-## Version 0.8.16 - ViewModels Refactoring Part 1
+### Added
+- **Log Viewer TreeView**: Hierarchical correlation-based log display
+  - Toggle between Tree and Flat view
+  - Three-level hierarchy: CorrelationGroup → StageGroup → LogEntry
+  - Expand/Collapse all functionality
+  - Visual status indicators for each correlation group
+  - Duration display for operations (currently shows 0ms - known issue)
+
+### Changed
+- **Log Viewer UI**: Complete redesign with improved layout
+  - Professional header with better spacing
+  - Enhanced pipeline selection dropdown showing count of selected items
+  - Moved action buttons to header for consistency
+  - Added filter TextBoxes (currently disabled due to architectural issue)
+  - Improved overall visual consistency with MappingEditor design
+
+### Fixed
+- **WPF Binding Errors**: Fixed 10,000+ TwoWay binding errors on read-only properties
+  - All read-only properties now use explicit Mode=OneWay
+  - Particularly affected Run elements within TextBlock
+- **UI Layout Issues**: 
+  - Corrected header spacing and padding
+  - Fixed dropdown display to show selection count
+  - Improved control alignment and sizing
+
+### Known Issues
+- **Filter Architecture Bug**: Filters completely empty the TreeView when used
+  - Root cause: Filters applied before grouping, resulting in incomplete correlation groups
+  - Temporary solution: Filter TextBoxes disabled until architectural fix in v0.8.18
+- **Duration Display**: All log entries show 0ms duration
+  - Millisecond precision appears to be lost during parsing or timing
+- **Pipeline Selection Display**: Always shows "No pipelines selected" even when pipelines are selected
+  - PropertyChanged notification missing for SelectedPipelineCount
+
+### Technical Notes
+- TreeView implementation leverages existing LogTreeBuilder service (95% backend was ready)
+- Uses WPF HierarchicalDataTemplate for efficient tree rendering
+- Virtualization enabled for performance with large logs
+- Custom ComboBox template for multi-select pipeline dropdown
+
+### Developer Notes
+Session 120 discoveries:
+- Filter order matters: Must group first, then filter (not vice versa)
+- WPF binding defaults can cause massive performance issues
+- UI polish consistently takes 3x longer than initial implementation
+- Hidden treasures: Often the backend logic already exists!
+
+## Version 0.8.16 - ViewModels Refactoring Part 1 - Session 118
 
 ### 🥋 Major Refactoring
 - **LogViewerViewModel** refactored from 1543 to 380 lines (75% reduction!)

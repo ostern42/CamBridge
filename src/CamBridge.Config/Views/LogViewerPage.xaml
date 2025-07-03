@@ -1,6 +1,6 @@
-<!-- src\CamBridge.Config\Views\LogViewerPage.xaml -->
-<!-- Version: 0.8.11 - MINIMAL WORKING VERSION -->
-<!-- Description: Nur flache Log-Anzeige, keine fancy TreeView -->
+<!-- src\CamBridge.Config\Views\Pages\LogViewerPage.xaml -->
+<!-- Version: 0.8.16 - Enhanced with TreeView! -->
+<!-- Description: Log viewer with hierarchical correlation display -->
 <!-- Copyright: © 2025 Claude's Improbably Reliable Software Solutions -->
 
 <Page x:Class="CamBridge.Config.Views.LogViewerPage"
@@ -10,160 +10,450 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:CamBridge.Config.Views"
       xmlns:viewmodels="clr-namespace:CamBridge.Config.ViewModels"
+      xmlns:models="clr-namespace:CamBridge.Config.Models"
       xmlns:converters="clr-namespace:CamBridge.Config.Converters"
       mc:Ignorable="d" 
-      d:DesignHeight="600" d:DesignWidth="1000"
+      d:DesignHeight="700" d:DesignWidth="1200"
       d:DataContext="{d:DesignInstance Type=viewmodels:LogViewerViewModel}"
       Title="Log Viewer">
 
     <Page.Resources>
-        <!-- Nur die WIRKLICH benötigten Converter -->
+        <!-- Converters -->
         <converters:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
         <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+
+        <!-- TreeView Item Style -->
+        <Style x:Key="TreeViewItemStyle" TargetType="TreeViewItem">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#E3F2FD"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F5F5F5"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Page.Resources>
 
     <DockPanel>
-        <!-- SIMPLE Header -->
-        <Border DockPanel.Dock="Top" Padding="8" Background="White"
+        <!-- Enhanced Header with TreeView Toggle -->
+        <Border DockPanel.Dock="Top" 
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                 BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
-            <Grid>
+            <Grid Margin="16,12,16,12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto" MinHeight="8"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto" MinHeight="8"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Title Row -->
-                <DockPanel Grid.Row="0">
-                    <TextBlock Text="Log Viewer" FontSize="16" FontWeight="Bold" DockPanel.Dock="Left"/>
+                <!-- Title Row with Actions -->
+                <Grid Grid.Row="0">
+                    <TextBlock Text="Log Viewer" FontSize="20" FontWeight="SemiBold" 
+                               VerticalAlignment="Center"/>
 
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" 
-                                HorizontalAlignment="Right">
-                        <TextBlock Text="Lines: " Opacity="0.7"/>
-                        <TextBlock Text="{Binding DisplayedLineCount}" FontWeight="Bold"/>
-                        <TextBlock Text=" / " Opacity="0.5"/>
-                        <TextBlock Text="{Binding TotalLineCount}" Opacity="0.7"/>
+                    <!-- Action buttons aligned right -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <!-- Tree/Flat Toggle -->
+                        <ToggleButton IsChecked="{Binding IsTreeViewEnabled}" 
+                                      ToolTip="Toggle Tree/Flat View"
+                                      Padding="10,6"
+                                      MinWidth="100">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🌳" FontSize="14" Margin="0,0,6,0"
+                                           Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}"/>
+                                <TextBlock Text="≡" FontSize="14" Margin="0,0,6,0"
+                                           Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource InverseBoolToVisibility}}"/>
+                                <TextBlock Text="Tree View" 
+                                           Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}"/>
+                                <TextBlock Text="Flat View" 
+                                           Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource InverseBoolToVisibility}}"/>
+                            </StackPanel>
+                        </ToggleButton>
+
+                        <Button Content="Refresh" Command="{Binding RefreshCommand}" 
+                                Margin="8,0,4,0" Padding="10,6" MinWidth="80"/>
+                        <Button Content="Clear" Command="{Binding ClearLogCommand}" 
+                                Margin="4,0" Padding="10,6" MinWidth="80"/>
+                        <Button Content="Export" Command="{Binding ExportLogCommand}" 
+                                Margin="4,0" Padding="10,6" MinWidth="80"/>
+                        <Button Content="Open Folder" Command="{Binding OpenLogFolderCommand}" 
+                                Margin="4,0,0,0" Padding="10,6" MinWidth="100"/>
                     </StackPanel>
-                </DockPanel>
+                </Grid>
+
+                <!-- Spacer Row -->
+                <Grid Grid.Row="1"/>
 
                 <!-- Pipeline Selection Row -->
-                <DockPanel Grid.Row="1" Margin="0,4,0,0">
-                    <ComboBox ItemsSource="{Binding PipelineSelections}"
-                              MinWidth="200" MaxWidth="300" Height="24">
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto" MinWidth="250"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Pipelines:" VerticalAlignment="Center" 
+                               Margin="0,0,12,0" FontWeight="SemiBold"/>
+
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding PipelineSelections}"
+                              MinWidth="250" MaxWidth="400" Height="32"
+                              VerticalContentAlignment="Center">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <CheckBox IsChecked="{Binding IsSelected}" 
                                           Content="{Binding Name}"
-                                          Margin="0" Padding="2,0"/>
+                                          Margin="2" Padding="4,2"/>
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
-                        <ComboBox.Text>
-                            <Binding Path="CurrentLogFiles" Mode="OneWay"/>
-                        </ComboBox.Text>
+                        <ComboBox.Template>
+                            <ControlTemplate TargetType="ComboBox">
+                                <Grid>
+                                    <ToggleButton Name="ToggleButton"
+                                                  IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                                  ClickMode="Press"
+                                                  HorizontalContentAlignment="Left"
+                                                  VerticalContentAlignment="Center"
+                                                  Padding="8,0,30,0"
+                                                  Background="White"
+                                                  BorderBrush="#CCCCCC"
+                                                  BorderThickness="1">
+                                        <TextBlock VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" 
+                                                            Value="{Binding DataContext.SelectedPipelineCount, 
+                                                                    RelativeSource={RelativeSource AncestorType=Page}, 
+                                                                    StringFormat='{}{0} selected'}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding DataContext.SelectedPipelineCount, 
+                                                                               RelativeSource={RelativeSource AncestorType=Page}}" 
+                                                                     Value="0">
+                                                            <Setter Property="Text" Value="No pipelines selected"/>
+                                                            <Setter Property="Foreground" Value="Gray"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </ToggleButton>
+                                    <Path Name="Arrow"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,8,0"
+                                          Fill="Black"
+                                          Data="M 0 0 L 4 4 L 8 0 Z"
+                                          IsHitTestVisible="False"/>
+                                    <Popup Name="Popup"
+                                           IsOpen="{TemplateBinding IsDropDownOpen}"
+                                           AllowsTransparency="True"
+                                           Focusable="False"
+                                           PopupAnimation="Slide">
+                                        <Border Background="White"
+                                                BorderBrush="#CCCCCC"
+                                                BorderThickness="1"
+                                                MaxHeight="300">
+                                            <ScrollViewer>
+                                                <ItemsPresenter/>
+                                            </ScrollViewer>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
+                            </ControlTemplate>
+                        </ComboBox.Template>
                     </ComboBox>
 
-                    <!-- Action buttons -->
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" 
-                                HorizontalAlignment="Right">
-                        <Button Content="Refresh" Command="{Binding RefreshCommand}" 
-                                Margin="2,0" Padding="8,2"/>
-                        <Button Content="Clear" Command="{Binding ClearLogCommand}" 
-                                Margin="2,0" Padding="8,2"/>
-                        <Button Content="Export" Command="{Binding ExportLogCommand}" 
-                                Margin="2,0" Padding="8,2"/>
-                        <Button Content="Open Folder" Command="{Binding OpenLogFolderCommand}" 
-                                Margin="2,0" Padding="8,2"/>
+                    <!-- Stats -->
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" 
+                                VerticalAlignment="Center">
+                        <TextBlock Text="Lines: " Opacity="0.7"/>
+                        <TextBlock Text="{Binding DisplayedLineCount, Mode=OneWay}" FontWeight="Bold"/>
+                        <TextBlock Text=" / " Opacity="0.5"/>
+                        <TextBlock Text="{Binding TotalLineCount, Mode=OneWay}" Opacity="0.7"/>
                     </StackPanel>
-                </DockPanel>
+                </Grid>
+
+                <!-- Spacer Row -->
+                <Grid Grid.Row="3"/>
 
                 <!-- Filter Row -->
-                <DockPanel Grid.Row="2" Margin="0,4,0,0">
-                    <!-- Simple search -->
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <TextBox Width="200" Height="22"
-                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                <Grid Grid.Row="4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Search and Filters -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
+                        <TextBox Width="200" Height="28" Margin="0,0,12,0"
+                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center"/>
+
+                        <TextBlock Text="Filters:" VerticalAlignment="Center" Margin="0,0,8,0" 
+                                   FontWeight="SemiBold" Opacity="0.7"/>
+                        <TextBox Width="140" Height="28" Margin="0,0,4,0"
+                                 Text="{Binding Filter1, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Filter 1 (wildcards supported)"
+                                 VerticalContentAlignment="Center"
+                                 IsEnabled="False">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Background" Value="#F5F5F5"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Opacity" Value="0.6"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                        <TextBox Width="140" Height="28" Margin="0,0,4,0"
+                                 Text="{Binding Filter2, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Filter 2 (wildcards supported)"
+                                 VerticalContentAlignment="Center"
+                                 IsEnabled="False">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Background" Value="#F5F5F5"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Opacity" Value="0.6"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                        <TextBox Width="140" Height="28" Margin="0,0,8,0"
+                                 Text="{Binding Filter3, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Filter 3 (wildcards supported)"
+                                 VerticalContentAlignment="Center"
+                                 IsEnabled="False">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Background" Value="#F5F5F5"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Opacity" Value="0.6"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+
+                        <Button Content="Clear Filters" Command="{Binding ClearFiltersCommand}"
+                                Padding="10,6" Margin="4,0" IsEnabled="False" Opacity="0.6"/>
                     </StackPanel>
 
                     <!-- Level filters -->
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" 
-                                HorizontalAlignment="Right">
-                        <CheckBox IsChecked="{Binding ShowDebug}" Content="Debug" Margin="4,0"/>
-                        <CheckBox IsChecked="{Binding ShowInformation}" Content="Info" Margin="4,0"/>
-                        <CheckBox IsChecked="{Binding ShowWarning}" Content="Warning" Margin="4,0"/>
-                        <CheckBox IsChecked="{Binding ShowError}" Content="Error" Margin="4,0"/>
-                        <CheckBox IsChecked="{Binding ShowCritical}" Content="Critical" Margin="4,0"/>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <CheckBox IsChecked="{Binding ShowDebug}" Content="Debug" Margin="8,0" VerticalContentAlignment="Center"/>
+                        <CheckBox IsChecked="{Binding ShowInformation}" Content="Info" Margin="8,0" VerticalContentAlignment="Center"/>
+                        <CheckBox IsChecked="{Binding ShowWarning}" Content="Warning" Margin="8,0" VerticalContentAlignment="Center"/>
+                        <CheckBox IsChecked="{Binding ShowError}" Content="Error" Margin="8,0" VerticalContentAlignment="Center"/>
+                        <CheckBox IsChecked="{Binding ShowCritical}" Content="Critical" Margin="8,0,0,0" VerticalContentAlignment="Center"/>
                     </StackPanel>
-                </DockPanel>
+                </Grid>
             </Grid>
         </Border>
 
         <!-- Loading indicator -->
-        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" Height="2"
+        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" Height="3"
                      Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
 
-        <!-- SIMPLE DataGrid - keine TreeView! -->
-        <DataGrid ItemsSource="{Binding FilteredCombinedEntries}"
-                  AutoGenerateColumns="False"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  GridLinesVisibility="Horizontal"
-                  HeadersVisibility="Column"
-                  IsReadOnly="True"
-                  SelectionMode="Extended"
-                  SelectionUnit="FullRow"
-                  CanUserSortColumns="True"
-                  ClipboardCopyMode="IncludeHeader"
-                  FontFamily="Consolas"
-                  FontSize="11">
+        <!-- Main Content Area - Tree or Flat View -->
+        <Grid>
+            <!-- TreeView (when enabled) -->
+            <TreeView ItemsSource="{Binding CorrelationGroups}"
+                      Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource BoolToVisibility}}"
+                      VirtualizingStackPanel.IsVirtualizing="True"
+                      VirtualizingStackPanel.VirtualizationMode="Recycling"
+                      BorderThickness="0"
+                      Padding="8">
 
-            <!-- Context Menu für Copy/Export -->
-            <DataGrid.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Copy" InputGestureText="Ctrl+C" 
-                              Command="{Binding CopySelectedCommand}"/>
-                    <MenuItem Header="Copy All" 
-                              Command="{Binding CopySelectedCommand}"/>
-                    <Separator/>
-                    <MenuItem Header="Export..." 
-                              Command="{Binding ExportLogCommand}"/>
-                </ContextMenu>
-            </DataGrid.ContextMenu>
+                <!-- Context Menu for TreeView -->
+                <TreeView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy Group" 
+                                  Command="{Binding CopyGroupCommand}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
+                                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem Header="Copy Line" 
+                                  Command="{Binding CopyLineCommand}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
+                                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <Separator/>
+                        <MenuItem Header="Expand All" Click="ExpandAll_Click"/>
+                        <MenuItem Header="Collapse All" Click="CollapseAll_Click"/>
+                    </ContextMenu>
+                </TreeView.ContextMenu>
 
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Time" 
-                                    Binding="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" 
-                                    Width="90"/>
-                <DataGridTextColumn Header="Level" 
-                                    Binding="{Binding LevelText}" 
-                                    Width="50"/>
-                <DataGridTextColumn Header="Pipeline" 
-                                    Binding="{Binding Pipeline}" 
-                                    Width="120"/>
-                <DataGridTextColumn Header="Stage" 
-                                    Binding="{Binding Stage}" 
-                                    Width="120"/>
-                <DataGridTextColumn Header="Message" 
-                                    Binding="{Binding Message}" 
-                                    Width="*"/>
-            </DataGrid.Columns>
+                <TreeView.Resources>
+                    <!-- Template for Log Entries -->
+                    <DataTemplate DataType="{x:Type models:LogEntry}">
+                        <Border Padding="2,1" Background="Transparent">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="50"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-            <!-- Row style for level colors -->
-            <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding LevelText}" Value="ERR">
-                            <Setter Property="Foreground" Value="#D32F2F"/>
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding LevelText}" Value="WRN">
-                            <Setter Property="Foreground" Value="#F57C00"/>
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding LevelText}" Value="DBG">
-                            <Setter Property="Foreground" Value="#616161"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </DataGrid.RowStyle>
-        </DataGrid>
+                                <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat='HH:mm:ss.fff', Mode=OneWay}" 
+                                           FontFamily="Consolas" FontSize="11" Opacity="0.8"/>
+                                <TextBlock Grid.Column="1" Text="{Binding LevelText, Mode=OneWay}" 
+                                           FontFamily="Consolas" FontSize="11"
+                                           Foreground="{Binding LevelColor, Mode=OneWay}"/>
+                                <TextBlock Grid.Column="2" Text="{Binding StageIcon, Mode=OneWay}" 
+                                           FontFamily="Consolas" FontSize="11" Opacity="0.7"/>
+                                <TextBlock Grid.Column="3" Text="{Binding Pipeline, Mode=OneWay}" 
+                                           FontFamily="Consolas" FontSize="11" Opacity="0.7"/>
+                                <TextBlock Grid.Column="4" Text="{Binding FormattedDuration, Mode=OneWay}" 
+                                           FontFamily="Consolas" FontSize="11" Opacity="0.6"
+                                           HorizontalAlignment="Right"/>
+                                <TextBlock Grid.Column="5" Text="{Binding Message, Mode=OneWay}" 
+                                           FontFamily="Consolas" FontSize="11"
+                                           TextWrapping="Wrap" Margin="8,0,0,0"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+
+                    <!-- Template for Stage Groups -->
+                    <HierarchicalDataTemplate DataType="{x:Type models:StageGroup}" 
+                                              ItemsSource="{Binding Entries}">
+                        <Border Background="#F5F5F5" CornerRadius="4" Padding="6,4" Margin="0,2">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding StageIcon, Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding Stage, Mode=OneWay}" FontWeight="SemiBold"/>
+                                <TextBlock Text=" (" Opacity="0.6"/>
+                                <TextBlock Text="{Binding Entries.Count, Mode=OneWay}" Opacity="0.6"/>
+                                <TextBlock Text=" entries, " Opacity="0.6"/>
+                                <TextBlock Text="{Binding DurationText, Mode=OneWay}" Opacity="0.6"/>
+                                <TextBlock Text=")" Opacity="0.6"/>
+                            </StackPanel>
+                        </Border>
+                    </HierarchicalDataTemplate>
+
+                    <!-- Template for Correlation Groups -->
+                    <HierarchicalDataTemplate DataType="{x:Type models:CorrelationGroup}" 
+                                              ItemsSource="{Binding Stages}">
+                        <Border Background="#E3F2FD" CornerRadius="6" Padding="8,6" Margin="0,4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="{Binding StatusIcon, Mode=OneWay}" 
+                                               Foreground="{Binding StatusColor, Mode=OneWay}"
+                                               FontWeight="Bold" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding CorrelationId, Mode=OneWay}" 
+                                               FontFamily="Consolas" FontWeight="Bold"/>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
+                                    <Run Text="{Binding Pipeline, Mode=OneWay}" FontWeight="SemiBold"/>
+                                    <Run Text=" - "/>
+                                    <Run Text="{Binding TotalEntries, Mode=OneWay}"/>
+                                    <Run Text=" entries"/>
+                                </TextBlock>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                    <TextBlock Text="{Binding StartTime, StringFormat='HH:mm:ss', Mode=OneWay}" 
+                                               Opacity="0.6" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding DurationText, Mode=OneWay}" 
+                                               FontWeight="SemiBold" Foreground="#2196F3"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </HierarchicalDataTemplate>
+                </TreeView.Resources>
+
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem" BasedOn="{StaticResource TreeViewItemStyle}"/>
+                </TreeView.ItemContainerStyle>
+            </TreeView>
+
+            <!-- DataGrid (when TreeView disabled) -->
+            <DataGrid ItemsSource="{Binding FilteredCombinedEntries}"
+                      Visibility="{Binding IsTreeViewEnabled, Converter={StaticResource InverseBoolToVisibility}}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      GridLinesVisibility="Horizontal"
+                      HeadersVisibility="Column"
+                      IsReadOnly="True"
+                      SelectionMode="Extended"
+                      SelectionUnit="FullRow"
+                      CanUserSortColumns="True"
+                      ClipboardCopyMode="IncludeHeader"
+                      FontFamily="Consolas"
+                      FontSize="11"
+                      BorderThickness="0">
+
+                <!-- Context Menu for DataGrid -->
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy" InputGestureText="Ctrl+C" 
+                                  Command="{Binding CopyLineCommand}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
+                                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <Separator/>
+                        <MenuItem Header="Export..." 
+                                  Command="{Binding ExportLogCommand}"/>
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Time" 
+                                        Binding="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" 
+                                        Width="90"/>
+                    <DataGridTextColumn Header="Level" 
+                                        Binding="{Binding LevelText}" 
+                                        Width="50"/>
+                    <DataGridTextColumn Header="Correlation" 
+                                        Binding="{Binding CorrelationId}" 
+                                        Width="140"/>
+                    <DataGridTextColumn Header="Pipeline" 
+                                        Binding="{Binding Pipeline}" 
+                                        Width="120"/>
+                    <DataGridTextColumn Header="Stage" 
+                                        Binding="{Binding Stage}" 
+                                        Width="120"/>
+                    <DataGridTextColumn Header="Message" 
+                                        Binding="{Binding Message}" 
+                                        Width="*"/>
+                </DataGrid.Columns>
+
+                <!-- Row style for level colors -->
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding LevelText}" Value="ERR">
+                                <Setter Property="Foreground" Value="#D32F2F"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding LevelText}" Value="WRN">
+                                <Setter Property="Foreground" Value="#F57C00"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding LevelText}" Value="DBG">
+                                <Setter Property="Foreground" Value="#616161"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+            </DataGrid>
+        </Grid>
     </DockPanel>
 </Page>
