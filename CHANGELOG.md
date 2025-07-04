@@ -6,6 +6,52 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.8.21 - 2025-01-04 - LogViewer UI Polish & Bug Discovery
+
+### 🎨 UI/UX Improvements
+- **LogViewer TreeView Grid Layout**: Implemented uniform column widths for better visual hierarchy
+  - CorrelationGroups now use consistent grid spacing
+  - StageGroups and LogEntries properly aligned
+  - Removed manual left padding - TreeView handles indentation automatically
+- **Header Layout Optimized**: 
+  - Pipeline dropdown increased to 350px (from 250px) for better multi-selection display
+  - Search boxes increased to 240px each (from 180px) for better usability
+  - Removed unnecessary 20px spacer between pipeline and search fields
+- **TreeView Polish**:
+  - Removed duplicate expand/collapse icons (now using native TreeView arrows only)
+  - Fixed mouse wheel scrolling by removing unnecessary ScrollViewer wrapper
+  - Added `HorizontalContentAlignment="Stretch"` for full-width item display
+
+### 🐛 Bug Fixes
+- **Fixed**: TreeView mouse wheel scrolling was blocked by ScrollViewer wrapper
+- **Fixed**: Duplicate expand/collapse arrows in TreeView items
+- **Fixed**: Event handler names mismatch between XAML and code-behind
+- **Fixed**: WPF binding errors for read-only properties (added Mode=OneWay)
+
+### 🔍 Known Issues (Identified for Next Session)
+- **Pipeline Selector**: Not showing selected pipelines, filtering not working
+- **Level Selector**: Always shows "All levels" despite filtering correctly
+- **CorrelationGroup Fragmentation**: Single operation creates 7+ separate groups
+- **Pipeline "Unknown"**: Service logs and some entries show "Unknown" pipeline
+- **DICOM DateTime Error**: Format "YYYYMMDDHHMMSS" not properly split for DA/TM fields
+- **Duration Display**: All entries show 0ms (no millisecond precision)
+- **EXIF Details**: Only patient name logged, other extracted fields missing
+
+### 📋 Technical Notes
+- Confirmed Converters exist: `StageToColorConverter`, `StageToIconConverter`
+- Using ModernWpf styles (NOT MaterialDesign)
+- TreeView performance remains good with virtualization
+- Identified need for session-based correlation grouping
+
+### 🎯 Next Steps
+- Implement correlation group merging/filtering to reduce fragmentation
+- Fix pipeline and level selector UI binding issues
+- Enhance log parsing for multiple format support
+- Complete EXIF detail logging
+
+---
+*Session 125 - "From beautiful to functional"*
+
 ## [0.8.20] - 2025-01-05
 
 ### Added

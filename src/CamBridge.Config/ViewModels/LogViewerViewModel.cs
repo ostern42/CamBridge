@@ -168,6 +168,42 @@ namespace CamBridge.Config.ViewModels
             }
         }
 
+        public string PipelineSelectionText
+        {
+            get
+            {
+                var count = PipelineSelections?.Count(p => p.IsSelected) ?? 0;
+                if (count == 0)
+                    return "Select pipelines...";
+                else if (count == 1)
+                    return PipelineSelections.First(p => p.IsSelected).Name;
+                else
+                    return $"{count} pipelines selected";
+            }
+        }
+
+        public string LevelSelectionText
+        {
+            get
+            {
+                var levels = new List<string>();
+                if (ShowDebug) levels.Add("Debug");
+                if (ShowInformation) levels.Add("Info");
+                if (ShowWarning) levels.Add("Warning");
+                if (ShowError) levels.Add("Error");
+                if (ShowCritical) levels.Add("Critical");
+
+                if (levels.Count == 0)
+                    return "No levels";
+                else if (levels.Count == 5)
+                    return "All levels";
+                else if (levels.Count == 1)
+                    return levels[0];
+                else
+                    return $"{levels.Count} levels";
+            }
+        }
+
         [ObservableProperty]
         private bool showDebug;
 

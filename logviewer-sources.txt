@@ -1,0 +1,2119 @@
+﻿
+
+// ========== src\CamBridge.Config\Converters\ValueConverters.cs ==========
+// src/CamBridge.Config/Converters/ValueConverters.cs
+// Version: 0.8.11 - SAFE VERSION (nur Unicode-Fixes, keine riskanten neuen Features)
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using CamBridge.Config.Models;
+using CamBridge.Config.ViewModels;
+using CamBridge.Core;
+using CamBridge.Core.Enums;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Linq;
+using System.Windows;
+using System.Windows.Data;
+using System.Windows.Media;
+
+namespace CamBridge.Config.Converters
+{
+    /// <summary>
+    /// Converts ProcessingStage to color for visual distinction
+    /// </summary>
+    public class StageToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ProcessingStage stage)
+            {
+                var color = stage switch
+                {
+                    ProcessingStage.ServiceStartup => Colors.DodgerBlue,        // Blue
+                    ProcessingStage.ConfigurationLoading => Colors.SteelBlue,   // Dark Blue
+                    ProcessingStage.PipelineInitialization => Colors.CornflowerBlue,
+                    ProcessingStage.ServiceShutdown => Colors.DarkGray,
+
+                    ProcessingStage.FileDetected => Colors.DarkTurquoise,       // Cyan
+                    ProcessingStage.ExifExtraction => Colors.MediumPurple,      // Purple
+                    ProcessingStage.TagMapping => Colors.MediumOrchid,          // Light Purple
+                    ProcessingStage.DicomConversion => Colors.DarkOrange,       // Orange
+                    ProcessingStage.PacsUpload => Colors.Goldenrod,            // Gold
+
+                    ProcessingStage.Complete => Colors.ForestGreen,             // Green
+                    ProcessingStage.PostProcessing => Colors.SeaGreen,
+
+                    ProcessingStage.Error => Colors.Crimson,                    // Red
+                    ProcessingStage.WatcherError => Colors.IndianRed,
+                    ProcessingStage.PipelineShutdown => Colors.DarkRed,
+                    ProcessingStage.PipelineRecovery => Colors.OrangeRed,
+
+                    ProcessingStage.HealthCheck => Colors.LimeGreen,
+                    _ => Colors.Gray
+                };
+
+                return new SolidColorBrush(color);
+            }
+
+            return new SolidColorBrush(Colors.Gray);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts ProcessingStage to icon symbol
+    /// </summary>
+    public class StageToIconConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ProcessingStage stage)
+            {
+                return stage switch
+                {
+                    ProcessingStage.ServiceStartup => "â–¶",        // Play
+                    ProcessingStage.ConfigurationLoading => "âš™",  // Gear
+                    ProcessingStage.PipelineInitialization => "ðŸ”§",
+                    ProcessingStage.ServiceShutdown => "â—¼",        // Stop
+
+                    ProcessingStage.FileDetected => "ðŸ“„",          // File
+                    ProcessingStage.ExifExtraction => "ðŸ”",        // Magnifier
+                    ProcessingStage.TagMapping => "ðŸ·",            // Tag
+                    ProcessingStage.DicomConversion => "ðŸ¥",       // Hospital
+                    ProcessingStage.PacsUpload => "â˜",            // Cloud
+
+                    ProcessingStage.Complete => "âœ“",              // Check
+                    ProcessingStage.PostProcessing => "ðŸ“¦",
+
+                    ProcessingStage.Error => "âœ—",                 // X
+                    ProcessingStage.WatcherError => "ðŸ‘",         // Eye
+                    ProcessingStage.PipelineShutdown => "â›”",
+                    ProcessingStage.PipelineRecovery => "â™»",     // Recycle
+
+                    ProcessingStage.HealthCheck => "ðŸ’š",          // Heart
+                    _ => "â€¢"
+                };
+            }
+
+            return "â€¢";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// SAFE: Fixed expand/collapse icons (Unicode â†’ proper symbols)
+    /// </summary>
+    public class ExpandIconConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isExpanded)
+            {
+                return isExpanded ? "â–¼" : "â–¶";  // FIXED: proper Unicode symbols
+            }
+            return "â–¶";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts integer to Visibility based on comparison with parameter
+    /// </summary>
+    public class IntToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            int intValue = 0;
+            int compareValue = 0;
+
+            if (value != null)
+            {
+                try { intValue = System.Convert.ToInt32(value); }
+                catch { /* Default to 0 */ }
+            }
+
+            if (parameter != null)
+            {
+                try { compareValue = System.Convert.ToInt32(parameter); }
+                catch { /* Default to 0 */ }
+            }
+
+            return intValue == compareValue ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts boolean values to Visibility
+    /// </summary>
+    public class BooleanToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            bool boolValue = value is bool b && b;
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return boolValue ? Visibility.Collapsed : Visibility.Visible;
+            else
+                return boolValue ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Inverts boolean to visibility conversion
+    /// </summary>
+    public class InverseBooleanToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            bool boolValue = value is bool b && b;
+            return boolValue ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// SAFE: Converts numeric values greater than zero to Visibility
+    /// </summary>
+    public class GreaterThanZeroConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null) return Visibility.Collapsed;
+
+            try
+            {
+                double numValue = System.Convert.ToDouble(value);
+                return numValue > 0 ? Visibility.Visible : Visibility.Collapsed;
+            }
+            catch
+            {
+                return Visibility.Collapsed;
+            }
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts null values to Visibility
+    /// </summary>
+    public class NullToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            bool isNull = value == null;
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return isNull ? Visibility.Visible : Visibility.Collapsed;
+            else
+                return isNull ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts zero values to Visibility
+    /// </summary>
+    public class ZeroToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            bool isZero = false;
+
+            if (value != null)
+            {
+                try
+                {
+                    double numValue = System.Convert.ToDouble(value);
+                    isZero = Math.Abs(numValue) < 0.0001;
+                }
+                catch { /* If conversion fails, treat as non-zero */ }
+            }
+
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return isZero ? Visibility.Collapsed : Visibility.Visible;
+            else
+                return isZero ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts error count to color brush
+    /// </summary>
+    public class ErrorCountToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            int errorCount = 0;
+
+            if (value != null)
+            {
+                try { errorCount = System.Convert.ToInt32(value); }
+                catch { /* Default to 0 */ }
+            }
+
+            if (errorCount > 0)
+            {
+                return new SolidColorBrush(Color.FromRgb(255, 107, 107));
+            }
+
+            return DependencyProperty.UnsetValue;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts boolean values to inverse boolean
+    /// </summary>
+    public class InverseBooleanConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return !(value is bool b && b);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return !(value is bool b && b);
+        }
+    }
+
+    /// <summary>
+    /// Converts empty string to visibility
+    /// </summary>
+    public class EmptyStringToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            string? str = value as string;
+            bool isEmpty = string.IsNullOrWhiteSpace(str);
+            bool invert = parameter as string == "Inverse";
+
+            if (invert)
+                return isEmpty ? Visibility.Visible : Visibility.Collapsed;
+            else
+                return isEmpty ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// SAFE: Service status to color converter (no changes, was working)
+    /// </summary>
+    public class ServiceStatusToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            string status = value as string ?? "";
+
+            return status.ToLower() switch
+            {
+                "running" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),      // Green
+                "online" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),       // Green
+                "stopped" => new SolidColorBrush(Color.FromRgb(255, 193, 7)),      // Yellow
+                "offline" => new SolidColorBrush(Color.FromRgb(255, 193, 7)),      // Yellow
+                "paused" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),       // Orange
+                "startpending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange
+                "stoppending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),  // Orange
+                "continuepending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange
+                "pausepending" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),    // Orange
+                "error" => new SolidColorBrush(Color.FromRgb(244, 67, 54)),        // Red
+                "notinstalled" => new SolidColorBrush(Color.FromRgb(244, 67, 54)), // Red
+                _ => new SolidColorBrush(Color.FromRgb(158, 158, 158))             // Gray
+            };
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts seconds to milliseconds
+    /// </summary>
+    public class SecondsToMillisecondsConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double seconds) return seconds * 1000;
+            if (value is int intSeconds) return intSeconds * 1000;
+            return 0;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double milliseconds) return milliseconds / 1000;
+            if (value is int intMilliseconds) return intMilliseconds / 1000;
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Converts enum value to boolean based on parameter
+    /// </summary>
+    public class EnumToBooleanConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null || parameter == null) return false;
+
+            string enumValue = value.ToString();
+            string targetValue = parameter.ToString();
+
+            return enumValue.Equals(targetValue, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isChecked && isChecked)
+            {
+                if (parameter != null && targetType.IsEnum)
+                {
+                    return Enum.Parse(targetType, parameter.ToString());
+                }
+            }
+
+            return Binding.DoNothing;
+        }
+    }
+
+    /// <summary>
+    /// Converter for file selection dialogs
+    /// </summary>
+    public class FileSelectConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return value;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return value;
+        }
+    }
+
+    /// <summary>
+    /// Multi-value boolean OR converter
+    /// </summary>
+    public class MultiBooleanOrConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values == null || values.Length == 0) return false;
+
+            foreach (var value in values)
+            {
+                if (value is bool b && b) return true;
+            }
+
+            return false;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts enum types to collection for ComboBox binding
+    /// </summary>
+    public class EnumToCollectionConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return Enum.GetValues(parameter as Type ?? value?.GetType() ?? typeof(object));
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts file size to human-readable format
+    /// </summary>
+    public class FileSizeConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value == null) return "0 B";
+
+            long bytes = System.Convert.ToInt64(value);
+            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+            int order = 0;
+            double size = bytes;
+
+            while (size >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                size /= 1024;
+            }
+
+            return $"{size:0.##} {sizes[order]}";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts TimeSpan to readable string
+    /// </summary>
+    public class TimeSpanToStringConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is TimeSpan timeSpan)
+            {
+                if (timeSpan.TotalDays >= 1)
+                    return $"{(int)timeSpan.TotalDays}d {timeSpan.Hours}h {timeSpan.Minutes}m";
+                else if (timeSpan.TotalHours >= 1)
+                    return $"{(int)timeSpan.TotalHours}h {timeSpan.Minutes}m";
+                else
+                    return $"{timeSpan.Minutes}m {timeSpan.Seconds}s";
+            }
+            return "0s";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Multi-value boolean AND converter
+    /// </summary>
+    public class MultiBooleanAndConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values == null || values.Length == 0) return false;
+
+            foreach (var value in values)
+            {
+                if (!(value is bool b) || !b) return false;
+            }
+
+            return true;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Null and boolean AND converter
+    /// </summary>
+    public class NullBooleanAndConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values == null || values.Length < 2) return false;
+
+            return values[0] != null && values[1] is bool b && b;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts boolean to color (Green for true, Red for false)
+    /// </summary>
+    public class BoolToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isTrue)
+            {
+                return new SolidColorBrush(isTrue ? Colors.Green : Colors.Red);
+            }
+            return new SolidColorBrush(Colors.Gray);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// SAFE: Transform enum converter (fixed Unicode but kept simple)
+    /// </summary>
+    public class TransformToSymbolConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ValueTransform transform)
+            {
+                return transform switch
+                {
+                    ValueTransform.None => "â†’",
+                    ValueTransform.DateToDicom => "Dateâ†’",
+                    ValueTransform.TimeToDicom => "Timeâ†’",
+                    ValueTransform.DateTimeToDicom => "DateTimeâ†’",
+                    ValueTransform.MapGender => "Genderâ†’",
+                    ValueTransform.RemovePrefix => "Trimâ†’",
+                    ValueTransform.ExtractDate => "Extractâ†’",
+                    ValueTransform.ExtractTime => "Extractâ†’",
+                    ValueTransform.ToUpperCase => "UPPERâ†’",
+                    ValueTransform.ToLowerCase => "lowerâ†’",
+                    ValueTransform.Trim => "Trimâ†’",
+                    _ => "â†’"
+                };
+            }
+            return "â†’";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts Transform enum to a descriptive text
+    /// </summary>
+    public class TransformToDescriptionConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ValueTransform transform)
+            {
+                return transform switch
+                {
+                    ValueTransform.None => "Direct mapping",
+                    ValueTransform.DateToDicom => "Convert date to DICOM format (YYYYMMDD)",
+                    ValueTransform.TimeToDicom => "Convert time to DICOM format (HHMMSS)",
+                    ValueTransform.DateTimeToDicom => "Convert datetime to DICOM format",
+                    ValueTransform.MapGender => "Map gender values (M/F/O)",
+                    ValueTransform.RemovePrefix => "Remove prefix from value",
+                    ValueTransform.ExtractDate => "Extract date from datetime",
+                    ValueTransform.ExtractTime => "Extract time from datetime",
+                    ValueTransform.ToUpperCase => "Convert to uppercase",
+                    ValueTransform.ToLowerCase => "Convert to lowercase",
+                    ValueTransform.Trim => "Remove leading/trailing spaces",
+                    _ => "Unknown transformation"
+                };
+            }
+            return "No transformation";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Combines stage entries and ungrouped entries into a flat list for compact tree view
+    /// </summary>
+    public class CombineStagesConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length != 2) return null;
+
+            var stages = values[0] as ObservableCollection<StageGroup>;
+            var ungrouped = values[1] as ObservableCollection<LogEntry>;
+
+            var combined = new List<LogEntry>();
+
+            if (stages != null)
+            {
+                foreach (var stage in stages.OrderBy(s => s.StartTime))
+                {
+                    combined.AddRange(stage.Entries);
+                }
+            }
+
+            if (ungrouped != null)
+            {
+                combined.AddRange(ungrouped);
+            }
+
+            return combined.OrderBy(e => e.Timestamp).ToList();
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// MISSING: Status to color converter for TreeView
+    /// </summary>
+    public class StatusToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is ProcessingStatus status)
+            {
+                return status switch
+                {
+                    ProcessingStatus.Completed => "#4CAF50",  // Green
+                    ProcessingStatus.Failed => "#F44336",     // Red
+                    ProcessingStatus.InProgress => "#2196F3", // Blue
+                    _ => "#9E9E9E"                          // Gray
+                };
+            }
+            return "#9E9E9E";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converts color string to SolidColorBrush with opacity
+    /// </summary>
+    public class ColorToBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string colorString)
+            {
+                try
+                {
+                    var color = (Color)ColorConverter.ConvertFromString(colorString);
+                    color.A = 30; // Very light background
+                    return new SolidColorBrush(color);
+                }
+                catch
+                {
+                    return Brushes.Transparent;
+                }
+            }
+            return Brushes.Transparent;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+}
+
+
+
+// ========== src\CamBridge.Config\ViewModels\LogViewerViewModel.cs ==========
+// src/CamBridge.Config/ViewModels/LogViewerViewModel.cs
+// Version: 0.8.19
+// Description: TRULY FIXED LogViewerViewModel - no duplicate methods!
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using CamBridge.Config.Models;
+using CamBridge.Config.Services;
+using CamBridge.Config.Services.Interfaces;
+using CamBridge.Core;
+using CamBridge.Core.Enums;
+using CamBridge.Core.Infrastructure;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+
+namespace CamBridge.Config.ViewModels
+{
+    /// <summary>
+    /// TRULY FIXED ViewModel for log viewer - no duplicate methods!
+    /// </summary>
+    public partial class LogViewerViewModel : ViewModelBase
+    {
+        private readonly ILogger<LogViewerViewModel> _logger;
+        private readonly IConfigurationService _configurationService;
+        private readonly ILogFileService _logFileService;
+        private readonly ILogParsingService _logParsingService;
+        private readonly ILogFilterService _logFilterService;
+        private readonly ILogTreeBuilder _logTreeBuilder;
+        private readonly Timer _refreshTimer;
+
+        // Track file positions separately since model doesn't have them
+        private readonly Dictionary<string, long> _filePositions = new();
+        private readonly Dictionary<string, string> _filePaths = new();
+
+        private const int RefreshIntervalMs = 1000;
+        private const int MaxHistoryItems = 10;
+
+        public LogViewerViewModel(
+            ILogger<LogViewerViewModel> logger,
+            IConfigurationService configurationService,
+            ILogFileService logFileService,
+            ILogParsingService logParsingService,
+            ILogFilterService logFilterService,
+            ILogTreeBuilder logTreeBuilder)
+        {
+            _logger = logger;
+            _configurationService = configurationService;
+            _logFileService = logFileService;
+            _logParsingService = logParsingService;
+            _logFilterService = logFilterService;
+            _logTreeBuilder = logTreeBuilder;
+
+            // Initialize collections
+            LogEntries = new ObservableCollection<LogEntry>();
+            CombinedLogEntries = new ObservableCollection<LogEntry>();
+            FilteredCombinedEntries = new ObservableCollection<LogEntry>();
+            CorrelationGroups = new ObservableCollection<CorrelationGroup>();
+            PipelineSelections = new ObservableCollection<PipelineSelection>();
+
+            // Initialize search history
+            Filter1History = new ObservableCollection<string>();
+            Filter2History = new ObservableCollection<string>();
+            Filter3History = new ObservableCollection<string>();
+
+            // Set defaults
+            ShowDebug = true;
+            ShowInformation = true;
+            ShowWarning = true;
+            ShowError = true;
+            ShowCritical = true;
+            IsTreeViewEnabled = true;
+
+            // Setup auto-refresh timer
+            _refreshTimer = new Timer(OnRefreshTimerTick, null, Timeout.Infinite, Timeout.Infinite);
+
+            // Setup property change handler - renamed to avoid conflict!
+            PropertyChanged += OnViewModelPropertyChanged;
+        }
+
+        #region Observable Properties
+
+        [ObservableProperty]
+        private ObservableCollection<LogEntry> logEntries;
+
+        [ObservableProperty]
+        private ObservableCollection<LogEntry> combinedLogEntries;
+
+        [ObservableProperty]
+        private ObservableCollection<LogEntry> filteredCombinedEntries;
+
+        [ObservableProperty]
+        private ObservableCollection<CorrelationGroup> correlationGroups;
+
+        [ObservableProperty]
+        private ObservableCollection<PipelineSelection> pipelineSelections;
+
+        [ObservableProperty]
+        private bool isLoading;
+
+        [ObservableProperty]
+        private bool isTreeViewEnabled;
+
+        [ObservableProperty]
+        private bool isAutoScrollEnabled;
+
+        // Search history collections
+        [ObservableProperty]
+        private ObservableCollection<string> filter1History;
+
+        [ObservableProperty]
+        private ObservableCollection<string> filter2History;
+
+        [ObservableProperty]
+        private ObservableCollection<string> filter3History;
+
+        // Filter properties - NO history spam on PropertyChanged!
+        private string _filter1 = string.Empty;
+        public string Filter1
+        {
+            get => _filter1;
+            set
+            {
+                if (SetProperty(ref _filter1, value))
+                {
+                    ApplyFilters();
+                    // Do NOT add to history here!
+                }
+            }
+        }
+
+        private string _filter2 = string.Empty;
+        public string Filter2
+        {
+            get => _filter2;
+            set
+            {
+                if (SetProperty(ref _filter2, value))
+                {
+                    ApplyFilters();
+                    // Do NOT add to history here!
+                }
+            }
+        }
+
+        private string _filter3 = string.Empty;
+        public string Filter3
+        {
+            get => _filter3;
+            set
+            {
+                if (SetProperty(ref _filter3, value))
+                {
+                    ApplyFilters();
+                    // Do NOT add to history here!
+                }
+            }
+        }
+
+        [ObservableProperty]
+        private bool showDebug;
+
+        [ObservableProperty]
+        private bool showInformation;
+
+        [ObservableProperty]
+        private bool showWarning;
+
+        [ObservableProperty]
+        private bool showError;
+
+        [ObservableProperty]
+        private bool showCritical;
+
+        #endregion
+
+        #region Computed Properties
+
+        public int TotalLineCount => CombinedLogEntries?.Count ?? 0;
+        public int DisplayedLineCount => FilteredCombinedEntries?.Count ?? 0;
+        public int SelectedPipelineCount => PipelineSelections?.Count(p => p.IsSelected) ?? 0;
+
+        // Add this property to show/hide "Filters active" in status bar
+        public bool HasActiveFilters =>
+            !string.IsNullOrWhiteSpace(Filter1) ||
+            !string.IsNullOrWhiteSpace(Filter2) ||
+            !string.IsNullOrWhiteSpace(Filter3) ||
+            StartDate.HasValue ||
+            EndDate.HasValue ||
+            !ShowDebug || !ShowInformation || !ShowWarning || !ShowError || !ShowCritical;
+
+        #endregion
+
+        #region Date Range Properties
+
+        private DateTime? _startDate;
+        public DateTime? StartDate
+        {
+            get => _startDate;
+            set
+            {
+                if (SetProperty(ref _startDate, value))
+                {
+                    ApplyFilters();
+                }
+            }
+        }
+
+        private DateTime? _endDate;
+        public DateTime? EndDate
+        {
+            get => _endDate;
+            set
+            {
+                if (SetProperty(ref _endDate, value))
+                {
+                    ApplyFilters();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Commands
+
+        // Tree View Commands
+        [RelayCommand]
+        private void ExpandAll()
+        {
+            foreach (var group in CorrelationGroups)
+            {
+                group.IsExpanded = true;
+                foreach (var stage in group.Stages)
+                {
+                    stage.IsExpanded = true;
+                }
+            }
+            _logger.LogDebug("Expanded all tree nodes");
+        }
+
+        [RelayCommand]
+        private void CollapseAll()
+        {
+            foreach (var group in CorrelationGroups)
+            {
+                group.IsExpanded = false;
+                foreach (var stage in group.Stages)
+                {
+                    stage.IsExpanded = false;
+                }
+            }
+            _logger.LogDebug("Collapsed all tree nodes");
+        }
+
+        // Date Range Commands
+        [RelayCommand]
+        private void SetToday()
+        {
+            StartDate = DateTime.Today;
+            EndDate = DateTime.Today.AddDays(1).AddSeconds(-1); // End of today
+        }
+
+        [RelayCommand]
+        private void SetLastWeek()
+        {
+            EndDate = DateTime.Today.AddDays(1).AddSeconds(-1);
+            StartDate = DateTime.Today.AddDays(-7);
+        }
+
+        [RelayCommand]
+        private void SetLastMonth()
+        {
+            EndDate = DateTime.Today.AddDays(1).AddSeconds(-1);
+            StartDate = DateTime.Today.AddDays(-30);
+        }
+
+        [RelayCommand]
+        private void ClearDateRange()
+        {
+            StartDate = null;
+            EndDate = null;
+        }
+
+        // Main Commands
+        [RelayCommand]
+        private async Task LoadLogFileAsync()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Log files (*.log)|*.log|All files (*.*)|*.*",
+                Title = "Select Log File"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                await LoadSpecificLogFileAsync(dialog.FileName);
+            }
+        }
+
+        [RelayCommand]
+        private async Task RefreshAsync()
+        {
+            var selectedPipelines = PipelineSelections.Where(p => p.IsSelected).ToList();
+            if (!selectedPipelines.Any())
+            {
+                _logger.LogInformation("No pipelines selected for refresh");
+                return;
+            }
+
+            try
+            {
+                IsLoading = true;
+                var allEntries = new List<LogEntry>();
+
+                foreach (var pipeline in selectedPipelines)
+                {
+                    // Get file path from our tracking dictionary
+                    if (_filePaths.TryGetValue(pipeline.Name, out var filePath) && File.Exists(filePath))
+                    {
+                        // Get stored position
+                        var startPosition = _filePositions.TryGetValue(pipeline.Name, out var pos) ? pos : 0;
+
+                        // Read entries using the existing service method
+                        var entries = await _logFileService.ReadLogFileAsync(filePath, pipeline.Name);
+
+                        // For incremental reading, skip already read entries
+                        if (startPosition > 0 && entries.Count > 0)
+                        {
+                            // Simple approach: store count instead of file position
+                            var previousCount = (int)startPosition;
+                            if (entries.Count > previousCount)
+                            {
+                                entries = entries.Skip(previousCount).ToList();
+                            }
+                            else
+                            {
+                                entries.Clear(); // No new entries
+                            }
+                        }
+
+                        // Update position (using count as proxy)
+                        _filePositions[pipeline.Name] = _filePositions.TryGetValue(pipeline.Name, out var oldPos)
+                            ? oldPos + entries.Count
+                            : entries.Count;
+
+                        allEntries.AddRange(entries);
+                    }
+                }
+
+                UpdateCombinedEntries(allEntries);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing logs");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        [RelayCommand]
+        private void ClearLog()
+        {
+            LogEntries.Clear();
+            CombinedLogEntries.Clear();
+            FilteredCombinedEntries.Clear();
+            CorrelationGroups.Clear();
+            _filePositions.Clear();
+            _logger.LogInformation("Cleared all log entries");
+        }
+
+        [RelayCommand]
+        private async Task ExportLogAsync()
+        {
+            var dialog = new SaveFileDialog
+            {
+                Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                Title = "Export Log",
+                FileName = $"cambridge_export_{DateTime.Now:yyyyMMdd_HHmmss}.log"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var entries = IsTreeViewEnabled ?
+                        GetAllEntriesFromGroups() :
+                        FilteredCombinedEntries.ToList();
+
+                    // Simple export implementation
+                    var lines = entries.Select(e => e.RawLine ??
+                        $"[{e.Timestamp:HH:mm:ss.fff}] [{e.LevelText}] {e.Message}");
+
+                    await File.WriteAllLinesAsync(dialog.FileName, lines);
+                    _logger.LogInformation("Exported {Count} log entries to {File}", entries.Count, dialog.FileName);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error exporting logs");
+                    MessageBox.Show($"Error exporting logs: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        [RelayCommand]
+        private void OpenLogFolder()
+        {
+            var logPath = ConfigurationPaths.GetLogsDirectory();
+            if (Directory.Exists(logPath))
+            {
+                Process.Start("explorer.exe", logPath);
+            }
+        }
+
+        [RelayCommand]
+        private void ClearFilters()
+        {
+            Filter1 = string.Empty;
+            Filter2 = string.Empty;
+            Filter3 = string.Empty;
+        }
+
+        /// <summary>
+        /// Generic command to copy any text to clipboard
+        /// </summary>
+        [RelayCommand]
+        private void CopyText(string? text)
+        {
+            if (!string.IsNullOrEmpty(text))
+            {
+                try
+                {
+                    Clipboard.SetText(text);
+                    _logger.LogDebug("Copied text to clipboard: {Length} characters", text.Length);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to copy text to clipboard");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Export entire correlation group to clipboard
+        /// </summary>
+        [RelayCommand]
+        private void ExportGroup(CorrelationGroup? group)
+        {
+            if (group == null) return;
+
+            try
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine($"=== Correlation Group Export ===");
+                sb.AppendLine($"Correlation ID: {group.CorrelationId}");
+                sb.AppendLine($"Pipeline: {group.Pipeline}");
+                sb.AppendLine($"Start Time: {group.StartTime:yyyy-MM-dd HH:mm:ss.fff}");
+                sb.AppendLine($"Duration: {group.DurationText}");
+                sb.AppendLine($"Status: {group.Status}");
+                sb.AppendLine();
+
+                foreach (var stage in group.Stages)
+                {
+                    sb.AppendLine($"[{stage.Stage}] - {stage.Entries.Count} entries - {stage.DurationText}");
+                    foreach (var entry in stage.Entries.OrderBy(e => e.Timestamp))
+                    {
+                        sb.AppendLine($"  {entry.Timestamp:HH:mm:ss.fff} [{entry.LevelText}] {entry.Message}");
+                    }
+                    sb.AppendLine();
+                }
+
+                Clipboard.SetText(sb.ToString());
+                _logger.LogInformation("Exported correlation group {CorrelationId} to clipboard", group.CorrelationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to export correlation group");
+            }
+        }
+
+        /// <summary>
+        /// Export all entries from a stage group to clipboard
+        /// </summary>
+        [RelayCommand]
+        private void ExportStage(StageGroup? stage)
+        {
+            if (stage == null) return;
+
+            try
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine($"=== Stage Export: {stage.Stage} ===");
+                sb.AppendLine($"Entries: {stage.Entries.Count}");
+                sb.AppendLine($"Duration: {stage.DurationText}");
+                sb.AppendLine();
+
+                foreach (var entry in stage.Entries.OrderBy(e => e.Timestamp))
+                {
+                    sb.AppendLine($"{entry.Timestamp:HH:mm:ss.fff} [{entry.LevelText}] {entry.Message}");
+                }
+
+                Clipboard.SetText(sb.ToString());
+                _logger.LogInformation("Exported stage {Stage} to clipboard", stage.Stage);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to export stage");
+            }
+        }
+
+        #endregion
+
+        #region Public Methods for UI
+
+        /// <summary>
+        /// Add current Filter1 to history (called from UI on Enter/LostFocus)
+        /// </summary>
+        public void AddToFilter1History()
+        {
+            AddToHistory(Filter1, Filter1History);
+        }
+
+        /// <summary>
+        /// Add current Filter2 to history
+        /// </summary>
+        public void AddToFilter2History()
+        {
+            AddToHistory(Filter2, Filter2History);
+        }
+
+        /// <summary>
+        /// Add current Filter3 to history
+        /// </summary>
+        public void AddToFilter3History()
+        {
+            AddToHistory(Filter3, Filter3History);
+        }
+
+        #endregion
+
+        #region Initialization
+
+        public async Task InitializeAsync()
+        {
+            _logger.LogInformation("Initializing LogViewerViewModel");
+
+            // Load available pipelines
+            await LoadAvailablePipelinesAsync();
+
+            // Auto-select pipelines if any
+            if (PipelineSelections.Any())
+            {
+                foreach (var pipeline in PipelineSelections)
+                {
+                    pipeline.IsSelected = true;
+                }
+                await RefreshAsync();
+            }
+
+            // Start auto-refresh if enabled
+            if (IsAutoScrollEnabled)
+            {
+                _refreshTimer.Change(RefreshIntervalMs, RefreshIntervalMs);
+            }
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        // MERGED and renamed to avoid conflict!
+        private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            switch (e.PropertyName)
+            {
+                case nameof(ShowDebug):
+                case nameof(ShowInformation):
+                case nameof(ShowWarning):
+                case nameof(ShowError):
+                case nameof(ShowCritical):
+                case nameof(IsTreeViewEnabled):
+                    ApplyFilters();
+                    OnPropertyChanged(nameof(HasActiveFilters));
+                    break;
+                case nameof(IsAutoScrollEnabled):
+                    if (IsAutoScrollEnabled)
+                        _refreshTimer.Change(RefreshIntervalMs, RefreshIntervalMs);
+                    else
+                        _refreshTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                    break;
+                case nameof(Filter1):
+                case nameof(Filter2):
+                case nameof(Filter3):
+                case nameof(StartDate):
+                case nameof(EndDate):
+                    OnPropertyChanged(nameof(HasActiveFilters));
+                    break;
+            }
+
+            // Update pipeline count when selection changes
+            if (e.PropertyName == nameof(PipelineSelections))
+            {
+                foreach (var pipeline in PipelineSelections)
+                {
+                    pipeline.PropertyChanged -= OnPipelineSelectionChanged;
+                    pipeline.PropertyChanged += OnPipelineSelectionChanged;
+                }
+            }
+        }
+
+        private void OnPipelineSelectionChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PipelineSelection.IsSelected))
+            {
+                OnPropertyChanged(nameof(SelectedPipelineCount));
+            }
+        }
+
+        private async Task LoadAvailablePipelinesAsync()
+        {
+            try
+            {
+                // Use the generic method from IConfigurationService
+                var settings = await _configurationService.LoadConfigurationAsync<CamBridgeSettingsV2>();
+                var logPath = ConfigurationPaths.GetLogsDirectory();
+
+                PipelineSelections.Clear();
+                _filePaths.Clear();
+
+                // If date range is selected, check multiple days
+                var searchDays = new List<DateTime>();
+
+                if (StartDate.HasValue && EndDate.HasValue)
+                {
+                    var current = StartDate.Value.Date;
+                    while (current <= EndDate.Value.Date)
+                    {
+                        searchDays.Add(current);
+                        current = current.AddDays(1);
+                    }
+                }
+                else
+                {
+                    // Default to today only
+                    searchDays.Add(DateTime.Today);
+                }
+
+                // Add service logs for each day
+                foreach (var date in searchDays)
+                {
+                    var servicePath = Path.Combine(logPath, $"service_{date:yyyyMMdd}.log");
+                    if (File.Exists(servicePath))
+                    {
+                        var servicePipeline = new PipelineSelection
+                        {
+                            Name = $"Service ({date:yyyy-MM-dd})",
+                            SanitizedName = "Service",
+                            IsSelected = false
+                        };
+                        PipelineSelections.Add(servicePipeline);
+                        _filePaths[$"Service ({date:yyyy-MM-dd})"] = servicePath;
+                    }
+                }
+
+                // Add pipeline logs for each day
+                if (settings?.Pipelines != null)
+                {
+                    foreach (var pipeline in settings.Pipelines)
+                    {
+                        foreach (var date in searchDays)
+                        {
+                            var sanitizedName = SanitizeForFileName(pipeline.Name);
+                            var pipelinePath = Path.Combine(logPath, $"pipeline_{sanitizedName}_{date:yyyyMMdd}.log");
+                            if (File.Exists(pipelinePath))
+                            {
+                                var pipelineSelection = new PipelineSelection
+                                {
+                                    Name = $"{pipeline.Name} ({date:yyyy-MM-dd})",
+                                    SanitizedName = sanitizedName,
+                                    IsSelected = false
+                                };
+                                PipelineSelections.Add(pipelineSelection);
+                                _filePaths[$"{pipeline.Name} ({date:yyyy-MM-dd})"] = pipelinePath;
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation("Found {Count} log files across {Days} days",
+                    PipelineSelections.Count, searchDays.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading available pipelines");
+            }
+        }
+
+        private string SanitizeForFileName(string name)
+        {
+            var invalid = Path.GetInvalidFileNameChars()
+                .Concat(new[] { ' ', '.', ',', '/', '\\', ':', '-' })
+                .Distinct()
+                .ToArray();
+            return string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private async Task LoadSpecificLogFileAsync(string filePath)
+        {
+            try
+            {
+                IsLoading = true;
+                _logger.LogInformation("Loading log file: {FilePath}", filePath);
+
+                var sourceName = Path.GetFileNameWithoutExtension(filePath);
+                var entries = await _logFileService.ReadLogFileAsync(filePath, sourceName);
+
+                LogEntries.Clear();
+                foreach (var entry in entries)
+                {
+                    LogEntries.Add(entry);
+                }
+
+                UpdateCombinedEntries(entries);
+
+                _logger.LogInformation("Loaded {Count} log entries", entries.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading log file");
+                MessageBox.Show($"Error loading log file: {ex.Message}", "Load Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private void UpdateCombinedEntries(List<LogEntry> newEntries)
+        {
+            // Add to combined collection
+            foreach (var entry in newEntries)
+            {
+                CombinedLogEntries.Add(entry);
+            }
+
+            // Keep only last 10000 entries
+            while (CombinedLogEntries.Count > 10000)
+            {
+                CombinedLogEntries.RemoveAt(0);
+            }
+
+            // Apply filters
+            ApplyFilters();
+        }
+
+        private void ApplyFilters()
+        {
+            // Create criteria using ACTUAL property names from LogFilterCriteria
+            var criteria = new LogFilterCriteria
+            {
+                ShowDebug = ShowDebug,
+                ShowInformation = ShowInformation,
+                ShowWarning = ShowWarning,
+                ShowError = ShowError,
+                ShowCritical = ShowCritical,
+                Filter1 = Filter1,
+                Filter2 = Filter2,
+                Filter3 = Filter3
+            };
+
+            // First apply level and text filters
+            var filtered = _logFilterService.ApplyFilters(CombinedLogEntries, criteria);
+
+            // Then apply date range filter if set
+            if (StartDate.HasValue || EndDate.HasValue)
+            {
+                var startTime = StartDate ?? DateTime.MinValue;
+                var endTime = EndDate?.AddDays(1) ?? DateTime.MaxValue; // Include entire end day
+
+                filtered = filtered.Where(e => e.Timestamp >= startTime && e.Timestamp < endTime).ToList();
+            }
+
+            FilteredCombinedEntries.Clear();
+            foreach (var entry in filtered)
+            {
+                FilteredCombinedEntries.Add(entry);
+            }
+
+            // Update tree view if enabled
+            if (IsTreeViewEnabled)
+            {
+                var groups = _logTreeBuilder.BuildCorrelationGroups(filtered);
+
+                // SORT groups by StartTime ASCENDING (oldest first, newest at bottom)
+                var sortedGroups = groups.OrderBy(g => g.StartTime).ToList();
+
+                CorrelationGroups.Clear();
+                foreach (var group in sortedGroups)
+                {
+                    CorrelationGroups.Add(group);
+                }
+            }
+
+            OnPropertyChanged(nameof(TotalLineCount));
+            OnPropertyChanged(nameof(DisplayedLineCount));
+        }
+
+        private async void OnRefreshTimerTick(object? state)
+        {
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                if (!IsLoading)
+                {
+                    await RefreshAsync();
+                }
+            });
+        }
+
+        private List<LogEntry> GetAllEntriesFromGroups()
+        {
+            var entries = new List<LogEntry>();
+            foreach (var group in CorrelationGroups)
+            {
+                foreach (var stage in group.Stages)
+                {
+                    entries.AddRange(stage.Entries);
+                }
+            }
+            return entries.OrderBy(e => e.Timestamp).ToList();
+        }
+
+        /// <summary>
+        /// Generic method to add filter to history
+        /// </summary>
+        private void AddToHistory(string filter, ObservableCollection<string> history)
+        {
+            if (string.IsNullOrWhiteSpace(filter)) return;
+
+            // Remove if already exists (to move to top)
+            if (history.Contains(filter))
+                history.Remove(filter);
+
+            // Add to top
+            history.Insert(0, filter);
+
+            // Keep only MaxHistoryItems
+            while (history.Count > MaxHistoryItems)
+                history.RemoveAt(history.Count - 1);
+
+            _logger.LogDebug("Added to search history: {Filter}", filter);
+        }
+
+        #endregion
+
+        public void Cleanup()
+        {
+            _refreshTimer?.Dispose();
+            _logFileService?.StopWatching();
+        }
+    }
+}
+
+
+
+// ========== src\CamBridge.Config\Models\LogEntry.cs ==========
+// src/CamBridge.Config/Models/LogEntry.cs
+// Version: 0.8.16
+// Description: Core log entry model with correlation support
+// Copyright: (C) 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using CamBridge.Core.Enums;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.Config.Models
+{
+    /// <summary>
+    /// Enhanced log entry with correlation support
+    /// </summary>
+    public class LogEntry
+    {
+        public DateTime Timestamp { get; set; }
+        public LogLevel Level { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string? RawLine { get; set; }
+        public string Source { get; set; } = string.Empty; // Which log file this came from
+
+        // Enhanced properties for correlation
+        public string? CorrelationId { get; set; }
+        public ProcessingStage? Stage { get; set; }
+        public string? Pipeline { get; set; }
+        public int? DurationMs { get; set; }
+
+        // UI Helper Properties
+        public string LevelText => Level switch
+        {
+            LogLevel.Debug => "DBG",
+            LogLevel.Information => "INF",
+            LogLevel.Warning => "WRN",
+            LogLevel.Error => "ERR",
+            LogLevel.Critical => "CRT",
+            _ => "???"
+        };
+
+        public string LevelColor => Level switch
+        {
+            LogLevel.Debug => "#808080",      // Gray
+            LogLevel.Information => "#0078D4", // Blue
+            LogLevel.Warning => "#FFA500",     // Orange
+            LogLevel.Error => "#FF0000",       // Red
+            LogLevel.Critical => "#8B0000",    // Dark Red
+            _ => "#000000"
+        };
+
+        // Stage icons using simple ASCII representations
+        public string StageIcon => Stage switch
+        {
+            ProcessingStage.ServiceStartup => "[START]",
+            ProcessingStage.ConfigurationLoading => "[CONFIG]",
+            ProcessingStage.PipelineInitialization => "[INIT]",
+            ProcessingStage.ServiceShutdown => "[STOP]",
+            ProcessingStage.FileDetected => "[FILE]",
+            ProcessingStage.ExifExtraction => "[EXIF]",
+            ProcessingStage.TagMapping => "[MAP]",
+            ProcessingStage.DicomConversion => "[DICOM]",
+            ProcessingStage.PostProcessing => "[POST]",
+            ProcessingStage.PacsUpload => "[PACS]",
+            ProcessingStage.Complete => "[OK]",
+            ProcessingStage.Error => "[ERR]",
+            ProcessingStage.PipelineShutdown => "[SHUTDOWN]",
+            ProcessingStage.PipelineRecovery => "[RECOVERY]",
+            ProcessingStage.WatcherError => "[WATCH]",
+            ProcessingStage.HealthCheck => "[HEALTH]",
+            _ => "[*]"
+        };
+
+        public string FormattedDuration => DurationMs.HasValue ? $"{DurationMs}ms" : "";
+    }
+}
+
+
+
+// ========== src\CamBridge.Config\Models\CorrelationGroup.cs ==========
+// src/CamBridge.Config/Models/CorrelationGroup.cs
+// Version: 0.8.19
+// Description: Groups log entries by correlation ID for tree view - ENHANCED
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using CamBridge.Core.Enums;
+using CommunityToolkit.Mvvm.ComponentModel;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.Linq;
+
+namespace CamBridge.Config.Models
+{
+    /// <summary>
+    /// Represents a group of log entries with the same correlation ID
+    /// </summary>
+    public class CorrelationGroup : ObservableObject
+    {
+        private bool _isExpanded = true; // Default expanded for compact view
+
+        public string CorrelationId { get; set; } = string.Empty;
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public string Pipeline { get; set; } = string.Empty;
+        public ProcessingStatus Status { get; set; }
+        public ObservableCollection<StageGroup> Stages { get; }
+        public ObservableCollection<LogEntry> UngroupedEntries { get; }
+
+        // Constructor
+        public CorrelationGroup()
+        {
+            Stages = new ObservableCollection<StageGroup>();
+            UngroupedEntries = new ObservableCollection<LogEntry>();
+
+            // IMPORTANT: Notify AllEntries when collections change
+            Stages.CollectionChanged += OnCollectionChanged;
+            UngroupedEntries.CollectionChanged += OnCollectionChanged;
+        }
+
+        private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            OnPropertyChanged(nameof(AllEntries));
+            OnPropertyChanged(nameof(TotalEntries));
+            OnPropertyChanged(nameof(ErrorCount));
+            OnPropertyChanged(nameof(WarningCount));
+
+            // If new stages added, check for status changes
+            if (e.Action == NotifyCollectionChangedAction.Add && sender == Stages)
+            {
+                UpdateStatus();
+            }
+        }
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set => SetProperty(ref _isExpanded, value);
+        }
+
+        public TimeSpan Duration => EndTime - StartTime;
+
+        public string DurationText
+        {
+            get
+            {
+                if (Duration.TotalSeconds >= 1)
+                    return $"{Duration.TotalSeconds:0.0}s";
+                else
+                    return $"{Duration.TotalMilliseconds:0}ms";
+            }
+        }
+
+        public int TotalEntries => Stages.Sum(s => s.Entries.Count) + UngroupedEntries.Count;
+
+        public int ErrorCount => AllEntries.Count(e => e.Level == Microsoft.Extensions.Logging.LogLevel.Error);
+        public int WarningCount => AllEntries.Count(e => e.Level == Microsoft.Extensions.Logging.LogLevel.Warning);
+
+        /// <summary>
+        /// All entries in chronological order for compact display
+        /// </summary>
+        public IEnumerable<LogEntry> AllEntries
+        {
+            get
+            {
+                var allEntries = new List<LogEntry>();
+
+                // Add all stage entries
+                foreach (var stage in Stages.OrderBy(s => s.StartTime))
+                {
+                    allEntries.AddRange(stage.Entries);
+                }
+
+                // Add ungrouped entries
+                allEntries.AddRange(UngroupedEntries);
+
+                // Return sorted by timestamp
+                return allEntries.OrderBy(e => e.Timestamp);
+            }
+        }
+
+        // Update status based on stages
+        private void UpdateStatus()
+        {
+            if (Stages.Any(s => s.Stage == ProcessingStage.Error))
+            {
+                Status = ProcessingStatus.Failed;
+            }
+            else if (Stages.Any(s => s.Stage == ProcessingStage.Complete))
+            {
+                Status = ProcessingStatus.Completed;
+            }
+            else if (Stages.Any(s => s.Stage == ProcessingStage.PipelineShutdown))
+            {
+                Status = ProcessingStatus.Failed;
+            }
+            else if (Stages.Count > 0)
+            {
+                Status = ProcessingStatus.InProgress;
+            }
+            else
+            {
+                Status = ProcessingStatus.Unknown;
+            }
+
+            OnPropertyChanged(nameof(Status));
+            OnPropertyChanged(nameof(StatusIcon));
+            OnPropertyChanged(nameof(StatusColor));
+            OnPropertyChanged(nameof(StatusText));
+        }
+
+        // UI Helper properties
+        public string StatusIcon => Status switch
+        {
+            ProcessingStatus.Completed => "âœ“",
+            ProcessingStatus.Failed => "âœ—",
+            ProcessingStatus.InProgress => "â‹¯",
+            _ => "?"
+        };
+
+        public string StatusColor => Status switch
+        {
+            ProcessingStatus.Completed => "#4CAF50",  // Green
+            ProcessingStatus.Failed => "#F44336",      // Red
+            ProcessingStatus.InProgress => "#2196F3",  // Blue
+            _ => "#9E9E9E"                            // Gray
+        };
+
+        public string StatusText => Status switch
+        {
+            ProcessingStatus.Completed => "Complete",
+            ProcessingStatus.Failed => "Failed",
+            ProcessingStatus.InProgress => "Processing",
+            _ => "Unknown"
+        };
+
+        // Additional UI properties for beautiful display
+        public string FormattedStartTime => StartTime.ToString("yyyy-MM-dd HH:mm:ss.fff");
+        public string FormattedDate => StartTime.ToString("yyyy-MM-dd");
+        public string FormattedTime => StartTime.ToString("HH:mm:ss.fff");
+
+        public bool HasErrors => ErrorCount > 0;
+        public bool HasWarnings => WarningCount > 0;
+
+        // Summary text for tooltips
+        public string Summary
+        {
+            get
+            {
+                var parts = new List<string>();
+                parts.Add($"{TotalEntries} entries");
+                parts.Add($"Duration: {DurationText}");
+
+                if (ErrorCount > 0)
+                    parts.Add($"{ErrorCount} errors");
+                if (WarningCount > 0)
+                    parts.Add($"{WarningCount} warnings");
+
+                return string.Join(" â€¢ ", parts);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Processing status for correlation groups
+    /// </summary>
+    public enum ProcessingStatus
+    {
+        Unknown,
+        InProgress,
+        Completed,
+        Failed
+    }
+}
+
+
+
+// ========== src\CamBridge.Config\Models\StageGroup.cs ==========
+// src/CamBridge.Config/Models/StageGroup.cs
+// Version: 0.8.19
+// Description: Groups log entries by processing stage - ENHANCED
+// Copyright: Â© 2025 Claude's Improbably Reliable Software Solutions
+
+using System;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.Linq;
+using CamBridge.Core.Enums;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.Logging;
+
+namespace CamBridge.Config.Models
+{
+    /// <summary>
+    /// Represents a group of log entries for a specific processing stage
+    /// </summary>
+    public class StageGroup : ObservableObject
+    {
+        private bool _isExpanded = true;
+
+        public ProcessingStage Stage { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public ObservableCollection<LogEntry> Entries { get; }
+
+        public StageGroup()
+        {
+            Entries = new ObservableCollection<LogEntry>();
+            Entries.CollectionChanged += OnEntriesChanged;
+        }
+
+        private void OnEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            OnPropertyChanged(nameof(EntryCount));
+            OnPropertyChanged(nameof(ErrorCount));
+            OnPropertyChanged(nameof(WarningCount));
+            OnPropertyChanged(nameof(HasErrors));
+            OnPropertyChanged(nameof(HasWarnings));
+            OnPropertyChanged(nameof(Summary));
+
+            // Update times if entries added
+            if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
+            {
+                foreach (LogEntry entry in e.NewItems)
+                {
+                    if (!StartTime.Equals(default) && entry.Timestamp < StartTime)
+                        StartTime = entry.Timestamp;
+                    if (entry.Timestamp > EndTime)
+                        EndTime = entry.Timestamp;
+                }
+
+                OnPropertyChanged(nameof(Duration));
+                OnPropertyChanged(nameof(DurationText));
+            }
+        }
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set => SetProperty(ref _isExpanded, value);
+        }
+
+        public TimeSpan Duration => EndTime - StartTime;
+
+        public string DurationText
+        {
+            get
+            {
+                if (Duration.TotalSeconds >= 1)
+                    return $"{Duration.TotalSeconds:0.0}s";
+                else
+                    return $"{Duration.TotalMilliseconds:0}ms";
+            }
+        }
+
+        // Entry counts
+        public int EntryCount => Entries.Count;
+        public int ErrorCount => Entries.Count(e => e.Level == LogLevel.Error);
+        public int WarningCount => Entries.Count(e => e.Level == LogLevel.Warning);
+
+        public bool HasErrors => ErrorCount > 0;
+        public bool HasWarnings => WarningCount > 0;
+
+        // UI Helper properties
+        public string StageIcon => Stage switch
+        {
+            ProcessingStage.ServiceStartup => "â–¶",
+            ProcessingStage.ConfigurationLoading => "âš™",
+            ProcessingStage.PipelineInitialization => "ðŸ”§",
+            ProcessingStage.ServiceShutdown => "â—¼",
+            ProcessingStage.FileDetected => "ðŸ“„",
+            ProcessingStage.ExifExtraction => "ðŸ”",
+            ProcessingStage.TagMapping => "ðŸ·",
+            ProcessingStage.DicomConversion => "ðŸ¥",
+            ProcessingStage.PacsUpload => "â˜",
+            ProcessingStage.Complete => "âœ“",
+            ProcessingStage.PostProcessing => "ðŸ“¦",
+            ProcessingStage.Error => "âœ—",
+            ProcessingStage.WatcherError => "ðŸ‘",
+            ProcessingStage.PipelineShutdown => "â›”",
+            ProcessingStage.PipelineRecovery => "â™»",
+            ProcessingStage.HealthCheck => "ðŸ’š",
+            _ => "â€¢"
+        };
+
+        public string StageColor => Stage switch
+        {
+            ProcessingStage.ServiceStartup => "#1E88E5",        // Blue
+            ProcessingStage.ConfigurationLoading => "#5E35B1",   // Deep Purple
+            ProcessingStage.PipelineInitialization => "#3949AB", // Indigo
+            ProcessingStage.ServiceShutdown => "#616161",        // Gray
+
+            ProcessingStage.FileDetected => "#00ACC1",           // Cyan
+            ProcessingStage.ExifExtraction => "#8E24AA",         // Purple
+            ProcessingStage.TagMapping => "#AB47BC",             // Light Purple
+            ProcessingStage.DicomConversion => "#FB8C00",        // Orange
+            ProcessingStage.PacsUpload => "#FFB300",             // Amber
+
+            ProcessingStage.Complete => "#43A047",               // Green
+            ProcessingStage.PostProcessing => "#66BB6A",         // Light Green
+
+            ProcessingStage.Error => "#E53935",                  // Red
+            ProcessingStage.WatcherError => "#EF5350",           // Light Red
+            ProcessingStage.PipelineShutdown => "#C62828",       // Dark Red
+            ProcessingStage.PipelineRecovery => "#FF6E40",       // Deep Orange
+
+            ProcessingStage.HealthCheck => "#00C853",            // Green Accent
+            _ => "#757575"                                       // Gray
+        };
+
+        public string StageDisplayName => Stage switch
+        {
+            ProcessingStage.ServiceStartup => "Service Startup",
+            ProcessingStage.ConfigurationLoading => "Configuration",
+            ProcessingStage.PipelineInitialization => "Pipeline Init",
+            ProcessingStage.ServiceShutdown => "Service Shutdown",
+            ProcessingStage.FileDetected => "File Detected",
+            ProcessingStage.ExifExtraction => "EXIF Extraction",
+            ProcessingStage.TagMapping => "Tag Mapping",
+            ProcessingStage.DicomConversion => "DICOM Conversion",
+            ProcessingStage.PacsUpload => "PACS Upload",
+            ProcessingStage.Complete => "Complete",
+            ProcessingStage.PostProcessing => "Post Processing",
+            ProcessingStage.Error => "Error",
+            ProcessingStage.WatcherError => "Watcher Error",
+            ProcessingStage.PipelineShutdown => "Pipeline Shutdown",
+            ProcessingStage.PipelineRecovery => "Pipeline Recovery",
+            ProcessingStage.HealthCheck => "Health Check",
+            _ => Stage.ToString()
+        };
+
+        // Summary for tooltips
+        public string Summary
+        {
+            get
+            {
+                var parts = new System.Collections.Generic.List<string>();
+                parts.Add($"{EntryCount} entries");
+
+                if (Duration.TotalMilliseconds > 0)
+                    parts.Add($"{DurationText}");
+
+                if (ErrorCount > 0)
+                    parts.Add($"{ErrorCount} errors");
+
+                if (WarningCount > 0)
+                    parts.Add($"{WarningCount} warnings");
+
+                return string.Join(" â€¢ ", parts);
+            }
+        }
+
+        // Get the most severe log level in this stage
+        public LogLevel MaxLogLevel
+        {
+            get
+            {
+                if (Entries.Any(e => e.Level == LogLevel.Critical))
+                    return LogLevel.Critical;
+                if (Entries.Any(e => e.Level == LogLevel.Error))
+                    return LogLevel.Error;
+                if (Entries.Any(e => e.Level == LogLevel.Warning))
+                    return LogLevel.Warning;
+                if (Entries.Any(e => e.Level == LogLevel.Information))
+                    return LogLevel.Information;
+                if (Entries.Any(e => e.Level == LogLevel.Debug))
+                    return LogLevel.Debug;
+                return LogLevel.Trace;
+            }
+        }
+
+        // Visual hint for severity
+        public bool IsErrorStage => Stage == ProcessingStage.Error || HasErrors;
+        public bool IsWarningStage => HasWarnings && !IsErrorStage;
+        public bool IsSuccessStage => Stage == ProcessingStage.Complete && !HasErrors && !HasWarnings;
+    }
+}
+
