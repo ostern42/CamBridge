@@ -183,6 +183,17 @@ namespace CamBridge.Config.Views
             });
         }
 
+        private void BrowseBackupFolder_Click(object sender, RoutedEventArgs e)
+        {
+            BrowseFolder("Select Backup Folder for Original JPEGs", path =>
+            {
+                if (DataContext is PipelineConfigViewModel vm && vm.SelectedPipeline != null)
+                {
+                    vm.SelectedPipeline.ProcessingOptions.BackupFolder = path;
+                }
+            });
+        }
+
         private void BrowseLogFolder_Click(object sender, RoutedEventArgs e)
         {
             BrowseFolder("Select Log Folder", path =>

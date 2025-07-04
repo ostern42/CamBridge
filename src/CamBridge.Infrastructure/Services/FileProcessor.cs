@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/FileProcessor.cs
-// Version: 0.8.10
-// Description: Pipeline-aware file processor with LogContext integration
+// Version: 0.8.23
+// Description: Pipeline-aware file processor with DELETE+BACKUP functionality
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
@@ -67,7 +67,7 @@ namespace CamBridge.Infrastructure.Services
             // Log with correlation ID if provided
             if (!string.IsNullOrEmpty(correlationId))
             {
-                _logger.LogDebug("[{CorrelationId}] [ProcessorInit] Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
+                _logger.LogInformation("[{CorrelationId}] [ProcessorInit] Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
                     correlationId, pipelineConfig.Name, pipelineConfig.Id);
 
                 if (_pacsUploadQueue != null)
@@ -79,7 +79,7 @@ namespace CamBridge.Infrastructure.Services
             else
             {
                 // Fallback without correlation ID
-                _logger.LogDebug("Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
+                _logger.LogInformation("Created FileProcessor for pipeline: {PipelineName} (\"{PipelineId}\")",
                     pipelineConfig.Name, pipelineConfig.Id);
 
                 if (_pacsUploadQueue != null)
@@ -95,8 +95,15 @@ namespace CamBridge.Infrastructure.Services
         /// </summary>
         public async Task<FileProcessingResult> ProcessFileAsync(string filePath)
         {
-            // Generate correlation ID and create LogContext
-            var correlationId = GenerateCorrelationId(filePath);
+            // RACE CONDITION FIX: Extract original filename from .processing_ prefix
+            var originalFileName = Path.GetFileName(filePath);
+            if (originalFileName.StartsWith(".processing_"))
+            {
+                originalFileName = originalFileName.Substring(".processing_".Length);
+            }
+
+            // Generate correlation ID using ORIGINAL filename
+            var correlationId = GenerateCorrelationId(originalFileName);
             var logContext = _logger.CreateContext(correlationId, _pipelineConfig.Name, _logVerbosity);
 
             var result = new FileProcessingResult
@@ -109,7 +116,7 @@ namespace CamBridge.Infrastructure.Services
 
             try
             {
-                using (logContext.BeginStage(ProcessingStage.FileDetected, $"Processing file: {Path.GetFileName(filePath)}"))
+                using (logContext.BeginStage(ProcessingStage.FileDetected, $"Processing file: {originalFileName}"))
                 {
                     ProcessingStarted?.Invoke(this, new FileProcessingEventArgs
                     {
@@ -154,9 +161,8 @@ namespace CamBridge.Infrastructure.Services
                     }
                 }
 
-                // Determine output path based on pipeline configuration
-                // FIXED: Pass correlationId to DetermineOutputPath!
-                var outputPath = DetermineOutputPath(metadata, filePath, correlationId);
+                // Determine output path based on pipeline configuration - use ORIGINAL filename
+                var outputPath = DetermineOutputPath(metadata, originalFileName, correlationId);
 
                 // Ensure output directory exists
                 var outputDir = Path.GetDirectoryName(outputPath);
@@ -208,14 +214,15 @@ namespace CamBridge.Infrastructure.Services
                         }
                     }
 
-                    // Handle post-processing
-                    using (logContext.BeginStage(ProcessingStage.PostProcessing, "Performing post-processing"))
+                    // Handle post-processing - pass ORIGINAL filename
+                    var postProcessAction = result.Success ? _pipelineConfig.ProcessingOptions.SuccessAction : _pipelineConfig.ProcessingOptions.FailureAction;
+                    using (logContext.BeginStage(ProcessingStage.PostProcessing, $"Performing {postProcessAction} action"))
                     {
-                        await HandlePostProcessingAsync(filePath, outputPath, result.Success, logContext);
+                        await HandlePostProcessingAsync(filePath, outputPath, result.Success, logContext, originalFileName);
                     }
 
                     // Final success log
-                    using (logContext.BeginStage(ProcessingStage.Complete, $"Successfully processed {Path.GetFileName(filePath)}"))
+                    using (logContext.BeginStage(ProcessingStage.Complete, $"Successfully processed {originalFileName}"))
                     {
                         // Performance warning for slow processing
                         if (result.ProcessingTimeMs > 5000)
@@ -248,7 +255,7 @@ namespace CamBridge.Infrastructure.Services
 
                 using (logContext.BeginStage(ProcessingStage.Error, $"Processing failed: {ex.Message}"))
                 {
-                    logContext.LogError(ex, $"Failed to process {Path.GetFileName(filePath)}");
+                    logContext.LogError(ex, $"Failed to process {originalFileName}");
 
                     // Critical error detection
                     if (ex is UnauthorizedAccessException && filePath.StartsWith(_pipelineConfig.WatchSettings.Path))
@@ -257,8 +264,12 @@ namespace CamBridge.Infrastructure.Services
                             correlationId, _pipelineConfig.WatchSettings.Path, _pipelineConfig.Name);
                     }
 
-                    // Handle failure post-processing
-                    await HandlePostProcessingAsync(filePath, null, false, logContext);
+                    // Handle failure post-processing - pass ORIGINAL filename
+                    var failureAction = _pipelineConfig.ProcessingOptions.FailureAction;
+                    using (logContext.BeginStage(ProcessingStage.PostProcessing, $"Performing {failureAction} action (failure)"))
+                    {
+                        await HandlePostProcessingAsync(filePath, null, false, logContext, originalFileName);
+                    }
 
                     ProcessingError?.Invoke(this, new FileProcessingErrorEventArgs
                     {
@@ -276,8 +287,9 @@ namespace CamBridge.Infrastructure.Services
 
         /// <summary>
         /// Handles post-processing with LogContext
+        /// ENHANCED: Delete now supports optional backup based on CreateBackup setting
         /// </summary>
-        private async Task HandlePostProcessingAsync(string sourceFilePath, string? dicomFilePath, bool success, LogContext logContext)
+        private async Task HandlePostProcessingAsync(string sourceFilePath, string? dicomFilePath, bool success, LogContext logContext, string originalFileName)
         {
             var action = success
                 ? _pipelineConfig.ProcessingOptions.SuccessAction
@@ -285,39 +297,78 @@ namespace CamBridge.Infrastructure.Services
 
             try
             {
-                logContext.LogDebug($"Performing {action} on source file");
-
+                // Don't log here - already logged by BeginStage
                 switch (action)
                 {
                     case PostProcessingAction.Delete:
-                        // Delete only the source file
+                        // NEW: Create backup if configured before deleting
+                        if (_pipelineConfig.ProcessingOptions.CreateBackup)
+                        {
+                            var backupFolder = _pipelineConfig.ProcessingOptions.BackupFolder;
+                            if (!string.IsNullOrWhiteSpace(backupFolder))
+                            {
+                                try
+                                {
+                                    Directory.CreateDirectory(backupFolder);
+
+                                    // Use ORIGINAL filename for backup
+                                    var backupPath = Path.Combine(backupFolder, originalFileName);
+
+                                    if (File.Exists(sourceFilePath))
+                                    {
+                                        File.Copy(sourceFilePath, backupPath, true);
+                                        logContext.LogInformation("Backup created: {BackupPath}", Path.GetFullPath(backupPath));
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    logContext.LogWarning("Failed to create backup: {Error}", ex.Message);
+                                    // Don't fail the delete operation if backup fails
+                                }
+                            }
+                            else
+                            {
+                                logContext.LogWarning("CreateBackup enabled but BackupFolder not configured");
+                            }
+                        }
+
+                        // Delete the source file (with .processing_ prefix)
                         if (File.Exists(sourceFilePath))
                         {
                             File.Delete(sourceFilePath);
-                            logContext.LogDebug("Deleted source file");
+                            if (_pipelineConfig.ProcessingOptions.CreateBackup)
+                            {
+                                logContext.LogInformation("Source file deleted (backup was created)");
+                            }
+                            else
+                            {
+                                logContext.LogInformation("Source file deleted (no backup)");
+                            }
                         }
                         break;
 
                     case PostProcessingAction.Archive:
+                        // ARCHIVE still works for backward compatibility but should be removed from UI
                         var jpegArchiveFolder = _pipelineConfig.ProcessingOptions.BackupFolder
                             ?? Path.Combine(_pipelineConfig.ProcessingOptions.ArchiveFolder, "ProcessedJPEGs");
 
+                        // Use ORIGINAL filename for archive
                         var archivePath = Path.Combine(
                             jpegArchiveFolder,
-                            Path.GetFileName(sourceFilePath));
+                            originalFileName);
 
                         Directory.CreateDirectory(Path.GetDirectoryName(archivePath)!);
 
                         if (File.Exists(sourceFilePath))
                         {
                             File.Move(sourceFilePath, archivePath, true);
-                            logContext.LogDebug($"Archived source JPEG to {Path.GetFullPath(archivePath)}");
+                            logContext.LogInformation("Source JPEG archived to: {ArchivePath}", Path.GetFullPath(archivePath));
                         }
 
                         // DICOM file stays in output folder
                         if (success && !string.IsNullOrEmpty(dicomFilePath))
                         {
-                            logContext.LogInformation($"DICOM file created at: {Path.GetFullPath(dicomFilePath)}");
+                            logContext.LogInformation("DICOM output: {DicomPath}", Path.GetFullPath(dicomFilePath));
                         }
                         break;
 
@@ -325,7 +376,7 @@ namespace CamBridge.Infrastructure.Services
                         // Move source file to error folder (typically for failures)
                         if (!success)
                         {
-                            await MoveToErrorFolderAsync(sourceFilePath, "Processing failed", logContext);
+                            await MoveToErrorFolderAsync(sourceFilePath, "Processing failed", logContext, originalFileName);
 
                             // If DICOM was partially created, clean it up
                             if (!string.IsNullOrEmpty(dicomFilePath) && File.Exists(dicomFilePath))
@@ -333,11 +384,11 @@ namespace CamBridge.Infrastructure.Services
                                 try
                                 {
                                     File.Delete(dicomFilePath);
-                                    logContext.LogDebug("Cleaned up partial DICOM file");
+                                    logContext.LogInformation("Cleaned up partial DICOM file");
                                 }
                                 catch (Exception ex)
                                 {
-                                    logContext.LogWarning($"Failed to clean up partial DICOM: {ex.Message}");
+                                    logContext.LogWarning("Failed to clean up partial DICOM: {Error}", ex.Message);
                                 }
                             }
                         }
@@ -345,7 +396,7 @@ namespace CamBridge.Infrastructure.Services
 
                     default:
                         // Leave files as-is
-                        logContext.LogDebug("No post-processing action");
+                        logContext.LogInformation("Source file left in place: {FilePath}", Path.GetFullPath(sourceFilePath));
                         break;
                 }
             }
@@ -356,16 +407,17 @@ namespace CamBridge.Infrastructure.Services
             }
         }
 
-        private async Task MoveToErrorFolderAsync(string filePath, string errorMessage, LogContext logContext)
+        private async Task MoveToErrorFolderAsync(string filePath, string errorMessage, LogContext logContext, string originalFileName)
         {
             try
             {
                 var errorFolder = _pipelineConfig.ProcessingOptions.ErrorFolder;
                 Directory.CreateDirectory(errorFolder);
 
-                var errorFileName = $"{Path.GetFileNameWithoutExtension(filePath)}" +
+                // Use ORIGINAL filename for error file
+                var errorFileName = $"{Path.GetFileNameWithoutExtension(originalFileName)}" +
                                    $"_{DateTime.Now:yyyyMMdd_HHmmss}" +
-                                   $"{Path.GetExtension(filePath)}";
+                                   $"{Path.GetExtension(originalFileName)}";
 
                 var errorPath = Path.Combine(errorFolder, errorFileName);
 
@@ -374,7 +426,8 @@ namespace CamBridge.Infrastructure.Services
                 await File.WriteAllTextAsync(errorInfoPath,
                     $"Error Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
                     $"Pipeline: {_pipelineConfig.Name}\n" +
-                    $"Source File: {filePath}\n" +
+                    $"Source File: {originalFileName}\n" +
+                    $"Processing File: {Path.GetFileName(filePath)}\n" +
                     $"Correlation ID: {logContext.CorrelationId}\n" +
                     $"Error: {errorMessage}");
 
@@ -382,7 +435,7 @@ namespace CamBridge.Infrastructure.Services
                 if (File.Exists(filePath))
                 {
                     File.Move(filePath, errorPath, true);
-                    logContext.LogDebug("Moved failed file to error folder");
+                    logContext.LogInformation("Failed file moved to: {ErrorPath}", Path.GetFullPath(errorPath));
                 }
             }
             catch (Exception ex)
@@ -424,7 +477,7 @@ namespace CamBridge.Infrastructure.Services
                     var age = DateTime.UtcNow - fileInfo.CreationTimeUtc;
                     if (age > _pipelineConfig.ProcessingOptions.MaxFileAge.Value)
                     {
-                        _logger.LogDebug("File {FileName} is too old ({Age} days)",
+                        _logger.LogInformation("File {FileName} is too old ({Age} days)",
                             fileInfo.Name, age.TotalDays);
                         return false;
                     }
@@ -434,7 +487,7 @@ namespace CamBridge.Infrastructure.Services
                 if (_pipelineConfig.ProcessingOptions.MinimumFileSizeBytes.HasValue &&
                     fileInfo.Length < _pipelineConfig.ProcessingOptions.MinimumFileSizeBytes.Value)
                 {
-                    _logger.LogDebug("File {FileName} is too small ({Size} bytes)",
+                    _logger.LogInformation("File {FileName} is too small ({Size} bytes)",
                         fileInfo.Name, fileInfo.Length);
                     return false;
                 }
@@ -442,7 +495,7 @@ namespace CamBridge.Infrastructure.Services
                 if (_pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.HasValue &&
                     fileInfo.Length > _pipelineConfig.ProcessingOptions.MaximumFileSizeBytes.Value)
                 {
-                    _logger.LogDebug("File {FileName} is too large ({Size} bytes)",
+                    _logger.LogInformation("File {FileName} is too large ({Size} bytes)",
                         fileInfo.Name, fileInfo.Length);
                     return false;
                 }
@@ -456,12 +509,12 @@ namespace CamBridge.Infrastructure.Services
             }
         }
 
-        private string GenerateCorrelationId(string filePath)
+        private string GenerateCorrelationId(string fileName)
         {
             // Format: F{HHmmssff}-{FilePrefix8}
             // Example: F10234512-IMG_1234
             var timestamp = DateTime.Now.ToString("HHmmssff");
-            var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+            var fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
             var filePrefix = fileNameWithoutExt.Length > 8
                 ? fileNameWithoutExt.Substring(0, 8)
                 : fileNameWithoutExt;
@@ -483,7 +536,7 @@ namespace CamBridge.Infrastructure.Services
             }
         }
 
-        private string DetermineOutputPath(ImageMetadata metadata, string sourceFile, string correlationId)
+        private string DetermineOutputPath(ImageMetadata metadata, string originalFileName, string correlationId)
         {
             // FIXED: Use ArchiveFolder as DICOM output if no OutputPath configured
             var baseOutputPath = _pipelineConfig.WatchSettings.OutputPath;
@@ -506,11 +559,11 @@ namespace CamBridge.Infrastructure.Services
                     correlationId, Path.GetFullPath(baseOutputPath));
             }
 
-            _logger.LogDebug("[{CorrelationId}] [PathResolution] Base output path for pipeline {Pipeline}: {Path}",
+            _logger.LogInformation("[{CorrelationId}] [PathResolution] Base output path for pipeline {Pipeline}: {Path}",
                 correlationId, _pipelineConfig.Name, Path.GetFullPath(baseOutputPath));
 
             var organization = _pipelineConfig.ProcessingOptions.OutputOrganization;
-            var fileName = Path.GetFileNameWithoutExtension(sourceFile);
+            var fileName = Path.GetFileNameWithoutExtension(originalFileName);  // Use ORIGINAL filename
 
             // Build organized path based on configuration
             var outputDir = baseOutputPath;
@@ -522,7 +575,7 @@ namespace CamBridge.Infrastructure.Services
                     {
                         var safeName = SanitizeForPath(metadata.Patient.PatientName);
                         outputDir = Path.Combine(baseOutputPath, safeName);
-                        _logger.LogDebug("[{CorrelationId}] [PathResolution] Output organized by patient: {PatientName} -> {SafeName}",
+                        _logger.LogInformation("[{CorrelationId}] [PathResolution] Output organized by patient: {PatientName} -> {SafeName}",
                             correlationId, metadata.Patient.PatientName, safeName);
                     }
                     else
@@ -537,7 +590,7 @@ namespace CamBridge.Infrastructure.Services
                     // ALWAYS use current date for organization
                     var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
                     outputDir = Path.Combine(baseOutputPath, dateFolder);
-                    _logger.LogDebug("[{CorrelationId}] [PathResolution] Output organized by date: {Date}",
+                    _logger.LogInformation("[{CorrelationId}] [PathResolution] Output organized by date: {Date}",
                         correlationId, dateFolder);
                     break;
 
@@ -548,7 +601,7 @@ namespace CamBridge.Infrastructure.Services
                         // ALWAYS use current date for organization
                         var dateFolder2 = DateTime.Now.ToString("yyyy-MM-dd");
                         outputDir = Path.Combine(baseOutputPath, safeName, dateFolder2);
-                        _logger.LogDebug("[{CorrelationId}] [PathResolution] Output organized by patient/date: {PatientName}/{Date}",
+                        _logger.LogInformation("[{CorrelationId}] [PathResolution] Output organized by patient/date: {PatientName}/{Date}",
                             correlationId, safeName, dateFolder2);
                     }
                     else
@@ -604,7 +657,7 @@ namespace CamBridge.Infrastructure.Services
                 ValidateAfterCreation = global.ValidateAfterCreation
             };
 
-            _logger.LogDebug("Applied DICOM overrides for pipeline: {PipelineName}", _pipelineConfig.Name);
+            _logger.LogInformation("Applied DICOM overrides for pipeline: {PipelineName}", _pipelineConfig.Name);
             return settings;
         }
 

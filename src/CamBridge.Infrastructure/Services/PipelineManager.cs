@@ -1,7 +1,7 @@
 // src/CamBridge.Infrastructure/Services/PipelineManager.cs
-// Version: 0.8.21
-// Last Modified: 2025-01-04 - Session 125
-// Description: Manages multiple processing pipelines with PROPER correlation ID flow
+// Version: 0.8.23
+// Last Modified: 2025-07-04 - Session 129
+// Description: Manages multiple processing pipelines with RACE CONDITION FIX
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
@@ -480,7 +480,7 @@ namespace CamBridge.Infrastructure.Services
         }
 
         /// <summary>
-        /// Handles file detection events
+        /// Handles file detection events with RACE CONDITION FIX
         /// </summary>
         private async Task OnFileDetectedAsync(string pipelineName, string filePath, ProcessingQueue queue)
         {
@@ -488,26 +488,64 @@ namespace CamBridge.Infrastructure.Services
             {
                 // Skip temporary files
                 if (Path.GetFileName(filePath).StartsWith("~") ||
-                    Path.GetFileName(filePath).StartsWith("."))
+                    Path.GetFileName(filePath).StartsWith(".") ||
+                    Path.GetFileName(filePath).StartsWith(".processing_"))
                 {
+                    return;
+                }
+
+                // RACE CONDITION FIX: Immediately rename the file to prevent duplicate events
+                var dir = Path.GetDirectoryName(filePath);
+                var fileName = Path.GetFileName(filePath);
+                var processingPath = Path.Combine(dir!, $".processing_{fileName}");
+
+                try
+                {
+                    // Try to rename the file - this is atomic and will fail if another thread already did it
+                    File.Move(filePath, processingPath);
+
+                    // Log the rename with a correlation ID for this specific file
+                    var fileCorrelationId = $"F{DateTime.Now:HHmmssff}-{Path.GetFileNameWithoutExtension(fileName).Substring(0, Math.Min(8, Path.GetFileNameWithoutExtension(fileName).Length))}";
+                    _logger.LogDebug("[{CorrelationId}] [FileDetected] Renamed {Original} to {Processing} to prevent duplicate processing [{Pipeline}]",
+                        fileCorrelationId, fileName, Path.GetFileName(processingPath), pipelineName);
+
+                    // Continue processing with the new path
+                    filePath = processingPath;
+                }
+                catch (IOException)
+                {
+                    // File is already being processed (renamed by another event)
+                    _logger.LogDebug("[FileDetected] File {File} already being processed by another event [{Pipeline}]",
+                        fileName, pipelineName);
                     return;
                 }
 
                 // Check file pattern (if multiple patterns)
-                if (!IsFilePatternMatch(filePath, pipelineName))
+                if (!IsFilePatternMatch(fileName, pipelineName))  // Use original name for pattern matching
                 {
+                    // Pattern doesn't match - rename back
+                    try
+                    {
+                        File.Move(processingPath, filePath);
+                        _logger.LogDebug("[FileDetected] File {File} doesn't match pattern, renamed back [{Pipeline}]",
+                            fileName, pipelineName);
+                    }
+                    catch (IOException)
+                    {
+                        // Someone else already processed it, ignore
+                    }
                     return;
                 }
 
                 // Each FILE gets its own correlation ID - this is correct!
-                var fileCorrelationId = $"F{DateTime.Now:HHmmssff}-{Path.GetFileNameWithoutExtension(filePath).Substring(0, Math.Min(8, Path.GetFileNameWithoutExtension(filePath).Length))}";
+                var correlationId = $"F{DateTime.Now:HHmmssff}-{Path.GetFileNameWithoutExtension(fileName).Substring(0, Math.Min(8, Path.GetFileNameWithoutExtension(fileName).Length))}";
 
-                // Add to queue
-                var added = await queue.EnqueueAsync(filePath, fileCorrelationId);
+                // Add to queue with the PROCESSING path but log with original name
+                var added = await queue.EnqueueAsync(processingPath, correlationId);
                 if (added)
                 {
-                    _logger.LogDebug("[{CorrelationId}] [FileDetected] File queued: {File} [{Pipeline}]",
-                        fileCorrelationId, Path.GetFileName(filePath), pipelineName);
+                    _logger.LogDebug("[{CorrelationId}] [FileDetected] File queued: {File} (processing as {ProcessingName}) [{Pipeline}]",
+                        correlationId, fileName, Path.GetFileName(processingPath), pipelineName);
 
                     // Update last activity time
                     if (_pipelines.TryGetValue(pipelineName, out var status))
@@ -518,7 +556,18 @@ namespace CamBridge.Infrastructure.Services
                 else
                 {
                     _logger.LogWarning("[{CorrelationId}] [QueueFull] Queue full or duplicate, file skipped: {File} [{Pipeline}]",
-                        fileCorrelationId, Path.GetFileName(filePath), pipelineName);
+                        correlationId, fileName, pipelineName);
+
+                    // Queue full - rename back to original
+                    try
+                    {
+                        var originalPath = Path.Combine(dir!, fileName);
+                        File.Move(processingPath, originalPath);
+                    }
+                    catch (IOException)
+                    {
+                        // Best effort, don't fail
+                    }
                 }
             }
             catch (Exception ex)
@@ -532,7 +581,7 @@ namespace CamBridge.Infrastructure.Services
         /// <summary>
         /// Checks if file matches any of the pipeline's patterns
         /// </summary>
-        private bool IsFilePatternMatch(string filePath, string pipelineName)
+        private bool IsFilePatternMatch(string fileName, string pipelineName)
         {
             if (_pipelines.TryGetValue(pipelineName, out var status))
             {
@@ -540,7 +589,6 @@ namespace CamBridge.Infrastructure.Services
                     .Split(';', StringSplitOptions.RemoveEmptyEntries)
                     .Select(p => p.Trim());
 
-                var fileName = Path.GetFileName(filePath);
                 foreach (var pattern in patterns)
                 {
                     if (FileMatchesPattern(fileName, pattern))

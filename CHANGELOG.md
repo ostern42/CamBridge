@@ -6,7 +6,30 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.23] - 2025-07-04
 
+### Added
+- BackupFolder UI element in Pipeline Configuration (Folders tab)
+- Support for backup creation when Delete post-processing action is used
+
+### Fixed
+- **CRITICAL**: Race condition causing duplicate file processing
+  - Files were processed twice due to FileSystemWatcher Created + Changed events
+  - Implemented atomic rename pattern (.processing_ prefix) to prevent duplicates
+  - Original filenames preserved in archives and backups
+- PostProcessing logging now shows detailed information
+- CreateBackup checkbox now actually creates backups before deletion
+
+### Changed
+- Enhanced PostProcessing logging from Debug to Information level
+- Improved correlation ID consistency across all components
+- PostProcessing now shows specific action being performed
+
+### Known Issues
+- DateTime validation errors for YYYYMMDDHHMMSS format (4 errors per file)
+- Pipeline-specific components still log to service log instead of pipeline log
+- TreeView copy commands non-functional
+- Duration display shows 0ms for all entries
 
 ## [0.8.22] - 2025-07-04
 

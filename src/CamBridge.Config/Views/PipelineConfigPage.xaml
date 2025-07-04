@@ -303,6 +303,7 @@
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
                                         <TextBlock Grid.Row="0" Grid.Column="0"
@@ -391,11 +392,27 @@
                                                     Margin="8,0,0,0"
                                                     Click="BrowseErrorFolder_Click"/>
                                         </Grid>
-
                                         <TextBlock Grid.Row="6" Grid.Column="0"
+                                                   Text="Backup Folder:"
+                                                   Style="{StaticResource SettingLabelStyle}"
+                                                   ToolTip="Archive location for original JPEG files"/>
+                                                                                <Grid Grid.Row="6" Grid.Column="1" Margin="0,0,0,8">
+                                                                                    <Grid.ColumnDefinitions>
+                                                                                        <ColumnDefinition Width="*"/>
+                                                                                        <ColumnDefinition Width="Auto"/>
+                                                                                    </Grid.ColumnDefinitions>
+                                                                                    <TextBox Grid.Column="0"
+                                                     Text="{Binding SelectedPipeline.ProcessingOptions.BackupFolder}"/>
+                                                                                    <Button Grid.Column="1"
+                                                    Content="Browse..."
+                                                    Width="80"
+                                                    Margin="8,0,0,0"
+                                                    Click="BrowseBackupFolder_Click"/>
+                                        </Grid>
+                                        <TextBlock Grid.Row="7" Grid.Column="0"
                                                    Text="Output Organization:"
                                                    Style="{StaticResource SettingLabelStyle}"/>
-                                        <ComboBox Grid.Row="6" Grid.Column="1"
+                                        <ComboBox Grid.Row="7" Grid.Column="1"
                                                   ItemsSource="{Binding OutputOrganizations}"
                                                   SelectedItem="{Binding SelectedPipeline.ProcessingOptions.OutputOrganization}"/>
                                     </Grid>
