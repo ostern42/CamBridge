@@ -1,5 +1,5 @@
 // src/CamBridge.Infrastructure/Services/DicomTagMapper.cs
-// Version: 0.8.10
+// Version: 0.8.24 - CLEANED UP - No more duplicate transform logic!
 // Description: Service for mapping values to DICOM tags with correlation ID support
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
@@ -73,8 +73,8 @@ namespace CamBridge.Infrastructure.Services
                         }
                     }
 
-                    // Apply transform if specified
-                    var transformedValue = ApplyTransform(sourceValue, rule.Transform);
+                    // FIXED: Use the MappingRule's ApplyTransform method instead of duplicating logic!
+                    var transformedValue = rule.ApplyTransform(sourceValue);
 
                     if (string.IsNullOrEmpty(transformedValue) && rule.Required)
                     {
@@ -144,93 +144,6 @@ namespace CamBridge.Infrastructure.Services
         }
 
         /// <summary>
-        /// Applies a mapping rule to transform a value
-        /// </summary>
-        public string? ApplyTransform(string? value, string? transform)
-        {
-            if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(transform) || transform == "None")
-            {
-                return value;
-            }
-
-            // Parse transform string to enum
-            if (!Enum.TryParse<ValueTransform>(transform, out var transformEnum))
-            {
-                _logger.LogWarning("Unknown transform: {Transform}", transform);
-                return value;
-            }
-
-            try
-            {
-                return transformEnum switch
-                {
-                    ValueTransform.DateToDicom => ConvertDateToDicom(value),
-                    ValueTransform.TimeToDicom => ConvertTimeToDicom(value),
-                    ValueTransform.DateTimeToDicom => ConvertDateTimeToDicom(value),
-                    ValueTransform.MapGender => MapGenderCode(value),
-                    ValueTransform.RemovePrefix => RemovePrefix(value),
-                    ValueTransform.ExtractDate => ExtractDate(value),
-                    ValueTransform.ExtractTime => ExtractTime(value),
-                    ValueTransform.ToUpperCase => value.ToUpperInvariant(),
-                    ValueTransform.ToLowerCase => value.ToLowerInvariant(),
-                    ValueTransform.Trim => value.Trim(),
-                    _ => value
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to apply transform {Transform} to value '{Value}'", transform, value);
-                return value;
-            }
-        }
-
-        private string ConvertDateToDicom(string date)
-        {
-            // Convert various date formats to DICOM format (YYYYMMDD)
-            if (DateTime.TryParse(date, out var dt))
-            {
-                return dt.ToString("yyyyMMdd");
-            }
-
-            // Already in DICOM format?
-            if (date.Length == 8 && int.TryParse(date, out _))
-            {
-                return date;
-            }
-
-            _logger.LogWarning("Unable to convert date '{Date}' to DICOM format", date);
-            return date;
-        }
-
-        private string ConvertTimeToDicom(string time)
-        {
-            // Convert various time formats to DICOM format (HHMMSS)
-            if (DateTime.TryParse(time, out var dt))
-            {
-                return dt.ToString("HHmmss");
-            }
-
-            if (TimeSpan.TryParse(time, out var ts))
-            {
-                return $"{ts.Hours:D2}{ts.Minutes:D2}{ts.Seconds:D2}";
-            }
-
-            _logger.LogWarning("Unable to convert time '{Time}' to DICOM format", time);
-            return time;
-        }
-
-        private string ConvertDateTimeToDicom(string dateTime)
-        {
-            if (DateTime.TryParse(dateTime, out var dt))
-            {
-                return dt.ToString("yyyyMMddHHmmss");
-            }
-
-            _logger.LogWarning("Unable to convert datetime '{DateTime}' to DICOM format", dateTime);
-            return dateTime;
-        }
-
-        /// <summary>
         /// Parses a DICOM tag string like "(0010,0010)" into group and element
         /// </summary>
         private bool TryParseDicomTag(string tagString, out ushort group, out ushort element)
@@ -258,48 +171,6 @@ namespace CamBridge.Infrastructure.Services
             {
                 return false;
             }
-        }
-
-        private string MapGenderCode(string gender)
-        {
-            return gender?.ToUpperInvariant() switch
-            {
-                "M" or "MALE" => "M",
-                "F" or "FEMALE" => "F",
-                "O" or "OTHER" => "O",
-                _ => ""
-            };
-        }
-
-        private string RemovePrefix(string value)
-        {
-            // Remove common prefixes like "GCM_TAG"
-            if (value.StartsWith("GCM_TAG", StringComparison.OrdinalIgnoreCase))
-            {
-                return value.Substring(7).Trim();
-            }
-
-            return value;
-        }
-
-        private string ExtractDate(string dateTime)
-        {
-            if (DateTime.TryParse(dateTime, out var dt))
-            {
-                return dt.ToString("yyyyMMdd");
-            }
-
-            return dateTime;
-        }
-
-        private string ExtractTime(string dateTime)
-        {
-            if (DateTime.TryParse(dateTime, out var dt))
-            {
-                return dt.ToString("HHmmss");
-            }
-
-            return dateTime;
         }
     }
 }

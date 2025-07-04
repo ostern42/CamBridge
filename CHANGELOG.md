@@ -6,6 +6,28 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.24] - 2025-01-04
+
+### Fixed
+- DateTime Transform validation errors - DICOM tags (0008,0021) and (0008,0031) now correctly handle 14-digit datetime format (YYYYMMDDHHMMSS) from Ricoh cameras
+- DicomTagMapper now uses MappingRule.ApplyTransform() instead of duplicate transform logic
+- LogVerbosity configuration now actually controls Serilog log level (was always Information before)
+- Removed redundant startup logs from Program.cs - all logging now uses correlation IDs from Worker.cs
+
+### Changed
+- Worker.cs now logs configuration path and log directory with correlation IDs
+- Cleaned up duplicate log entries between Program.cs and Worker.cs
+- Updated copyright to "© 2025 Claude's Improbably Reliable Software Solutions"
+
+### Technical Debt Discovered
+- Transform logic duplicated in 9+ files (~500 LOC) - needs refactoring to central TransformService
+- Logging patterns potentially duplicated across many files (~350-550 LOC) - needs analysis
+
+### Known Issues
+- Pipeline-specific logging still writes to service log instead of pipeline log files
+- TreeView copy commands in LogViewer not functional
+- Duration display shows 0ms for all log entries
+
 ## [0.8.23] - 2025-07-04
 
 ### Added

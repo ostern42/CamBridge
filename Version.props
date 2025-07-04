@@ -1,18 +1,18 @@
 <!-- Version.props - Global version configuration -->
-<!-- Version: 0.8.23 -->
+<!-- Version: 0.8.24 -->
 <!-- Modified: 2025-07-04 -->
-<!-- Purpose: Session 128 - BackupFolder UI & Race Condition Analysis -->
+<!-- Purpose: Session 130 - DateTime Transform Fix & Pipeline Logging -->
 <Project>
 	<PropertyGroup>
 		<!-- SINGLE SOURCE OF TRUTH for version -->
-		<VersionPrefix>0.8.23</VersionPrefix>
+		<VersionPrefix>0.8.24</VersionPrefix>
 		<VersionSuffix></VersionSuffix>
 		<!-- Assembly version (major.minor.0.0) for binary compatibility -->
 		<AssemblyVersion>0.8.0.0</AssemblyVersion>
 		<!-- File version (major.minor.patch.0) for file properties -->
-		<FileVersion>0.8.23.0</FileVersion>
+		<FileVersion>0.8.24.0</FileVersion>
 		<!-- Package version for NuGet (if needed) -->
-		<PackageVersion>0.8.23</PackageVersion>
+		<PackageVersion>0.8.24</PackageVersion>
 		<!-- Product information -->
 		<Product>CamBridge</Product>
 		<Company>Claude's Improbably Reliable Software Solutions</Company>

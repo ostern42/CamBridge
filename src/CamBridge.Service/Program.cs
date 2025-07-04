@@ -1,9 +1,10 @@
 // src/CamBridge.Service/Program.cs
-// Version: 0.8.19
+// Version: 0.8.24 - Removed redundant startup logs
 // Description: Windows service entry point with FIXED timestamp format
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core;
+using CamBridge.Core.Enums;
 using CamBridge.Core.Infrastructure;
 using CamBridge.Infrastructure;
 using CamBridge.Infrastructure.Services;
@@ -97,8 +98,18 @@ try
     var settings = new CamBridgeSettingsV2();
     configuration.GetSection("CamBridge").Bind(settings);
 
+    // Map LogVerbosity enum to Serilog LogEventLevel
+    var logLevel = settings?.Service?.LogVerbosity switch
+    {
+        LogVerbosity.Minimal => LogEventLevel.Warning,
+        LogVerbosity.Normal => LogEventLevel.Information,
+        LogVerbosity.Detailed => LogEventLevel.Debug,
+        LogVerbosity.Debug => LogEventLevel.Verbose,
+        _ => LogEventLevel.Information
+    };
+
     var logConfig = new LoggerConfiguration()
-        .MinimumLevel.Information()
+        .MinimumLevel.Is(logLevel)
         .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
         .MinimumLevel.Override("System", LogEventLevel.Warning)
         .Enrich.FromLogContext()
@@ -141,15 +152,12 @@ try
                     retainedFileCountLimit: 30,
                     outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}",
                     shared: true));
-
-            Log.Information("Configured logging for pipeline: {Pipeline} -> {LogFile}",
-                pipeline.Name, $"pipeline_{sanitizedName}_{{Date}}.log");
         }
     }
 
     Log.Logger = logConfig.CreateLogger();
 
-    Log.Information("Serilog configured with multi-pipeline support at {LogPath}", baseLogPath);
+    // Only log to EventLog for service debugging
     serviceEventLog?.WriteEntry($"Logging initialized with separate pipeline logs at: {baseLogPath}", EventLogEntryType.Information, 1005);
 }
 catch (Exception ex)
@@ -160,9 +168,10 @@ catch (Exception ex)
 
 try
 {
-    Log.Information("=== CamBridge Service Starting ===");
-    Log.Information("Version: {Version}", ServiceInfo.GetFullVersionString());
-    Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
+    // REMOVED redundant startup logs - Worker.cs logs these with proper structure
+    // Log.Information("=== CamBridge Service Starting ===");
+    // Log.Information("Version: {Version}", ServiceInfo.GetFullVersionString());
+    // Log.Information("Running as: {Mode}", isService ? "Windows Service" : "Console Application");
 
     var builder = Host.CreateDefaultBuilder(args);
 
@@ -184,12 +193,12 @@ try
 
             // Use centralized configuration path
             var configPath = ConfigurationPaths.GetPrimaryConfigPath();
-            Log.Information("Loading configuration from: {ConfigPath}", configPath);
 
             // Initialize config if needed
             if (!File.Exists(configPath))
             {
                 ConfigurationPaths.InitializePrimaryConfig();
+                // Only warn about missing config - important for troubleshooting
                 Log.Warning("Configuration file not found. Created default at: {ConfigPath}", configPath);
             }
 
@@ -283,23 +292,6 @@ try
 
     var host = builder.Build();
 
-    // Test configuration loading (non-production diagnostic)
-    using (var scope = host.Services.CreateScope())
-    {
-        var settings = scope.ServiceProvider.GetService<IOptionsSnapshot<CamBridgeSettingsV2>>();
-        if (settings?.Value != null)
-        {
-            Log.Information("Configuration loaded successfully:");
-            Log.Information("  Version: {Version}", settings.Value.Version);
-            Log.Information("  Pipelines: {Count}", settings.Value.Pipelines.Count);
-            Log.Information("  Service Port: {Port}", settings.Value.Service?.ApiPort ?? 5111);
-        }
-        else
-        {
-            Log.Warning("Failed to load configuration!");
-        }
-    }
-
     await host.RunAsync();
 }
 catch (Exception ex)
@@ -311,7 +303,8 @@ catch (Exception ex)
 }
 finally
 {
-    Log.Information("=== CamBridge Service Stopped ===");
+    // REMOVED redundant stop log - Worker logs this properly
+    // Log.Information("=== CamBridge Service Stopped ===");
     Log.CloseAndFlush();
 }
 

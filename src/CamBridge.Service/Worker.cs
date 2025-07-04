@@ -1,20 +1,21 @@
 // src/CamBridge.Service/Worker.cs
-// Version: 0.8.8
+// Version: 0.8.24 - Enhanced with config and log paths
 // Description: Main worker service with hierarchical logging support
-// Copyright: (c) 2025 Claude's Improbably Reliable Software Solutions
+// Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
-using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using CamBridge.Core;
 using CamBridge.Core.Enums;
+using CamBridge.Core.Infrastructure;
 using CamBridge.Core.Logging;
 using CamBridge.Infrastructure.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CamBridge.Service
 {
@@ -60,6 +61,9 @@ namespace CamBridge.Service
                     _serviceLogContext.LogInformation("Log verbosity: {Verbosity}", logVerbosity);
                     _serviceLogContext.LogInformation("API Port: {Port}", settings.Service.ApiPort);
 
+                    // ADDED: Log paths
+                    _serviceLogContext.LogInformation("Log files at: {LogPath}", ConfigurationPaths.GetLogsDirectory());
+
                     // Startup delay if configured
                     if (settings.Service.StartupDelaySeconds > 0)
                     {
@@ -72,6 +76,10 @@ namespace CamBridge.Service
                 // Configuration loading stage
                 using (var configStage = _serviceLogContext.BeginStage(ProcessingStage.ConfigurationLoading, "Loading configuration"))
                 {
+                    // ADDED: Config path
+                    _serviceLogContext.LogInformation("Loading configuration from: {ConfigPath}",
+                        ConfigurationPaths.GetPrimaryConfigPath());
+
                     _serviceLogContext.LogInformation("Pipelines configured: {Count}",
                         settings.Pipelines?.Count ?? 0);
                     _serviceLogContext.LogInformation("Notification settings: Email={Email}, EventLog={EventLog}",

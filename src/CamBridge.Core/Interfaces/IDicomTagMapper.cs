@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+// src/CamBridge.Core/Interfaces/IDicomTagMapper.cs
+// Version: 0.8.24 - Cleaned up interface
+// Transform logic belongs to MappingRule, not the mapper!
+
+using System.Collections.Generic;
 using FellowOakDicom;
 using CamBridge.Core;
 
@@ -9,14 +13,6 @@ namespace CamBridge.Core.Interfaces
     /// </summary>
     public interface IDicomTagMapper
     {
-        /// <summary>
-        /// Applies a mapping rule to transform a value
-        /// </summary>
-        /// <param name="value">The value to transform</param>
-        /// <param name="transform">The transform to apply</param>
-        /// <returns>The transformed value</returns>
-        string? ApplyTransform(string? value, string? transform);
-
         /// <summary>
         /// Maps source data to a DICOM dataset using mapping rules
         /// </summary>
