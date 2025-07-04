@@ -1,6 +1,6 @@
 <!-- src/CamBridge.Config/Views/LogViewerPage.xaml -->
-<!-- Version: 0.8.20 -->
-<!-- Description: BEAUTIFUL LogViewer with ModernWpf styles (NO MaterialDesign!) -->
+<!-- Version: 0.8.21 -->
+<!-- Description: BEAUTIFUL LogViewer with Multi-File status display -->
 <!-- Copyright: © 2025 Claude's Improbably Reliable Software Solutions -->
 
 <Page x:Class="CamBridge.Config.Views.LogViewerPage"
@@ -97,10 +97,10 @@
                             <TextBlock Text="🔄 Refresh" FontSize="12"/>
                         </Button>
 
-                        <!-- Auto Scroll Toggle -->
+                        <!-- Auto Refresh Toggle -->
                         <ToggleButton IsChecked="{Binding IsAutoScrollEnabled}" 
-                                      Height="26" Padding="8,0" ToolTip="Auto-scroll to new entries">
-                            <TextBlock Text="📜 Auto" FontSize="12"/>
+                                      Height="26" Padding="8,0" ToolTip="Auto-refresh every 10 seconds">
+                            <TextBlock Text="🔄 Auto" FontSize="12"/>
                         </ToggleButton>
                     </StackPanel>
                 </Grid>
@@ -532,7 +532,7 @@
             </TreeView>
         </Grid>
 
-        <!-- Beautiful Status Bar -->
+        <!-- Beautiful Status Bar - UPDATED with loaded files info -->
         <StatusBar Grid.Row="2" Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
             <StatusBarItem>
                 <TextBlock FontSize="11">
@@ -544,8 +544,21 @@
             </StatusBarItem>
             <Separator/>
             <StatusBarItem>
+                <TextBlock FontSize="11">
+                    <Run Text="📁 "/>
+                    <Run Text="{Binding LoadedFilesText, Mode=OneWay}" FontWeight="Medium"/>
+                </TextBlock>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
                 <TextBlock FontSize="11" Visibility="{Binding HasActiveFilters, Converter={StaticResource BoolToVisibility}}">
                     <Run Text="🔍 Filters active" Foreground="#FFA500"/>
+                </TextBlock>
+            </StatusBarItem>
+            <Separator Visibility="{Binding HasActiveFilters, Converter={StaticResource BoolToVisibility}}"/>
+            <StatusBarItem>
+                <TextBlock FontSize="11" Visibility="{Binding IsAutoScrollEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Run Text="🔄 Auto-refresh (10s)" Foreground="#4CAF50"/>
                 </TextBlock>
             </StatusBarItem>
             <Separator/>

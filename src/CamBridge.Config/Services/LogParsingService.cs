@@ -1,6 +1,6 @@
 // src/CamBridge.Config/Services/LogParsingService.cs
-// Version: 0.8.19
-// Description: Service for parsing log lines with MILLISECOND support
+// Version: 0.8.22
+// Description: Service for parsing log lines with BETTER pipeline extraction
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace CamBridge.Config.Services
 {
     /// <summary>
-    /// Service implementation for log line parsing with millisecond precision
+    /// Service implementation for log line parsing with improved pipeline detection
     /// </summary>
     public class LogParsingService : ILogParsingService
     {
@@ -77,12 +77,12 @@ namespace CamBridge.Config.Services
                     timestamp = DateTime.Today.Add(timestamp.TimeOfDay);
 
                     // Extract pipeline if present at end
-                    string? pipeline = null;
-                    var pipelineMatch = Regex.Match(message, @"\s*\[([^\]]+)\]\s*$");
-                    if (pipelineMatch.Success)
+                    string? pipeline = ExtractPipelineFromMessage(ref message);
+
+                    // FIX: If no pipeline found, try to extract from CorrelationID
+                    if (string.IsNullOrEmpty(pipeline))
                     {
-                        pipeline = pipelineMatch.Groups[1].Value;
-                        message = message.Substring(0, message.Length - pipelineMatch.Value.Length).Trim();
+                        pipeline = ExtractPipelineFromCorrelationId(correlationId);
                     }
 
                     // Extract duration if present
@@ -250,6 +250,70 @@ namespace CamBridge.Config.Services
             return null;
         }
 
+        /// <summary>
+        /// Extract pipeline name from message if present at end: [Pipeline]
+        /// </summary>
+        private string? ExtractPipelineFromMessage(ref string message)
+        {
+            var pipelineMatch = Regex.Match(message, @"\s*\[([^\]]+)\]\s*$");
+            if (pipelineMatch.Success)
+            {
+                var pipeline = pipelineMatch.Groups[1].Value;
+                message = message.Substring(0, message.Length - pipelineMatch.Value.Length).Trim();
+                return pipeline;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// NEW: Extract pipeline name from correlation ID patterns
+        /// </summary>
+        private string? ExtractPipelineFromCorrelationId(string correlationId)
+        {
+            if (string.IsNullOrEmpty(correlationId))
+                return null;
+
+            // Pattern: PINIT{timestamp}-{Pipeline}
+            var pinitMatch = Regex.Match(correlationId, @"^PINIT\d+-(.+)$");
+            if (pinitMatch.Success)
+            {
+                return pinitMatch.Groups[1].Value;
+            }
+
+            // Pattern: PM{timestamp}-PACS-{Pipeline}
+            var pacsMatch = Regex.Match(correlationId, @"^PM\d+-PACS-(.+)$");
+            if (pacsMatch.Success)
+            {
+                return pacsMatch.Groups[1].Value;
+            }
+
+            // Pattern: PM{timestamp}-QUEUE-{Pipeline}
+            var queueMatch = Regex.Match(correlationId, @"^PM\d+-QUEUE-(.+)$");
+            if (queueMatch.Success)
+            {
+                return queueMatch.Groups[1].Value;
+            }
+
+            // Pattern: P{timestamp}-{Pipeline} (old pattern)
+            var oldPipelineMatch = Regex.Match(correlationId, @"^P\d{14,}-(.+)$");
+            if (oldPipelineMatch.Success)
+            {
+                return oldPipelineMatch.Groups[1].Value;
+            }
+
+            // Pattern: FD/WE/PE/PR{timestamp}-{Pipeline}
+            var errorMatch = Regex.Match(correlationId, @"^(?:FD|WE|PE|PR)\d+-(.+?)(?:-ERROR|-FAIL)?$");
+            if (errorMatch.Success)
+            {
+                return errorMatch.Groups[1].Value;
+            }
+
+            // Pattern: F{timestamp}-{FilePrefix} (file processing)
+            // These don't have pipeline in correlation ID, will get from log content
+
+            return null;
+        }
+
         private LogEntry ParseFullFormat(string line, Match match, bool stageIsQuoted)
         {
             var timeStr = match.Groups[1].Value;
@@ -279,14 +343,12 @@ namespace CamBridge.Config.Services
 
             // Extract message and pipeline
             var message = messageAndMore;
-            string? pipeline = null;
+            string? pipeline = ExtractPipelineFromMessage(ref message);
 
-            // Check for pipeline at end: [Radiology]
-            var pipelineMatch = Regex.Match(messageAndMore, @"^(.+?)\s*\[([^\]]+)\]\s*$");
-            if (pipelineMatch.Success)
+            // FIX: If no pipeline found, try to extract from CorrelationID
+            if (string.IsNullOrEmpty(pipeline))
             {
-                message = pipelineMatch.Groups[1].Value.Trim();
-                pipeline = pipelineMatch.Groups[2].Value;
+                pipeline = ExtractPipelineFromCorrelationId(correlationId);
             }
 
             // Extract duration if present - look for [XXXms] pattern

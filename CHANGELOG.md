@@ -6,6 +6,42 @@ All notable changes to CamBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+
+## [0.8.22] - 2025-07-04
+
+### Fixed
+- **LogViewer**: Service-level correlation IDs are now correctly identified as "Service" instead of "Unknown"
+- **PipelineManager**: Corrected correlation ID prefixes from SVC to PM (as documented):
+  - `SVC{timestamp}` → `PM{timestamp}-START`
+  - `SVC{timestamp}-STOP` → `PM{timestamp}-STOP`
+  - `SVC{timestamp}-ERROR` → `PM{timestamp}-ERROR`
+  - 
+- **LogViewer**: FlatView now correctly filters by selected pipelines (was showing all entries regardless of selection)
+- **LogViewer**: Date selector now displays "today" as default when opening the LogViewer
+- **LogViewer**: Pipeline names are now correctly extracted from new correlation ID patterns (PINIT, PM-PACS, PM-QUEUE)
+- **LogViewer**: Log files from renamed or deleted pipelines are now discovered and shown as "[Archived]" in the dropdown
+
+### Changed
+- **LogParsingService**: Updated to recognize PM-START/STOP/ERROR patterns
+- **LogParsingService**: Removed obsolete SVC patterns (replaced by PM)
+- **LogViewer**: Improved pipeline name extraction from correlation IDs to handle Session 125/126 patterns
+- **LogViewer**: Enhanced file discovery to show all pipeline log files, not just those in current configuration
+- **LogViewer**: Better handling of sanitized filenames with attempt to reverse for display
+- **MainViewModel**: Version is now dynamically read from assembly attributes (no more hardcoding!)
+
+### Known Issues
+- TreeView context menu copy commands (Copy Line, Export Group) are not functioning - clipboard operation fails silently
+- DateTime Transform validation errors from Session 115 still present (4 ERR messages per file)
+- Duration display shows 0ms for all entries (millisecond precision issue)
+
+### Technical Notes
+- Consistency fix for v0.8.22 - all correlation IDs now match WISDOM_CORRELATIONID_PATTERNS.md
+- Modified files: LogParsingService.cs, PipelineManager.cs
+- Version bump from 0.8.21 to 0.8.22
+- Main changes in LogViewerViewModel.cs and LogParsingService.cs
+- Backward compatible with existing log files
+
 ## v0.8.21 - 2025-01-04 - LogViewer UI Polish & Bug Discovery
 
 ### 🎨 UI/UX Improvements

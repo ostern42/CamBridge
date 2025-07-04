@@ -1,6 +1,6 @@
 // src/CamBridge.Infrastructure/Services/PacsUploadQueue.cs
-// Version: 0.8.10
-// Modified: Session 110 - Fixed correlation ID usage
+// Version: 0.8.21
+// Modified: Session 125 - Fixed to use provided correlation ID consistently
 // Purpose: Per-pipeline queue for PACS uploads with retry logic
 
 using System;
@@ -24,7 +24,7 @@ namespace CamBridge.Infrastructure.Services
         private readonly PipelineConfiguration _pipelineConfig;
         private readonly CancellationTokenSource _cts;
         private readonly Task _processingTask;
-        private readonly string _correlationId;
+        private readonly string _pipelineCorrelationId;  // This is the PIPELINE INIT ID!
         private int _queueLength = 0;
 
         /// <summary>
@@ -36,12 +36,12 @@ namespace CamBridge.Infrastructure.Services
             PipelineConfiguration pipelineConfig,
             DicomStoreService storeService,
             ILogger<PacsUploadQueue> logger,
-            string correlationId)
+            string pipelineCorrelationId)  // This should be the PIPELINE INIT ID
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _storeService = storeService ?? throw new ArgumentNullException(nameof(storeService));
             _pipelineConfig = pipelineConfig ?? throw new ArgumentNullException(nameof(pipelineConfig));
-            _correlationId = correlationId ?? throw new ArgumentNullException(nameof(correlationId));
+            _pipelineCorrelationId = pipelineCorrelationId ?? throw new ArgumentNullException(nameof(pipelineCorrelationId));
 
             if (_pipelineConfig.PacsConfiguration == null)
                 throw new ArgumentException("Pipeline must have PACS configuration", nameof(pipelineConfig));
@@ -53,26 +53,33 @@ namespace CamBridge.Infrastructure.Services
             });
 
             _cts = new CancellationTokenSource();
+
+            // Log initialization with the PROVIDED pipeline correlation ID
+            _logger.LogInformation(
+                "[{CorrelationId}] [PacsInit] Starting PACS upload processor for pipeline {Pipeline} with {MaxConcurrent} concurrent uploads",
+                _pipelineCorrelationId, _pipelineConfig.Name,
+                Math.Max(1, Math.Min(_pipelineConfig.PacsConfiguration.MaxConcurrentUploads, 10)));
+
             _processingTask = ProcessQueueAsync(_cts.Token);
         }
 
         /// <summary>
         /// Queue a DICOM file for upload to PACS
         /// </summary>
-        public async Task<bool> EnqueueAsync(string dicomFilePath, string correlationId)
+        public async Task<bool> EnqueueAsync(string dicomFilePath, string fileCorrelationId)
         {
             if (!File.Exists(dicomFilePath))
             {
                 _logger.LogWarning(
                     "[{CorrelationId}] [PacsUpload] File not found for upload: {Path} [{Pipeline}]",
-                    correlationId, dicomFilePath, _pipelineConfig.Name);
+                    fileCorrelationId, dicomFilePath, _pipelineConfig.Name);
                 return false;
             }
 
             var item = new PacsUploadItem
             {
                 DicomFilePath = dicomFilePath,
-                CorrelationId = correlationId,
+                CorrelationId = fileCorrelationId,  // This is the FILE correlation ID
                 QueuedAt = DateTime.UtcNow
             };
 
@@ -81,16 +88,17 @@ namespace CamBridge.Infrastructure.Services
                 await _queue.Writer.WriteAsync(item);
                 Interlocked.Increment(ref _queueLength);
 
+                // Log with the FILE correlation ID
                 _logger.LogInformation(
                     "[{CorrelationId}] [PacsUpload] File queued for upload (queue depth: {QueueDepth}) [{Pipeline}]",
-                    correlationId, _queueLength, _pipelineConfig.Name);
+                    fileCorrelationId, _queueLength, _pipelineConfig.Name);
                 return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
                     "[{CorrelationId}] [PacsUpload] Failed to queue file [{Pipeline}]",
-                    correlationId, _pipelineConfig.Name);
+                    fileCorrelationId, _pipelineConfig.Name);
                 return false;
             }
         }
@@ -100,13 +108,7 @@ namespace CamBridge.Infrastructure.Services
             var pacsConfig = _pipelineConfig.PacsConfiguration!;
             var maxConcurrent = Math.Max(1, Math.Min(pacsConfig.MaxConcurrentUploads, 10));
 
-            // FIXED: Don't use _correlationId here! This is a one-time startup log
-            // We create a specific correlation ID for PACS initialization
-            var pacsInitCorrelationId = $"PM{DateTime.Now:HHmmssff}-PACS-{_pipelineConfig.Name}";
-
-            _logger.LogInformation(
-                "[{CorrelationId}] [PacsInit] Starting upload processor with {MaxConcurrent} concurrent uploads [{Pipeline}]",
-                pacsInitCorrelationId, maxConcurrent, _pipelineConfig.Name);
+            // Already logged in constructor with pipeline correlation ID
 
             // Use semaphore to limit concurrent uploads
             using var semaphore = new SemaphoreSlim(maxConcurrent, maxConcurrent);
@@ -134,25 +136,23 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (OperationCanceledException)
             {
-                // Use a shutdown-specific correlation ID
-                var shutdownCorrelationId = $"PM{DateTime.Now:HHmmssff}-PACS-SHUTDOWN-{_pipelineConfig.Name}";
+                // Normal shutdown - use the pipeline correlation ID
                 _logger.LogInformation(
                     "[{CorrelationId}] [PacsShutdown] Upload processor cancelled [{Pipeline}]",
-                    shutdownCorrelationId, _pipelineConfig.Name);
+                    _pipelineCorrelationId, _pipelineConfig.Name);
             }
             catch (Exception ex)
             {
-                // Use an error-specific correlation ID
-                var errorCorrelationId = $"PM{DateTime.Now:HHmmssff}-PACS-ERROR-{_pipelineConfig.Name}";
+                // Error - use the pipeline correlation ID
                 _logger.LogError(ex,
                     "[{CorrelationId}] [PacsError] Upload processor failed [{Pipeline}]",
-                    errorCorrelationId, _pipelineConfig.Name);
+                    _pipelineCorrelationId, _pipelineConfig.Name);
             }
         }
 
         private async Task ProcessUploadAsync(PacsUploadItem item, PacsConfiguration pacsConfig, CancellationToken cancellationToken)
         {
-            var correlationId = item.CorrelationId;
+            var correlationId = item.CorrelationId;  // This is the FILE correlation ID
             var queueTime = DateTime.UtcNow - item.QueuedAt;
 
             _logger.LogInformation(
@@ -188,20 +188,18 @@ namespace CamBridge.Infrastructure.Services
 
                 if (!_processingTask.Wait(TimeSpan.FromSeconds(30)))
                 {
-                    // Use a disposal-specific correlation ID
-                    var disposeCorrelationId = $"PM{DateTime.Now:HHmmssff}-PACS-DISPOSE-{_pipelineConfig.Name}";
+                    // Use the pipeline correlation ID for disposal
                     _logger.LogWarning(
                         "[{CorrelationId}] [PacsShutdown] Upload processor did not complete within timeout [{Pipeline}]",
-                        disposeCorrelationId, _pipelineConfig.Name);
+                        _pipelineCorrelationId, _pipelineConfig.Name);
                 }
             }
             catch (Exception ex)
             {
-                // Use an error-specific correlation ID
-                var errorCorrelationId = $"PM{DateTime.Now:HHmmssff}-PACS-DISPOSE-ERROR-{_pipelineConfig.Name}";
+                // Use the pipeline correlation ID for disposal errors
                 _logger.LogError(ex,
                     "[{CorrelationId}] [PacsShutdown] Error during disposal [{Pipeline}]",
-                    errorCorrelationId, _pipelineConfig.Name);
+                    _pipelineCorrelationId, _pipelineConfig.Name);
             }
             finally
             {

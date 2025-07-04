@@ -1,6 +1,6 @@
 // src/CamBridge.Config/Models/CorrelationGroup.cs
-// Version: 0.8.19
-// Description: Groups log entries by correlation ID for tree view - ENHANCED
+// Version: 0.8.22
+// Description: Groups log entries by correlation ID for tree view - WITH UPDATE METHOD
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using CamBridge.Core.Enums;
@@ -18,7 +18,7 @@ namespace CamBridge.Config.Models
     /// </summary>
     public class CorrelationGroup : ObservableObject
     {
-        private bool _isExpanded = true; // Default expanded for compact view
+        private bool _isExpanded = false; // Changed to false for default collapsed
 
         public string CorrelationId { get; set; } = string.Empty;
         public DateTime StartTime { get; set; }
@@ -98,6 +98,79 @@ namespace CamBridge.Config.Models
                 // Return sorted by timestamp
                 return allEntries.OrderBy(e => e.Timestamp);
             }
+        }
+
+        /// <summary>
+        /// Update this group with data from another group (for flicker-free refresh)
+        /// </summary>
+        public void Update(CorrelationGroup newData)
+        {
+            // Update basic properties
+            StartTime = newData.StartTime;
+            EndTime = newData.EndTime;
+            Pipeline = newData.Pipeline;
+            Status = newData.Status;
+
+            // Update stages while preserving expansion state
+            var existingStageStates = Stages.ToDictionary(s => s.Stage, s => s.IsExpanded);
+
+            // Remove stages that no longer exist
+            var newStageTypes = new HashSet<ProcessingStage>(newData.Stages.Select(s => s.Stage));
+            var toRemove = Stages.Where(s => !newStageTypes.Contains(s.Stage)).ToList();
+            foreach (var stage in toRemove)
+            {
+                Stages.Remove(stage);
+            }
+
+            // Add or update stages
+            foreach (var newStage in newData.Stages)
+            {
+                var existingStage = Stages.FirstOrDefault(s => s.Stage == newStage.Stage);
+                if (existingStage != null)
+                {
+                    // Update existing stage - just add new entries
+                    var existingTimestamps = new HashSet<DateTime>(existingStage.Entries.Select(e => e.Timestamp));
+                    foreach (var newEntry in newStage.Entries)
+                    {
+                        if (!existingTimestamps.Contains(newEntry.Timestamp))
+                        {
+                            existingStage.Entries.Add(newEntry);
+                        }
+                    }
+                }
+                else
+                {
+                    // Preserve expansion state if it existed before, otherwise default to collapsed
+                    if (existingStageStates.TryGetValue(newStage.Stage, out var wasExpanded))
+                    {
+                        newStage.IsExpanded = wasExpanded;
+                    }
+                    else
+                    {
+                        newStage.IsExpanded = false; // Default collapsed
+                    }
+                    Stages.Add(newStage);
+                }
+            }
+
+            // Update ungrouped entries
+            var existingUngroupedTimestamps = new HashSet<DateTime>(UngroupedEntries.Select(e => e.Timestamp));
+            foreach (var newEntry in newData.UngroupedEntries)
+            {
+                if (!existingUngroupedTimestamps.Contains(newEntry.Timestamp))
+                {
+                    UngroupedEntries.Add(newEntry);
+                }
+            }
+
+            // Trigger property updates
+            OnPropertyChanged(nameof(Duration));
+            OnPropertyChanged(nameof(DurationText));
+            OnPropertyChanged(nameof(FormattedStartTime));
+            OnPropertyChanged(nameof(FormattedDate));
+            OnPropertyChanged(nameof(FormattedTime));
+            OnPropertyChanged(nameof(Summary));
+            UpdateStatus();
         }
 
         // Update status based on stages

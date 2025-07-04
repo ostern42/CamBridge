@@ -1,7 +1,7 @@
 // src/CamBridge.Infrastructure/Services/ProcessingQueue.cs
-// Version: 0.8.10
-// Description: Thread-safe queue with duplicate detection and CORRELATION IDS
-// Session: 107 - Added correlation IDs using PM prefix (part of PipelineManager)
+// Version: 0.8.21
+// Description: Thread-safe queue with PROPER correlation ID usage
+// Session: 125 - Fixed to accept and use pipeline init correlation ID
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -18,23 +18,22 @@ namespace CamBridge.Infrastructure.Services
 {
     /// <summary>
     /// Thread-safe queue for managing file processing with retry logic
-    /// FIXED: Prevents duplicate processing of successfully completed files
-    /// FIXED: NullReferenceException in StopAsync
-    /// FIXED: Added correlation IDs to all logs
+    /// FIXED: Now accepts pipeline correlation ID for proper hierarchy
     /// </summary>
     public class ProcessingQueue
     {
         private readonly ILogger<ProcessingQueue> _logger;
         private readonly FileProcessor _fileProcessor;
         private readonly ProcessingOptions _options;
-        private readonly string _pipelineName;  // NEW: For correlation IDs
+        private readonly string _pipelineName;
+        private readonly string _pipelineCorrelationId;  // NEW: Store pipeline init ID
         private readonly ConcurrentQueue<ProcessingItem> _queue = new();
         private readonly ConcurrentDictionary<string, ProcessingItem> _activeItems = new();
         private readonly SemaphoreSlim _processingSlots;
         private CancellationTokenSource? _cancellationSource;
         private Task? _processingTask;
 
-        // FIX: Track processed and enqueued files to prevent duplicates
+        // Track processed and enqueued files to prevent duplicates
         private readonly HashSet<string> _processedFiles = new();
         private readonly HashSet<string> _enqueuedFiles = new();
         private readonly object _trackingLock = new object();
@@ -62,51 +61,63 @@ namespace CamBridge.Infrastructure.Services
             ILogger<ProcessingQueue> logger,
             FileProcessor fileProcessor,
             IOptions<ProcessingOptions> options,
-            string pipelineName)  // NEW: Add pipeline name
+            string pipelineName,
+            string pipelineCorrelationId)  // NEW PARAMETER!
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _fileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-            _pipelineName = pipelineName ?? "Unknown";  // NEW: Store pipeline name
+            _pipelineName = pipelineName ?? "Unknown";
+            _pipelineCorrelationId = pipelineCorrelationId ?? throw new ArgumentNullException(nameof(pipelineCorrelationId));
 
             _processingSlots = new SemaphoreSlim(
                 _options.MaxConcurrentProcessing,
                 _options.MaxConcurrentProcessing);
+
+            // Log initialization with the pipeline correlation ID
+            _logger.LogInformation("[{CorrelationId}] [QueueInit] Processing queue created for pipeline {Pipeline} with max concurrent: {MaxConcurrent}",
+                _pipelineCorrelationId, _pipelineName, _options.MaxConcurrentProcessing);
         }
 
         /// <summary>
-        /// Enqueues a file for processing
+        /// Enqueues a file for processing with its own correlation ID
         /// </summary>
-        public bool TryEnqueue(string filePath)
+        public bool TryEnqueue(string filePath, string fileCorrelationId = null)
         {
             if (string.IsNullOrWhiteSpace(filePath))
                 return false;
 
-            var correlationId = $"PM{DateTime.Now:HHmmssff}-QUEUE-{_pipelineName}";  // Using PM prefix!
+            // If no file correlation ID provided, generate one
+            if (string.IsNullOrEmpty(fileCorrelationId))
+            {
+                var fileName = Path.GetFileNameWithoutExtension(filePath);
+                var filePrefix = fileName.Length > 8 ? fileName.Substring(0, 8) : fileName;
+                fileCorrelationId = $"F{DateTime.Now:HHmmssff}-{filePrefix}";
+            }
 
             lock (_trackingLock)
             {
-                // FIX: Check if already successfully processed
+                // Check if already successfully processed
                 if (_processedFiles.Contains(filePath))
                 {
-                    _logger.LogDebug("[{CorrelationId}] [QueueDuplicate] File {FilePath} already processed, ignoring duplicate event",
-                        correlationId, filePath);
+                    _logger.LogDebug("[{CorrelationId}] [QueueDuplicate] File {FilePath} already processed, ignoring duplicate event [{Pipeline}]",
+                        fileCorrelationId, filePath, _pipelineName);
                     return false;
                 }
 
-                // FIX: Check if already in queue
+                // Check if already in queue
                 if (_enqueuedFiles.Contains(filePath))
                 {
-                    _logger.LogDebug("[{CorrelationId}] [QueueDuplicate] File {FilePath} already in queue, ignoring duplicate event",
-                        correlationId, filePath);
+                    _logger.LogDebug("[{CorrelationId}] [QueueDuplicate] File {FilePath} already in queue, ignoring duplicate event [{Pipeline}]",
+                        fileCorrelationId, filePath, _pipelineName);
                     return false;
                 }
 
                 // Check if already being processed
                 if (_activeItems.ContainsKey(filePath))
                 {
-                    _logger.LogDebug("[{CorrelationId}] [QueueActive] File {FilePath} is currently being processed",
-                        correlationId, filePath);
+                    _logger.LogDebug("[{CorrelationId}] [QueueActive] File {FilePath} is currently being processed [{Pipeline}]",
+                        fileCorrelationId, filePath, _pipelineName);
                     return false;
                 }
 
@@ -114,11 +125,11 @@ namespace CamBridge.Infrastructure.Services
                 _enqueuedFiles.Add(filePath);
             }
 
-            var item = new ProcessingItem(filePath);
+            var item = new ProcessingItem(filePath, fileCorrelationId);
             _queue.Enqueue(item);
 
-            _logger.LogInformation("[{CorrelationId}] [QueueEnqueue] Enqueued {FilePath} for processing (queue length: {QueueLength})",
-                correlationId, filePath, _queue.Count);
+            _logger.LogInformation("[{CorrelationId}] [QueueEnqueue] Enqueued {FilePath} for processing (queue length: {QueueLength}) [{Pipeline}]",
+                fileCorrelationId, filePath, _queue.Count, _pipelineName);
 
             return true;
         }
@@ -126,9 +137,9 @@ namespace CamBridge.Infrastructure.Services
         /// <summary>
         /// Async wrapper for TryEnqueue to match PipelineManager expectations
         /// </summary>
-        public Task<bool> EnqueueAsync(string filePath, CancellationToken cancellationToken = default)
+        public Task<bool> EnqueueAsync(string filePath, string fileCorrelationId = null, CancellationToken cancellationToken = default)
         {
-            var result = TryEnqueue(filePath);
+            var result = TryEnqueue(filePath, fileCorrelationId);
             return Task.FromResult(result);
         }
 
@@ -137,9 +148,9 @@ namespace CamBridge.Infrastructure.Services
         /// </summary>
         public async Task ProcessAsync(CancellationToken cancellationToken)
         {
-            var startCorrelationId = $"PM{DateTime.Now:HHmmssff}-QSTART-{_pipelineName}";
+            // Use the pipeline correlation ID for queue lifecycle events
             _logger.LogInformation("[{CorrelationId}] [QueueStart] Processing queue started [{Pipeline}]",
-                startCorrelationId, _pipelineName);
+                _pipelineCorrelationId, _pipelineName);
 
             try
             {
@@ -158,9 +169,8 @@ namespace CamBridge.Infrastructure.Services
                             }
                             catch (Exception ex)
                             {
-                                var errorCorrelationId = $"PM{DateTime.Now:HHmmssff}-QERROR-{_pipelineName}";
-                                _logger.LogError(ex, "[{CorrelationId}] [QueueError] Unexpected error in background processing",
-                                    errorCorrelationId);
+                                _logger.LogError(ex, "[{CorrelationId}] [QueueError] Unexpected error in background processing [{Pipeline}]",
+                                    item.CorrelationId, _pipelineName);
                             }
                         }, cancellationToken);
                     }
@@ -173,17 +183,16 @@ namespace CamBridge.Infrastructure.Services
             }
             catch (TaskCanceledException)
             {
-                // This is normal during shutdown
-                var cancelCorrelationId = $"PM{DateTime.Now:HHmmssff}-QCANCEL-{_pipelineName}";
+                // This is normal during shutdown - use pipeline correlation ID
                 _logger.LogInformation("[{CorrelationId}] [QueueCancelled] Processing queue cancelled [{Pipeline}]",
-                    cancelCorrelationId, _pipelineName);
+                    _pipelineCorrelationId, _pipelineName);
                 throw;  // Re-throw so PipelineManager can handle it
             }
             finally
             {
-                var stopCorrelationId = $"PM{DateTime.Now:HHmmssff}-QSTOP-{_pipelineName}";
+                // Use pipeline correlation ID for lifecycle events
                 _logger.LogInformation("[{CorrelationId}] [QueueStop] Processing queue stopped [{Pipeline}]",
-                    stopCorrelationId, _pipelineName);
+                    _pipelineCorrelationId, _pipelineName);
             }
         }
 
@@ -211,7 +220,6 @@ namespace CamBridge.Infrastructure.Services
         /// </summary>
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            // FIXED: Null checks added!
             _cancellationSource?.Cancel();
 
             if (_processingTask != null)
@@ -257,11 +265,6 @@ namespace CamBridge.Infrastructure.Services
 
         private async Task ProcessItemAsync(ProcessingItem item, CancellationToken cancellationToken)
         {
-            // Use same format as FileProcessor: F{timestamp}-{fileprefix}
-            var fileName = Path.GetFileNameWithoutExtension(item.FilePath);
-            var filePrefix = fileName.Length > 8 ? fileName.Substring(0, 8) : fileName;
-            var itemCorrelationId = $"F{DateTime.Now:HHmmssff}-{filePrefix}";
-
             try
             {
                 // Mark as active
@@ -270,9 +273,10 @@ namespace CamBridge.Infrastructure.Services
                 item.AttemptCount++;
 
                 _logger.LogInformation("[{CorrelationId}] [ProcessStart] Starting processing of {FilePath} (attempt {Attempt}) [{Pipeline}]",
-                    itemCorrelationId, item.FilePath, item.AttemptCount, _pipelineName);
+                    item.CorrelationId, item.FilePath, item.AttemptCount, _pipelineName);
 
                 // Process the file with THIS pipeline's FileProcessor!
+                // FileProcessor will use the file's correlation ID
                 var result = await _fileProcessor.ProcessFileAsync(item.FilePath);
 
                 // Update statistics
@@ -292,7 +296,7 @@ namespace CamBridge.Infrastructure.Services
 
                 if (result.Success)
                 {
-                    // FIX: Mark as successfully processed
+                    // Mark as successfully processed
                     lock (_trackingLock)
                     {
                         _processedFiles.Add(item.FilePath);
@@ -301,12 +305,14 @@ namespace CamBridge.Infrastructure.Services
                         // Cleanup old entries if too many (prevent memory leak)
                         if (_processedFiles.Count > 10000)
                         {
-                            var cleanupCorrelationId = $"PM{DateTime.Now:HHmmssff}-CLEANUP-{_pipelineName}";
                             _logger.LogInformation("[{CorrelationId}] [QueueMaintenance] Cleaning up processed files tracking (>10000 entries) [{Pipeline}]",
-                                cleanupCorrelationId, _pipelineName);
+                                _pipelineCorrelationId, _pipelineName);
                             _processedFiles.Clear();
                         }
                     }
+
+                    _logger.LogInformation("[{CorrelationId}] [ProcessComplete] Successfully processed {FilePath} [{Pipeline}]",
+                        item.CorrelationId, item.FilePath, _pipelineName);
                 }
                 else if (ShouldRetry(item))
                 {
@@ -322,13 +328,13 @@ namespace CamBridge.Infrastructure.Services
                     }
 
                     _logger.LogError("[{CorrelationId}] [ProcessFailed] Failed to process {FilePath} after {Attempts} attempts: {Error} [{Pipeline}]",
-                        itemCorrelationId, item.FilePath, item.AttemptCount, result.ErrorMessage, _pipelineName);
+                        item.CorrelationId, item.FilePath, item.AttemptCount, result.ErrorMessage, _pipelineName);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[{CorrelationId}] [ProcessError] Unexpected error processing {FilePath} [{Pipeline}]",
-                    itemCorrelationId, item.FilePath, _pipelineName);
+                    item.CorrelationId, item.FilePath, _pipelineName);
 
                 lock (_statsLock)
                 {
@@ -350,7 +356,7 @@ namespace CamBridge.Infrastructure.Services
                     }
 
                     _logger.LogError("[{CorrelationId}] [ProcessAbandoned] Failed to process {FilePath} after {Attempts} attempts [{Pipeline}]",
-                        itemCorrelationId, item.FilePath, item.AttemptCount, _pipelineName);
+                        item.CorrelationId, item.FilePath, item.AttemptCount, _pipelineName);
                 }
             }
             finally
@@ -372,10 +378,9 @@ namespace CamBridge.Infrastructure.Services
         private async Task ScheduleRetryAsync(ProcessingItem item, CancellationToken cancellationToken)
         {
             var delay = TimeSpan.FromSeconds(_options.RetryDelaySeconds * item.AttemptCount);
-            var retryCorrelationId = $"PM{DateTime.Now:HHmmssff}-RETRY-{_pipelineName}";
 
             _logger.LogInformation("[{CorrelationId}] [RetryScheduled] Scheduling retry for {FilePath} in {Delay} seconds [{Pipeline}]",
-                retryCorrelationId, item.FilePath, delay.TotalSeconds, _pipelineName);
+                item.CorrelationId, item.FilePath, delay.TotalSeconds, _pipelineName);
 
             // Wait before re-enqueueing
             await Task.Delay(delay, cancellationToken);
@@ -410,18 +415,20 @@ namespace CamBridge.Infrastructure.Services
         }
 
         /// <summary>
-        /// Processing item with retry tracking
+        /// Processing item with retry tracking and correlation ID
         /// </summary>
         private class ProcessingItem
         {
             public string FilePath { get; }
+            public string CorrelationId { get; }
             public int AttemptCount { get; set; }
             public DateTime? StartTime { get; set; }
             public DateTime EnqueuedTime { get; }
 
-            public ProcessingItem(string filePath)
+            public ProcessingItem(string filePath, string correlationId)
             {
                 FilePath = filePath;
+                CorrelationId = correlationId;
                 EnqueuedTime = DateTime.UtcNow;
             }
         }

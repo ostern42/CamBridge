@@ -1,6 +1,6 @@
 // src/CamBridge.Config/Models/StageGroup.cs
-// Version: 0.8.19
-// Description: Groups log entries by processing stage - ENHANCED
+// Version: 0.8.22
+// Description: Groups log entries by processing stage - DEFAULT COLLAPSED
 // Copyright: © 2025 Claude's Improbably Reliable Software Solutions
 
 using System;
@@ -18,7 +18,7 @@ namespace CamBridge.Config.Models
     /// </summary>
     public class StageGroup : ObservableObject
     {
-        private bool _isExpanded = true;
+        private bool _isExpanded = false; // Changed to false for default collapsed
 
         public ProcessingStage Stage { get; set; }
         public DateTime StartTime { get; set; }
